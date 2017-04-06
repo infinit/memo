@@ -20,14 +20,20 @@ namespace infinit
 {
   namespace prometheus
   {
-    void prometheus_endpoint(std::string e)
+    void endpoint(std::string e)
     {
       ::prometheus_endpoint = std::move(e);
     }
 
-    std::string const& prometheus_endpoint()
+    std::string const& endpoint()
     {
       return ::prometheus_endpoint;
+    }
+
+    Prometheus& instance()
+    {
+      static auto res = Prometheus();
+      return res;
     }
 
     /// An HTTP server to answer Prometheus's requests.
@@ -37,7 +43,7 @@ namespace infinit
     exposer()
     {
       static auto res = []() -> std::unique_ptr<::prometheus::Exposer> {
-        auto const addr = prometheus_endpoint();
+        auto const addr = endpoint();
         if (addr != "no" || addr != "0")
           try
           {
@@ -62,7 +68,6 @@ namespace infinit
       return res.get();
     }
 
-
     /// Where to register the measurements to expose to Prometheus.
     std::shared_ptr<::prometheus::Registry>
     registry()
@@ -81,6 +86,35 @@ namespace infinit
           return nullptr;
       }();
       return res;
+    }
+
+    auto
+    Prometheus::make_gauge_family(std::string const& name,
+                                  std::string const& help)
+      -> Family<Gauge>*
+    {
+      // Add a new member gauge family to the registry.
+      if (auto reg = registry())
+      {
+        auto& res = ::prometheus::BuildGauge()
+          .Name(name)
+          .Help(help)
+          .Register(*reg);
+        return &res;
+      }
+      else
+        return {};
+    }
+
+    auto
+    Prometheus::make(Family<Gauge>* family,
+                     Labels const& labels)
+      -> UniquePtr<Gauge>
+    {
+      if (family)
+        return {&family->Add(labels), Deleter<Gauge>{family}};
+      else
+        return {};
     }
   }
 }

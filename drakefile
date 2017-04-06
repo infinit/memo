@@ -300,6 +300,7 @@ def configure(
                              protobuf_lib = grpc.grpc.protobuf_lib)
   for p in prometheus.prometheus_include_path:
     cxx_config_infinit.add_system_include_path(p)
+    cxx_config.add_system_include_path(p)
   extra_libs.append(drake.copy(prometheus.prometheus_lib,
                                'bin' if windows else 'lib',
                                strip_prefix = True))

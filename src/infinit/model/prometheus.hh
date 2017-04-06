@@ -3,33 +3,61 @@
 #include <memory>
 #include <string>
 
-#include <prometheus/registry.h>
-
-namespace prometheus
-{
-  class Exposer;
-}
+#include <prometheus/family.h>
+#include <prometheus/gauge.h>
 
 namespace infinit
 {
   namespace prometheus
   {
+    /// A characteristic profile for a metric instance.
+    using Labels = std::map<std::string, std::string>;
+    /// A family of metrics.
+    template <typename Metric>
+    using Family = ::prometheus::Family<Metric>;
+    /// A non-monotonic (i.e., increasing/decreasing) counter.
+    using Gauge = ::prometheus::Gauge;
+
+    /// Delete a metric, i.e. remove it from its family.
+    template <typename Metric>
+    struct Deleter
+    {
+      Family<Metric>* family;
+      void operator()(Metric* m)
+      {
+        family->Remove(m);
+      }
+    };
+
+    /// A managed metric.
+    template <typename Metric>
+    using UniquePtr = std::unique_ptr<Metric, Deleter<Metric>>;
+
+    /// A managed gauge.
+    using GaugePtr = UniquePtr<Gauge>;
+
+    class Prometheus
+    {
+    public:
+      /// Create a family of gauges.
+      Family<Gauge>*
+      make_gauge_family(std::string const& name,
+                        std::string const& help);
+
+      /// Create a new member to a family.
+      /// Should be removed eventually.
+      UniquePtr<Gauge>
+      make(Family<Gauge>* family,
+           Labels const& labels);
+    };
+
     /// Set the Prometheus publishing address.
-    void prometheus_endpoint(std::string e);
+    void endpoint(std::string e);
 
     /// Get the Prometheus publishing address.
-    std::string const& prometheus_endpoint();
+    std::string const& endpoint();
 
-    /// An HTTP server to answer Prometheus's requests.
-    ///
-    /// Maybe nullptr if set up failed.
-    ::prometheus::Exposer*
-    exposer();
-
-    /// Where to register the measurements to expose to Prometheus.
-    ///
-    /// Maybe nullptr if set up failed.
-    std::shared_ptr<::prometheus::Registry>
-    registry();
+    /// The instance to use.
+    Prometheus& instance();
   }
 }

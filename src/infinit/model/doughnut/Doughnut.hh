@@ -21,12 +21,8 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Dock.hh>
 #include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/overlay/Overlay.hh>
-
-namespace prometheus
-{
-  class Gauge;
-}
 
 namespace infinit
 {
@@ -165,7 +161,7 @@ namespace infinit
         int
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
-        prometheus::Gauge* _member_gauge;
+        prometheus::GaugePtr _member_gauge;
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);

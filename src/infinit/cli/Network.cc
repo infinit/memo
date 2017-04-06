@@ -911,7 +911,7 @@ namespace infinit
           });
         }
         if (prometheus)
-          infinit::prometheus::prometheus_endpoint(*prometheus);
+          infinit::prometheus::endpoint(*prometheus);
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
