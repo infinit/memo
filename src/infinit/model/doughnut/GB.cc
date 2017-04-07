@@ -21,11 +21,12 @@ namespace infinit
         : Super(owner, {}, elle::Buffer("group", 5), master)
       {
         ELLE_TRACE_SCOPE("%s: create", *this);
-        auto first_group_key = elle::cryptography::rsa::keypair::generate(2048);
+        auto const first_group_key
+          = elle::cryptography::rsa::keypair::generate(2048);
         this->_public_keys.push_back(first_group_key.K());
         this->_keys.push_back(first_group_key);
-        auto user_key = owner->keys();
-        auto ser_master = elle::serialization::binary::serialize(master.k());
+        auto const user_key = owner->keys();
+        auto const ser_master = elle::serialization::binary::serialize(master.k());
         auto sealed = user_key.K().seal(ser_master);
         this->_admin_keys.emplace(user_key.K(), sealed);
         this->data(elle::serialization::binary::serialize(this->_keys));
@@ -56,9 +57,6 @@ namespace infinit
             ELLE_DEBUG("we are not group admin");
         }
       }
-
-      GB::~GB()
-      {}
 
       void
       GB::serialize(elle::serialization::Serializer& s,

@@ -62,12 +62,12 @@ sources = drake.nodes(
   'doughnut/Remote.hxx',
   'doughnut/UB.cc',
   'doughnut/UB.hh',
-  'doughnut/conflict/UBUpserter.hh',
-  'doughnut/conflict/UBUpserter.cc',
   'doughnut/User.cc',
   'doughnut/User.hh',
   'doughnut/ValidationFailed.cc',
   'doughnut/ValidationFailed.hh',
+  'doughnut/conflict/UBUpserter.cc',
+  'doughnut/conflict/UBUpserter.hh',
   'doughnut/consensus/Paxos.cc',
   'doughnut/consensus/Paxos.hh',
   'doughnut/protocol.cc',
@@ -77,3 +77,7 @@ sources = drake.nodes(
   'paranoid/Paranoid.cc',
   'paranoid/Paranoid.hh',
 )
+
+# Local Variables:
+# mode: python
+# End:

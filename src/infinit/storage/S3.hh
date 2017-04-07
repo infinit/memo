@@ -1,8 +1,8 @@
-#ifndef INFINIT_STORAGE_S3_HH
-# define INFINIT_STORAGE_S3_HH
+#pragma once
 
-# include <infinit/storage/Storage.hh>
-# include <elle/service/aws/S3.hh>
+#include <elle/service/aws/S3.hh>
+
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -18,16 +18,12 @@ namespace infinit
       ~S3();
 
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
 
@@ -39,7 +35,8 @@ namespace infinit
       : public StorageConfig
     {
     public:
-      typedef elle::service::aws::S3::StorageClass StorageClass;
+      using Super = StorageConfig;
+      using StorageClass = elle::service::aws::S3::StorageClass;
 
     public:
       S3StorageConfig(std::string name,
@@ -49,10 +46,8 @@ namespace infinit
                       boost::optional<std::string> description);
       S3StorageConfig(elle::serialization::SerializerIn& input);
 
-      virtual
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
 
@@ -61,5 +56,3 @@ namespace infinit
     };
   }
 }
-
-#endif

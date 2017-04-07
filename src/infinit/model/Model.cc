@@ -139,7 +139,7 @@ namespace infinit
     }
 
     Address
-    Model:: _named_block_address(elle::Buffer const& key) const
+    Model::_named_block_address(elle::Buffer const& key) const
     {
       elle::err("named blocks are not implemented in this model");
     }
@@ -365,26 +365,23 @@ namespace infinit
       MergeConflictResolver(std::unique_ptr<ConflictResolver> a,
                             std::unique_ptr<ConflictResolver> b,
                             SquashConflictResolverOptions const& config)
-      : _config(config)
+        : _config(config)
       {
-        this->_resolvers.push_back(std::move(a));
-        this->_resolvers.push_back(std::move(b));
+        add(std::move(a));
+        add(std::move(b));
       }
 
       void
       add(std::unique_ptr<ConflictResolver> a)
       {
-        this->_resolvers.push_back(std::move(a));
+        this->_resolvers.emplace_back(std::move(a));
       }
 
       void
       add_front(std::unique_ptr<ConflictResolver> a)
       {
-        std::vector<std::unique_ptr<ConflictResolver>> nr;
-        nr.push_back(std::move(a));
-        for (auto& cr: this->_resolvers)
-          nr.push_back(std::move(cr));
-        this->_resolvers = std::move(nr);
+        this->_resolvers.insert(this->_resolvers.begin(),
+                                std::move(a));
       }
 
       std::unique_ptr<blocks::Block>
@@ -413,9 +410,9 @@ namespace infinit
       std::string
       description() const override
       {
-        std::string res("Squash(");
+        auto res = std::string("Squash(");
         for (auto const& c: this->_resolvers)
-          res += c->description() + ",";
+          res += c->description() + ',';
         res += ')';
         return res;
       }
@@ -465,7 +462,8 @@ namespace infinit
           = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
         if (mcr->resolvers().size() >= max_size)
           return {model::Squash::stop, {}};
-        return this->squashable(mcr->resolvers());
+        else
+          return this->squashable(mcr->resolvers());
       }
       else
       {

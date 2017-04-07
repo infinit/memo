@@ -1017,39 +1017,37 @@ namespace infinit
          no_local_endpoints,
          no_public_endpoints,
          advertise_host,
-         {},
-         {},
-         {},
+         {}, // grpc
+         {}, // paxos_rebalancing_auto_expand
+         {}, // paxos_rebalancing_inspect
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,
               bool /*push*/)
-        {
-          auto services = dht.services();
-          if (cli.script())
-          {
-            auto res = std::unordered_map<std::string, Strings>{};
-            for (auto const& type: services)
-            {
-              auto services = elle::make_vector(type.second,
-                                                [](auto const& service)
-                                                {
-                                                  return service.first;
-                                                });
-              res.emplace(type.first, std::move(services));
-            }
-            elle::serialization::json::serialize(res, std::cout, false);
-          }
-          else
-          {
-            for (auto const& type: services)
-            {
-              std::cout << type.first << ":" << std::endl;
-              for (auto const& service: type.second)
-                std::cout << "  " << service.first << std::endl;
-            }
-          }
-        });
+         {
+           auto services = dht.services();
+           if (cli.script())
+           {
+             auto res = std::unordered_map<std::string, Strings>{};
+             for (auto const& type: services)
+               res.emplace(type.first,
+                           elle::make_vector(type.second,
+                                             [](auto const& service)
+                                             {
+                                               return service.first;
+                                             }));
+             elle::serialization::json::serialize(res, std::cout, false);
+           }
+           else
+           {
+             for (auto const& type: services)
+             {
+               std::cout << type.first << ":" << std::endl;
+               for (auto const& service: type.second)
+                 std::cout << "  " << service.first << std::endl;
+             }
+           }
+         });
     }
 
 

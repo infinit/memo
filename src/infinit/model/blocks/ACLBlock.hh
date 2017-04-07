@@ -18,8 +18,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::blocks::ACLBlock;
-        using Super = infinit::model::blocks::MutableBlock;
+        using Self = ACLBlock;
+        using Super = MutableBlock;
 
       /*-------------.
       | Construction |
@@ -45,8 +45,7 @@ namespace infinit
         void
         set_permissions(User const& user,
                         bool read,
-                        bool write
-                        );
+                        bool write);
         void
         set_world_permissions(bool read, bool write);
         std::pair<bool, bool>

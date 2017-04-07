@@ -728,14 +728,12 @@ public:
     , fail(false)
   {}
 
-  virtual
   elle::reactor::Generator<infinit::overlay::Overlay::WeakMember>
   _lookup(infinit::model::Address address, int n, bool fast) const override
   {
-    if (fail)
-      return infinit::overlay::Stonehenge::_lookup(address, n - 1, fast);
-    else
-      return infinit::overlay::Stonehenge::_lookup(address, n, fast);
+    return infinit::overlay::Stonehenge::_lookup(address,
+                                                 fail ? n - 1 : n,
+                                                 fast);
   }
 
   bool fail;
@@ -1221,7 +1219,6 @@ namespace rebalancing
       : _previous(previous.data())
     {}
 
-    virtual
     std::unique_ptr<blocks::Block>
     operator () (blocks::Block& failed,
                  blocks::Block& current) override
@@ -1230,7 +1227,6 @@ namespace rebalancing
       return failed.clone();
     }
 
-    virtual
     void
     serialize(elle::serialization::Serializer& s,
               elle::Version const&) override
@@ -1251,8 +1247,8 @@ namespace rebalancing
     public dht::consensus::Paxos::LocalPeer
   {
   public:
-    typedef dht::consensus::Paxos::LocalPeer Super;
-    typedef infinit::model::Address Address;
+    using Super = dht::consensus::Paxos::LocalPeer;
+    using Address = infinit::model::Address;
 
     template <typename ... Args>
     Local(infinit::model::doughnut::consensus::Paxos& paxos,
@@ -1285,7 +1281,6 @@ namespace rebalancing
       this->_confirm_barrier.open();
     }
 
-    virtual
     boost::optional<PaxosClient::Accepted>
     propose(PaxosServer::Quorum const& peers,
             Address address,
@@ -1300,7 +1295,6 @@ namespace rebalancing
       return res;
     }
 
-    virtual
     PaxosClient::Proposal
     accept(PaxosServer::Quorum const& peers,
            Address address,
@@ -1313,7 +1307,6 @@ namespace rebalancing
       return Super::accept(peers, address, p, value);
     }
 
-    virtual
     void
     confirm(PaxosServer::Quorum const& peers,
             Address address,
@@ -1325,7 +1318,6 @@ namespace rebalancing
       Super::confirm(peers, address, p);
     }
 
-    virtual
     void
     _disappeared_schedule_eviction(infinit::model::Address id) override
     {
@@ -1348,10 +1340,10 @@ namespace rebalancing
   static constexpr
   auto default_node_timeout = std::chrono::seconds(1);
 
-  class InstrumentedPaxos:
-    public dht::consensus::Paxos
+  class InstrumentedPaxos
+    : public dht::consensus::Paxos
   {
-    typedef dht::consensus::Paxos Super;
+    using Super = dht::consensus::Paxos;
     using Super::Super;
     std::unique_ptr<dht::Local>
     make_local(

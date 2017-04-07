@@ -11,7 +11,7 @@ namespace elle
     template <>
     struct Serialize<elle::reactor::Duration>
     {
-      typedef double Type;
+      using Type = double;
 
       static
       double

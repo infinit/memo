@@ -57,8 +57,9 @@ namespace infinit
 
     using SquashOperation = std::pair<Squash, SquashConflictResolverOptions>;
 
-    // Called in case of conflict error. Returns the new block to retry with
-    // or null to abort
+    /// Called in case of conflict error.
+    ///
+    /// @returns the new block to retry with or null to abort.
     class ConflictResolver
       : public elle::serialization::VirtuallySerializable<ConflictResolver, true>
     {
@@ -92,11 +93,11 @@ namespace infinit
     std::vector<std::unique_ptr<ConflictResolver>>&
     get_merge_conflict_resolver_content(ConflictResolver& cr);
 
-    // A resolver that just override the previous version.
+    /// A resolver that just overrides the previous version.
     class DummyConflictResolver
       : public ConflictResolver
     {
-       using Super = ConflictResolver;
+      using Super = ConflictResolver;
     protected:
       DummyConflictResolver();
     public:
@@ -139,30 +140,27 @@ namespace infinit
     public:
       template <typename Block>
       std::unique_ptr<Block>
-      make_block(elle::Buffer data = elle::Buffer(),
-                 Address owner = Address::null) const;
+      make_block(elle::Buffer data = {},
+                 Address owner = {}) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
 
-      /** Construct an immutable block.
-       *
-       *  \param data  Payload of the block.
-       *  \param owner Optional owning mutable block to restrict deletion.
-       */
+      /// Construct an immutable block.
+      ///
+      /// @param data  Payload of the block.
+      /// @param owner Optional owning mutable block to restrict deletion.
       elle::das::named::Function<
         std::unique_ptr<blocks::ImmutableBlock>(
           decltype(data)::Formal<elle::Buffer>,
           decltype(owner = Address::null))>
       make_immutable_block;
 
-      /** Construct a mutable block.
-       */
+      /// Construct a mutable block.
       elle::das::named::Function<
         std::unique_ptr<blocks::MutableBlock>()>
       make_mutable_block;
 
-      /** Construct a named block.
-       */
+      /// Construct a named block.
       elle::das::named::Function<
         std::unique_ptr<blocks::Block>(decltype(key)::Formal<elle::Buffer>)>
       make_named_block;
@@ -171,17 +169,16 @@ namespace infinit
         Address(decltype(key)::Formal<elle::Buffer>)>
       named_block_address;
 
-      /** Fetch block at \param address.
-       *
-       *  Use \param local_version to avoid refetching the block if it did
-       *  not change.
-       *
-       *  \param address Address of the block to fetch.
-       *  \param local_version Optional version already owned by the caller.
-       *  \return The block at \param address, or null if its version is
-       *          still local_version.
-       *  \throws MissingBlock if the block does not exist.
-       */
+      /// Fetch block at @param address.
+      ///
+      /// Use @param local_version to avoid refetching the block if it did
+      /// not change.
+      ///
+      /// @param address Address of the block to fetch.
+      /// @param local_version Optional version already owned by the caller.
+      /// @return The block at \param address, or null if its version is
+      ///         still local_version.
+      /// @throws MissingBlock if the block does not exist.
       elle::das::named::Function<
         std::unique_ptr<blocks::Block> (
           decltype(address)::Formal<Address>,
@@ -193,11 +190,10 @@ namespace infinit
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                                     std::exception_ptr)> res) const;
 
-      /** Insert a new block.
-       *
-       *  \param block             New block to insert.
-       *  \param conflict_resolver Optional automatic conflict resolver.
-       */
+      /// Insert a new block.
+      ///
+      /// @param block             New block to insert.
+      /// @param conflict_resolver Optional automatic conflict resolver.
       elle::das::named::Function<
         bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
@@ -208,11 +204,10 @@ namespace infinit
       void
       seal_and_insert(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
-      /** Update an existing block.
-       *
-       *  \param block             Block to update.
-       *  \param conflict_resolver Optional automatic conflict resolver.
-       */
+      /// Update an existing block.
+      ///
+      /// @param block             Block to update.
+      /// @param conflict_resolver Optional automatic conflict resolver.
       elle::das::named::Function<
         bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
@@ -223,8 +218,7 @@ namespace infinit
       void
       seal_and_update(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
-      /** Remove an existing block.
-       */
+      /// Remove an existing block.
       elle::das::named::Function<
         bool (
           decltype(address)::Formal<Address>,

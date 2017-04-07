@@ -11,27 +11,28 @@ namespace infinit
 {
   namespace storage
   {
+    namespace bfs = boost::filesystem;
+
+    namespace
+    {
+      std::string
+      _key_str(Key key)
+      {
+        return elle::sprintf("%x", key).substr(2);
+      }
+    }
+
     Dropbox::Dropbox(std::string token)
       : Dropbox(std::move(token), ".infinit")
     {}
 
     Dropbox::Dropbox(std::string token,
-                     boost::filesystem::path root)
+                     bfs::path root)
       : _dropbox(std::move(token))
       , _root(std::move(root))
     {}
 
-    Dropbox::~Dropbox()
-    {}
-
-    static
-    std::string
-    _key_str(Key key)
-    {
-      return elle::sprintf("%x", key).substr(2);
-    }
-
-    boost::filesystem::path
+    bfs::path
     Dropbox::_path(Key key) const
     {
       return this->_root / _key_str(key);
@@ -100,18 +101,18 @@ namespace infinit
       try
       {
         auto metadata = this->_dropbox.metadata("/" + this->_root.string());
-        std::vector<Key> res;
         if (!metadata.is_dir)
           elle::err("%s is not a directory", this->_root.string());
-        if  (!metadata.contents)
-          return res;
-        for (auto const& entry: metadata.contents.get())
-        {
-          std::string address =
-            entry.path.substr(entry.path.find_last_of('/') + 1);
-          res.push_back(model::Address::from_string(address));
-        }
-        return res;
+        if (metadata.contents)
+          return elle::make_vector(metadata.contents.get(),
+                                   [](auto const& entry)
+            {
+              std::string address =
+                entry.path.substr(entry.path.find_last_of('/') + 1);
+              return model::Address::from_string(address);
+            });
+        else
+          return {};
       }
       catch (elle::service::dropbox::NoSuchFile const& e)
       {
@@ -122,13 +123,12 @@ namespace infinit
     BlockStatus
     Dropbox::_status(Key k)
     {
-      boost::filesystem::path p("/" + this->_root.string());
-      p = p / _key_str(k);
+      auto const p = bfs::path("/" + this->_root.string()) / _key_str(k);
       try
       {
         auto metadata = this->_dropbox.local_metadata(p);
         ELLE_DEBUG("status check on %x: %s", p, metadata? "exists" : "unknown");
-        return metadata? BlockStatus::exists : BlockStatus::unknown;
+        return metadata ? BlockStatus::exists : BlockStatus::unknown;
       }
       catch (elle::service::dropbox::NoSuchFile const &)
       {

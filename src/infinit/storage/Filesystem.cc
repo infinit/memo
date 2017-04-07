@@ -20,41 +20,33 @@ namespace infinit
 {
   namespace storage
   {
-    Filesystem::Filesystem(boost::filesystem::path root,
+    namespace bfs = boost::filesystem;
+
+    Filesystem::Filesystem(bfs::path root,
                            boost::optional<int64_t> capacity)
       : Storage(std::move(capacity))
       , _root(std::move(root))
     {
-      using namespace boost;
-      using namespace boost::filesystem;
-      create_directories(this->_root);
-      auto dirs = make_iterator_range(
-        directory_iterator(this->_root), {});
-      for (auto const& dir: dirs)
-      {
-        auto blocks_path = dir.path();
-        if (!is_directory(blocks_path))
-          continue;
-        auto blocks = make_iterator_range(
-          directory_iterator(blocks_path), {});
-        for (auto const& block: blocks)
-        {
-          auto path = block.path();
-          auto _file_size = file_size(path);
-          auto name = path.filename().string();
-          auto addr = infinit::model::Address::from_string(name.substr(2));
-          this->_size_cache[addr] = _file_size;
-          this->_usage += _file_size;
-        }
-      }
+      bfs::create_directories(this->_root);
+      for (auto const& dir: bfs::directory_iterator(this->_root))
+        if (is_directory(dir.path()))
+          for (auto const& block: bfs::directory_iterator(dir.path()))
+          {
+            auto const path = block.path();
+            auto const _file_size = file_size(path);
+            auto const name = path.filename().string();
+            auto const addr = infinit::model::Address::from_string(name.substr(2));
+            this->_size_cache[addr] = _file_size;
+            this->_usage += _file_size;
+          }
       ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)",
-                 this->_usage , this->_size_cache.size());
+                 this->_usage, this->_size_cache.size());
     }
 
     elle::Buffer
     Filesystem::_get(Key key) const
     {
-      boost::filesystem::ifstream input(this->_path(key), std::ios::binary);
+      bfs::ifstream input(this->_path(key), std::ios::binary);
       if (!input.good())
       {
         ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
@@ -78,11 +70,9 @@ namespace infinit
       ELLE_TRACE("set %x", key);
       static elle::Bench bench("bench.fsstorage.set", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      auto path = this->_path(key);
-      bool exists = boost::filesystem::exists(path);
-      int size = 0;
-      if (exists)
-        size = boost::filesystem::file_size(path);
+      auto const path = this->_path(key);
+      bool const exists = bfs::exists(path);
+      int const size = exists ? bfs::file_size(path) : 0;
       int delta = value.size() - size;
       if (this->capacity() && this->usage() + delta > this->capacity())
         throw InsufficientSpace(delta, this->usage(), this->capacity().get());
@@ -90,7 +80,7 @@ namespace infinit
         throw MissingKey(key);
       if (exists && !update)
         throw Collision(key);
-      boost::filesystem::ofstream output(path, std::ios::binary);
+      bfs::ofstream output(path, std::ios::binary);
       if (!output.good())
         elle::err("unable to open for writing: %s", path);
       output.write(
@@ -109,12 +99,12 @@ namespace infinit
       ELLE_TRACE("erase %x", key);
       static elle::Bench bench("bench.fsstorage.erase", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      auto path = this->_path(key);
+      auto const path = this->_path(key);
       if (!exists(path))
         throw MissingKey(key);
       remove(path);
 
-      int delta = this->_size_cache[key];
+      int const delta = this->_size_cache[key];
       this->_size_cache.erase(key);
       ELLE_DEBUG("_erase: -delta = %s", -delta);
       return -delta;
@@ -125,32 +115,24 @@ namespace infinit
     {
       static elle::Bench bench("bench.fsstorage.list", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      std::vector<Key> res;
-      boost::filesystem::recursive_directory_iterator it(this->root());
-      boost::filesystem::recursive_directory_iterator iend;
-      while (it != iend)
+      auto res = std::vector<Key>{};
+      for (auto const& p: bfs::recursive_directory_iterator(this->root()))
       {
-        std::string s = it->path().filename().string();
-        if (s.substr(0, 2) != "0x" || s.length()!=66)
-        {
-          ++it;
-          continue;
-        }
-        Key k = Key::from_string(s.substr(2));
-        res.push_back(k);
-        ++it;
+        std::string const s = p.path().filename().string();
+        if (s.substr(0, 2) == "0x" && s.length() == 66)
+          res.emplace_back(Key::from_string(s.substr(2)));
       }
       return res;
     }
 
-    boost::filesystem::path
+    bfs::path
     Filesystem::_path(Key const& key) const
     {
       auto dirname = elle::sprintf("%x", elle::ConstWeakBuffer(
         key.value(), 1)).substr(2);
       auto dir = this->root() / dirname;
-      if (! boost::filesystem::exists(dir))
-        boost::filesystem::create_directory(dir);
+      if (!bfs::exists(dir))
+        bfs::create_directory(dir);
       return dir / elle::sprintf("%x", key);
     }
 

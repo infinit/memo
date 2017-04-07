@@ -1,16 +1,15 @@
-#ifndef INFINIT_STORAGE_GCS_HH
-# define INFINIT_STORAGE_GCS_HH
+#pragma once
 
-# include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 
-# include <elle/Error.hh>
+#include <elle/Error.hh>
 
-# include <infinit/storage/Storage.hh>
-# include <infinit/storage/Key.hh>
-# include <infinit/storage/GoogleAPI.hh>
+#include <infinit/storage/Storage.hh>
+#include <infinit/storage/Key.hh>
+#include <infinit/storage/GoogleAPI.hh>
 
-# include <elle/reactor/http/Request.hh>
-# include <elle/reactor/http/url.hh>
+#include <elle/reactor/http/Request.hh>
+#include <elle/reactor/http/url.hh>
 
 namespace infinit
 {
@@ -24,23 +23,20 @@ namespace infinit
           std::string const& bucket,
           std::string const& root,
           std::string const& refresh_token);
+
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
 
-      virtual
       int
       _set(Key k,
            elle::Buffer const& value,
            bool insert,
            bool update) override;
 
-      virtual
       int
       _erase(Key k) override;
 
-      virtual
       std::vector<Key>
       _list() override;
 
@@ -62,7 +58,7 @@ namespace infinit
                 boost::optional<std::string> description);
       GCSConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
-      virtual std::unique_ptr<infinit::storage::Storage> make() override;
+      std::unique_ptr<infinit::storage::Storage> make() override;
       std::string bucket;
       std::string root;
       std::string refresh_token;
@@ -70,6 +66,3 @@ namespace infinit
     };
   }
 }
-
-#endif
-
