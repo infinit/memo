@@ -6,9 +6,6 @@ namespace infinit
   {
     namespace blocks
     {
-      ImmutableBlock::ImmutableBlock(Address address)
-        : Super(address)
-      {}
       char const* ImmutableBlock::type = "immutable";
 
       ImmutableBlock::ImmutableBlock(Address address, elle::Buffer data)

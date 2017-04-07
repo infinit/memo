@@ -30,11 +30,6 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Block::Block(Address address)
-        : _address(std::move(address))
-        , _data()
-        , _validated(false)
-      {}
       Block::Block(Address address, elle::Buffer data)
         : _address(std::move(address))
         , _data(std::move(data))

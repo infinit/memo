@@ -24,10 +24,9 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-        MutableBlock(MutableBlock const& other);
+        MutableBlock(MutableBlock const& other) = default;
       protected:
-        MutableBlock(Address address);
-        MutableBlock(Address address, elle::Buffer data);
+        MutableBlock(Address address, elle::Buffer data = {});
         friend class infinit::model::Model;
         bool _data_changed;
 

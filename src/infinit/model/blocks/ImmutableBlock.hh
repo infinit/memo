@@ -27,8 +27,7 @@ namespace infinit
         ImmutableBlock(ImmutableBlock&&) = default;
 
       protected:
-        ImmutableBlock(Address address);
-        ImmutableBlock(Address address, elle::Buffer data);
+        ImmutableBlock(Address address, elle::Buffer data = {});
         ImmutableBlock(ImmutableBlock const& other);
         friend class infinit::model::Model;
 
@@ -36,7 +35,6 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-
       std::unique_ptr<Block>
       clone() const override;
 

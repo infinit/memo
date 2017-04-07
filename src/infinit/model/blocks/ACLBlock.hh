@@ -28,8 +28,7 @@ namespace infinit
       `-------------*/
         ACLBlock(ACLBlock const& other);
       protected:
-        ACLBlock(Address address);
-        ACLBlock(Address address, elle::Buffer data);
+        ACLBlock(Address address, elle::Buffer data = {});
         friend class infinit::model::Model;
 
       /*-------.

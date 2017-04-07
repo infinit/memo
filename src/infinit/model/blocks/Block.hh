@@ -108,20 +108,16 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Block(Address address);
-        Block(Address address, elle::Buffer data);
+        Block(Address address, elle::Buffer data = {});
         Block(Block const& other) = default;
         Block(Block&& other) = default;
         friend class infinit::model::Model;
-
-        ~Block() override = default;
         static char const* type;
 
       /*---------.
       | Clonable |
       `---------*/
       public:
-
         std::unique_ptr<Block>
         clone() const override;
 
@@ -197,7 +193,6 @@ namespace infinit
       /*----------.
       | Printable |
       `----------*/
-
       public:
         void
         print(std::ostream& output) const override;

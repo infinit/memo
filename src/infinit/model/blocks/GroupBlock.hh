@@ -23,11 +23,10 @@ namespace infinit
         using Super = ACLBlock;
         static char const* type;
 
+        GroupBlock(GroupBlock const& other) = default;
 
-        GroupBlock(GroupBlock const& other);
       protected:
-        GroupBlock(Address);
-        GroupBlock(Address, elle::Buffer data);
+        GroupBlock(Address, elle::Buffer data = {});
         friend class infinit::model::Model;
 
       public:
