@@ -1,10 +1,11 @@
 #pragma once
 
-#include <memory>
-#include <string>
+#if INFINIT_ENABLE_PROMETHEUS
+# include <memory>
+# include <string>
 
-#include <prometheus/family.h>
-#include <prometheus/gauge.h>
+# include <prometheus/family.h>
+# include <prometheus/gauge.h>
 
 namespace infinit
 {
@@ -61,3 +62,4 @@ namespace infinit
     Prometheus& instance();
   }
 }
+#endif

@@ -161,7 +161,9 @@ namespace infinit
         int
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
+#if INFINIT_ENABLE_PROMETHEUS
         prometheus::GaugePtr _member_gauge;
+#endif
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);

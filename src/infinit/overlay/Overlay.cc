@@ -25,6 +25,7 @@ namespace infinit
       : _doughnut(dht)
       , _local(local)
     {
+#if INFINIT_ENABLE_PROMETHEUS
       if (auto* g = _doughnut->_member_gauge.get())
       {
         ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
@@ -40,6 +41,7 @@ namespace infinit
             g->Decrement();
           });
       }
+#endif
     }
 
     Overlay::~Overlay()

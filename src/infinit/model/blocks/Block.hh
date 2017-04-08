@@ -34,11 +34,12 @@ namespace infinit
         boost::optional<elle::Buffer> signature;
       };
 
-      /// A gauge to track the number of members of a DHT.
+#if INFINIT_ENABLE_PROMETHEUS
+      /// A gauge family to track the number of blocks.
       ///
       /// May return nullptr if set up failed.
-      infinit::prometheus::GaugePtr
-      make_block_gauge(std::string const& type);
+      infinit::prometheus::Family<infinit::prometheus::Gauge>*
+      block_gauge_family();
 
       /// A base class to bind a gauge to a number of instances.
       template <typename Self>
@@ -68,8 +69,9 @@ namespace infinit
         infinit::prometheus::Gauge*
         _block_gauge()
         {
-          static auto res
-            = infinit::model::blocks::make_block_gauge(Self::type);
+          static auto res = infinit::prometheus::instance()
+            .make(block_gauge_family(),
+                  {{"type", Self::type}});
           return res.get();
         }
 
@@ -97,6 +99,10 @@ namespace infinit
           }
         }
       };
+#else
+      template <typename Self>
+      struct InstanceTracker {};
+#endif
 
       class Block
         : public elle::Printable

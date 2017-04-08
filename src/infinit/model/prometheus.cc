@@ -1,12 +1,13 @@
-#include <infinit/model/prometheus.hh>
+#if INFINIT_ENABLE_PROMETHEUS
+# include <infinit/model/prometheus.hh>
 
-#include <boost/exception/diagnostic_information.hpp>
+# include <boost/exception/diagnostic_information.hpp>
 
-#include <elle/log.hh>
-#include <elle/os/environ.hh>
+# include <elle/log.hh>
+# include <elle/os/environ.hh>
 
-#include <prometheus/exposer.h>
-#include <prometheus/registry.h>
+# include <prometheus/exposer.h>
+# include <prometheus/registry.h>
 
 ELLE_LOG_COMPONENT("infinit.prometheus");
 
@@ -118,3 +119,4 @@ namespace infinit
     }
   }
 }
+#endif

@@ -339,7 +339,9 @@ namespace infinit
                  decltype(cli::no_public_endpoints = false),
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::grpc = boost::optional<std::string>()),
+#if INFINIT_ENABLE_PROMETHEUS
                  decltype(cli::prometheus = boost::optional<std::string>()),
+#endif
                  // Options that used to be hidden.
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),
@@ -376,8 +378,10 @@ namespace infinit
                bool no_public_endpoints = false,
                Strings advertise_host = {},
                boost::optional<std::string> grpc = {},
+#if INFINIT_ENABLE_PROMETHEUS
                boost::optional<std::string> prometheus = {},
-               // Hidden options.
+#endif
+               // Options that used to be hidden.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
                boost::optional<bool> paxos_rebalancing_inspect = {});
 

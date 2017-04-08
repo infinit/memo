@@ -11,18 +11,19 @@ namespace infinit
   {
     namespace blocks
     {
-      infinit::prometheus::GaugePtr
-      make_block_gauge(std::string const& type)
+#if INFINIT_ENABLE_PROMETHEUS
+      infinit::prometheus::Family<infinit::prometheus::Gauge>*
+      block_gauge_family()
       {
         /// The family of COUNTERs used to count the number of
         /// connected members for this DHT.
-        static auto* family
+        static auto* res
           = infinit::prometheus::instance().make_gauge_family(
             "infinit_blocks",
             "Number of blocks");
-        return infinit::prometheus::instance()
-          .make(family, {{"type", type}});
+        return res;
       }
+#endif
 
       char const* Block::type = "block";
 

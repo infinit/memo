@@ -45,6 +45,7 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
 namespace
 {
+#if INFINIT_ENABLE_PROMETHEUS
   /// A gauge to track the number of members of a DHT.
   ///
   /// May return nullptr if set up failed.
@@ -60,7 +61,8 @@ namespace
     return infinit::prometheus::instance()
       .make(family, {{"id", elle::sprintf("%f", id)}});
   }
-  
+#endif
+
   std::chrono::milliseconds
   _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
@@ -171,7 +173,9 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
+#if INFINIT_ENABLE_PROMETHEUS
         , _member_gauge(make_member_gauge(this->id()))
+#endif
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
