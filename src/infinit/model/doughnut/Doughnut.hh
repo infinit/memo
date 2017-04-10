@@ -171,8 +171,8 @@ namespace infinit
 
       public:
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);
-      protected:
 
+      protected:
         std::unique_ptr<blocks::MutableBlock>
         _make_mutable_block() const override;
 
@@ -194,6 +194,7 @@ namespace infinit
 
         std::unique_ptr<model::User>
         _make_user(elle::Buffer const& data) const override;
+
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
@@ -206,6 +207,7 @@ namespace infinit
         void
         _insert(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
+
         void
         _update(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
