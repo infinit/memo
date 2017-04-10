@@ -192,8 +192,13 @@ namespace infinit
 
   using Headers = elle::unordered_map<std::string, std::string>;
 
+  /// Whether this path's filename starts with `.` or ends with `~`.
   bool
   is_hidden_file(boost::filesystem::path const& path);
+
+  /// Whether this entry is a non-hidden regular file.
+  bool
+  is_visible_file(boost::filesystem::directory_entry const& e);
 
   bool
   validate_email(std::string const& candidate);
