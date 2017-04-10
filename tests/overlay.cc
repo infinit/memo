@@ -1743,7 +1743,7 @@ ELLE_TEST_SUITE()
     {
       // WARNING: too low an eviction delay with result in impossible
       // reconnections.
-      auto const eviction_delay = valgrind(1, 5) * 5;
+      auto const eviction_delay = valgrind(5, 5);
       return std::make_unique<kouncil::Kouncil>(&dht, local, eviction_delay);
     };
   auto const kouncil_config
