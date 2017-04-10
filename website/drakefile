@@ -103,12 +103,12 @@ def configure(
     target = changelog,
   )
 
-  changelog_drive = drake.node(
-    'templates/pages/drive/ChangeLog.html',
+  changelog_desktop = drake.node(
+    'templates/pages/desktop/ChangeLog.html',
   )
   drake.markdown.Renderer(
-    source = drake.Node('templates/pages/drive/ChangeLog'),
-    target = changelog_drive,
+    source = drake.Node('templates/pages/desktop/ChangeLog'),
+    target = changelog_desktop,
   )
 
   def copy_generated_pages(nodes):
@@ -157,8 +157,8 @@ def configure(
 
     'templates/pages/docs/get_started.html',
 
-    'templates/pages/drive/drive.html',
-    'templates/pages/drive/ChangeLog.html',
+    'templates/pages/desktop/desktop.html',
+    'templates/pages/desktop/ChangeLog.html',
 
     'templates/pages/press/investors.html',
     'templates/pages/press/pr_storage.html',

@@ -81,36 +81,36 @@ class Website(bottle.Bottle):
       'description': 'Infinit provides persistent storage through several solutions well suited to make your containerized Docker applications stateful.',
     }
 
-  @route('/drive', name = 'drive')
-  @view('pages/drive/drive.html')
+  @route('/desktop', name = 'drive')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/linux', name = 'drive_linux')
-  @view('pages/drive/drive.html')
+  @route('/desktop/linux', name = 'desktop_linux')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Linux',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Linux',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/mac', name = 'drive_mac')
-  @view('pages/drive/drive.html')
+  @route('/desktop/mac', name = 'desktop_mac')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Mac',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Mac',
+      'description': 'The Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/windows', name = 'drive_windows')
-  @view('pages/drive/drive.html')
+  @route('/desktop/windows', name = 'desktop_windows')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Windows',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Windows',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
   @route('/download', name = 'download')
