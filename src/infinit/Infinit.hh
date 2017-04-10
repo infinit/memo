@@ -15,6 +15,8 @@
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   class Infinit
   {
   public:

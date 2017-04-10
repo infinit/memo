@@ -6,24 +6,17 @@ namespace infinit
   std::vector<std::unique_ptr<T, std::default_delete<Credentials>>>
   Infinit::credentials(std::string const& name) const
   {
-    std::vector<
-      std::unique_ptr<
-        T,
-        std::default_delete<Credentials>
-        >
-      > res;
-    auto const path = this->_credentials_path(name);
-    boost::filesystem::directory_iterator const end;
-    for (boost::filesystem::directory_iterator it(path);
-         it != end;
-         ++it)
-    {
-      if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
-        continue;
-      boost::filesystem::ifstream f;
-      this->_open_read(f, it->path(), name, "credential");
-      res.push_back(std::dynamic_pointer_cast<T>(load<std::unique_ptr<Credentials>>(f)));
-    }
+    auto res
+      = std::vector<std::unique_ptr<T, std::default_delete<Credentials>>>{};
+    for (auto const& p
+           : bfs::directory_iterator(this->_credentials_path(name)))
+      if (is_visible_file(p))
+      {
+        bfs::ifstream f;
+        this->_open_read(f, p, name, "credential");
+        res.emplace_back(
+          std::dynamic_pointer_cast<T>(load<std::unique_ptr<Credentials>>(f)));
+      }
     return res;
   }
 
