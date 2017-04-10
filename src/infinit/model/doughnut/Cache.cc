@@ -20,6 +20,8 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache");
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   namespace model
   {
     namespace doughnut
@@ -440,12 +442,10 @@ namespace infinit
             return;
           ELLE_TRACE_SCOPE("%s: reload disk cache", this);
           int count = 0;
-          for (auto it = boost::filesystem::directory_iterator(*this->_disk_cache_path);
-              it != boost::filesystem::directory_iterator();
-              ++it)
+          for (auto const& p: bfs::directory_iterator(*this->_disk_cache_path))
           {
-            auto sz = boost::filesystem::file_size(it->path());
-            auto addr = Address::from_string(it->path().filename().string().substr(2));
+            auto sz = boost::filesystem::file_size(p);
+            auto addr = Address::from_string(p.path().filename().string().substr(2));
             this->_disk_cache.insert(CachedCHB{addr, sz, clock::time_point()});
             this->_disk_cache_used += sz;
             ++count;
