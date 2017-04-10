@@ -70,6 +70,14 @@ namespace infinit
         return convert_capacity(intval, quantifier);
       }
 
+      boost::optional<int64_t>
+      convert_capacity(boost::optional<std::string> capacity)
+      {
+        return capacity
+          ? convert_capacity(*capacity)
+          : boost::optional<int64_t>{};
+      }
+
       std::string
       pretty_print(int64_t bytes, int64_t zeros)
       {
@@ -198,13 +206,10 @@ namespace infinit
     Silo::Create::mode_dropbox(std::string const& name,
                                std::string const& account_name,
                                boost::optional<std::string> description,
-                               boost::optional<std::string> capacity_repr,
+                               boost::optional<std::string> capacity,
                                boost::optional<std::string> output,
                                boost::optional<std::string> root)
     {
-      boost::optional<int64_t> capacity;
-      if (capacity_repr)
-        capacity = convert_capacity(*capacity_repr);
       if (!root)
         root = elle::sprintf("storage_%s", name);
       auto account = this->cli().infinit().credentials_dropbox(account_name);
@@ -215,20 +220,17 @@ namespace infinit
           name,
           account->token,
           std::move(root),
-          std::move(capacity),
+          convert_capacity(capacity),
           std::move(description)));
     })
 
     void
     Silo::Create::mode_filesystem(std::string const& name,
                                   boost::optional<std::string> description,
-                                  boost::optional<std::string> capacity_repr,
+                                  boost::optional<std::string> capacity,
                                   boost::optional<std::string> output,
                                   boost::optional<std::string> root)
     {
-      boost::optional<int64_t> capacity;
-      if (capacity_repr)
-        capacity = convert_capacity(*capacity_repr);
       auto path = root ?
         infinit::canonical_folder(root.get()) :
         (infinit::xdg_data_home() / "blocks" / name);
@@ -246,7 +248,7 @@ namespace infinit
         elle::make_unique<infinit::storage::FilesystemStorageConfig>(
           name,
           std::move(path.string()),
-          std::move(capacity),
+          convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -256,15 +258,11 @@ namespace infinit
                            std::string const& account_name,
                            std::string const& bucket,
                            boost::optional<std::string> description,
-                           boost::optional<std::string> capacity_repr,
+                           boost::optional<std::string> capacity,
                            boost::optional<std::string> output,
                            boost::optional<std::string> root)
     {
       auto self = this->cli().as_user();
-      auto const capacity
-        = capacity_repr
-        ? convert_capacity(*capacity_repr)
-        : boost::optional<int64_t>{};
       auto const account = this->cli().infinit().credentials_gcs(account_name);
       mode_create(
         this->cli(),
@@ -275,7 +273,7 @@ namespace infinit
           root.value_or(elle::print("{}_blocks", name)),
           self.name,
           account->refresh_token,
-          std::move(capacity),
+          convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -285,15 +283,12 @@ namespace infinit
                           std::string const& bucket,
                           std::string const& region,
                           boost::optional<std::string> description,
-                          boost::optional<std::string> capacity_repr,
+                          boost::optional<std::string> capacity,
                           boost::optional<std::string> output,
                           std::string const& endpoint,
                           boost::optional<std::string> const& storage_class_str,
                           boost::optional<std::string> root)
     {
-      boost::optional<int64_t> capacity;
-      if (capacity_repr)
-        capacity = convert_capacity(*capacity_repr);
       if (!root)
         root = elle::sprintf("%s_blocks", name);
       auto account = this->cli().infinit().credentials_aws(account_name);
@@ -325,7 +320,7 @@ namespace infinit
           name,
           std::move(aws_credentials),
           storage_class,
-          std::move(capacity),
+          convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -333,14 +328,11 @@ namespace infinit
     Silo::Create::mode_google_drive(std::string const& name,
                                     std::string const& account_name,
                                     boost::optional<std::string> description,
-                                    boost::optional<std::string> capacity_repr,
+                                    boost::optional<std::string> capacity,
                                     boost::optional<std::string> output,
                                     boost::optional<std::string> root)
     {
       auto self = this->cli().as_user();
-      boost::optional<int64_t> capacity;
-      if (capacity_repr)
-        capacity = convert_capacity(*capacity_repr);
       if (!root)
         root = elle::sprintf(".infinit_%s", name);
       auto account = this->cli().infinit().credentials_google(account_name);
@@ -352,7 +344,7 @@ namespace infinit
           std::move(root),
           account->refresh_token,
           self.name,
-          std::move(capacity),
+          convert_capacity(capacity),
           std::move(description)));
     })
 
@@ -393,8 +385,8 @@ namespace infinit
         {
           auto o = elle::json::Object{
             {"name", static_cast<std::string>(storage->name)},
-            {"capacity", (storage->capacity ? pretty_print(storage->capacity.get())
-                          : "unlimited")},
+            {"capacity", (storage->capacity
+                          ? pretty_print(*storage->capacity) : "unlimited")},
           };
           if (storage->description)
             o["description"] = storage->description.get();
@@ -407,9 +399,8 @@ namespace infinit
           elle::print(
             std::cout, "{0}{1? \"{1}\"}: {2}\n",
             storage->name, storage->description,
-            storage->capacity ?
-            pretty_print(storage->capacity.get()) :
-            "unlimited");
+            storage->capacity
+            ? pretty_print(*storage->capacity) : "unlimited");
     }
 
     void
