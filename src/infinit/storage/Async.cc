@@ -97,29 +97,25 @@ namespace infinit
     Async::_restore_journal()
     {
       ELLE_TRACE("Restoring journal from %s", _journal_dir);
-      auto p = bfs::path(_journal_dir);
+      auto const path = bfs::path(_journal_dir);
       unsigned int min_id = [&]
         {
+          // FIXME: stou, boost::min_element.
           unsigned res = -1;
-          for (auto it = bfs::directory_iterator(p);
-               it != bfs::directory_iterator();
-               ++it)
+          for (auto const& p: bfs::directory_iterator(path))
           {
-            auto id = std::stoi(it->path().filename().string());
+            auto id = std::stoi(p.path().filename().string());
             res = std::min(res, unsigned(id));
           }
           return res;
         }();
-
       _op_offset = signed(min_id) == -1 ? 0 : min_id;
-      for (auto it = bfs::directory_iterator(p);
-           it != bfs::directory_iterator();
-           ++it)
+      for (auto const& p: bfs::directory_iterator(path))
       {
-        auto id = std::stoi(it->path().filename().string());
+        auto const id = std::stoi(p.path().filename().string());
         while (signed(_op_cache.size() + _op_offset) <= id)
           _op_cache.emplace_back(Key(), Operation::none, elle::Buffer(), 0);
-        bfs::ifstream is(*it);
+        bfs::ifstream is(p.path());
         auto sin = elle::serialization::binary::SerializerIn(is);
         auto op = Operation(sin.deserialize<int>("operation"));
         auto k = sin.deserialize<Key>("key");

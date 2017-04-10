@@ -5,8 +5,6 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
-namespace bfs = boost::filesystem;
-
 namespace infinit
 {
   bool
@@ -32,7 +30,7 @@ namespace infinit
   }
 
   bool
-  Infinit::_delete(boost::filesystem::path const& path,
+  Infinit::_delete(bfs::path const& path,
                    std::string const& type,
                    std::string const& name)
   {
@@ -50,7 +48,7 @@ namespace infinit
   }
 
   bool
-  Infinit::_delete_all(boost::filesystem::path const& path,
+  Infinit::_delete_all(bfs::path const& path,
                        std::string const& type,
                        std::string const& name)
   {

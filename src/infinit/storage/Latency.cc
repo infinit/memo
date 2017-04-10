@@ -126,7 +126,6 @@ namespace infinit
         s.serialize("latency_erase", this->latency_erase);
       }
 
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override
       {
