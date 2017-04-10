@@ -24,19 +24,21 @@
 
 ELLE_LOG_COMPONENT("backward-compatibility");
 
+namespace bfs = boost::filesystem;
+
 static
-boost::filesystem::path
+bfs::path
 root()
 {
-  static boost::filesystem::path source(elle::os::getenv("SOURCE_DIR", "."));
+  static bfs::path source(elle::os::getenv("SOURCE_DIR", "."));
   auto res = source / "tests/backward-compatibility";
-  if (!boost::filesystem::exists(res))
+  if (!bfs::exists(res))
     res = source / "backend/tests/backward-compatibility";
   return res;
 }
 
 static
-boost::filesystem::path
+bfs::path
 path(elle::Version const& v)
 {
   return root() / elle::sprintf("%s", v);
@@ -233,19 +235,19 @@ struct TestSetConflictResolver
 
 template<typename Base>
 void
-generate(std::string const& name, Base* b, boost::filesystem::path dir,
+generate(std::string const& name, Base* b, bfs::path dir,
          elle::Version const& version)
 {
   {
     auto path = dir / elle::sprintf("%s.bin", name);
-    boost::filesystem::ofstream output(path);
+    bfs::ofstream output(path);
     if (!output.good())
        elle::err("unable to open %s", path);
     elle::serialization::binary::serialize(b, output, version, false);
   }
   {
     auto path = dir / elle::sprintf("%s.json", name);
-    boost::filesystem::ofstream output(path);
+    bfs::ofstream output(path);
     if (!output.good())
       elle::err("unable to open %s", path);
     elle::serialization::json::serialize(b, output, version, false);
@@ -299,7 +301,7 @@ main(int argc, char** argv)
         auto current = path(current_version);
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
-        boost::filesystem::create_directories(current);
+        bfs::create_directories(current);
         TestSet set(keys, current_version);
         set.apply(
           "generate",
@@ -317,20 +319,18 @@ main(int argc, char** argv)
       }
       else
       {
-        for (auto it = boost::filesystem::directory_iterator(root());
-             it != boost::filesystem::directory_iterator();
-             ++it)
+        for (auto const& p: bfs::directory_iterator(root()))
         {
-          auto version = [&] ()
+          auto const version = [&]
           {
-            auto filename = it->path().filename().string();
+            auto const filename = p.path().filename().string();
             try
             {
-              auto dot = filename.find('.');
+              auto const dot = filename.find('.');
               if (dot == std::string::npos)
                 throw std::runtime_error("override me I'm famous");
-              auto major = std::stoi(filename.substr(0, dot));
-              auto minor = std::stoi(filename.substr(dot + 1));
+              auto const major = std::stoi(filename.substr(0, dot));
+              auto const minor = std::stoi(filename.substr(dot + 1));
               return elle::Version(major, minor, 0);
             }
             catch (std::exception const&)
@@ -347,12 +347,12 @@ main(int argc, char** argv)
             [&] (std::string const& name, infinit::model::blocks::Block* b)
             {
               {
-                auto path = it->path() / elle::sprintf("%s.json", name);
-                boost::filesystem::ifstream input(path);
+                auto path = p / elle::sprintf("%s.json", name);
+                bfs::ifstream input(path);
                 if (!input.good())
                   elle::err("unable to open %s", path);
                 auto contents = elle::Buffer(
-                  std::string((std::istreambuf_iterator<char>(input)),
+                  std::string(std::istreambuf_iterator<char>(input),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
                   contents,
@@ -392,12 +392,12 @@ main(int argc, char** argv)
                 ELLE_ASSERT(loaded->validate(set.dht, false));
               }
               {
-                auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path, std::ios::binary);
+                auto path = p / elle::sprintf("%s.bin", name);
+                bfs::ifstream input(path, std::ios::binary);
                 if (!input.good())
                   elle::err("unable to open %s", path);
                 auto contents = elle::Buffer(
-                  std::string((std::istreambuf_iterator<char>(input)),
+                  std::string(std::istreambuf_iterator<char>(input),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
                   contents,
@@ -410,30 +410,30 @@ main(int argc, char** argv)
             [&] (std::string const& name, infinit::model::ConflictResolver* b)
             {
               {
-                auto path = it->path() / elle::sprintf("%s.json", name);
-                boost::filesystem::ifstream input(path);
+                auto path = p / elle::sprintf("%s.json", name);
+                bfs::ifstream input(path);
                 if (!input.good())
                 {
                   ELLE_WARN("unable to open %s", path);
                   return;
                 }
-                elle::Buffer contents(
-                  std::string((std::istreambuf_iterator<char>(input)),
+                auto contents = elle::Buffer(
+                  std::string(std::istreambuf_iterator<char>(input),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
                   contents,
                   elle::serialization::json::serialize(b, version, false));
               }
               {
-                auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path, std::ios::binary);
+                auto path = p / elle::sprintf("%s.bin", name);
+                bfs::ifstream input(path, std::ios::binary);
                 if (!input.good())
                 {
                   ELLE_WARN("unable to open %s", path);
                   return;
                 }
-                elle::Buffer contents(
-                  std::string((std::istreambuf_iterator<char>(input)),
+                auto contents = elle::Buffer(
+                  std::string(std::istreambuf_iterator<char>(input),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
                   contents,

@@ -448,8 +448,7 @@ namespace infinit
       Doughnut::ServicesTypes
       Doughnut::services()
       {
-        auto block = this->_services_block(false);
-        if (block)
+        if (auto block = this->_services_block(false))
           return elle::serialization::binary::deserialize
             <ServicesTypes>(block->data());
         else
@@ -700,7 +699,7 @@ namespace infinit
         boost::optional<std::string> rdv_host,
         boost::optional<boost::filesystem::path> monitoring_socket_path)
       {
-        Doughnut::ConsensusBuilder consensus =
+        auto make_consensus =
           [&] (Doughnut& dht)
           {
             if (!this->consensus)
@@ -727,7 +726,7 @@ namespace infinit
             }
             return consensus;
           };
-        Doughnut::OverlayBuilder overlay =
+        auto make_overlay =
           [&] (Doughnut& dht, std::shared_ptr<Local> local)
           {
             if (!this->overlay)
@@ -743,8 +742,8 @@ namespace infinit
           std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
           owner,
           passport,
-          std::move(consensus),
-          std::move(overlay),
+          make_consensus,
+          make_overlay,
           port_.value_or(this->port.value_or(0)),
           std::move(listen_address),
           std::move(storage),

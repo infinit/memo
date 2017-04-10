@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/range/algorithm/sort.hpp>
 
 #include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
@@ -29,6 +30,8 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async");
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   namespace model
   {
     namespace doughnut
@@ -63,7 +66,7 @@ namespace infinit
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
-                     boost::filesystem::path journal_dir,
+                     bfs::path journal_dir,
                      int max_size)
           : Consensus(backend->doughnut())
           , _backend(std::move(backend))
@@ -86,10 +89,10 @@ namespace infinit
         {
           if (!this->_journal_dir.empty())
           {
-            boost::filesystem::create_directories(this->_journal_dir);
-            boost::filesystem::permissions(this->_journal_dir,
-              boost::filesystem::remove_perms
-              | boost::filesystem::others_all | boost::filesystem::group_all);
+            bfs::create_directories(this->_journal_dir);
+            bfs::permissions(this->_journal_dir,
+              bfs::remove_perms
+              | bfs::others_all | bfs::group_all);
           }
           if (max_size)
             this->_queue.max_size(max_size);
@@ -104,16 +107,13 @@ namespace infinit
             this->_init_barrier.open();
         }
 
-        std::vector<boost::filesystem::path>
-        Async::entries(boost::filesystem::path const& root)
+        std::vector<bfs::path>
+        Async::entries(bfs::path const& root)
         {
-          std::vector<boost::filesystem::path> paths;
-          std::copy(boost::filesystem::directory_iterator(root),
-                    boost::filesystem::directory_iterator(),
-                    std::back_inserter(paths));
-          std::sort(paths.begin(), paths.end(),
-                    [] (boost::filesystem::path const& a,
-                        boost::filesystem::path const& b) -> bool
+          auto paths = std::vector<bfs::path>
+            {bfs::directory_iterator(root), bfs::directory_iterator()};
+          boost::sort(paths,
+                    [] (bfs::path const& a, bfs::path const& b)
                     {
                       return std::stoi(a.filename().string()) <
                         std::stoi(b.filename().string());
@@ -129,7 +129,7 @@ namespace infinit
             });
           ELLE_TRACE_SCOPE("%s: restore journal from %s",
                            *this, this->_journal_dir);
-          boost::filesystem::path p(_journal_dir);
+          bfs::path p(_journal_dir);
           auto files = Async::entries(p);
           for (auto const& p: files)
           {
@@ -240,9 +240,9 @@ namespace infinit
         }
 
         Async::Op
-        Async::_load_op(boost::filesystem::path const& p, bool signature)
+        Async::_load_op(bfs::path const& p, bool signature)
         {
-          boost::filesystem::ifstream is(p, std::ios::binary);
+          bfs::ifstream is(p, std::ios::binary);
           elle::serialization::binary::SerializerIn sin(is);
           sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
           sin.set_context<Doughnut*>(&this->doughnut());
@@ -353,8 +353,8 @@ namespace infinit
                   if (!this->_journal_dir.empty())
                   {
                     auto path =
-                      boost::filesystem::path(_journal_dir) / std::to_string(last_candidate_index);
-                    boost::filesystem::ofstream os(path, std::ios::binary);
+                      bfs::path(_journal_dir) / std::to_string(last_candidate_index);
+                    bfs::ofstream os(path, std::ios::binary);
                     elle::serialization::binary::SerializerOut sout(os);
                     sout.set_context(ACBDontWaitForSignature{});
                     sout.set_context(OKBDontWaitForSignature{});
@@ -371,9 +371,9 @@ namespace infinit
                 this->_operations.get<1>().erase(last_candidate_index);
                 if (!this->_journal_dir.empty())
                 {
-                  auto path = boost::filesystem::path(this->_journal_dir) /
+                  auto path = bfs::path(this->_journal_dir) /
                   std::to_string(idx);
-                  boost::filesystem::remove(path);
+                  bfs::remove(path);
                 }
                 if (this->_first_disk_index
                   && this->_first_disk_index.get() == idx)
@@ -392,8 +392,8 @@ namespace infinit
           if (!this->_journal_dir.empty())
           {
             auto path =
-              boost::filesystem::path(_journal_dir) / std::to_string(op.index);
-            boost::filesystem::ofstream os(path, std::ios::binary);
+              bfs::path(_journal_dir) / std::to_string(op.index);
+            bfs::ofstream os(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(os);
             sout.set_context(ACBDontWaitForSignature{});
             sout.set_context(OKBDontWaitForSignature{});
@@ -563,9 +563,8 @@ namespace infinit
               this->_process_operation(std::move(op));
               if (!this->_journal_dir.empty())
               {
-                auto path = boost::filesystem::path(this->_journal_dir) /
-                  std::to_string(index);
-                boost::filesystem::remove(path);
+                auto path = bfs::path(this->_journal_dir) / std::to_string(index);
+                bfs::remove(path);
                 this->_last_processed_index = index;
               }
               this->_operations.get<1>().erase(it);
