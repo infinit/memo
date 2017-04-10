@@ -418,12 +418,16 @@ namespace infinit
               }
               this->_connected = true;
               ELLE_TRACE("connected through %s", this->_connected_endpoint);
-              auto connected_it =
+              this->_connected_it =
                 this->_dock._connected.insert(this->shared_from_this()).first;
               this->_dock._connecting.erase(connecting_it);
               auto const cleanup = [&]
                 {
-                  this->_dock._connected.erase(connected_it);
+                  if (this->_connected_it)
+                  {
+                    this->_dock._connected.erase(this->_connected_it.get());
+                    this->_connected_it.reset();
+                  }
                   this->_disconnected = true;
                   this->_disconnected_since = std::chrono::system_clock::now();
                   {
@@ -476,6 +480,11 @@ namespace infinit
 
       Dock::Connection::~Connection() noexcept(false)
       {
+        if (this->_connected_it)
+        {
+          this->_dock._connected.erase(this->_connected_it.get());
+          this->_connected_it.reset();
+        }
         if (this->_thread)
           this->_thread->terminate_now(false);
       }
