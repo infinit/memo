@@ -1278,6 +1278,8 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
+  // FIXME: test run in TCP only because the BF for some reason takes forever
+  // (nearly 30s) to detect stale UTP connections.
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
