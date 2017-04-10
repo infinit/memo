@@ -115,6 +115,12 @@ namespace infinit
   }
 
   bool
+  is_visible_file(boost::filesystem::directory_entry const& e)
+  {
+    return is_regular_file(e.status()) && !is_hidden_file(e);
+  }
+
+  bool
   validate_email(std::string const& candidate)
   {
     static const auto email_regex = std::regex(EMAIL_REGEX);

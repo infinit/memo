@@ -122,7 +122,7 @@ namespace infinit
     auto extract =
       [&] (bfs::path const& path, bool move) {
       for (auto const& p: bfs::recursive_directory_iterator(path))
-        if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+        if (is_visible_file(p))
         {
           bfs::ifstream f;
           this->_open_read(
@@ -259,7 +259,7 @@ namespace infinit
     auto res = std::vector<Drive>{};
     for (auto const& p
            : bfs::recursive_directory_iterator(this->_drives_path()))
-      if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
         this->_open_read(
@@ -375,7 +375,7 @@ namespace infinit
     if (!bfs::exists(path))
       return res;
     for (auto const& p: bfs::recursive_directory_iterator(path))
-      if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         auto user_name = p.path().filename().string();
         bfs::ifstream f;
@@ -464,7 +464,7 @@ namespace infinit
   {
     auto res = std::vector<User>{};
     for (auto const& p: bfs::recursive_directory_iterator(this->_users_path()))
-      if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
         this->_open_read(f, p.path(), p.path().filename().string(), "user");
@@ -507,7 +507,7 @@ namespace infinit
     auto res = std::vector<std::unique_ptr<storage::StorageConfig>>{};
     for (auto const& p
            : bfs::recursive_directory_iterator(this->_storages_path()))
-      if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+      if (is_visible_file(p))
         res.emplace_back(storage_get(p.path().filename().string()));
     return res;
   }
@@ -609,7 +609,7 @@ namespace infinit
     auto res = std::vector<Volume>{};
     for (auto const& p
            : bfs::recursive_directory_iterator(this->_volumes_path()))
-      if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
         this->_open_read(f, p.path(), p.path().filename().string(), "volume");
