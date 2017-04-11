@@ -51,9 +51,8 @@ namespace infinit
                   return owner;
               case STORE_UPDATE:
                 return this->doughnut().overlay()->lookup(block->address());
-              default:
-                ELLE_ABORT("unrecognized store mode: %s", mode);
             }
+            ELLE_ABORT("unrecognized store mode: %s", mode);
           }();
           std::unique_ptr<blocks::Block> nb;
           while (true)
@@ -99,8 +98,7 @@ namespace infinit
 
         void
         Consensus::fetch(std::vector<AddressVersion> const& addresses,
-                         std::function<void(Address, std::unique_ptr<blocks::Block>,
-                           std::exception_ptr)> res)
+                         ReceiveBlock res)
         {
            ELLE_TRACE_SCOPE("%s: fetch %s", *this, addresses);
            this->_fetch(addresses, res);
@@ -108,8 +106,7 @@ namespace infinit
 
         void
         Consensus::_fetch(std::vector<AddressVersion> const& addresses,
-                         std::function<void(Address, std::unique_ptr<blocks::Block>,
-                           std::exception_ptr)> res)
+                          ReceiveBlock res)
         {
           for (auto a: addresses)
           {
