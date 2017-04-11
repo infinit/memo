@@ -57,6 +57,41 @@ namespace infinit
 {
   namespace filesystem
   {
+    std::ostream&
+    operator <<(std::ostream& out, EntryType entry)
+    {
+      switch (entry)
+      {
+      case EntryType::pending:
+        return out << "pending";
+      case EntryType::file:
+        return out << "file";
+      case EntryType::directory:
+        return out << "directory";
+      case EntryType::symlink:
+        return out << "symlink";
+      }
+      elle::unreachable();
+    }
+
+    std::ostream&
+    operator <<(std::ostream& out, OperationType operation)
+    {
+      switch (operation)
+      {
+      case OperationType::insert:
+        return out << "insert";
+      case OperationType::insert_exclusive:
+        return out << "insert_exclusive";
+      case OperationType::update:
+        return out << "update";
+      case OperationType::remove:
+        return out << "remove";
+      }
+      elle::unreachable();
+    }
+
+
     FileSystem::FileSystem(
         std::string volume_name,
         std::shared_ptr<model::Model> model,
@@ -750,47 +785,4 @@ namespace infinit
 
 namespace std
 {
-  std::ostream&
-  operator <<(std::ostream& out,
-              infinit::filesystem::EntryType entry)
-  {
-    switch (entry)
-    {
-      case infinit::filesystem::EntryType::pending:
-        out << "pending";
-        break;
-      case infinit::filesystem::EntryType::file:
-        out << "file";
-        break;
-      case infinit::filesystem::EntryType::directory:
-        out << "directory";
-        break;
-      case infinit::filesystem::EntryType::symlink:
-        out << "symlink";
-        break;
-    }
-    return out;
-  }
-
-  std::ostream&
-  operator <<(std::ostream& out,
-              infinit::filesystem::OperationType operation)
-  {
-    switch (operation)
-    {
-      case infinit::filesystem::OperationType::insert:
-        out << "insert";
-        break;
-      case infinit::filesystem::OperationType::insert_exclusive:
-        out << "insert_exclusive";
-        break;
-      case infinit::filesystem::OperationType::update:
-        out << "update";
-        break;
-      case infinit::filesystem::OperationType::remove:
-        out << "remove";
-        break;
-    }
-    return out;
-  }
 }
