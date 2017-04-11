@@ -407,8 +407,7 @@ namespace infinit
 
       void
       Doughnut::_fetch(std::vector<AddressVersion> const& addresses,
-        std::function<void(Address, std::unique_ptr<blocks::Block>,
-          std::exception_ptr)> res) const
+                       ReceiveBlock res) const
       {
         this->_consensus->fetch(addresses, res);
       }
