@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <boost/signals2.hpp>
+#include <boost/filesystem.hpp>
 
 #include <elle/Buffer.hh>
 #include <elle/attribute.hh>
@@ -19,6 +20,8 @@ namespace infinit
 {
   namespace storage
   {
+    namespace bfs = boost::filesystem;
+
     enum class BlockStatus
     {
       exists,
@@ -105,6 +108,22 @@ namespace infinit
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args);
+
+    /// Whether is a block name.
+    inline
+    bool
+    is_block(std::string const& name)
+    {
+      return name.substr(0, 2) == "0x" && name.length() == 66;
+    }
+
+    /// Whether is a block name.
+    inline
+    bool
+    is_block(bfs::directory_entry const& p)
+    {
+      return is_block(p.path().filename().string());
+    }
 
     struct StorageConfig
       : public descriptor::TemplatedBaseDescriptor<StorageConfig>

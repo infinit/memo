@@ -117,11 +117,9 @@ namespace infinit
       elle::Bench::BenchScope bs(bench);
       auto res = std::vector<Key>{};
       for (auto const& p: bfs::recursive_directory_iterator(this->root()))
-      {
-        std::string const s = p.path().filename().string();
-        if (s.substr(0, 2) == "0x" && s.length() == 66)
-          res.emplace_back(Key::from_string(s.substr(2)));
-      }
+        if (is_block(p))
+          res.emplace_back(
+            Key::from_string(p.path().filename().string().substr(2)));
       return res;
     }
 

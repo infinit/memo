@@ -27,8 +27,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::doughnut::Local;
-        using Super = infinit::model::doughnut::Peer;
+        using Self = Local;
+        using Super = Peer;
 
       /*-------------.
       | Construction |

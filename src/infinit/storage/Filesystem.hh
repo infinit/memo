@@ -1,10 +1,9 @@
-#ifndef INFINIT_STORAGE_FILESYSTEM_HH
-# define INFINIT_STORAGE_FILESYSTEM_HH
+#pragma once
 
-# include <boost/filesystem/path.hpp>
+#include <boost/filesystem/path.hpp>
 
-# include <infinit/storage/Key.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/storage/Key.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -47,5 +46,3 @@ namespace infinit
     };
   }
 }
-
-#endif
