@@ -72,6 +72,8 @@ namespace infinit
                       *doughnut.local()->utp_server() :
                       *this->_local_utp_server)
       {
+        ELLE_TRACE_SCOPE("%s: construct");
+        ELLE_DEBUG("tcp heartbeat: %s", tcp_heartbeat);
         if (this->_local_utp_server)
         {
           bool v6 = ipv6_enabled
