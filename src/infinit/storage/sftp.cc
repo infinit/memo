@@ -597,7 +597,7 @@ namespace infinit
           std::string s = p.readString().string();
           p.skipAttr();
           if (is_block(s))
-            res.emplace_back(Key::from_string(s.substr(2)));
+            res.emplace_back(Key::from_string(s));
         }
       }
       p.make(SSH_FXP_CLOSE, ++_req, handle);

@@ -118,7 +118,7 @@ namespace infinit
         try
         {
           res.push_back(
-            infinit::model::Address::from_string(pair.first.substr(2)));
+            infinit::model::Address::from_string(pair.first));
         }
         catch (elle::Error const& e)
         {

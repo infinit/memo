@@ -445,7 +445,7 @@ namespace infinit
           for (auto const& p: bfs::directory_iterator(*this->_disk_cache_path))
           {
             auto sz = boost::filesystem::file_size(p);
-            auto addr = Address::from_string(p.path().filename().string().substr(2));
+            auto addr = Address::from_string(p.path().filename().string());
             this->_disk_cache.insert(CachedCHB{addr, sz, clock::time_point()});
             this->_disk_cache_used += sz;
             ++count;

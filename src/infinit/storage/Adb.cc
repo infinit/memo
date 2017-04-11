@@ -80,7 +80,7 @@ namespace infinit
         if (s.empty())
           break;
         if (is_block(s))
-          res.emplace_back(Key::from_string(s.substr(2)));
+          res.emplace_back(Key::from_string(s));
       }
       return res;
     }
