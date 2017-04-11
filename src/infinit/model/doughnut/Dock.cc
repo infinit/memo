@@ -309,15 +309,27 @@ namespace infinit
                       ping_time,
                       ping_time);
                   auto channels =
-                  elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
-                  if (!disable_key)
-                    this->_key_exchange(*channels);
-                  ELLE_TRACE("%s: connected", this);
-                  this->_socket = std::move(socket);
-                  this->_serializer = std::move(serializer);
-                  this->_channels = std::move(channels);
-                  ELLE_ASSERT(this->_channels);
-                  connected = true;
+                    elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
+                  try
+                  {
+                    if (!disable_key)
+                      this->_key_exchange(*channels);
+                    ELLE_TRACE("%s: connected", this);
+                    this->_socket = std::move(socket);
+                    this->_serializer = std::move(serializer);
+                    this->_channels = std::move(channels);
+                    ELLE_ASSERT(this->_channels);
+                    connected = true;
+                  }
+                  catch (...)
+                  {
+                    // Delay termination from destructor.
+                    elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
+                    {
+                      channels.reset();
+                    };
+                    throw;
+                  }
                 };
               auto umbrella = [&, this] (auto const& f)
                 {
