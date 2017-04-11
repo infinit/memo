@@ -89,8 +89,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           void
           _fetch(std::vector<AddressVersion> const& addresses,
-                 std::function<void(Address, std::unique_ptr<blocks::Block>,
-                   std::exception_ptr)> res) override;
+                 ReceiveBlock res) override;
           std::unique_ptr<blocks::Block>
           _fetch(Address address,
                  PaxosClient::Peers peers,
@@ -106,6 +105,7 @@ namespace infinit
                      int version);
           Paxos::PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
+
         private:
           PaxosClient::Peers
           _peers(Address const& address,

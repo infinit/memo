@@ -31,6 +31,8 @@ namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
+
     class ACLConflictResolver
       : public model::ConflictResolver
     {
@@ -141,14 +143,14 @@ namespace infinit
     static bool acl_preserver = getenv("INFINIT_PRESERVE_ACLS");
 
     void
-    Node::rename(boost::filesystem::path const& where)
+    Node::rename(bfs::path const& where)
     {
-      std::string newname = where.filename().string();
-      boost::filesystem::path newpath = where.parent_path();
       if (!this->_parent)
         throw rfs::Error(EINVAL, "Cannot delete root node");
-      auto destparent = this->_owner.filesystem()->path(newpath.string());
-      auto dir = std::dynamic_pointer_cast<Directory>(destparent);
+      auto const newname = where.filename().string();
+      auto const newpath = where.parent_path();
+      auto const destparent = this->_owner.filesystem()->path(newpath.string());
+      auto const dir = std::dynamic_pointer_cast<Directory>(destparent);
       if (!dir)
       {
         if (std::dynamic_pointer_cast<Unreachable>(destparent))
@@ -170,9 +172,9 @@ namespace infinit
           {
             target->rmdir();
           }
-          catch(rfs::Error const& e)
+          catch (rfs::Error const& e)
           {
-            throw rfs::Error(ENOTEMPTY, "Target is a directory");
+            throw rfs::Error(ENOTEMPTY, "Target is a nonempty directory");
           }
         }
         else
@@ -914,7 +916,7 @@ namespace infinit
         ));
     }
 
-    boost::filesystem::path
+    bfs::path
     Node::full_path()
     {
       if (this->_parent)

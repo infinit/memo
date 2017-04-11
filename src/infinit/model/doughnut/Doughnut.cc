@@ -91,6 +91,8 @@ namespace
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   namespace model
   {
     namespace doughnut
@@ -107,7 +109,7 @@ namespace infinit
                       std::string const& what,
                       Address where,
                       F (UB::*checker)(void) const,
-                      FF value,
+                      FF reference_value,
                       Args... create)
       {
         while (true)
@@ -117,10 +119,11 @@ namespace infinit
             auto block = d.fetch(where);
             ELLE_DEBUG("%s: %s already present at %x",
                        d, what, block->address());
-            auto ub = elle::cast<UB>::runtime(block);
-            if (((ub.get())->*checker)() != value)
-              elle::err("%s: %s exists but differrs at %x: %s != %s",
-                        d, what, where, value, ((ub.get())->*checker)());
+            auto const ub = elle::cast<UB>::runtime(block);
+            auto const value = ((ub.get())->*checker)();
+            if (value != reference_value)
+              elle::err("%s: %s exists but differs at %x: %s != %s",
+                        d, what, where, value, reference_value);
             break;
           }
           catch (MissingBlock const&)
@@ -210,7 +213,7 @@ namespace infinit
         if (init.monitoring_socket_path)
         {
           auto const& m_path = init.monitoring_socket_path.get();
-          if (boost::filesystem::exists(m_path))
+          if (bfs::exists(m_path))
           {
             try
             {
@@ -220,17 +223,17 @@ namespace infinit
             }
             catch (elle::Exception const&)
             {
-              boost::filesystem::remove(m_path);
+              bfs::remove(m_path);
             }
           }
-          if (!boost::filesystem::exists(m_path))
+          if (!bfs::exists(m_path))
           {
             try
             {
               auto unix_domain_server =
                 std::make_unique<elle::reactor::network::UnixDomainServer>();
-              if (!boost::filesystem::exists(m_path.parent_path()))
-                boost::filesystem::create_directories(m_path.parent_path());
+              if (!bfs::exists(m_path.parent_path()))
+                bfs::create_directories(m_path.parent_path());
               unix_domain_server->listen(m_path);
               this->_monitoring_server.reset(
                 new MonitoringServer(std::move(unix_domain_server), *this));
@@ -405,8 +408,7 @@ namespace infinit
 
       void
       Doughnut::_fetch(std::vector<AddressVersion> const& addresses,
-        std::function<void(Address, std::unique_ptr<blocks::Block>,
-          std::exception_ptr)> res) const
+                       ReceiveBlock res) const
       {
         this->_consensus->fetch(addresses, res);
       }
@@ -449,8 +451,7 @@ namespace infinit
       Doughnut::ServicesTypes
       Doughnut::services()
       {
-        auto block = this->_services_block(false);
-        if (block)
+        if (auto block = this->_services_block(false))
           return elle::serialization::binary::deserialize
             <ServicesTypes>(block->data());
         else
@@ -568,12 +569,14 @@ namespace infinit
       Doughnut::ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k)
       {
         auto it = this->_key_cache.get<0>().find(*k);
-        if (it != this->_key_cache.get<0>().end())
+        if (it == this->_key_cache.get<0>().end())
+        {
+          int index = this->_key_cache.get<0>().size();
+          this->_key_cache.insert(KeyHash(index, k));
+          return index;
+        }
+        else
           return it->hash;
-
-        int index = this->_key_cache.get<0>().size();
-        this->_key_cache.insert(KeyHash(index, k));
-        return index;
       }
 
       std::shared_ptr<elle::cryptography::rsa::PublicKey>
@@ -581,12 +584,13 @@ namespace infinit
       {
         ELLE_DUMP("%s: resolve key from %x", this, hash);
         auto it = this->_key_cache.get<1>().find(hash);
-        if (it != this->_key_cache.get<1>().end())
+        if (it == this->_key_cache.get<1>().end())
+          elle::err("%s: failed to resolve key hash locally: %x", this, hash);
+        else
         {
           ELLE_DUMP("%s: resolved from cache: %x", this, hash);
           return it->key;
         }
-        elle::err("%s: failed to resolve key hash locally: %x", this, hash);
       }
 
       void
@@ -681,7 +685,7 @@ namespace infinit
 
       std::unique_ptr<infinit::model::Model>
       Configuration::make(bool client,
-                          boost::filesystem::path const& dir)
+                          bfs::path const& dir)
       {
         return this->make(client, dir, false, false);
       }
@@ -689,7 +693,7 @@ namespace infinit
       std::unique_ptr<Doughnut>
       Configuration::make(
         bool client,
-        boost::filesystem::path const& p,
+        bfs::path const& p,
         bool async,
         bool cache,
         boost::optional<int> cache_size,
@@ -700,9 +704,9 @@ namespace infinit
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
         boost::optional<std::string> rdv_host,
-        boost::optional<boost::filesystem::path> monitoring_socket_path)
+        boost::optional<bfs::path> monitoring_socket_path)
       {
-        Doughnut::ConsensusBuilder consensus =
+        auto make_consensus =
           [&] (Doughnut& dht)
           {
             if (!this->consensus)
@@ -729,7 +733,7 @@ namespace infinit
             }
             return consensus;
           };
-        Doughnut::OverlayBuilder overlay =
+        auto make_overlay =
           [&] (Doughnut& dht, std::shared_ptr<Local> local)
           {
             if (!this->overlay)
@@ -745,8 +749,8 @@ namespace infinit
           std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
           owner,
           passport,
-          std::move(consensus),
-          std::move(overlay),
+          make_consensus,
+          make_overlay,
           port_.value_or(this->port.value_or(0)),
           std::move(listen_address),
           std::move(storage),

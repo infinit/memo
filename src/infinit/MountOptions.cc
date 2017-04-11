@@ -12,26 +12,6 @@ namespace infinit
       a = *b;
   }
 
-  // template<typename T>
-  // void merge(boost::optional<T>& a,
-  //            T const& b,
-  //            boost::program_options::option_description const& o)
-  // {
-  //   boost::any def;
-  //   o.semantic()->apply_default(def);
-  //   if (b != boost::any_cast<T>(def))
-  //     a = b;
-  // }
-
-  // template<typename T>
-  // void merge(boost::optional<T>& a,
-  //            boost::optional<T> const& b,
-  //            boost::program_options::option_description const& o)
-  // {
-  //   if (b)
-  //     merge(a, *b, o);
-  // }
-
   template <typename T>
   void merge(std::vector<T>& a,
              std::vector<T> const& b)

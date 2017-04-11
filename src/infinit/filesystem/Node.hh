@@ -1,19 +1,19 @@
-#ifndef INFINIT_FILESYSTEM_NODE_HH
-# define INFINIT_FILESYSTEM_NODE_HH
+#pragma once
 
-# include <elle/Printable.hh>
+#include <elle/Printable.hh>
 
-# include <infinit/serialization.hh>
-# include <infinit/filesystem/filesystem.hh>
-# include <infinit/filesystem/FileData.hh>
-# include <infinit/model/blocks/Block.hh>
+#include <infinit/serialization.hh>
+#include <infinit/filesystem/filesystem.hh>
+#include <infinit/filesystem/FileData.hh>
+#include <infinit/model/blocks/Block.hh>
 
 #ifdef INFINIT_WINDOWS
-  #define S_IFLNK    0120000
-  #define S_IFREG    0100000
-  #define S_IFDIR    0040000
-  #undef  stat
+# define S_IFLNK    0120000
+# define S_IFREG    0100000
+# define S_IFDIR    0040000
+# undef  stat
 #endif
+
 namespace infinit
 {
   namespace filesystem
@@ -101,5 +101,3 @@ namespace infinit
     xattr_special(std::string const& name);
   }
 }
-
-#endif

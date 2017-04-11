@@ -279,7 +279,7 @@ namespace infinit
     if (bfs::exists(old_dir / "async") && !bfs::is_empty(old_dir / "async"))
     {
       for (auto p: bfs::recursive_directory_iterator(old_dir / "async"))
-        if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+        if (is_visible_file(p))
           bfs::copy_file(p.path(),
                          new_dir / "async" / p.path().filename());
       bfs::remove_all(old_dir / "async");

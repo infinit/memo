@@ -26,6 +26,7 @@ namespace infinit
     using ACLBlock = model::blocks::ACLBlock;
     class FileSystem;
     class FileBuffer;
+
     enum class EntryType
     {
       file,
@@ -33,6 +34,10 @@ namespace infinit
       symlink,
       pending
     };
+
+    std::ostream&
+    operator <<(std::ostream& out, EntryType entry);
+
     enum class OperationType
     {
       insert,
@@ -40,6 +45,10 @@ namespace infinit
       remove,
       insert_exclusive,
     };
+
+    std::ostream&
+    operator <<(std::ostream& out, OperationType operation);
+
     struct Operation
     {
       OperationType type;
@@ -316,17 +325,6 @@ namespace infinit
       friend class DirectoryData;
     };
   }
-}
-
-namespace std
-{
-  std::ostream&
-  operator <<(std::ostream& out,
-              infinit::filesystem::EntryType entry);
-
-  std::ostream&
-  operator <<(std::ostream& out,
-              infinit::filesystem::OperationType operation);
 }
 
 #include <infinit/filesystem/filesystem.hxx>

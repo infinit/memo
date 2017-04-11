@@ -119,15 +119,6 @@ namespace infinit
     | Mode: stats.  |
     `--------------*/
 
-    namespace
-    {
-      bool
-      valid_block(bfs::path const& path)
-      {
-        return bfs::is_regular_file(path) && !infinit::is_hidden_file(path);
-      }
-    }
-
     void
     Journal::mode_stat(boost::optional<std::string> const& network_name)
     {
@@ -148,7 +139,7 @@ namespace infinit
         int64_t data_size = 0;
         if (bfs::exists(async_path))
           for (auto const& p: bfs::directory_iterator(async_path))
-            if (valid_block(p.path()))
+            if (is_visible_file(p))
             {
               operation_count++;
               data_size += bfs::file_size(p);

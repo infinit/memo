@@ -185,10 +185,22 @@ namespace infinit
           decltype(local_version = boost::optional<int>()),
           decltype(decrypt_data = boost::optional<bool>()))>
       fetch;
+
+      /// Callback when fetching a block.
+      ///
+      /// @param address   the requested address.
+      /// @param block     the block, or nullptr.
+      /// @param exception if non null, a exception raised during the fetch.
+      using receive_block_t
+        = auto(Address address,
+               std::unique_ptr<blocks::Block> block,
+               std::exception_ptr exception)
+        -> void;
+      using ReceiveBlock = std::function<receive_block_t>;
+
       void
       multifetch(std::vector<AddressVersion> const& addresses,
-                 std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                    std::exception_ptr)> res) const;
+                 ReceiveBlock res) const;
 
       /// Insert a new block.
       ///
@@ -264,8 +276,7 @@ namespace infinit
       virtual
       void
       _fetch(std::vector<AddressVersion> const& addresses,
-             std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const;
+             ReceiveBlock res) const;
       virtual
       void
       _insert(std::unique_ptr<blocks::Block> block,

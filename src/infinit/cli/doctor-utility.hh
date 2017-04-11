@@ -2258,7 +2258,7 @@ namespace
         return boost::starts_with(file.parent_path(), dir);
       };
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_data_home()))
-      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         try
         {
@@ -2292,7 +2292,7 @@ namespace
         }
       }
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_cache_home()))
-      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         try
         {
@@ -2306,7 +2306,7 @@ namespace
         }
       }
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_state_home()))
-      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
+      if (is_visible_file(p))
       {
         try
         {

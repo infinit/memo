@@ -2,6 +2,7 @@
 
 #include <elle/Clonable.hh>
 
+#include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Peer.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
@@ -23,6 +24,7 @@ namespace infinit
           : public elle::Printable
         {
         public:
+          using ReceiveBlock = Model::ReceiveBlock;
           Consensus(Doughnut& doughnut);
           virtual
           ~Consensus() = default;
@@ -39,8 +41,7 @@ namespace infinit
                 std::unique_ptr<ConflictResolver> resolver);
           void
           fetch(std::vector<AddressVersion> const& addresses,
-                std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                   std::exception_ptr)> res);
+                ReceiveBlock res);
           std::unique_ptr<blocks::Block>
           fetch(Address address, boost::optional<int> local_version = {});
           void
@@ -67,8 +68,7 @@ namespace infinit
           virtual
           void
           _fetch(std::vector<AddressVersion> const& addresses,
-                 std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                    std::exception_ptr)> res);
+                 ReceiveBlock res);
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);

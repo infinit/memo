@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
@@ -556,6 +558,16 @@ namespace infinit
 
     struct PrefetchEntry
     {
+      PrefetchEntry(std::string name, Address address,
+                    int level, bool is_dir,
+                    boost::optional<int> cached_version)
+        : name{std::move(name)}
+        , address{std::move(address)}
+        , level{level}
+        , is_dir{is_dir}
+        , cached_version{std::move(cached_version)}
+      {}
+
       std::string name;
       Address address;
       int level;
@@ -606,11 +618,10 @@ namespace infinit
       fs.prefetching()++;
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
       for (auto const& f: this->_files)
-        files->push_back(
-          PrefetchEntry{f.first, f.second.second, 0,
-                        f.second.first == EntryType::directory,
-                        cached_version(fs, f.second.second, f.second.first)
-          });
+        files->emplace_back(
+          f.first, f.second.second, 0,
+          f.second.first == EntryType::directory,
+          cached_version(fs, f.second.second, f.second.first));
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
@@ -647,8 +658,8 @@ namespace infinit
             }
             if (should_exit)
               break;
-            std::vector<model::Model::AddressVersion> addresses;
-            std::unordered_map<Address, int> recurse;
+            auto addresses = std::vector<model::Model::AddressVersion>{};
+            auto recurse =std::unordered_map<Address, int>{};
             do
             {
               ++nf;
@@ -657,7 +668,7 @@ namespace infinit
               files->pop_back();
               Address addr(e.address.value(),
                 model::flags::mutable_block, false);
-              addresses.push_back(std::make_pair(addr, e.cached_version));
+              addresses.emplace_back(addr, e.cached_version);
               if (e.is_dir && e.level + 1 < prefetch_depth)
                 recurse.insert(std::make_pair(addr, e.level));;
             }
@@ -681,11 +692,10 @@ namespace infinit
                     d = *(fs->directory_cache().find(addr));
                   for (auto const& f: d->_files)
                   {
-                    files->push_back(
-                      PrefetchEntry{f.first, f.second.second, recurse.at(addr)+1,
-                                    f.second.first == EntryType::directory,
-                                    cached_version(*fs, f.second.second, f.second.first)
-                      });
+                    files->emplace_back(
+                      f.first, f.second.second, recurse.at(addr) + 1,
+                      f.second.first == EntryType::directory,
+                      cached_version(*fs, f.second.second, f.second.first));
                     available->open();
                   }
                 }
@@ -707,15 +717,14 @@ namespace infinit
                       std::exception_ptr exception)
                   {
                     if (recurse.find(addr) != recurse.end()
-                      && recurse.at(addr) + 1 < prefetch_depth
-                      )
+                        && recurse.at(addr) + 1 < prefetch_depth)
                     {
                       try
                       {
                         std::shared_ptr<DirectoryData> d;
                         if (block)
-                        d = std::shared_ptr<DirectoryData>(
-                          new DirectoryData({}, *block, {true, true}));
+                          d = std::shared_ptr<DirectoryData>(
+                            new DirectoryData({}, *block, {true, true}));
                         else
                         {
                           auto it = fs->directory_cache().find(addr);
@@ -724,11 +733,10 @@ namespace infinit
                           d = *it;
                         }
                         for (auto const& f: d->_files)
-                        files->push_back(
-                          PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
-                              f.second.first == EntryType::directory,
-                              cached_version(*fs, f.second.second, f.second.first)
-                              });
+                          files->emplace_back(
+                            f.first, f.second.second, recurse.at(addr) + 1,
+                            f.second.first == EntryType::directory,
+                            cached_version(*fs, f.second.second, f.second.first));
                         available->open();
                       }
                       catch (elle::Error const& e)
@@ -909,10 +917,8 @@ namespace infinit
     Directory::listxattr()
     {
       ELLE_TRACE_SCOPE("%s: listxattr", *this);
-      std::vector<std::string> res;
-      for (auto const& a: _data->_header.xattrs)
-        res.push_back(a.first);
-      return res;
+      return elle::make_vector(_data->_header.xattrs,
+                               [](auto const& a) { return a.first; });
     }
 
     void
@@ -926,7 +932,7 @@ namespace infinit
         ELLE_DEBUG("handle special xattr %s", *special);
         if (*special == "auth.inherit")
         {
-          bool on = !(value == "0" || value == "false" || value=="");
+          bool on = !(value == "0" || value == "false" || value == "");
           this->_data->_inherit_auth = on;
           this->_data->write(
             _owner,
@@ -948,15 +954,17 @@ namespace infinit
           auto p2 = value.find_last_of(':');
           if (p1 == p2 || p1 != 1)
             THROW_INVAL();
-          EntryType type;
-          if (value[0] == 'd')
-            type = EntryType::directory;
-          else if (value[0] == 'f')
-            type = EntryType::file;
-          else
-            type = EntryType::symlink;
-          std::string ename = value.substr(p1+1, p2 - p1 - 1);
-          Address eaddr = Address::from_string(value.substr(p2+1));
+          auto const type = [&]
+            {
+              if (value[0] == 'd')
+                return EntryType::directory;
+              else if (value[0] == 'f')
+                return EntryType::file;
+              else
+                return EntryType::symlink;
+            }();
+          std::string ename = value.substr(p1 + 1, p2 - p1 - 1);
+          Address eaddr = Address::from_string(value.substr(p2 + 1));
           this->_data->_files[ename] = std::make_pair(type, eaddr);
           this->_data->write(_owner,
                              {OperationType::insert, ename},
@@ -1035,7 +1043,7 @@ namespace infinit
               a->sync();
               return "ok";
             }
-            else if (special->find("blockof.") == 0)
+            else if (boost::starts_with(*special, "blockof."))
             {
               return umbrella(
                 [&]

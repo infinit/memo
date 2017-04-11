@@ -5,8 +5,6 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
-namespace bfs = boost::filesystem;
-
 namespace infinit
 {
   bool
@@ -32,7 +30,7 @@ namespace infinit
   }
 
   bool
-  Infinit::_delete(boost::filesystem::path const& path,
+  Infinit::_delete(bfs::path const& path,
                    std::string const& type,
                    std::string const& name)
   {
@@ -50,7 +48,7 @@ namespace infinit
   }
 
   bool
-  Infinit::_delete_all(boost::filesystem::path const& path,
+  Infinit::_delete_all(bfs::path const& path,
                        std::string const& type,
                        std::string const& name)
   {
@@ -121,39 +119,36 @@ namespace infinit
     auto res = std::vector<Network>{};
     auto extract =
       [&] (bfs::path const& path, bool move) {
-      for (auto it = bfs::recursive_directory_iterator(path);
-           it != bfs::recursive_directory_iterator();
-           ++it)
-      {
-        if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
-          continue;
-        bfs::ifstream f;
-        this->_open_read(
-          f, it->path(), "network", it->path().filename().string());
-        auto network =
-          elle::serialization::json::deserialize<Network>(f, false);
-        if (require_linked && !network.model)
-          continue;
-        if (move && network.model && self && network.user_linked(*self))
+      for (auto const& p: bfs::recursive_directory_iterator(path))
+        if (is_visible_file(p))
         {
-          bfs::ifstream temp_f;
+          bfs::ifstream f;
           this->_open_read(
-            temp_f, it->path(), "network", it->path().filename().string());
-          auto temp_net =
-            elle::serialization::json::deserialize<Network>(temp_f, false);
-          auto desc = NetworkDescriptor(std::move(temp_net));
-          auto path = this->_network_path(network.name, *self);
-          create_directories(path.parent_path());
-          bfs::rename(it->path(), path);
-          this->network_save(desc);
+            f, p.path(), "network", p.path().filename().string());
+          auto network =
+            elle::serialization::json::deserialize<Network>(f, false);
+          if (require_linked && !network.model)
+            continue;
+          if (move && network.model && self && network.user_linked(*self))
+          {
+            bfs::ifstream temp_f;
+            this->_open_read(
+              temp_f, p.path(), "network", p.path().filename().string());
+            auto temp_net =
+              elle::serialization::json::deserialize<Network>(temp_f, false);
+            auto desc = NetworkDescriptor(std::move(temp_net));
+            auto path = this->_network_path(network.name, *self);
+            create_directories(path.parent_path());
+            bfs::rename(p.path(), path);
+            this->network_save(desc);
+          }
+          // Ignore duplicates.
+          if (std::find_if(res.begin(), res.end(),
+                           [&network] (Network const& n) {
+                             return n.name == network.name;
+                           }) == res.end())
+            res.emplace_back(std::move(network));
         }
-        // Ignore duplicates.
-        if (std::find_if(res.begin(), res.end(),
-                         [&network] (Network const& n) {
-                           return n.name == network.name;
-                         }) == res.end())
-          res.emplace_back(std::move(network));
-      }
     };
     if (self)
       // Start by linked networks first.
@@ -259,19 +254,16 @@ namespace infinit
   std::vector<Drive>
   Infinit::drives_get() const
   {
-    std::vector<Drive> res;
-    for (bfs::recursive_directory_iterator it(this->_drives_path());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-    {
-      if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    auto res = std::vector<Drive>{};
+    for (auto const& p
+           : bfs::recursive_directory_iterator(this->_drives_path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
         this->_open_read(
-          f, it->path(), it->path().filename().string(), "drive");
-        res.push_back(load<Drive>(f));
+          f, p.path(), p.path().filename().string(), "drive");
+        res.emplace_back(load<Drive>(f));
       }
-    }
     return res;
   }
 
@@ -380,14 +372,12 @@ namespace infinit
       path = this->_passports_path();
     if (!bfs::exists(path))
       return res;
-    for (auto it = bfs::recursive_directory_iterator(path);
-         it != bfs::recursive_directory_iterator();
-         ++it)
-      if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    for (auto const& p: bfs::recursive_directory_iterator(path))
+      if (is_visible_file(p))
       {
-        auto user_name = it->path().filename().string();
+        auto user_name = p.path().filename().string();
         bfs::ifstream f;
-        this->_open_read(f, it->path(), user_name, "passport");
+        this->_open_read(f, p.path(), user_name, "passport");
         auto passport =
           elle::serialization::json::deserialize<model::doughnut::Passport>(f, false);
         res.emplace_back(passport, user_name);
@@ -470,19 +460,14 @@ namespace infinit
   std::vector<User>
   Infinit::users_get() const
   {
-    std::vector<User> res;
-    for (bfs::recursive_directory_iterator it(this->_users_path());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-    {
-      if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    auto res = std::vector<User>{};
+    for (auto const& p: bfs::recursive_directory_iterator(this->_users_path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
-        this->_open_read(
-          f, it->path(), it->path().filename().string(), "user");
-        res.push_back(load<User>(f));
+        this->_open_read(f, p.path(), p.path().filename().string(), "user");
+        res.emplace_back(load<User>(f));
       }
-    }
     return res;
   }
 
@@ -517,16 +502,11 @@ namespace infinit
   std::vector<std::unique_ptr<storage::StorageConfig>>
   Infinit::storages_get()
   {
-    std::vector<std::unique_ptr<storage::StorageConfig>> res;
-    for (bfs::recursive_directory_iterator it(this->_storages_path());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-    {
-      if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
-      {
-        res.emplace_back(storage_get(it->path().filename().string()));
-      }
-    }
+    auto res = std::vector<std::unique_ptr<storage::StorageConfig>>{};
+    for (auto const& p
+           : bfs::recursive_directory_iterator(this->_storages_path()))
+      if (is_visible_file(p))
+        res.emplace_back(storage_get(p.path().filename().string()));
     return res;
   }
 
@@ -624,19 +604,15 @@ namespace infinit
   std::vector<Volume>
   Infinit::volumes_get() const
   {
-    std::vector<Volume> res;
-    for (bfs::recursive_directory_iterator it(this->_volumes_path());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-    {
-      if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    auto res = std::vector<Volume>{};
+    for (auto const& p
+           : bfs::recursive_directory_iterator(this->_volumes_path()))
+      if (is_visible_file(p))
       {
         bfs::ifstream f;
-        this->_open_read(
-          f, it->path(), it->path().filename().string(), "volume");
-        res.push_back(load<Volume>(f));
+        this->_open_read(f, p.path(), p.path().filename().string(), "volume");
+        res.emplace_back(load<Volume>(f));
       }
-    }
     return res;
   }
 

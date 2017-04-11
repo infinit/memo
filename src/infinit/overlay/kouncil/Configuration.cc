@@ -11,8 +11,9 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Configuration::Configuration()
+      Configuration::Configuration(std::chrono::seconds eviction_delay)
         : Super()
+        , _eviction_delay{eviction_delay}
       {
         this->_validate();
       }
