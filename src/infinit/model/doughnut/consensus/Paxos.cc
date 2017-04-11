@@ -1518,10 +1518,8 @@ namespace infinit
         };
 
         void
-        Paxos::_fetch(
-          std::vector<AddressVersion> const& addresses,
-          std::function<void(Address, std::unique_ptr<blocks::Block>,
-                             std::exception_ptr)> res)
+        Paxos::_fetch(std::vector<AddressVersion> const& addresses,
+                      ReceiveBlock res)
         {
           BENCH("multi_fetch");
           if (this->doughnut().version() < elle::Version(0, 5, 0))
@@ -1541,19 +1539,16 @@ namespace infinit
             return;
           }
           ELLE_DEBUG("querying %s addresses", addresses.size());
-          auto hits = [&]
-          {
-            std::vector<Address> raw_addrs;
-            for (auto const& a: addresses)
-              raw_addrs.push_back(a.first);
-            return this->doughnut().overlay()->lookup(raw_addrs, this->_factor);
-          }();
-          std::unordered_map<Address, boost::optional<int>> versions;
+          auto hits = this->doughnut().overlay()->lookup(
+            elle::make_vector(addresses,
+                              [](auto const& a){ return a.first; }),
+            this->_factor);
+          auto versions = std::unordered_map<Address, boost::optional<int>>{};
           for (auto a: addresses)
             versions[a.first] = a.second;
-          std::unordered_map<Address, PaxosClient::Peers> peers;
+          auto peers = std::unordered_map<Address, PaxosClient::Peers>{};
           for (auto r: hits)
-            peers[r.first].push_back(
+            peers[r.first].emplace_back(
               std::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
           elle::reactor::for_each_parallel(
             peers,

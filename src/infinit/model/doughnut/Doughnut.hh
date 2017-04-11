@@ -201,8 +201,7 @@ namespace infinit
 
         void
         _fetch(std::vector<AddressVersion> const& addresses,
-               std::function<void(Address, std::unique_ptr<blocks::Block>,
-                 std::exception_ptr)> res) const override;
+               ReceiveBlock res) const override;
 
         void
         _insert(std::unique_ptr<blocks::Block> block,

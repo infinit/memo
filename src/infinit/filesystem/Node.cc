@@ -172,7 +172,7 @@ namespace infinit
           }
           catch(rfs::Error const& e)
           {
-            throw rfs::Error(ENOTEMPTY, "Target is a directory");
+            throw rfs::Error(ENOTEMPTY, "Target is a nonempty directory");
           }
         }
         else
