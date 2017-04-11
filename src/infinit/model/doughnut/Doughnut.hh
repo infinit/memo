@@ -161,9 +161,6 @@ namespace infinit
         int
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
-#if INFINIT_ENABLE_PROMETHEUS
-        prometheus::GaugePtr _member_gauge;
-#endif
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
@@ -171,6 +168,14 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
+#if INFINIT_ENABLE_PROMETHEUS
+        /// Gauge on the number of peers.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, member_gauge);
+        /// Gauge on blocks count.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, blocks_gauge);
+        /// Gauge on bytes count.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, bytes_gauge);
+#endif
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(

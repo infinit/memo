@@ -13,6 +13,7 @@
 
 #include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 #include <infinit/model/Address.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/serialization.hh>
 #include <infinit/storage/fwd.hh>
 
@@ -73,9 +74,9 @@ namespace infinit
        */
       std::vector<Key>
       list();
+
       BlockStatus
       status(Key k);
-
       void
       register_notifier(std::function<void ()> f);
     protected:
@@ -91,6 +92,7 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() = 0;
+
       /// Return the status of a given key.
       /// Implementations should check locally only if the information is
       /// available, or return BlockStatus::unknown.
@@ -98,13 +100,23 @@ namespace infinit
       BlockStatus
       _status(Key k);
 
+      /// Notify subscribers to register_notifier.
+      ///
+      /// Should be called by ctors of subclasses if they update
+      /// _usage, etc.
+      void
+      _notify_metrics();
+
       ELLE_ATTRIBUTE_R(boost::optional<int64_t>, capacity, protected);
+      /// Number of bytes used.
       ELLE_ATTRIBUTE_R(int64_t, usage, protected);
       ELLE_ATTRIBUTE(int64_t, base_usage);
       ELLE_ATTRIBUTE(int64_t, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache,
                      mutable, protected);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
+      /// Number of blocks.
+      ELLE_ATTRIBUTE_R(int64_t, block_count, protected);
     };
 
     std::unique_ptr<Storage>

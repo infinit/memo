@@ -25,6 +25,7 @@ namespace infinit
       std::vector<Key>
       _list() override;
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
+
     private:
       boost::filesystem::path
       _path(Key const& key) const;

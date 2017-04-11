@@ -25,12 +25,31 @@ namespace infinit
       , _usage(0) // recovered in the child ctor.
       , _base_usage(0)
       , _step(this->capacity() ? (this->capacity().get() / 10) : step)
+      , _block_count{0} // recovered in the child ctor.
     {
       // _size_cache too has to be recovered in the child ctor.
+
+      // There is no point in notifying about the metrics now, even if
+      // ctors of subclasses may update _usage and _block_count, as
+      // this piece of code would be executed first anyway.  So let
+      // these ctors notify themselves.
     }
 
     Storage::~Storage()
     {}
+
+    void
+    Storage::_notify_metrics()
+    {
+      try
+      {
+        this->_on_storage_size_change();
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Error notifying storage size change: %s", e);
+      }
+    }
 
     elle::Buffer
     Storage::get(Key key) const
@@ -55,20 +74,14 @@ namespace infinit
           this->_base_usage - this->_usage, this->_step);
         ELLE_DEBUG("%s: update Beyond (if --push provided) with usage = %s",
           this, this->_usage);
-        try
-        {
-          this->_on_storage_size_change();
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("Error notifying storage size change: %s", e);
-        }
+        _notify_metrics();
         this->_base_usage = this->_usage;
       }
 
       ELLE_DEBUG("%s: usage/capacity = %s/%s", this,
                                                this->_usage,
                                                this->_capacity);
+      _notify_metrics();
       return delta;
     }
 
@@ -80,6 +93,7 @@ namespace infinit
       ELLE_DEBUG("usage %s and delta %s", this->_usage, delta);
       this->_usage += delta;
       this->_size_cache.erase(key);
+      _notify_metrics();
       return delta;
     }
 

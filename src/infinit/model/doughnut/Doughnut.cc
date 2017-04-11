@@ -50,7 +50,7 @@ namespace
   ///
   /// May return nullptr if set up failed.
   infinit::prometheus::GaugePtr
-  make_member_gauge(infinit::model::Address const& id)
+  make_member_gauge(infinit::model::doughnut::Doughnut const& dht)
   {
     /// The family of counters used to count the number of
     /// connected members for this DHT.
@@ -59,7 +59,39 @@ namespace
           "infinit_overlay_peers",
           "How many overlay peers this overlay member is connected to");
     return infinit::prometheus::instance()
-      .make(family, {{"id", elle::sprintf("%f", id)}});
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+  }
+
+  /// A gauge to track the number of blocks in a silo.
+  ///
+  /// @return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_storage_blocks_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    /// The family of counters used to count the number of
+    /// connected members for this DHT.
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_storage_blocks",
+          "How many blocks this storage uses");
+    return infinit::prometheus::instance()
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+  }
+
+  /// A gauge to track the number of bytes in a silo.
+  ///
+  /// @return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_storage_bytes_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    /// The family of counters used to count the number of
+    /// connected members for this DHT.
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_storage_bytes",
+          "How many bytes this storage uses");
+    return infinit::prometheus::instance()
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
   }
 #endif
 
@@ -173,9 +205,6 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
-#if INFINIT_ENABLE_PROMETHEUS
-        , _member_gauge(make_member_gauge(this->id()))
-#endif
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -195,12 +224,29 @@ namespace infinit
                 init.listen_address,
                 std::move(init.rdv_host),
                 init.tcp_heartbeat)
+#if INFINIT_ENABLE_PROMETHEUS
+          // To initialize before _overlay, which uses it.
+        , _member_gauge{make_member_gauge(*this)}
+          // To initialize after _local, it uses it.
+        , _blocks_gauge{make_storage_blocks_gauge(*this)}
+        , _bytes_gauge{make_storage_bytes_gauge(*this)}
+#endif
         , _overlay(init.overlay_builder(*this, this->_local))
         , _pool([this] { return std::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
         if (this->_local)
+        {
           this->_local->initialize();
+          auto& storage = *this->_local->storage();
+          storage.register_notifier([this, &storage]
+            {
+              if (auto* g = this->_blocks_gauge.get())
+                g->Set(storage.block_count());
+              if (auto* g = this->_bytes_gauge.get())
+                g->Set(storage.usage());
+            });
+        }
         if (init.name)
         {
           auto check_user_blocks = [name = init.name.get(), this]

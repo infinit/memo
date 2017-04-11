@@ -26,7 +26,7 @@ namespace infinit
       , _local(local)
     {
 #if INFINIT_ENABLE_PROMETHEUS
-      if (auto* g = _doughnut->_member_gauge.get())
+      if (auto* g = _doughnut->member_gauge().get())
       {
         ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
         ELLE_TRACE("%s: construct, gauge: %s", this, g->Value());
