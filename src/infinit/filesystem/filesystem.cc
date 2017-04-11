@@ -422,7 +422,7 @@ namespace infinit
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %f", bootstrap_addr);
           auto block = this->_block_store->fetch(bootstrap_addr);
           this->_root_address = Address(
-            Address::from_string(block->data().string().substr(2)).value(),
+            Address::from_string(block->data().string()).value(),
             model::flags::mutable_block,
             false);
           if (root_cache && !boost::filesystem::exists(*root_cache))

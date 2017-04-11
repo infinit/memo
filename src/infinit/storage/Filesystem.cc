@@ -35,7 +35,7 @@ namespace infinit
             auto const path = block.path();
             auto const _file_size = file_size(path);
             auto const name = path.filename().string();
-            auto const addr = infinit::model::Address::from_string(name.substr(2));
+            auto const addr = infinit::model::Address::from_string(name);
             this->_size_cache[addr] = _file_size;
             this->_usage += _file_size;
           }
@@ -119,7 +119,7 @@ namespace infinit
       for (auto const& p: bfs::recursive_directory_iterator(this->root()))
         if (is_block(p))
           res.emplace_back(
-            Key::from_string(p.path().filename().string().substr(2)));
+            Key::from_string(p.path().filename().string()));
       return res;
     }
 
