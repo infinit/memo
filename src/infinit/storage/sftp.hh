@@ -1,11 +1,11 @@
-#ifndef INFINIT_STORAGE_SFTP_HH
-#define INFINIT_STORAGE_SFTP_HH
+#pragma once
 
 #include <boost/asio.hpp>
 
+#include <elle/reactor/semaphore.hh>
+
 #include <infinit/storage/Storage.hh>
 
-#include <elle/reactor/semaphore.hh>
 namespace infinit
 {
   namespace storage
@@ -15,16 +15,12 @@ namespace infinit
     public:
       SFTP(std::string const& host, std::string const& path);
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
     private:
@@ -49,11 +45,9 @@ namespace infinit
                         boost::optional<std::string> description);
       SFTPStorageConfig(elle::serialization::SerializerIn& in);
 
-      virtual
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
 
@@ -62,5 +56,3 @@ namespace infinit
     };
   }
 }
-
-#endif
