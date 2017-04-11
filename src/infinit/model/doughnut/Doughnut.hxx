@@ -43,8 +43,8 @@ namespace infinit
                      elle::defaulted(std::chrono::milliseconds(5000)),
                      doughnut::soft_fail_timeout =
                      elle::defaulted(std::chrono::milliseconds(20000)),
-                     doughnut::soft_fail_running = elle::defaulted(false)
-                     ).template map<
+                     doughnut::soft_fail_running = elle::defaulted(false),
+                     doughnut::tcp_heartbeat = boost::none).template map<
                    Address,
                    std::shared_ptr<elle::cryptography::rsa::KeyPair>,
                    std::shared_ptr<elle::cryptography::rsa::PublicKey>,
@@ -62,7 +62,9 @@ namespace infinit
                    Protocol,
                    elle::Defaulted<std::chrono::milliseconds>,
                    elle::Defaulted<std::chrono::milliseconds>,
-                   elle::Defaulted<bool>>(std::forward<Args>(args)...))
+                   elle::Defaulted<bool>,
+                   boost::optional<std::chrono::milliseconds>>(
+                     std::forward<Args>(args)...))
       {}
     }
   }

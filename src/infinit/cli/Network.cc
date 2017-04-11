@@ -68,7 +68,9 @@ namespace infinit
                cli::k = boost::none,
                cli::kelips_contact_timeout = boost::none,
                cli::encrypt = boost::none,
-               cli::protocol = boost::none)
+               // Generic options
+               cli::protocol = boost::none,
+               cli::tcp_heartbeat = boost::none)
       , delete_(*this,
                 "Delete a network locally",
                 cli::name,
@@ -350,38 +352,40 @@ namespace infinit
     }
 
     void
-    Network::mode_create(std::string const& network_name,
-                         boost::optional<std::string> const& description,
-                         Strings const& storage_names,
-                         boost::optional<int> port,
-                         int replication_factor,
-                         boost::optional<std::string> const& eviction_delay,
-                         boost::optional<std::string> const& output_name,
-                         bool push_network,
-                         bool push,
-                         Strings const& admin_r,
-                         Strings const& admin_rw,
-                         Strings const& peer,
-                         // Consensus types.
-                         bool paxos,
-                         bool no_consensus,
-                         // Overlay types.
-                         bool kelips,
-                         bool kalimero,
-                         bool kouncil,
-                         // Kelips options,
-                         boost::optional<int> nodes,
-                         boost::optional<int> k,
-                         boost::optional<std::string> const& kelips_contact_timeout,
-                         boost::optional<std::string> const& encrypt,
-                         boost::optional<std::string> const& protocol)
+    Network::mode_create(
+      std::string const& network_name,
+      boost::optional<std::string> const& description,
+      Strings const& storage_names,
+      boost::optional<int> port,
+      int replication_factor,
+      boost::optional<std::string> const& eviction_delay,
+      boost::optional<std::string> const& output_name,
+      bool push_network,
+      bool push,
+      Strings const& admin_r,
+      Strings const& admin_rw,
+      Strings const& peer,
+      // Consensus types.
+      bool paxos,
+      bool no_consensus,
+      // Overlay types.
+      bool kelips,
+      bool kalimero,
+      bool kouncil,
+      // Kelips options,
+      boost::optional<int> nodes,
+      boost::optional<int> k,
+      boost::optional<std::string> kelips_contact_timeout,
+      boost::optional<std::string> encrypt,
+      boost::optional<std::string> protocol,
+      boost::optional<std::chrono::milliseconds> tcp_heartbeat)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
-      auto overlay_config = [&]() -> std::unique_ptr<infinit::overlay::Configuration>
+      auto overlay_config =
+        [&] () -> std::unique_ptr<infinit::overlay::Configuration>
         {
           if (1 < kalimero + kelips + kouncil)
             elle::err<CLIError>("only one overlay type must be specified");
@@ -401,7 +405,6 @@ namespace infinit
                                                     replication_factor,
                                                     eviction_delay);
       auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
-
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
@@ -419,7 +422,8 @@ namespace infinit
           std::move(port),
           infinit::version(),
           admin_keys,
-          parse_peers(peer));
+          parse_peers(peer),
+          tcp_heartbeat);
       {
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
@@ -762,7 +766,8 @@ namespace infinit
           boost::optional<int>(),
           desc.version,
           desc.admin_keys,
-          desc.peers),
+          desc.peers,
+          desc.tcp_heartbeat),
         desc.description);
       if (output_name)
         ifnt.save(*cli.get_output(output_name), network, false);

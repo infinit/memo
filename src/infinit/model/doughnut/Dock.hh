@@ -32,7 +32,8 @@ namespace infinit
              Protocol protocol = {},
              boost::optional<int> port = {},
              boost::optional<boost::asio::ip::address> listen_address = {},
-             boost::optional<std::string> rdv_host = {});
+             boost::optional<std::string> rdv_host = {},
+             boost::optional<std::chrono::milliseconds> tcp_heartbeat = {});
         Dock(Dock const&) = delete;
         Dock(Dock&&);
         ~Dock();
@@ -42,6 +43,8 @@ namespace infinit
         cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
+        ELLE_ATTRIBUTE_R(boost::optional<std::chrono::milliseconds>,
+                         tcp_heartbeat);
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
         ELLE_ATTRIBUTE_R(elle::reactor::network::UTPServer&, utp_server);

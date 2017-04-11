@@ -170,6 +170,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
     ELLE_DAS_CLI_SYMBOL(storage, 'S', "storage to contribute (optional, data striped over multiple)", false);
     ELLE_DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    ELLE_DAS_CLI_SYMBOL(tcp_heartbeat, '\0', "tcp heartbeat period and timeout", false);
     ELLE_DAS_CLI_SYMBOL(tcp_port, 't', "port to perform tcp tests on", false);
     ELLE_DAS_CLI_SYMBOL(traverse, 't', "set read permission on parent directories", false);
     ELLE_DAS_CLI_SYMBOL(upnp_tcp_port, 0, "port to try to get an tcp upnp connection on", false);

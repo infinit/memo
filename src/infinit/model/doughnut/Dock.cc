@@ -61,9 +61,11 @@ namespace infinit
                  Protocol protocol,
                  boost::optional<int> port,
                  boost::optional<boost::asio::ip::address> listen_address,
-                 boost::optional<std::string> rdv_host)
+                 boost::optional<std::string> rdv_host,
+                 boost::optional<std::chrono::milliseconds> tcp_heartbeat)
         : _doughnut(doughnut)
         , _protocol(protocol)
+        , _tcp_heartbeat(tcp_heartbeat)
         , _local_utp_server(
           doughnut.local() ? nullptr : new elle::reactor::network::UTPServer)
         , _utp_server(doughnut.local() ?
@@ -295,19 +297,17 @@ namespace infinit
               ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
                                this, this->_location.endpoints().size());
               ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
-              auto handshake = [&] (std::unique_ptr<std::iostream> socket,
-                                    bool pings)
+              auto handshake =
+                [&] (std::unique_ptr<std::iostream> socket,
+                     boost::optional<std::chrono::milliseconds> ping)
                 {
-                  boost::optional<std::chrono::milliseconds> ping_time;
-                  if (pings)
-                    ping_time = std::chrono::milliseconds(10000);
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
                   auto serializer =
                     elle::make_unique<elle::protocol::Serializer>(
                       *socket, sv, false,
-                      ping_time,
-                      ping_time);
+                      ping,
+                      ping);
                   auto channels =
                     elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
                   try
@@ -361,7 +361,7 @@ namespace infinit
                         {
                           using elle::reactor::network::TCPSocket;
                           handshake(elle::make_unique<TCPSocket>(e.tcp()),
-                                    true);
+                                    this->_dock._tcp_heartbeat);
                           this->_serializer->ping_timeout().connect(
                             [this]
                             {
@@ -389,7 +389,7 @@ namespace infinit
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
-                        handshake(std::move(socket), false);
+                        handshake(std::move(socket), {});
                         scope.terminate_now();
                       }));
                 elle::reactor::wait(scope);

@@ -362,7 +362,8 @@ namespace infinit
     elle::Version version,
     model::doughnut::AdminKeys admin_keys,
     std::vector<model::Endpoints> peers,
-    boost::optional<std::string> description)
+    boost::optional<std::string> description,
+    boost::optional<std::chrono::milliseconds> tcp_heartbeat)
     : descriptor::TemplatedBaseDescriptor<NetworkDescriptor>(
       std::move(name), std::move(description))
     , consensus(std::move(consensus))
@@ -371,6 +372,7 @@ namespace infinit
     , version(std::move(version))
     , admin_keys(std::move(admin_keys))
     , peers(std::move(peers))
+    , tcp_heartbeat(tcp_heartbeat)
   {}
 
   NetworkDescriptor::NetworkDescriptor(elle::serialization::SerializerIn& s)
@@ -381,6 +383,8 @@ namespace infinit
               ("overlay"))
     , owner(s.deserialize<elle::cryptography::rsa::PublicKey>("owner"))
     , version()
+    , tcp_heartbeat(s.deserialize<boost::optional<std::chrono::milliseconds>>(
+                      "tcp-heartbeat"))
   {
     try
     {
@@ -414,6 +418,7 @@ namespace infinit
     , version(std::move(network.dht()->version))
     , admin_keys(std::move(network.dht()->admin_keys))
     , peers(std::move(network.dht()->peers))
+    , tcp_heartbeat(std::move(network.dht()->tcp_heartbeat))
   {}
 
   NetworkDescriptor::NetworkDescriptor(NetworkDescriptor const& desc)
@@ -424,6 +429,7 @@ namespace infinit
     , version(desc.version)
     , admin_keys(desc.admin_keys)
     , peers(desc.peers)
+    , tcp_heartbeat(desc.tcp_heartbeat)
   {}
 
   void
@@ -454,5 +460,6 @@ namespace infinit
     }
     catch (elle::serialization::Error const&)
     {}
+    s.serialize("tcp-heartbeat", this->tcp_heartbeat);
   }
 }
