@@ -91,11 +91,9 @@ namespace infinit
             }
             // Always enable UTP server
             {
-              int udp_port = port;
               this->_utp_server =
                 std::make_unique<elle::reactor::network::UTPServer>();
-              if (this->_server)
-                udp_port = this->_server->port();
+              int const udp_port = this->_server ? this->_server->port() : port;
               try
               {
                 if (listen_address)

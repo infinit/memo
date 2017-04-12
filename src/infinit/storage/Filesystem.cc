@@ -33,11 +33,11 @@ namespace infinit
           for (auto const& block: bfs::directory_iterator(dir.path()))
           {
             auto const path = block.path();
-            auto const _file_size = file_size(path);
+            auto const size = file_size(path);
             auto const name = path.filename().string();
             auto const addr = infinit::model::Address::from_string(name);
-            this->_size_cache[addr] = _file_size;
-            this->_usage += _file_size;
+            this->_size_cache[addr] = size;
+            this->_usage += size;
           }
       ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)",
                  this->_usage, this->_size_cache.size());
@@ -46,7 +46,7 @@ namespace infinit
     elle::Buffer
     Filesystem::_get(Key key) const
     {
-      bfs::ifstream input(this->_path(key), std::ios::binary);
+      auto&& input = bfs::ifstream(this->_path(key), std::ios::binary);
       if (!input.good())
       {
         ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
@@ -55,7 +55,7 @@ namespace infinit
       static elle::Bench bench("bench.fsstorage.get", 10000_sec);
       elle::Bench::BenchScope bs(bench);
       elle::Buffer res;
-      elle::IOStream output(res.ostreambuf());
+      auto&& output = elle::IOStream(res.ostreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>(),
                 std::ostreambuf_iterator<char>(output));
@@ -64,8 +64,8 @@ namespace infinit
     }
 
     int
-    Filesystem::_set(
-      Key key, elle::Buffer const& value, bool insert, bool update)
+    Filesystem::_set(Key key, elle::Buffer const& value,
+                     bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
       static elle::Bench bench("bench.fsstorage.set", 10000_sec);
@@ -80,7 +80,7 @@ namespace infinit
         throw MissingKey(key);
       if (exists && !update)
         throw Collision(key);
-      bfs::ofstream output(path, std::ios::binary);
+      auto&& output = bfs::ofstream(path, std::ios::binary);
       if (!output.good())
         elle::err("unable to open for writing: %s", path);
       output.write(
@@ -88,7 +88,7 @@ namespace infinit
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 
-      _size_cache[key] = value.size();
+      this->_size_cache[key] = value.size();
 
       return update ? value.size() - size : value.size();
     }

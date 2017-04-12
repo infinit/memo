@@ -47,7 +47,7 @@ namespace infinit
        *  \param k      Key of the set data.
        *  \param value  Value to associate to \a k.
        *  \param insert Whether to accept inserting a new key.
-       *  \param update Whether to accept updating an exising key.
+       *  \param update Whether to accept updating an existing key.
        *  \return The delta in used storage space in bytes.
        *  \throw Collision if the key is present and not \a update.
        *  \throw InsufficientSpace if there is not enough space left to store

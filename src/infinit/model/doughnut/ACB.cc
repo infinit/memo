@@ -55,7 +55,7 @@ namespace infinit
 }
 
 ELLE_DAS_MODEL_DEFAULT(infinit::model::doughnut::ACLEntry,
-                  infinit::model::doughnut::DasACLEntry);
+                       infinit::model::doughnut::DasACLEntry);
 // FAILS in binary mode
 // ELLE_DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
 
