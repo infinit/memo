@@ -69,8 +69,6 @@ namespace infinit
       // FIXME: properly handle insert and update flags.
       BENCH("set");
       ELLE_DEBUG("set %x", key);
-      if (!insert && !update)
-        elle::err("neither inserting nor updating");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
                                  elle::sprintf("%x", key),
@@ -187,9 +185,9 @@ namespace infinit
           bool reduced_redundancy;
           s.serialize("reduced_redundancy", reduced_redundancy);
           if (reduced_redundancy)
-            this->storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
+            this->storage_class = StorageClass::ReducedRedundancy;
           else
-            this->storage_class = elle::service::aws::S3::StorageClass::Default;
+            this->storage_class = StorageClass::Default;
         }
       }
     }
