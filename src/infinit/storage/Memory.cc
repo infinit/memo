@@ -20,17 +20,32 @@ namespace infinit
       : _blocks(&blocks, [] (Blocks*) {})
     {}
 
-    elle::Buffer
-    Memory::_get(Key key) const
+    auto
+    Memory::_find(Key key)
+      -> typename Blocks::iterator
     {
       auto it = this->_blocks->find(key);
       if (it == this->_blocks->end())
         throw MissingKey(key);
       else
-      {
-        auto& buffer = it->second;
-        return elle::Buffer(buffer.contents(), buffer.size());
-      }
+        return it;
+    }
+
+    auto
+    Memory::_find(Key key) const
+      -> typename Blocks::const_iterator
+    {
+      auto it = this->_blocks->find(key);
+      if (it == this->_blocks->end())
+        throw MissingKey(key);
+      else
+        return it;
+    }
+
+    elle::Buffer
+    Memory::_get(Key key) const
+    {
+      return _find(key)->second;
     }
 
     std::size_t
@@ -47,27 +62,20 @@ namespace infinit
     {
       if (insert)
       {
-        auto insertion =
-          this->_blocks->insert(std::make_pair(key, elle::Buffer()));
-        if (!insertion.second && !update)
+        auto p = this->_blocks->emplace(key, elle::Buffer());
+        if (!p.second && !update)
           throw Collision(key);
-        insertion.first->second = elle::Buffer(value.contents(), value.size());
-        if (insertion.second)
+        p.first->second = elle::Buffer(value.contents(), value.size());
+        if (p.second)
           ELLE_DEBUG("%s: block inserted", *this);
-        else if (!insertion.second)
+        else if (!p.second)
           ELLE_DEBUG("%s: block updated: %s", *this,
                      this->get(key));
       }
       else
       {
-        auto i = this->_blocks->find(key);
-        if (i == this->_blocks->end())
-          throw MissingKey(key);
-        else
-        {
-          ELLE_DEBUG("%s: block updated", *this);
-          i->second = elle::Buffer(value.contents(), value.size());
-        }
+        _find(key)->second = elle::Buffer(value.contents(), value.size());
+        ELLE_DEBUG("%s: block updated", *this);
       }
       // FIXME: impl.
       return 0;
@@ -76,11 +84,9 @@ namespace infinit
     int
     Memory::_erase(Key key)
     {
-      if (this->_blocks->erase(key) == 0)
-        throw MissingKey(key);
-      else
-        // FIXME: impl.
-        return 0;
+      auto it = _find(key);
+      this->_blocks->erase(it);
+      return 0;
     }
 
     std::vector<Key>
