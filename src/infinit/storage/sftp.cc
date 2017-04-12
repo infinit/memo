@@ -19,34 +19,35 @@
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/model/Address.hh>
 
-enum PacketType {
-  SSH_FXP_INIT          =      1 ,
-  SSH_FXP_VERSION       =      2 ,
-  SSH_FXP_OPEN          =      3 ,
-  SSH_FXP_CLOSE         =      4 ,
-  SSH_FXP_READ          =      5 ,
-  SSH_FXP_WRITE         =      6 ,
-  SSH_FXP_LSTAT         =      7 ,
-  SSH_FXP_FSTAT         =      8 ,
-  SSH_FXP_SETSTAT       =      9 ,
-  SSH_FXP_FSETSTAT      =     10 ,
-  SSH_FXP_OPENDIR       =     11 ,
-  SSH_FXP_READDIR       =     12 ,
-  SSH_FXP_REMOVE        =     13 ,
-  SSH_FXP_MKDIR         =     14 ,
-  SSH_FXP_RMDIR         =     15 ,
-  SSH_FXP_REALPATH      =     16 ,
-  SSH_FXP_STAT          =     17 ,
-  SSH_FXP_RENAME        =     18 ,
-  SSH_FXP_READLINK      =     19 ,
-  SSH_FXP_SYMLINK       =     20 ,
-  SSH_FXP_STATUS        =    101 ,
-  SSH_FXP_HANDLE        =    102 ,
-  SSH_FXP_DATA          =    103 ,
-  SSH_FXP_NAME          =    104 ,
-  SSH_FXP_ATTRS         =    105 ,
-  SSH_FXP_EXTENDED      =    200 ,
-  SSH_FXP_EXTENDED_REPLY=    201 ,
+enum PacketType
+{
+  SSH_FXP_INIT           =      1,
+  SSH_FXP_VERSION        =      2,
+  SSH_FXP_OPEN           =      3,
+  SSH_FXP_CLOSE          =      4,
+  SSH_FXP_READ           =      5,
+  SSH_FXP_WRITE          =      6,
+  SSH_FXP_LSTAT          =      7,
+  SSH_FXP_FSTAT          =      8,
+  SSH_FXP_SETSTAT        =      9,
+  SSH_FXP_FSETSTAT       =     10,
+  SSH_FXP_OPENDIR        =     11,
+  SSH_FXP_READDIR        =     12,
+  SSH_FXP_REMOVE         =     13,
+  SSH_FXP_MKDIR          =     14,
+  SSH_FXP_RMDIR          =     15,
+  SSH_FXP_REALPATH       =     16,
+  SSH_FXP_STAT           =     17,
+  SSH_FXP_RENAME         =     18,
+  SSH_FXP_READLINK       =     19,
+  SSH_FXP_SYMLINK        =     20,
+  SSH_FXP_STATUS         =    101,
+  SSH_FXP_HANDLE         =    102,
+  SSH_FXP_DATA           =    103,
+  SSH_FXP_NAME           =    104,
+  SSH_FXP_ATTRS          =    105,
+  SSH_FXP_EXTENDED       =    200,
+  SSH_FXP_EXTENDED_REPLY =    201,
 };
 
 #define SSH_FXF_READ            0x00000001
@@ -79,7 +80,9 @@ ELLE_LOG_COMPONENT("infinit.fs.sftp");
   static elle::Bench bench("bench.sftp." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
-static std::unique_ptr<infinit::storage::Storage> make(std::vector<std::string> const& args)
+static
+std::unique_ptr<infinit::storage::Storage>
+make(std::vector<std::string> const& args)
 {
   return std::make_unique<infinit::storage::SFTP>(args[0], args[1]);
 }
@@ -93,12 +96,13 @@ namespace infinit
     {
     public:
       PacketError(int erc, std::string const& what)
-      : std::runtime_error(what.c_str())
-      , _erc(erc)
+        : std::runtime_error(what.c_str())
+        , _erc(erc)
       {}
     private:
       ELLE_ATTRIBUTE_R(int, erc);
     };
+
     class Packet: public elle::Buffer
     {
     public:
@@ -107,18 +111,19 @@ namespace infinit
       void add(std::string const & v);
       void add(elle::ConstWeakBuffer const& v);
       void addSize();
-      template<typename T> void _make(T const& v)
+      template <typename T>
+      void _make(T const& v)
       {
         add(v);
         addSize();
       }
-      template<typename H, typename ...T>
+      template <typename H, typename ...T>
       void _make(H const& h, T const& ...v)
       {
         add(h);
         _make(v...);
       }
-      template<typename H, typename ...T>
+      template <typename H, typename ...T>
       void make(H const& h, T const& ...v)
       {
         size(0);
@@ -142,33 +147,39 @@ namespace infinit
       unsigned int _pos;
       elle::ConstWeakBuffer _payload;
     };
+
     void Packet::add(PacketType v)
     {
       char pt = (char)v;
       append(&pt, 1);
     }
+
     void Packet::add(int v)
     {
       v = htonl(v);
       append(&v, 4);
     }
+
     void Packet::add(std::string const& v)
     {
       add(v.length());
       append(v.c_str(), v.size());
     }
+
     void Packet::add(elle::ConstWeakBuffer const& v)
     {
       ELLE_DEBUG("Add buffer of size %s", v.size());
       add(v.size());
       _payload = v;
     }
+
     void Packet::addSize()
     {
       int sz = size() - 4 + _payload.size();
       sz = htonl(sz);
       *(int*)mutable_contents() = sz;
     }
+
     void Packet::readFrom(boost::asio::posix::stream_descriptor& s)
     {
       ELLE_DEBUG("Reading one packet...");
@@ -241,6 +252,7 @@ namespace infinit
       if (erc)
         throw std::runtime_error(erc.message());
     }
+
     void Packet::writeTo(boost::asio::posix::stream_descriptor& s)
     {
       ELLE_DEBUG("Writing packet %x ..., with payload %s", *this, _payload.size());
@@ -279,12 +291,14 @@ namespace infinit
       if (erc)
         throw std::runtime_error(erc.message());
     }
+
     unsigned char Packet::readByte()
     {
       unsigned char res = contents()[_pos];
       ++_pos;
       return res;
     }
+
     int Packet::readInt()
     {
       ELLE_ASSERT_LTE(_pos + 4, this->size());
@@ -293,6 +307,7 @@ namespace infinit
       _pos += 4;
       return v;
     }
+
     elle::ConstWeakBuffer Packet::readString()
     {
       int len = readInt();
@@ -301,6 +316,7 @@ namespace infinit
       _pos += len;
       return res;
     }
+
     void Packet::expectType(int t)
     {
       int type = readByte();
@@ -404,6 +420,7 @@ namespace infinit
         ELLE_TRACE("Got reply, len %s, type %s id %s", p.size(), type, id);
       }
     }
+
     elle::Buffer
     SFTP::_get(Key k) const
     {
@@ -510,7 +527,7 @@ namespace infinit
       elle::Buffer value(value_.contents(), value_.size());
       /*elle::reactor::Lock lock(_sem);*/
       ELLE_TRACE("_set %x of size %s", k, value.size());
-      std::string path = elle::sprintf("%s/%x", _path, k);
+      auto const path = elle::sprintf("%s/%x", _path, k);
       Packet p;
       int req = ++_req;
       p.make(SSH_FXP_OPEN, req, path,
@@ -531,7 +548,7 @@ namespace infinit
       {
         // Sending too big values freeezes things up, probably because it
         // fills the pipe with ssh
-        for(int o = 0; o < 1 + int(value.size() - 1) / block_size; ++o)
+        for (int o = 0; o < 1 + int(value.size() - 1) / block_size; ++o)
         {
           ELLE_TRACE("write block %s", o);
           int req = ++_req;
@@ -564,7 +581,6 @@ namespace infinit
     std::vector<Key>
     SFTP::_list()
     {
-      std::vector<Key> res;
       Packet p;
       int req = ++_req;
       p.make(SSH_FXP_OPENDIR, req, _path);
@@ -579,6 +595,7 @@ namespace infinit
       std::string handle = p.readString().string();
       ELLE_TRACE("got handle %x", handle);
 
+      auto res = std::vector<Key>{};
       while (true)
       {
         int req = ++_req;
@@ -594,7 +611,7 @@ namespace infinit
         int count = p.readInt();
         for (int i=0; i<count; ++i)
         {
-          std::string s = p.readString().string();
+          auto const s = p.readString().string();
           p.skipAttr();
           if (is_block(s))
             res.emplace_back(Key::from_string(s));
