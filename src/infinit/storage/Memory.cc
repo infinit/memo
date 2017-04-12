@@ -8,17 +8,51 @@
 
 ELLE_LOG_COMPONENT("infinit.storage.Memory");
 
+namespace
+{
+  // As an int, since that's the type of Storage::_usage.
+  template <typename Map>
+  int mapped_size(Map const& map)
+  {
+    int res = 0;
+    for (auto const& b: map)
+      res += b.second.size();
+    return res;
+  }
+}
+
 namespace infinit
 {
   namespace storage
   {
+
+
     Memory::Memory()
       : _blocks(new Blocks, std::default_delete<Blocks>())
     {}
 
     Memory::Memory(Blocks& blocks)
       : _blocks(&blocks, [] (Blocks*) {})
-    {}
+    {
+      ELLE_ASSERT_EQ(this->_usage, 0);
+      ELLE_ASSERT_EQ(this->_block_count, 0);
+      this->_usage = mapped_size(*this->_blocks);
+      this->_block_count = int(this->_blocks->size());
+    }
+
+    Memory::~Memory()
+    {
+      ELLE_LOG(__PRETTY_FUNCTION__);
+      _check_invariants();
+    }
+
+    auto
+    Memory::_check_invariants() const
+      -> void
+    {
+      ELLE_ASSERT_EQ(this->_block_count, int(this->_blocks->size()));
+      ELLE_ASSERT_EQ(this->_usage, mapped_size(*this->_blocks));
+    }
 
     auto
     Memory::_find(Key key)
@@ -51,10 +85,8 @@ namespace infinit
     std::size_t
     Memory::size() const
     {
-      std::size_t res = 0;
-      for (auto const& block: *this->_blocks)
-        res += block.second.size();
-      return res;
+      _check_invariants();
+      return this->_usage;
     }
 
     int
@@ -65,33 +97,41 @@ namespace infinit
         auto p = this->_blocks->emplace(key, elle::Buffer());
         if (!p.second && !update)
           throw Collision(key);
+        auto prev_size = p.second ? 0 : p.first->second.size();
         p.first->second = elle::Buffer(value.contents(), value.size());
         if (p.second)
-          ELLE_DEBUG("%s: block inserted", *this);
-        else if (!p.second)
-          ELLE_DEBUG("%s: block updated: %s", *this,
-                     this->get(key));
+        {
+          ELLE_DEBUG("%s: block inserted", this);
+          this->_block_count += 1;
+        }
+        else
+          ELLE_DEBUG("%s: block updated: %s", this, p.first->second);
+        return value.size() - prev_size;
       }
       else
       {
-        _find(key)->second = elle::Buffer(value.contents(), value.size());
-        ELLE_DEBUG("%s: block updated", *this);
+        auto it = _find(key);
+        auto prev_size = it->second.size();
+        it->second = elle::Buffer(value.contents(), value.size());
+        ELLE_DEBUG("%s: block updated: %s", this, it->second);
+        return value.size() - prev_size;
       }
-      // FIXME: impl.
-      return 0;
     }
 
     int
     Memory::_erase(Key key)
     {
       auto it = _find(key);
+      auto prev_size = it->second.size();
       this->_blocks->erase(it);
-      return 0;
+      this->_block_count -= 1;
+      return - prev_size;
     }
 
     std::vector<Key>
     Memory::_list()
     {
+      _check_invariants();
       return elle::make_vector(*this->_blocks,
                                [](auto const& b)
                                {
