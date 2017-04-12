@@ -28,6 +28,8 @@ namespace infinit
                   std::string refresh_token,
                   std::string name);
       ~GoogleDrive() = default;
+      std::string
+      type() const override { return "googledrive"; }
 
     protected:
       elle::Buffer

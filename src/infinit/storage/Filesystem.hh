@@ -15,6 +15,9 @@ namespace infinit
     public:
       Filesystem(boost::filesystem::path root,
                  boost::optional<int64_t> capacity = {});
+      std::string
+      type() const override { return "filesystem"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

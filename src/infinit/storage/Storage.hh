@@ -79,6 +79,12 @@ namespace infinit
       status(Key k);
       void
       register_notifier(std::function<void ()> f);
+
+      /// The type of storage (e.g., "s3").
+      virtual
+      std::string
+      type() const = 0;
+
     protected:
       virtual
       elle::Buffer

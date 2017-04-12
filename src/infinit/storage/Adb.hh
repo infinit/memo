@@ -12,6 +12,9 @@ namespace infinit
     {
     public:
       Adb(std::string const& root);
+      std::string
+      type() const override { return "adb"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

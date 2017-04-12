@@ -18,6 +18,8 @@ namespace infinit
       /// Number of bytes stored.
       std::size_t
       size() const;
+      std::string
+      type() const override { return "memory"; }
 
     protected:
       elle::Buffer

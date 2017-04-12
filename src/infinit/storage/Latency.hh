@@ -14,9 +14,11 @@ namespace infinit
     {
     public:
       Latency(std::unique_ptr<Storage> backend,
-        elle::reactor::DurationOpt latency_get,
-        elle::reactor::DurationOpt latency_set,
-        elle::reactor::DurationOpt latency_erase);
+              elle::reactor::DurationOpt latency_get,
+              elle::reactor::DurationOpt latency_set,
+              elle::reactor::DurationOpt latency_erase);
+      std::string
+      type() const override { return "latency"; }
 
     protected:
       elle::Buffer

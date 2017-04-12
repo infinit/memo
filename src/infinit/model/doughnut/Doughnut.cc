@@ -68,14 +68,19 @@ namespace
   infinit::prometheus::GaugePtr
   make_storage_blocks_gauge(infinit::model::doughnut::Doughnut const& dht)
   {
-    /// The family of counters used to count the number of
-    /// connected members for this DHT.
     static auto* family
       = infinit::prometheus::instance().make_gauge_family(
           "infinit_storage_blocks",
           "How many blocks this storage uses");
-    return infinit::prometheus::instance()
-      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+    if (dht.local())
+      return infinit::prometheus::instance()
+        .make(family,
+            {
+              {"id", elle::sprintf("%f", dht.id())},
+              {"type", dht.local()->storage()->type()},
+            });
+    else
+      return nullptr;
   }
 
   /// A gauge to track the number of bytes in a silo.
@@ -84,14 +89,19 @@ namespace
   infinit::prometheus::GaugePtr
   make_storage_bytes_gauge(infinit::model::doughnut::Doughnut const& dht)
   {
-    /// The family of counters used to count the number of
-    /// connected members for this DHT.
     static auto* family
       = infinit::prometheus::instance().make_gauge_family(
           "infinit_storage_bytes",
           "How many bytes this storage uses");
-    return infinit::prometheus::instance()
-      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+    if (dht.local())
+      return infinit::prometheus::instance()
+        .make(family,
+            {
+              {"id", elle::sprintf("%f", dht.id())},
+              {"type", dht.local()->storage()->type()},
+            });
+    else
+      return nullptr;
   }
 #endif
 
@@ -238,14 +248,17 @@ namespace infinit
         if (this->_local)
         {
           this->_local->initialize();
-          auto& storage = *this->_local->storage();
-          storage.register_notifier([this, &storage]
+#if INFINIT_ENABLE_PROMETHEUS
+          if (auto* storage = this->_local->storage().get())
+            if (this->_blocks_gauge.get())
             {
-              if (auto* g = this->_blocks_gauge.get())
-                g->Set(storage.block_count());
-              if (auto* g = this->_bytes_gauge.get())
-                g->Set(storage.usage());
-            });
+              storage->register_notifier([this, storage]
+              {
+                this->_blocks_gauge.get()->Set(storage->block_count());
+                this->_bytes_gauge.get()->Set(storage->usage());
+              });
+            }
+#endif
         }
         if (init.name)
         {

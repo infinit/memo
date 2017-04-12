@@ -17,6 +17,8 @@ namespace infinit
       Dropbox(std::string token,
               boost::filesystem::path root);
       ~Dropbox() = default;
+      std::string
+      type() const override { return "dropbox"; }
 
     protected:
       elle::Buffer

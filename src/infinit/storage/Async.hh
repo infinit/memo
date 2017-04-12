@@ -20,6 +20,9 @@ namespace infinit
       ~Async();
       void
       flush();
+      std::string
+      type() const override { return "async"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

@@ -12,6 +12,9 @@ namespace infinit
     {
     public:
       Strip(std::vector<std::unique_ptr<Storage>> backend);
+      std::string
+      type() const override { return "strip"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

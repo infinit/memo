@@ -16,6 +16,8 @@ namespace infinit
             std::string const& password,
             // Mix address and password to get a different key per block.
             bool salt = true);
+      std::string
+      type() const override { return "cache"; }
 
     protected:
       elle::Buffer

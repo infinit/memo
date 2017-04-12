@@ -14,6 +14,9 @@ namespace infinit
     {
     public:
       SFTP(std::string const& host, std::string const& path);
+      std::string
+      type() const override { return "sftp"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

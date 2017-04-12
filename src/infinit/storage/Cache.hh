@@ -17,6 +17,10 @@ namespace infinit
             bool use_list = false, // optimize trusting keys from backend._list()
             bool use_status = true // optimize using backend._status()
             );
+      std::string
+      type() const override { return "cache"; }
+
+    private:
       elle::Buffer
       _get(Key k) const override;
       int
