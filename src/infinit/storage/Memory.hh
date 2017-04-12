@@ -13,6 +13,7 @@ namespace infinit
     {
     public:
       using Blocks = std::unordered_map<Key, elle::Buffer>;
+
       Memory();
       Memory(Blocks& blocks);
       /// Number of bytes stored.
@@ -20,6 +21,10 @@ namespace infinit
       size() const;
 
     protected:
+      /// Retrieve a key, or throw if missing.
+      typename Blocks::iterator _find(Key k);
+      /// Retrieve a key, or throw if missing.
+      typename Blocks::const_iterator _find(Key k) const;
       elle::Buffer
       _get(Key k) const override;
       int
