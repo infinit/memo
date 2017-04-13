@@ -109,17 +109,26 @@ namespace infinit
       this->_on_storage_size_change.connect(f);
     }
 
-    std::unique_ptr<Storage>
-    instantiate(std::string const& name,
-                std::string const& args)
+    namespace
     {
-      ELLE_TRACE_SCOPE("Processing backend %s '%s'", args[0], args[1]);
-      std::vector<std::string> bargs;
-      size_t space = args.find(" ");
-      const char* sep = (space == args.npos) ? ":" : " ";
-      boost::algorithm::split(bargs, args, boost::algorithm::is_any_of(sep),
-                              boost::algorithm::token_compress_on);
-      return elle::Factory<Storage>::instantiate(name, bargs);
+      std::vector<std::string>
+      split_arguments(std::string const& args)
+      {
+        auto res = std::vector<std::string>{};
+        auto const space = args.find(" ");
+        const char* sep = (space == args.npos) ? ":" : " ";
+        boost::algorithm::split(res, args,
+                                boost::algorithm::is_any_of(sep),
+                                boost::algorithm::token_compress_on);
+        return res;
+      }
+    }
+
+    std::unique_ptr<Storage>
+    instantiate(std::string const& name, std::string const& args)
+    {
+      ELLE_TRACE_SCOPE("Processing backend %s '%s'", name, args);
+      return elle::Factory<Storage>::instantiate(name, split_arguments(args));
     }
 
     /*---------------.

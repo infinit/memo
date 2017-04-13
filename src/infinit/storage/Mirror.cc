@@ -86,24 +86,24 @@ namespace infinit
       return _backend.front()->list();
     }
 
-    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    namespace
     {
-      std::vector<std::unique_ptr<Storage>> backends;
-      bool balance_reads = args[0] == "true" || args[0] == "1" || args[0] =="yes";
-      bool parallel = args[1] == "true" || args[1] == "1" || args[1] =="yes";
-      for (int i = 2; i < signed(args.size()); i += 2)
+      bool
+      means_yes(std::string const& s)
       {
-        std::string name = args[i];
-        std::vector<std::string> bargs;
-        ELLE_TRACE_SCOPE("Processing mirror backend %s '%s'", name, args[i+1]);
-        size_t space = args[i+1].find(" ");
-        const char* sep = (space == args[i+1].npos) ? ":" : " ";
-        boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
-                                boost::algorithm::token_compress_on);
-        std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-        backends.push_back(std::move(backend));
+        return s == "true" || s == "1" || s =="yes";
       }
-      return std::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
+
+      std::unique_ptr<Storage>
+      make(std::vector<std::string> const& args)
+      {
+        bool balance_reads = means_yes(args[0]);
+        bool parallel = means_yes(args[1]);
+        auto backends = std::vector<std::unique_ptr<Storage>>{};
+        for (int i = 2; i < signed(args.size()); i += 2)
+          backends.emplace_back(instantiate(args[i], args[i+1]));
+        return std::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
+      }
     }
 
     struct MirrorStorageConfig
