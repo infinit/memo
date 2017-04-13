@@ -1,9 +1,8 @@
-#ifndef INFINIT_STORAGE_INSUFFICIENT_SPACE_HH
-# define INFINIT_STORAGE_INSUFFICIENT_SPACE_HH
+#pragma once
 
-# include <elle/Error.hh>
-# include <elle/serialization/Serializer.hh>
-# include <elle/serialization/SerializerIn.hh>
+#include <elle/Error.hh>
+#include <elle/serialization/Serializer.hh>
+#include <elle/serialization/SerializerIn.hh>
 
 namespace infinit
 {
@@ -27,5 +26,3 @@ namespace infinit
     };
   }
 }
-
-#endif
