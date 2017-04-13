@@ -1,7 +1,6 @@
-#ifndef INFINIT_STORAGE_GOOGLE_API_HH
-# define INFINIT_STORAGE_GOOGLE_API_HH
+#pragma once
 
-# include <elle/reactor/http/Request.hh>
+#include <elle/reactor/http/Request.hh>
 
 namespace infinit
 {
@@ -10,24 +9,25 @@ namespace infinit
     class GoogleAPI
     {
     protected:
-      GoogleAPI(std::string const& name,
-                std::string const& refresh_token);
+      using Method = elle::reactor::http::Method;
+      using Request = elle::reactor::http::Request;
+      using StatusCode = elle::reactor::http::StatusCode;
+
+      GoogleAPI(std::string name,
+                std::string refresh_token);
       void
       _refresh();
 
-      elle::reactor::http::Request
+      Request
       _request(std::string url,
-               elle::reactor::http::Method method,
-               elle::reactor::http::Request::QueryDict query,
-               elle::reactor::http::Request::Configuration conf
-                 = elle::reactor::http::Request::Configuration{},
-               std::vector<elle::reactor::http::StatusCode>
-               = std::vector<elle::reactor::http::StatusCode>{},
-               elle::Buffer const& payload = elle::Buffer()) const;
+               Method method,
+               Request::QueryDict query,
+               Request::Configuration conf = {},
+               std::vector<StatusCode> = {},
+               elle::Buffer const& payload = {}) const;
       ELLE_ATTRIBUTE_R(std::string, name, protected);
       ELLE_ATTRIBUTE_R(std::string, token, protected);
       ELLE_ATTRIBUTE_R(std::string, refresh_token);
     };
   }
 }
-#endif
