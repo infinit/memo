@@ -1,7 +1,6 @@
-#ifndef INFINIT_OAUTH_CREDENTIALS_HH
-# define INFINIT_OAUTH_CREDENTIALS_HH
+#pragma once
 
-# include <infinit/credentials/Credentials.hh>
+#include <infinit/credentials/Credentials.hh>
 
 namespace infinit
 {
@@ -14,17 +13,13 @@ namespace infinit
                      std::string token,
                      std::string refresh_token);
     OAuthCredentials(elle::serialization::SerializerIn& input);
-    virtual
-    ~OAuthCredentials() override;
 
     void
     serialize(elle::serialization::Serializer& s) override;
 
-    virtual
     std::string
     display_name() const override;
 
-    virtual
     std::string
     uid() const override;
 
@@ -34,5 +29,3 @@ namespace infinit
     std::string refresh_token;
   };
 }
-
-#endif

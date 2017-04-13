@@ -1,7 +1,6 @@
-#ifndef INFINIT_AWS_CREDENTIALS_HH
-# define INFINIT_AWS_CREDENTIALS_HH
+#pragma once
 
-# include <infinit/credentials/Credentials.hh>
+#include <infinit/credentials/Credentials.hh>
 
 namespace infinit
 {
@@ -13,13 +12,10 @@ namespace infinit
                    std::string access_key_id,
                    std::string secret_access_key);
     AWSCredentials(elle::serialization::SerializerIn& input);
-    virtual
-    ~AWSCredentials() override;
 
     void
     serialize(elle::serialization::Serializer& s) override;
 
-    virtual
     std::string
     display_name() const override;
 
@@ -32,5 +28,3 @@ namespace infinit
     std::string secret_access_key;
   };
 }
-
-#endif

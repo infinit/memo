@@ -6,21 +6,16 @@ namespace infinit
                                      std::string display_name,
                                      std::string token,
                                      std::string refresh_token)
-    : Credentials()
-    , _uid(std::move(uid))
+    : _uid(std::move(uid))
     , _display_name(std::move(display_name))
     , token(std::move(token))
     , refresh_token(std::move(refresh_token))
   {}
 
   OAuthCredentials::OAuthCredentials(elle::serialization::SerializerIn& input)
-    : Credentials()
   {
     this->serialize(input);
   }
-
-  OAuthCredentials::~OAuthCredentials()
-  {}
 
   void
   OAuthCredentials::serialize(elle::serialization::Serializer& s)
