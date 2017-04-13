@@ -1073,21 +1073,25 @@ ELLE_TEST_SCHEDULED(acls)
   BOOST_CHECK_THROW(read_all(fs0->path("/dirrm/rm3")), rfs::Error);
 }
 
-ELLE_TEST_SCHEDULED(basic)
+ELLE_TEST_SCHEDULED(write_read)
 {
   auto servers = DHTs(3);
   auto client = servers.client();
   auto& fs = client.fs;
 
-  ELLE_LOG("write, read")
-  {
-    write_file(fs->path("/test"), "Test");
-    BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Test");
-    write_file(fs->path("/test"), "coin", O_WRONLY, 4);
-    BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Testcoin");
-    BOOST_CHECK_EQUAL(file_size(fs->path("/test")), 8);
-    fs->path("/test")->unlink();
-  }
+  write_file(fs->path("/test"), "Test");
+  BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Test");
+  write_file(fs->path("/test"), "coin", O_WRONLY, 4);
+  BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Testcoin");
+  BOOST_CHECK_EQUAL(file_size(fs->path("/test")), 8);
+  fs->path("/test")->unlink();
+}
+
+ELLE_TEST_SCHEDULED(basic)
+{
+  auto servers = DHTs(3);
+  auto client = servers.client();
+  auto& fs = client.fs;
 
   BOOST_CHECK_THROW(read_file(fs->path("/foo")), rfs::Error);
 
@@ -1781,6 +1785,7 @@ ELLE_TEST_SUITE()
 #endif
   auto& suite = boost::unit_test::framework::master_test_suite();
   // Fast tests that do not mount
+  suite.add(BOOST_TEST_CASE(write_read), 0, valgrind(1));
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(20));
   suite.add(BOOST_TEST_CASE(acls), 0, valgrind(20));
   suite.add(BOOST_TEST_CASE(write_unlink), 0, valgrind(1));
