@@ -5,20 +5,15 @@ namespace infinit
   AWSCredentials::AWSCredentials(std::string account,
                                  std::string access_key_id,
                                  std::string secret_access_key)
-    : Credentials()
-    , account(std::move(account))
+    : account(std::move(account))
     , access_key_id(std::move(access_key_id))
     , secret_access_key(std::move(secret_access_key))
   {}
 
   AWSCredentials::AWSCredentials(elle::serialization::SerializerIn& input)
-    : Credentials()
   {
     this->serialize(input);
   }
-
-  AWSCredentials::~AWSCredentials()
-  {}
 
   void
   AWSCredentials::serialize(elle::serialization::Serializer& s)
