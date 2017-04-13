@@ -57,14 +57,16 @@ namespace infinit
       int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);
+
       /** Erase key \a k and associated data.
        *
-       *  \param k      Key to remove.
-       *  \return The delta in used storage space in bytes.
-       *  \throw MissingKey if the key is absent.
+       *  \param k  Key to remove.
+       *  \return   The delta (non positive!) in used storage space in bytes.
+       *  \throw    MissingKey if the key is absent.
        */
       int
       erase(Key k);
+
       /** List of all keys in the storage.
        *
        *  \return A list of all keys in the storage.
