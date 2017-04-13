@@ -35,9 +35,9 @@ namespace infinit
         int
         version() const;
         std::vector<std::unique_ptr<model::User>>
-        list_members(bool ommit_names = false);
+        list_members(bool omit_names = false);
         std::vector<std::unique_ptr<model::User>>
-        list_admins(bool ommit_names = false);
+        list_admins(bool omit_names = false);
         void
         add_member(model::User const& user);
         void
