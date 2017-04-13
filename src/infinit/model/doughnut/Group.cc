@@ -51,16 +51,16 @@ namespace infinit
       {
         if (!this->_public_control_key)
           return;
-        if (this->_stack.Get().back() != this->_public_control_key)
+        if (this->_stack.get().back() != this->_public_control_key)
           ELLE_WARN("Group stack error");
         else
-          this->_stack.Get().pop_back();
+          this->_stack.get().pop_back();
       }
 
       void
       Group::_stack_push()
       {
-        auto& s = this->_stack.Get();
+        auto& s = this->_stack.get();
         if (std::find(s.begin(), s.end(), this->_public_control_key) != s.end())
           elle::err("Group loop");
         s.push_back(*this->_public_control_key);
