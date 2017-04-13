@@ -1,5 +1,6 @@
 #include <infinit/storage/GoogleAPI.hh>
 
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
 #include <elle/os/environ.hh>
 
@@ -12,44 +13,39 @@ ELLE_LOG_COMPONENT("infinit.storage.GoogleAPI");
   static elle::Bench bench("bench.googleapi." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
+namespace
+{
+  auto static const beyond
+    = elle::os::getenv("INFINIT_BEYOND", "https://beyond.infinit.sh");
+
+  elle::reactor::Duration
+  delay(int attempt)
+  {
+    auto factor = pow(2, std::min(8, attempt));
+    return boost::posix_time::milliseconds(factor * 100);
+  }
+}
+
 namespace infinit
 {
   namespace storage
   {
-    static
-    std::string
-    beyond()
-    {
-      auto static const res = elle::os::getenv("INFINIT_BEYOND", "https://beyond.infinit.sh");
-      return res;
-    }
+    GoogleAPI::GoogleAPI(std::string name,
+                         std::string refresh_token)
+      : _name{std::move(name)}
+      , _refresh_token{std::move(refresh_token)}
+    {}
 
-    static elle::reactor::Duration delay(int attempt)
-    {
-      if (attempt > 8)
-        attempt = 8;
-      unsigned int factor = pow(2, attempt);
-      return boost::posix_time::milliseconds(factor * 100);
-    }
-
-    GoogleAPI::GoogleAPI(std::string const& name,
-                         std::string const& refresh_token)
-      : _name(name)
-      , _token()
-      , _refresh_token(refresh_token)
-      {}
-
-    elle::reactor::http::Request
+    auto
     GoogleAPI::_request(std::string url,
-                          elle::reactor::http::Method method,
-                          elle::reactor::http::Request::QueryDict query,
-                          elle::reactor::http::Request::Configuration conf,
-                          std::vector<elle::reactor::http::StatusCode> expected_codes,
-                          elle::Buffer const& payload) const
+                        Method method,
+                        Request::QueryDict query,
+                        Request::Configuration conf,
+                        std::vector<StatusCode> expected_codes,
+                        elle::Buffer const& payload) const
+      -> Request
     {
       ELLE_DUMP("_request %s", method);
-      using Request = elle::reactor::http::Request;
-      using StatusCode = elle::reactor::http::StatusCode;
 
       expected_codes.push_back(StatusCode::OK);
       unsigned attempt = 0;
@@ -58,13 +54,12 @@ namespace infinit
       conf.header_add("Authorization", elle::sprintf("Bearer %s", this->_token));
 
       if (this->_token.empty())
-        const_cast<GoogleAPI*>(this)->_refresh();
+        elle::unconst(this)->_refresh();
       while (true)
       {
         conf.header_remove("Authorization");
         conf.header_add("Authorization", elle::sprintf("Bearer %s", this->_token));
-
-        Request r{url, method, conf};
+        auto r = Request{url, method, conf};
         {
           BENCH("query");
           r.query_string(query);
@@ -74,8 +69,7 @@ namespace infinit
           r.status();
         }
 
-        if (std::find(expected_codes.begin(), expected_codes.end(), r.status())
-            != expected_codes.end())
+        if (elle::contains(expected_codes, r.status()))
           return r;
         else if (r.status() == StatusCode::Forbidden
                  || r.status() == StatusCode::Unauthorized)
@@ -92,30 +86,25 @@ namespace infinit
         elle::reactor::sleep(delay(attempt));
       }
     }
+
     void
     GoogleAPI::_refresh()
     {
       ELLE_DUMP("_refresh");
-      using Configuration = elle::reactor::http::Request::Configuration;
-      using Method = elle::reactor::http::Method;
-      using Request = elle::reactor::http::Request;
-      using StatusCode = elle::reactor::http::StatusCode;
 
-      Configuration conf;
+      // Autoconf rulez!
+      auto conf = Request::Configuration{};
       conf.timeout(elle::reactor::DurationOpt());
       unsigned attempt = 0;
 
-      elle::reactor::http::Request::QueryDict query{
-        {"refresh_token", this->_refresh_token}};
+      auto query = Request::QueryDict{{"refresh_token", this->_refresh_token}};
 
       while (true)
       {
         auto url = elle::sprintf("%s/users/%s/credentials/google/refresh",
-                                beyond(),
+                                beyond,
                                 this->_name);
-        Request r{url,
-                  Method::GET,
-                  conf};
+        auto r = Request{url, Method::GET, conf};
         r.query_string(query);
         r.finalize();
 
