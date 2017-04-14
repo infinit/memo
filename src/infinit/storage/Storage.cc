@@ -10,18 +10,19 @@
 
 ELLE_LOG_COMPONENT("infinit.storage.Storage");
 
+namespace
+{
+  int const step = 100 * 1024 * 1024; // 100 MiB
+}
+
+
 namespace infinit
 {
   namespace storage
   {
-    namespace
-    {
-      static int const step = 104857600; // 100 Mio
-    }
-
     Storage::Storage(boost::optional<int64_t> capacity)
       : _capacity(std::move(capacity))
-      , _usage(0) // _usage is recovered in the child ctor.
+      , _usage(0) // recovered in the child ctor.
       , _base_usage(0)
       , _step(this->capacity() ? (this->capacity().get() / 10) : step)
     {
@@ -34,8 +35,8 @@ namespace infinit
     elle::Buffer
     Storage::get(Key key) const
     {
-      ELLE_TRACE_SCOPE("%s: get %x", *this, key);
-      // FIXME: use _size_cache to check block existance ?
+      ELLE_TRACE_SCOPE("%s: get %x", this, key);
+      // FIXME: use _size_cache to check block existance?
       return this->_get(key);
     }
 
@@ -43,17 +44,17 @@ namespace infinit
     Storage::set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_ASSERT(insert || update);
-      ELLE_TRACE_SCOPE("%s: %s at %x", *this,
+      ELLE_TRACE_SCOPE("%s: %s at %x", this,
                        insert ? update ? "upsert" : "insert" : "update", key);
       int delta = this->_set(key, value, insert, update);
 
       this->_usage += delta;
       if (std::abs(this->_base_usage - this->_usage) >= this->_step)
       {
-        ELLE_DUMP("%s: _base_usage - _usage = %s (_step = %s)", *this,
+        ELLE_DUMP("%s: _base_usage - _usage = %s (_step = %s)", this,
           this->_base_usage - this->_usage, this->_step);
         ELLE_DEBUG("%s: update Beyond (if --push provided) with usage = %s",
-          *this, this->_usage);
+          this, this->_usage);
         try
         {
           this->_on_storage_size_change();
@@ -65,7 +66,7 @@ namespace infinit
         this->_base_usage = this->_usage;
       }
 
-      ELLE_DEBUG("%s: usage/capacity = %s/%s", *this,
+      ELLE_DEBUG("%s: usage/capacity = %s/%s", this,
                                                this->_usage,
                                                this->_capacity);
       return delta;
@@ -74,7 +75,7 @@ namespace infinit
     int
     Storage::erase(Key key)
     {
-      ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
+      ELLE_TRACE_SCOPE("%s: erase %x", this, key);
       int delta = this->_erase(key);
       ELLE_DEBUG("usage %s and delta %s", this->_usage, delta);
       this->_usage += delta;
@@ -85,14 +86,14 @@ namespace infinit
     std::vector<Key>
     Storage::list()
     {
-      ELLE_TRACE_SCOPE("%s: list", *this);
+      ELLE_TRACE_SCOPE("%s: list", this);
       return this->_list();
     }
 
     BlockStatus
     Storage::status(Key k)
     {
-      ELLE_TRACE_SCOPE("%s: status %x", *this, k);
+      ELLE_TRACE_SCOPE("%s: status %x", this, k);
       return this->_status(k);
     }
 
@@ -108,19 +109,26 @@ namespace infinit
       this->_on_storage_size_change.connect(f);
     }
 
-    std::unique_ptr<Storage>
-    instantiate(std::string const& name,
-                std::string const& args)
+    namespace
     {
-      ELLE_TRACE_SCOPE("Processing backend %s '%s'", args[0], args[1]);
-      std::vector<std::string> bargs;
-      size_t space = args.find(" ");
-      const char* sep = (space == args.npos) ? ":" : " ";
-      boost::algorithm::split(bargs, args, boost::algorithm::is_any_of(sep),
-                              boost::algorithm::token_compress_on);
-      std::unique_ptr<Storage> backend =
-        elle::Factory<Storage>::instantiate(name, bargs);
-      return backend;
+      std::vector<std::string>
+      split_arguments(std::string const& args)
+      {
+        auto res = std::vector<std::string>{};
+        auto const space = args.find(" ");
+        const char* sep = (space == args.npos) ? ":" : " ";
+        boost::algorithm::split(res, args,
+                                boost::algorithm::is_any_of(sep),
+                                boost::algorithm::token_compress_on);
+        return res;
+      }
+    }
+
+    std::unique_ptr<Storage>
+    instantiate(std::string const& name, std::string const& args)
+    {
+      ELLE_TRACE_SCOPE("Processing backend %s '%s'", name, args);
+      return elle::Factory<Storage>::instantiate(name, split_arguments(args));
     }
 
     /*---------------.

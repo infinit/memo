@@ -7,22 +7,7 @@ namespace infinit
     this->serialize(input);
   }
 
-  Credentials::~Credentials()
-  {}
-
   void
   Credentials::serialize(elle::serialization::Serializer& s)
   {}
-
-  std::string
-  Credentials::display_name() const
-  {
-    return "";
-  }
-
-  std::string
-  Credentials::uid() const
-  {
-    return "";
-  }
 }

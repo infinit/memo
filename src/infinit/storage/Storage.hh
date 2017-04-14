@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <boost/signals2.hpp>
+#include <boost/filesystem.hpp>
 
 #include <elle/Buffer.hh>
 #include <elle/attribute.hh>
@@ -19,6 +20,8 @@ namespace infinit
 {
   namespace storage
   {
+    namespace bfs = boost::filesystem;
+
     enum class BlockStatus
     {
       exists,
@@ -44,7 +47,7 @@ namespace infinit
        *  \param k      Key of the set data.
        *  \param value  Value to associate to \a k.
        *  \param insert Whether to accept inserting a new key.
-       *  \param update Whether to accept updating an exising key.
+       *  \param update Whether to accept updating an existing key.
        *  \return The delta in used storage space in bytes.
        *  \throw Collision if the key is present and not \a update.
        *  \throw InsufficientSpace if there is not enough space left to store
@@ -54,14 +57,16 @@ namespace infinit
       int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);
+
       /** Erase key \a k and associated data.
        *
-       *  \param k      Key to remove.
-       *  \return The delta in used storage space in bytes.
-       *  \throw MissingKey if the key is absent.
+       *  \param k  Key to remove.
+       *  \return   The delta (non positive!) in used storage space in bytes.
+       *  \throw    MissingKey if the key is absent.
        */
       int
       erase(Key k);
+
       /** List of all keys in the storage.
        *
        *  \return A list of all keys in the storage.
@@ -105,6 +110,22 @@ namespace infinit
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args);
+
+    /// Whether is a block name.
+    inline
+    bool
+    is_block(std::string const& name)
+    {
+      return name.substr(0, 2) == "0x" && name.length() == 66;
+    }
+
+    /// Whether is a block name.
+    inline
+    bool
+    is_block(bfs::directory_entry const& p)
+    {
+      return is_block(p.path().filename().string());
+    }
 
     struct StorageConfig
       : public descriptor::TemplatedBaseDescriptor<StorageConfig>

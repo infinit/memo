@@ -184,7 +184,7 @@ namespace
 
 ELLE_TEST_SCHEDULED(write_truncate)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client = servers.client();
   // the emacs save procedure: open() truncate() write()
   auto handle =
@@ -212,7 +212,7 @@ ELLE_TEST_SCHEDULED(write_truncate)
 
 ELLE_TEST_SCHEDULED(write_unlink)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client_1 = servers.client();
   auto client_2 = servers.client();
   auto root_1 = [&]
@@ -275,7 +275,7 @@ ELLE_TEST_SCHEDULED(write_unlink)
 
 ELLE_TEST_SCHEDULED(prefetcher_failure)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client = servers.client();
   ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
   auto root = client.fs->path("/");
@@ -305,7 +305,7 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
 
 ELLE_TEST_SCHEDULED(paxos_race)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto c1 = servers.client();
   auto c2 = servers.client();
   auto r1 = c1.fs->path("/");
@@ -331,7 +331,7 @@ ELLE_TEST_SCHEDULED(paxos_race)
 
 ELLE_TEST_SCHEDULED(data_embed)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client = servers.client();
   auto root = client.fs->path("/");
   auto h = root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
@@ -397,7 +397,7 @@ ELLE_TEST_SCHEDULED(symlink_perms)
   // Since we use the Locals dirrectly(no remote), there is no
   // serialization at all when fetching, which means we end up with
   // already decyphered blocks
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client1 = servers.client(false);
   auto client2 = servers.client(true);
   ELLE_LOG("create file");
@@ -425,7 +425,7 @@ ELLE_TEST_SCHEDULED(symlink_perms)
 
 ELLE_TEST_SCHEDULED(short_hash_key)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client1 = servers.client();
   auto key = elle::cryptography::rsa::keypair::generate(512);
   auto serkey = elle::serialization::json::serialize(key.K());
@@ -451,7 +451,7 @@ ELLE_TEST_SCHEDULED(short_hash_key)
 ELLE_TEST_SCHEDULED(rename_exceptions)
 {
   // Ensure source does not get erased if rename fails under various conditions
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client1 = servers.client();
   client1.fs->path("/");
   auto client2 = servers.client(true);
@@ -496,7 +496,7 @@ ELLE_TEST_SCHEDULED(rename_exceptions)
 
 ELLE_TEST_SCHEDULED(erased_group)
 {
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client1 = servers.client();
   auto client2 = servers.client(true);
   auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
@@ -519,7 +519,7 @@ ELLE_TEST_SCHEDULED(erased_group)
 
 ELLE_TEST_SCHEDULED(erased_group_recovery)
 {
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client1 = servers.client();
   auto client2 = servers.client(true);
   client1.fs->path("/");
@@ -559,7 +559,7 @@ ELLE_TEST_SCHEDULED(erased_group_recovery)
 
 ELLE_TEST_SCHEDULED(remove_permissions)
 {
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client1 = servers.client(false);
   auto client2 = servers.client(true);
   auto skey = serialize(client2.dht.dht->keys().K());
@@ -614,7 +614,7 @@ ELLE_TEST_SCHEDULED(remove_permissions)
 
 ELLE_TEST_SCHEDULED(create_excl)
 {
-  DHTs servers(1, {}, with_cache = true);
+  auto servers = DHTs(1, {}, with_cache = true);
   auto client1 = servers.client(false);
   auto client2 = servers.client(false);
   // cache feed
@@ -634,7 +634,7 @@ ELLE_TEST_SCHEDULED(multiple_writers)
 {
   infinit::storage::Memory::Blocks blocks;
   struct stat st;
-  DHTs servers(1, {},
+  auto servers = DHTs(1, {},
                with_cache = true,
                storage = std::make_unique<infinit::storage::Memory>(blocks));
   auto client = servers.client(false);
@@ -759,7 +759,7 @@ ELLE_TEST_SCHEDULED(sparse_file)
 {
   // Under windows, a 'cp' causes a ftruncate(target_size), so check that it
   // works
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto client = servers.client();
   client.fs->path("/");
   for (int iter = 0; iter < 2; ++iter)
@@ -787,7 +787,7 @@ ELLE_TEST_SCHEDULED(sparse_file)
 
 ELLE_TEST_SCHEDULED(create_race)
 {
-  DHTs dhts(3 /*, {},version = elle::Version(0, 6, 0)*/);
+  auto dhts = DHTs(3 /*, {},version = elle::Version(0, 6, 0)*/);
   auto client1 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
   auto client2 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
   client1.fs->path("/");
@@ -880,7 +880,7 @@ void read_all(std::shared_ptr<elle::reactor::filesystem::Path> p)
 
 ELLE_TEST_SCHEDULED(acls)
 {
-  DHTs servers(3, {}, make_consensus = no_cheat_consensus);
+  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus);
   auto client0 = servers.client(false, {}, user_name="user0");
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1");
@@ -1073,21 +1073,29 @@ ELLE_TEST_SCHEDULED(acls)
   BOOST_CHECK_THROW(read_all(fs0->path("/dirrm/rm3")), rfs::Error);
 }
 
-ELLE_TEST_SCHEDULED(basic)
+ELLE_TEST_SCHEDULED(write_read)
 {
-  DHTs servers(3);
+  auto servers = DHTs(3);
   auto client = servers.client();
   auto& fs = client.fs;
+
   write_file(fs->path("/test"), "Test");
   BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Test");
   write_file(fs->path("/test"), "coin", O_WRONLY, 4);
   BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Testcoin");
   BOOST_CHECK_EQUAL(file_size(fs->path("/test")), 8);
   fs->path("/test")->unlink();
+}
+
+ELLE_TEST_SCHEDULED(basic)
+{
+  auto servers = DHTs(3);
+  auto client = servers.client();
+  auto& fs = client.fs;
 
   BOOST_CHECK_THROW(read_file(fs->path("/foo")), rfs::Error);
 
-  ELLE_LOG("truncate");
+  ELLE_LOG("truncate")
   {
     auto h = fs->path("/tt")->create(O_RDWR|O_TRUNC|O_CREAT, 0666);
     char buffer[16384];
@@ -1105,8 +1113,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(file_size(fs->path("/tt")), 32413);
     fs->path("/tt")->unlink();
   }
+
+  ELLE_LOG("hard-link")
   {
-    ELLE_LOG("hard-link");
     write_file(fs->path("/test"), "Test");
     fs->path("/test")->link("/test2");
     write_file(fs->path("/test2"), "coinB", O_WRONLY, 4);
@@ -1136,8 +1145,8 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/test2")->unlink();
   }
 
+  ELLE_LOG("Holes")
   {
-    ELLE_LOG("Holes");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 13);
@@ -1148,8 +1157,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(std::string(expect, expect+16), content);
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("use after unlink")
   {
-    ELLE_LOG("use after unlink");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
     fs->path("/test")->unlink();
@@ -1161,8 +1171,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 2);
   }
+
+  ELLE_LOG("rename")
   {
-    ELLE_LOG("rename");
     write_file(fs->path("/test"), "Test");
     fs->path("/test")->rename("/test2");
     write_file(fs->path("/test3"), "foo");
@@ -1179,8 +1190,9 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/foo")->unlink();
     fs->path("/test3")->unlink();
   }
+
+  ELLE_LOG("cross-block")
   {
-    ELLE_LOG("cross-block");
     auto h = fs->path("/babar")->create(O_RDWR|O_CREAT, 0644);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
     auto res = h->write(elle::ConstWeakBuffer(data, strlen(data)), strlen(data),
@@ -1199,8 +1211,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/babar")->unlink();
   }
+
+  ELLE_LOG("cross-block 2")
   {
-    ELLE_LOG("cross-block 2");
     auto h = fs->path("/babar")->create(O_RDWR|O_CREAT, 0644);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
     auto res = h->write(elle::ConstWeakBuffer(data, strlen(data)), strlen(data),
@@ -1219,13 +1232,15 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/babar")->unlink();
   }
+
+  ELLE_LOG("link/unlink")
   {
-    ELLE_LOG("link/unlink");
     fs->path("/u")->create(O_RDWR|O_CREAT, 0644);
     fs->path("/u")->unlink();
   }
+
+  ELLE_LOG("multiple opens")
   {
-    ELLE_LOG("multiple opens");
     {
       write_file(fs->path("/test"), "Test");
       fs->path("/test")->open(O_RDWR, 0644);
@@ -1245,8 +1260,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(read_file(fs->path("/test")), "TestTest");
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("randomizing a file")
   {
-    ELLE_LOG("randomizing a file");
     std::default_random_engine gen;
     std::uniform_int_distribution<>dist(0, 255);
     auto const random_size = 10000;
@@ -1274,8 +1290,9 @@ ELLE_TEST_SCHEDULED(basic)
     }
     BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
   }
+
+  ELLE_LOG("truncate")
   {
-    ELLE_LOG("truncate");
     auto p = fs->path("/tbig");
     p->truncate(9000000);
     read_all(p);
@@ -1289,8 +1306,9 @@ ELLE_TEST_SCHEDULED(basic)
     read_all(p);
     p->unlink();
   }
+
+  ELLE_LOG("extended attributes")
   {
-    ELLE_LOG("extended attributes");
     fs->path("/")->setxattr("testattr", "foo", 0);
     write_file(fs->path("/file"), "test");
     fs->path("/file")->setxattr("testattr", "foo", 0);
@@ -1304,8 +1322,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_THROW(fs->path("/file")->getxattr("nope"), rfs::Error);
     fs->path("/file")->unlink();
   }
+
+  ELLE_LOG("simultaneus read/write")
   {
-    ELLE_LOG("simultaneus read/write");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     char buf[1024];
     for (int i=0; i< 22 * 1024; ++i)
@@ -1317,8 +1336,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("symlink")
   {
-    ELLE_LOG("symlink");
     write_file(fs->path("/real_file"), "something");
     fs->path("/symlink")->symlink("/real_file");
     // Fuse handles symlinks for us
@@ -1326,8 +1346,9 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/symlink")->unlink();
     fs->path("/real_file")->unlink();
   }
+
+  ELLE_LOG("utf-8")
   {
-    ELLE_LOG("utf-8");
     const char* name = "/éùßñЂ";
     write_file(fs->path(name), "foo");
     BOOST_CHECK_EQUAL(read_file(fs->path(name)), "foo");
@@ -1353,11 +1374,12 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   auto nid = infinit::model::Address::random(0);
   char buf[1024];
   {
-    DHTs dhts(1, owner_key,
-              keys = owner_key,
-              storage = std::make_unique<infinit::storage::Memory>(blocks),
-              version = elle::Version(0,6,0),
-              id = nid);
+    auto dhts
+      = DHTs(1, owner_key,
+             keys = owner_key,
+             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             version = elle::Version(0,6,0),
+             id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
     client.fs->path("/dir")->mkdir(0666);
     auto h = client.fs->path("/dir/file")->create(O_RDWR|O_CREAT, 0666);
@@ -1375,14 +1397,14 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   }
   {
     BOOST_CHECK(blocks.size());
-    DHTs dhts(1,
-              owner_key,
-              keys = owner_key,
-              storage = std::make_unique<infinit::storage::Memory>(blocks),
-              version = elle::Version(0,7,0),
-              dht::consensus::rebalance_auto_expand = false,
-              id = nid
-              );
+    auto dhts
+      = DHTs(1,
+             owner_key,
+             keys = owner_key,
+             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             version = elle::Version(0,7,0),
+             dht::consensus::rebalance_auto_expand = false,
+             id = nid);
     auto client = dhts.client(false);
     struct stat st;
     client.fs->path("/")->stat(&st);
@@ -1410,13 +1432,13 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   }
   {
     BOOST_CHECK(blocks.size());
-    DHTs dhts(1, owner_key,
-              keys = owner_key,
-              storage = std::make_unique<infinit::storage::Memory>(blocks),
-              version = elle::Version(0,7,0),
-              dht::consensus::rebalance_auto_expand = false,
-              id = nid
-              );
+    auto dhts
+      = DHTs(1, owner_key,
+             keys = owner_key,
+             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             version = elle::Version(0,7,0),
+             dht::consensus::rebalance_auto_expand = false,
+             id = nid);
     auto client = dhts.client(false);
     struct stat st;
     client.fs->path("/")->stat(&st);
@@ -1439,7 +1461,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
 
 ELLE_TEST_SCHEDULED(conflicts)
 {
-  DHTs servers(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
   auto client0 = servers.client(false, {}, user_name="user0", yielding_overlay = true);
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1", yielding_overlay = true);
@@ -1488,7 +1510,7 @@ ELLE_TEST_SCHEDULED(conflicts)
 
 ELLE_TEST_SCHEDULED(group_description)
 {
-  DHTs servers(-1);
+  auto servers = DHTs(-1);
   auto owner = servers.client();
   auto member = servers.client(true);
   auto admin = servers.client(true);
@@ -1545,7 +1567,7 @@ ELLE_TEST_SCHEDULED(group_description)
 
 ELLE_TEST_SCHEDULED(world_perm_conflict)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client1 = servers.client(false, {}, with_cache = true);
   auto client2 = servers.client(false);
   auto kp = elle::cryptography::rsa::keypair::generate(512);
@@ -1589,7 +1611,7 @@ ELLE_TEST_SCHEDULED(world_perm_conflict)
 
 ELLE_TEST_SCHEDULED(world_perm_mode)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client1 = servers.client(false, {});
   auto client2 = servers.client(true);
   auto client3 = DHTs::Client("volume", servers.dht(false, {}),
@@ -1628,7 +1650,7 @@ ELLE_TEST_SCHEDULED(world_perm_mode)
 void
 read_unlink_test(int64_t size)
 {
-  DHTs servers(1);
+  auto servers = DHTs(1);
   auto client = servers.client();
   auto file = [&client]
     {
@@ -1713,7 +1735,7 @@ ELLE_TEST_SCHEDULED(block_size)
      return true;
   };
   elle::ConstWeakBuffer cc(content.data(), content.size());
-  DHTs servers(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
   auto client1 = servers.client(false, {}, yielding_overlay = true);
   auto client2 = servers.client(false, {}, yielding_overlay = true);
   BOOST_CHECK(write_file(client1.fs->path("/foo")));
@@ -1763,6 +1785,7 @@ ELLE_TEST_SUITE()
 #endif
   auto& suite = boost::unit_test::framework::master_test_suite();
   // Fast tests that do not mount
+  suite.add(BOOST_TEST_CASE(write_read), 0, valgrind(1));
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(20));
   suite.add(BOOST_TEST_CASE(acls), 0, valgrind(20));
   suite.add(BOOST_TEST_CASE(write_unlink), 0, valgrind(1));

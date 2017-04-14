@@ -329,11 +329,11 @@ namespace infinit
                               Protocol p)
         {
           return std::make_unique<Local>(this->doughnut(),
-                                          this->doughnut().id(),
-                                          std::move(storage),
-                                          port ? port.get() : 0,
-                                          listen_address,
-                                          p);
+                                         this->doughnut().id(),
+                                         std::move(storage),
+                                         port.value_or(0),
+                                         listen_address,
+                                         p);
         }
 
         /*-----------.

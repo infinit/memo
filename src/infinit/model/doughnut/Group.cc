@@ -1,20 +1,21 @@
 #include <infinit/model/doughnut/Group.hh>
 
+#include <elle/algorithm.hh>
 #include <elle/cast.hh>
 
+#include <elle/cryptography/hash.hh>
 #include <elle/cryptography/rsa/KeyPair.hh>
 #include <elle/cryptography/rsa/PublicKey.hh>
-#include <elle/cryptography/hash.hh>
 
+#include <infinit/filesystem/umbrella.hh>
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
-#include <infinit/model/blocks/GroupBlock.hh>
-#include <infinit/filesystem/umbrella.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Group");
 
@@ -24,10 +25,10 @@ namespace infinit
   {
     namespace doughnut
     {
-
       namespace rfs = elle::reactor::filesystem;
 
       static const elle::Buffer group_block_key = elle::Buffer("group", 5);
+
       elle::reactor::LocalStorage<std::vector<elle::cryptography::rsa::PublicKey>>
       Group::_stack;
 
@@ -61,9 +62,10 @@ namespace infinit
       Group::_stack_push()
       {
         auto& s = this->_stack.get();
-        if (std::find(s.begin(), s.end(), this->_public_control_key) != s.end())
+        if (elle::contains(s, this->_public_control_key))
           elle::err("Group loop");
-        s.push_back(*this->_public_control_key);
+        else
+          s.push_back(*this->_public_control_key);
       }
 
       struct GroupBlockInserter
@@ -153,22 +155,27 @@ namespace infinit
             elle::err("Group destruction needs group name as input");
           public_control_key();
           block();
-          auto ctrl = _control_key();
+          auto const ctrl = _control_key();
           // UB
-          auto addr = UB::hash_address(this->_name, this->_dht);
-          auto block = _dht.fetch(addr);
-          auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
-          blocks::RemoveSignature sig;
-          sig.signature_key.emplace(ctrl.K());
-          sig.signature.emplace(ctrl.k().sign(to_sign));
-          this->_dht.remove(addr, sig);
+          {
+            auto addr = UB::hash_address(this->_name, this->_dht);
+            auto block = _dht.fetch(addr);
+            auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+            blocks::RemoveSignature sig;
+            sig.signature_key.emplace(ctrl.K());
+            sig.signature.emplace(ctrl.k().sign(to_sign));
+            this->_dht.remove(addr, sig);
+          }
           // RUB
-          addr = UB::hash_address(*this->_public_control_key, this->_dht);
-          block = _dht.fetch(addr);
-          to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
-          sig.signature_key.emplace(ctrl.K());
-          sig.signature.emplace(ctrl.k().sign(to_sign));
-          this->_dht.remove(addr, sig);
+          {
+            auto addr = UB::hash_address(*this->_public_control_key, this->_dht);
+            auto block = _dht.fetch(addr);
+            auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+            blocks::RemoveSignature sig;
+            sig.signature_key.emplace(ctrl.K());
+            sig.signature.emplace(ctrl.k().sign(to_sign));
+            this->_dht.remove(addr, sig);
+          }
           this->_dht.remove(this->_block->address(),
                             this->_block->sign_remove(this->_dht));
         });
@@ -177,15 +184,16 @@ namespace infinit
       elle::cryptography::rsa::PublicKey
       Group::public_control_key() const
       {
-        if (this->_public_control_key)
-          return *_public_control_key;
-        ELLE_TRACE_SCOPE("%s: fetch", this->_name);
-        auto ub = elle::cast<UB>::runtime(
-          this->_dht.fetch(UB::hash_address(_name, this->_dht)));
-        elle::unconst(this)->_public_control_key.emplace(ub->key());
-        elle::unconst(this)->_stack_push();
-        ELLE_DEBUG("public_control_key for %s is %s",
-                   this->_name, this->_public_control_key);
+        if (!this->_public_control_key)
+        {
+          ELLE_TRACE_SCOPE("%s: fetch", this->_name);
+          auto ub = elle::cast<UB>::runtime(
+            this->_dht.fetch(UB::hash_address(_name, this->_dht)));
+          elle::unconst(this)->_public_control_key.emplace(ub->key());
+          elle::unconst(this)->_stack_push();
+          ELLE_DEBUG("public_control_key for %s is %s",
+                     this->_name, this->_public_control_key);
+        }
         return *this->_public_control_key;
       }
 
@@ -250,10 +258,10 @@ namespace infinit
       elle::cryptography::rsa::KeyPair
       Group::_control_key()
       {
-        auto priv = this->block().control_key();
-        if (!priv)
+        if (auto priv = this->block().control_key())
+          return {public_control_key(), *priv};
+        else
           elle::err("You are not a group admin");
-        return elle::cryptography::rsa::KeyPair(public_control_key(), *priv);
       }
 
       elle::cryptography::rsa::PublicKey
@@ -275,20 +283,19 @@ namespace infinit
       }
 
       std::vector<std::unique_ptr<model::User>>
-      Group::list_members(bool ommit_names)
+      Group::list_members(bool)
       {
         auto entries = this->block().list_permissions(_dht);
-        std::vector<std::unique_ptr<model::User>> res;
+        auto res = std::vector<std::unique_ptr<model::User>>{};
         for (auto& ent: entries)
           res.emplace_back(std::move(ent.user));
         return res;
       }
 
       std::vector<std::unique_ptr<model::User>>
-      Group::list_admins(bool ommit_names)
+      Group::list_admins(bool omit_names)
       {
-        auto entries = this->block().list_admins(ommit_names);
-        return entries;
+        return this->block().list_admins(omit_names);
       }
 
       void
@@ -396,8 +403,8 @@ namespace infinit
       boost::optional<std::string> const&
       Group::description() const
       {
-        // WORKAROUND: Force the lambda return type or else umbrella breaks it.
-        // This is at least the case with clang.
+        // WORKAROUND: Force the lambda return type or else umbrella
+        // breaks it.  This is at least the case with clang.
         return infinit::filesystem::umbrella(
           [&] () -> boost::optional<std::string> const&
           {
@@ -533,23 +540,18 @@ namespace infinit
       {
         switch (action)
         {
-          case GroupConflictResolver::Action::add_member:
-            out << "add member";
-            break;
-          case GroupConflictResolver::Action::remove_member:
-            out << "remove member";
-            break;
-          case GroupConflictResolver::Action::add_admin:
-            out << "add admin";
-            break;
-          case GroupConflictResolver::Action::remove_admin:
-            out << "remove admin";
-            break;
-          case GroupConflictResolver::Action::set_description:
-            out << "set description";
-            break;
+        case GroupConflictResolver::Action::add_member:
+          return out << "add member";
+        case GroupConflictResolver::Action::remove_member:
+          return out << "remove member";
+        case GroupConflictResolver::Action::add_admin:
+          return out << "add admin";
+        case GroupConflictResolver::Action::remove_admin:
+          return out << "remove admin";
+        case GroupConflictResolver::Action::set_description:
+          return out << "set description";
         }
-        return out;
+        elle::unreachable();
       }
 
       static const elle::serialization::Hierarchy<model::ConflictResolver>::

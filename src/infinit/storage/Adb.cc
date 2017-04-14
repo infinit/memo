@@ -79,10 +79,8 @@ namespace infinit
         std::getline(ifs, s);
         if (s.empty())
           break;
-        if (s.substr(0, 2) != "0x" || s.length()!=66)
-          continue;
-        Key k = Key::from_string(s.substr(2));
-        res.push_back(k);
+        if (is_block(s))
+          res.emplace_back(Key::from_string(s));
       }
       return res;
     }

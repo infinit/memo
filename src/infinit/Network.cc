@@ -329,7 +329,7 @@ namespace infinit
       {
         for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
         {
-          auto uuid = infinit::model::Address::from_string(node.first.substr(2));
+          auto uuid = infinit::model::Address::from_string(node.first);
           elle::serialization::json::SerializerIn s(node.second, false);
           auto endpoints = s.deserialize<Endpoints>();
           auto eps = infinit::model::Endpoints{};

@@ -572,7 +572,7 @@ namespace infinit
             }
             elle::protocol::Serializer serializer{
               *socket, infinit::elle_serialization_version(v), false};
-            elle::protocol::ChanneledStream stream(serializer);
+            auto&& stream = elle::protocol::ChanneledStream{serializer};
             match_versions(stream);
             action(stream);
           };
@@ -604,7 +604,7 @@ namespace infinit
               }();
               elle::protocol::Serializer serializer{
                 *socket, infinit::elle_serialization_version(v), false};
-              elle::protocol::ChanneledStream stream(serializer);
+              auto&& stream = elle::protocol::ChanneledStream{serializer};
               match_versions(stream);
               action(stream);
             };

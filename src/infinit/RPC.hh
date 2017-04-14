@@ -313,7 +313,7 @@ namespace infinit
     void
     _serve(elle::protocol::Serializer& serializer)
     {
-      elle::protocol::ChanneledStream chans(serializer);
+      auto&& chans = elle::protocol::ChanneledStream{serializer};
       this->_serve(chans);
     }
 

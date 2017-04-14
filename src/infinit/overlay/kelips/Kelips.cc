@@ -139,63 +139,58 @@ namespace infinit
   {
     namespace kelips
     {
-
-      static inline
-      Time
-      now()
-      {
-        return std::chrono::system_clock::now();
-      }
-
-      static
-      void
-      endpoints_update(std::vector<TimedEndpoint>& endpoints, Endpoint entry,
-                       Time t = now())
-      {
-        auto hit = boost::find_if(endpoints,
-            [&](TimedEndpoint const& e) { return e.first == entry;});
-        if (hit == endpoints.end())
-          endpoints.emplace_back(entry, now());
-        else
-          hit->second = std::max(t, hit->second);
-      }
-
-      static
-      void
-      endpoints_update(std::vector<TimedEndpoint>& endpoints,
-                       const std::vector<TimedEndpoint>& src)
-      {
-        for (auto const& te: src)
-          endpoints_update(endpoints, te.first, te.second);
-      }
-
-      static
-      void
-      endpoints_cleanup(std::vector<TimedEndpoint>& endpoints, Time deadline)
-      {
-        for (unsigned i=0; i<endpoints.size(); ++i)
-        {
-          if (endpoints[i].second < deadline)
-          {
-            std::swap(endpoints[i], endpoints[endpoints.size()-1]);
-            endpoints.pop_back();
-            --i;
-          }
-        }
-      }
-
-      static
-      Time
-      endpoints_max(std::vector<TimedEndpoint> const& endpoints)
-      {
-        return boost::max_element(endpoints,
-          [](TimedEndpoint const& a, TimedEndpoint const& b) {
-            return a.second < b.second;
-          })->second;
-      }
-
       namespace
       {
+        inline
+        Time
+        now()
+        {
+          return std::chrono::system_clock::now();
+        }
+
+        void
+        endpoints_update(std::vector<TimedEndpoint>& endpoints, Endpoint entry,
+                         Time t = now())
+        {
+          auto hit = boost::find_if(endpoints,
+              [&](TimedEndpoint const& e) { return e.first == entry;});
+          if (hit == endpoints.end())
+            endpoints.emplace_back(entry, now());
+          else
+            hit->second = std::max(t, hit->second);
+        }
+
+        void
+        endpoints_update(std::vector<TimedEndpoint>& endpoints,
+                         const std::vector<TimedEndpoint>& src)
+        {
+          for (auto const& te: src)
+            endpoints_update(endpoints, te.first, te.second);
+        }
+
+        void
+        endpoints_cleanup(std::vector<TimedEndpoint>& endpoints, Time deadline)
+        {
+          for (unsigned i=0; i<endpoints.size(); ++i)
+          {
+            if (endpoints[i].second < deadline)
+            {
+              std::swap(endpoints[i], endpoints[endpoints.size()-1]);
+              endpoints.pop_back();
+              --i;
+            }
+          }
+        }
+
+        Time
+        endpoints_max(std::vector<TimedEndpoint> const& endpoints)
+        {
+          return boost::max_element(endpoints,
+            [](TimedEndpoint const& a, TimedEndpoint const& b) {
+              return a.second < b.second;
+            })->second;
+        }
+
         Endpoints
         to_endpoints(std::vector<TimedEndpoint> const& v)
         {
@@ -204,43 +199,40 @@ namespace infinit
             res.emplace(e.first);
           return res;
         }
-      }
 
-      static
-      uint64_t
-      serialize_time(const Time& t)
-      {
-        return elle::serialization::Serialize<Time>::convert(
-          const_cast<Time&>(t));
-      }
+        uint64_t
+        serialize_time(const Time& t)
+        {
+          return elle::serialization::Serialize<Time>::convert(
+            const_cast<Time&>(t));
+        }
 
-      static
-      std::string
-      key_hash(elle::cryptography::SecretKey const& k)
-      {
-        auto hk = elle::cryptography::hash(k.password(),
-                                               elle::cryptography::Oneway::sha256);
-        std::string hkhex = elle::sprintf("%x", hk);
-        return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
-      }
+        std::string
+        key_hash(elle::cryptography::SecretKey const& k)
+        {
+          auto hk = elle::cryptography::hash(k.password(),
+                                                 elle::cryptography::Oneway::sha256);
+          std::string hkhex = elle::sprintf("%x", hk);
+          return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
+        }
 
-      static
-      void
-      merge_peerlocations(NodeLocations& dst, NodeLocations const& src)
-      {
-        for (auto const& r: src)
-          {
-            auto it = boost::find_if(dst,
-                                     [&](const NodeLocation& a)
-                                     {
-                                       return a.id() == r.id();
-                                     });
-          if (it == dst.end())
-            dst.push_back(r);
-          else
-            // FIXME: check for some union algorithm.
-            for (auto const& ep: r.endpoints())
-              it->endpoints().insert(ep);
+        void
+        merge_peerlocations(NodeLocations& dst, NodeLocations const& src)
+        {
+          for (auto const& r: src)
+            {
+              auto it = boost::find_if(dst,
+                                       [&](const NodeLocation& a)
+                                       {
+                                         return a.id() == r.id();
+                                       });
+            if (it == dst.end())
+              dst.push_back(r);
+            else
+              // FIXME: check for some union algorithm.
+              for (auto const& ep: r.endpoints())
+                it->endpoints().insert(ep);
+          }
         }
       }
 
@@ -3612,10 +3604,10 @@ namespace infinit
         }
         if (!make)
           return nullptr;
-        Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
+        auto c = Contact{{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
-        NodeLocation nl(address, endpoints);
+        auto nl = NodeLocation(address, endpoints);
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)

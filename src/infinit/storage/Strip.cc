@@ -63,18 +63,9 @@ namespace infinit
     std::unique_ptr<Storage>
     make(std::vector<std::string> const& args)
     {
-      std::vector<std::unique_ptr<Storage>> backends;
+      auto backends = std::vector<std::unique_ptr<Storage>>{};
       for (unsigned int i = 0; i < args.size(); i += 2)
-      {
-        std::string name = args[i];
-        std::vector<std::string> bargs;
-        size_t space = args[i+1].find(" ");
-        const char* sep = (space == args[i+1].npos) ? ":" : " ";
-        boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
-                                boost::algorithm::token_compress_on);
-        std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-        backends.push_back(std::move(backend));
-      }
+        backends.emplace_back(instantiate(args[i], args[i+1]));
       return std::make_unique<Strip>(std::move(backends));
     }
 

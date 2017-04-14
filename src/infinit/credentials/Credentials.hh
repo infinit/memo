@@ -1,9 +1,8 @@
-#ifndef INFINIT_CREDENTIALS_HH
-# define INFINIT_CREDENTIALS_HH
+#pragma once
 
-# include <elle/serialization/Serializer.hh>
+#include <elle/serialization/Serializer.hh>
 
-# include <infinit/serialization.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -14,22 +13,20 @@ namespace infinit
     Credentials() = default;
     Credentials(elle::serialization::SerializerIn& input);
     virtual
-    ~Credentials();
+    ~Credentials() = default;
 
     virtual
     void
     serialize(elle::serialization::Serializer& s);
-    typedef infinit::serialization_tag serialization_tag;
+    using serialization_tag = infinit::serialization_tag;
     static constexpr char const* virtually_serializable_key = "type";
 
     virtual
     std::string
-    display_name() const;
+    display_name() const = 0;
 
     virtual
     std::string
-    uid() const;
+    uid() const = 0;
   };
 }
-
-#endif

@@ -41,7 +41,7 @@ namespace infinit
     public:
       S3StorageConfig(std::string name,
                       elle::service::aws::Credentials credentials,
-                      elle::service::aws::S3::StorageClass storage_class,
+                      StorageClass storage_class,
                       boost::optional<int64_t> capacity,
                       boost::optional<std::string> description);
       S3StorageConfig(elle::serialization::SerializerIn& input);

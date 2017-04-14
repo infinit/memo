@@ -1,19 +1,18 @@
-#ifndef INFINIT_STORAGE_GOOGLEDRIVE_HH
-# define INFINIT_STORAGE_GOOGLEDRIVE_HH
+#pragma once
 
-# include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 
-# include <elle/Error.hh>
+#include <elle/Error.hh>
 
-# include <infinit/storage/Storage.hh>
-# include <infinit/storage/Key.hh>
-# include <infinit/storage/GoogleAPI.hh>
+#include <infinit/storage/Storage.hh>
+#include <infinit/storage/Key.hh>
+#include <infinit/storage/GoogleAPI.hh>
 
-# include <elle/reactor/Barrier.hh>
-# include <elle/reactor/http/Request.hh>
-# include <elle/reactor/http/url.hh>
-# include <elle/reactor/scheduler.hh>
-# include <elle/reactor/Scope.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/http/Request.hh>
+#include <elle/reactor/http/url.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/Scope.hh>
 
 namespace infinit
 {
@@ -23,7 +22,6 @@ namespace infinit
       : public Storage, public GoogleAPI
     {
     public:
-
       GoogleDrive(std::string refresh_token,
                   std::string name);
       GoogleDrive(boost::filesystem::path root,
@@ -32,27 +30,21 @@ namespace infinit
       ~GoogleDrive() = default;
 
     protected:
-
-      virtual
       elle::Buffer
       _get(Key k) const override;
 
-      virtual
       int
       _set(Key k,
            elle::Buffer const& value,
            bool insert,
            bool update) override;
 
-      virtual
       int
       _erase(Key k) override;
 
-      virtual
       std::vector<Key>
       _list() override;
 
-      virtual
       BlockStatus
       _status(Key k) override;
 
@@ -97,5 +89,3 @@ namespace infinit
     };
   }
 }
-
-#endif /* !INFINIT_STORAGE_GOOGLEDRIVE_HH */
