@@ -3,7 +3,7 @@
 #include <elle/reactor/filesystem.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
-#include <infinit/filesystem/FileData.hh>
+#include <infinit/filesystem/FileHeader.hh>
 #include <elle/unordered_map.hh>
 
 namespace infinit

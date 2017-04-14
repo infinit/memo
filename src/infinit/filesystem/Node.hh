@@ -4,7 +4,7 @@
 
 #include <infinit/serialization.hh>
 #include <infinit/filesystem/filesystem.hh>
-#include <infinit/filesystem/FileData.hh>
+#include <infinit/filesystem/FileHeader.hh>
 #include <infinit/model/blocks/Block.hh>
 
 #ifdef INFINIT_WINDOWS

@@ -3,7 +3,7 @@ sources = drake.nodes(
   'Directory.hh',
   'File.cc',
   'File.hh',
-  'FileData.hh',
+  'FileHeader.hh',
   'FileHandle.cc',
   'FileHandle.hh',
   'Node.cc',

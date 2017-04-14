@@ -15,13 +15,15 @@
 #include <elle/reactor/Thread.hh>
 
 #include <infinit/model/Model.hh>
-#include <infinit/filesystem/FileData.hh>
+#include <infinit/filesystem/FileHeader.hh>
 
 namespace infinit
 {
   namespace filesystem
   {
     namespace bmi = boost::multi_index;
+
+    using Address = model::Address;
     using Block = model::blocks::Block;
     using ACLBlock = model::blocks::ACLBlock;
     class FileSystem;
