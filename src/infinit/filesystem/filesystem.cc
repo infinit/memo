@@ -96,8 +96,8 @@ namespace infinit
         std::string volume_name,
         std::shared_ptr<model::Model> model,
         boost::optional<elle::cryptography::rsa::PublicKey> owner,
-        boost::optional<boost::filesystem::path> root_block_cache_dir,
-        boost::optional<boost::filesystem::path> mountpoint,
+        boost::optional<bfs::path> root_block_cache_dir,
+        boost::optional<bfs::path> mountpoint,
         bool allow_root_creation,
         bool map_other_permissions,
         boost::optional<int> block_size)
@@ -222,7 +222,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version,
-                 boost::filesystem::path const& path)
+                 bfs::path const& path)
     {
       try
       {
@@ -263,7 +263,7 @@ namespace infinit
     std::unique_ptr<model::blocks::Block>
     FileSystem::fetch_or_die(model::Address address,
                              boost::optional<int> local_version,
-                             boost::filesystem::path const& path)
+                             bfs::path const& path)
     {
       return filesystem::fetch_or_die(*this->block_store(), address,
                                       local_version, path);
@@ -394,19 +394,20 @@ namespace infinit
     };
 
     static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
-    Register<InsertRootBootstrapBlock> _register_InsertRootBootstrapBlock_resolver("InsertRootBootstrapBlockResolver");
+    Register<InsertRootBootstrapBlock>
+    _register_InsertRootBootstrapBlock_resolver("InsertRootBootstrapBlockResolver");
 
     Address
     FileSystem::root_address()
     {
       if (this->_root_address != Address::null)
         return this->_root_address;
-      boost::optional<boost::filesystem::path> root_cache;
+      boost::optional<bfs::path> root_cache;
       if (this->root_block_cache_dir())
       {
         auto dir = this->root_block_cache_dir().get();
-        if (!boost::filesystem::exists(dir))
-          boost::filesystem::create_directories(dir);
+        if (!bfs::exists(dir))
+          bfs::create_directories(dir);
         root_cache = dir / "root_block";
         ELLE_DEBUG("root block cache: %s", root_cache);
       }
@@ -425,9 +426,9 @@ namespace infinit
             Address::from_string(block->data().string()).value(),
             model::flags::mutable_block,
             false);
-          if (root_cache && !boost::filesystem::exists(*root_cache))
+          if (root_cache && !bfs::exists(*root_cache))
           {
-            boost::filesystem::ofstream ofs(*root_cache);
+            bfs::ofstream ofs(*root_cache);
             elle::fprintf(ofs, "%x", this->_root_address);
           }
           return this->_root_address;
@@ -463,7 +464,7 @@ namespace infinit
                 "unable to find root block, allow creation with "
                 "--allow-root-creation");
             }
-            else if (root_cache && boost::filesystem::exists(*root_cache))
+            else if (root_cache && bfs::exists(*root_cache))
             {
               ELLE_WARN(
                 "refusing to recreate root block, marker set: %s", root_cache);
@@ -493,7 +494,7 @@ namespace infinit
                   true,
                   std::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
-                  boost::filesystem::ofstream(*root_cache) << saddr;
+                  bfs::ofstream(*root_cache) << saddr;
               }
               on_root_block_create();
               return this->_root_address;
@@ -591,7 +592,7 @@ namespace infinit
       boost::algorithm::split(components, path, boost::algorithm::is_any_of("/\\"));
       ELLE_DEBUG("%s: get %s (%s)", this, path, components);
       ELLE_ASSERT_EQ(components.front(), "");
-      boost::filesystem::path current_path("/");
+      bfs::path current_path("/");
       auto d = get(current_path, this->root_address());
       std::shared_ptr<DirectoryData> dp;
       for (int i=1; i< signed(components.size()) - 1; ++i)
@@ -602,7 +603,7 @@ namespace infinit
         if (name.size() > strlen("$xattrs.")
           && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
         {
-          auto rpath = boost::filesystem::path(
+          auto rpath = bfs::path(
             path.substr(0, path.find("$xattrs."))) / name.substr(strlen("$xattrs."));
           auto target = this->path(rpath.string());
           std::shared_ptr<rfs::Path> xroot = std::make_shared<XAttributeDirectory>(target);
@@ -634,7 +635,7 @@ namespace infinit
         && name.substr(0, strlen(attr_key)) == attr_key)
       {
         return std::make_shared<XAttributeFile>(
-          this->path(boost::filesystem::path(path).parent_path().string()),
+          this->path(bfs::path(path).parent_path().string()),
           name.substr(strlen(attr_key)));
       }
       if (name.size() > strlen("$xattrs.")
@@ -642,7 +643,7 @@ namespace infinit
       {
         auto fname = name.substr(strlen("$xattrs."));
         auto target = this->path(
-          (boost::filesystem::path(path).parent_path() / fname).string());
+          (bfs::path(path).parent_path() / fname).string());
         return std::make_shared<XAttributeDirectory>(target);
       }
 
@@ -744,7 +745,7 @@ namespace infinit
     }
 
     std::shared_ptr<DirectoryData>
-    FileSystem::get(boost::filesystem::path path, model::Address address)
+    FileSystem::get(bfs::path path, model::Address address)
     {
       ELLE_DEBUG_SCOPE("%s: get directory at %f", this, address);
       static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);

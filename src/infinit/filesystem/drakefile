@@ -17,7 +17,12 @@ sources = drake.nodes(
   'filesystem.cc',
   'filesystem.hh',
   'filesystem.hxx',
+  'fwd.hh',
   'umbrella.hh',
   'xattribute.cc',
   'xattribute.hh',
 )
+
+# Local Variables:
+# mode: python
+# End:

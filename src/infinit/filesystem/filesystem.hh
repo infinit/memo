@@ -14,20 +14,20 @@
 #include <elle/reactor/filesystem.hh>
 #include <elle/reactor/Thread.hh>
 
-#include <infinit/model/Model.hh>
 #include <infinit/filesystem/FileHeader.hh>
+#include <infinit/filesystem/fwd.hh>
+#include <infinit/model/Model.hh>
 
 namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
     namespace bmi = boost::multi_index;
 
     using Address = model::Address;
     using Block = model::blocks::Block;
     using ACLBlock = model::blocks::ACLBlock;
-    class FileSystem;
-    class FileBuffer;
 
     enum class EntryType
     {
@@ -64,9 +64,9 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       static std::unique_ptr<model::blocks::ACLBlock> null_block;
-      DirectoryData(boost::filesystem::path path,
+      DirectoryData(bfs::path path,
                     Block& block, std::pair<bool, bool> perms);
-      DirectoryData(boost::filesystem::path path,
+      DirectoryData(bfs::path path,
                     model::Address address);
       DirectoryData(elle::serialization::Serializer& s, elle::Version const& v);
       void
@@ -91,7 +91,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, prefetching);
       ELLE_ATTRIBUTE_R(clock::time_point, last_prefetch);
       ELLE_ATTRIBUTE_R(clock::time_point, last_used);
-      ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
+      ELLE_ATTRIBUTE_R(bfs::path, path);
       friend class Unknown;
       friend class Directory;
       friend class File;
@@ -141,10 +141,10 @@ namespace infinit
     {
     public:
       using clock = std::chrono::high_resolution_clock;
-      FileData(boost::filesystem::path path,
+      FileData(bfs::path path,
                Block& block, std::pair<bool, bool> perms,
                int block_size);
-      FileData(boost::filesystem::path path,
+      FileData(bfs::path path,
                model::Address address, int mode,
                int block_size);
       void
@@ -165,7 +165,7 @@ namespace infinit
       using FatEntry = std::pair<Address, std::string>; // (address, key)
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
-      ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
+      ELLE_ATTRIBUTE_R(bfs::path, path);
       using serialization_tag = infinit::serialization_tag;
       friend class FileSystem;
       friend class File;
@@ -182,7 +182,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version = {},
-                 boost::filesystem::path const& path = {});
+                 bfs::path const& path = {});
 
     std::pair<bool, bool>
     get_permissions(model::Model& model,
@@ -222,8 +222,8 @@ namespace infinit
         std::string volume_name,
         std::shared_ptr<infinit::model::Model> model,
         boost::optional<elle::cryptography::rsa::PublicKey> owner = {},
-        boost::optional<boost::filesystem::path> root_block_cache_dir = {},
-        boost::optional<boost::filesystem::path> mountpoint = {},
+        boost::optional<bfs::path> root_block_cache_dir = {},
+        boost::optional<bfs::path> mountpoint = {},
         bool allow_root_creation = false,
         bool map_other_permissions = true,
         boost::optional<int> block_size = {});
@@ -248,7 +248,7 @@ namespace infinit
       std::unique_ptr<model::blocks::Block>
       fetch_or_die(model::Address address,
                    boost::optional<int> local_version = {},
-                   boost::filesystem::path const& path = {});
+                   bfs::path const& path = {});
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
@@ -264,7 +264,7 @@ namespace infinit
 
       boost::signals2::signal<void()> on_root_block_create;
       std::shared_ptr<DirectoryData>
-      get(boost::filesystem::path path, model::Address address);
+      get(bfs::path path, model::Address address);
       void filesystem(elle::reactor::filesystem::FileSystem* fs) override;
       elle::reactor::filesystem::FileSystem* filesystem();
 
@@ -281,9 +281,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::string, volume_name);
       ELLE_ATTRIBUTE_R(std::string, network_name);
       ELLE_ATTRIBUTE_R(bool, read_only);
-      ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>,
-                       root_block_cache_dir);
-      ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, mountpoint);
+      ELLE_ATTRIBUTE_R(boost::optional<bfs::path>, root_block_cache_dir);
+      ELLE_ATTRIBUTE_R(boost::optional<bfs::path>, mountpoint);
       ELLE_ATTRIBUTE_R(model::Address, root_address);
       ELLE_ATTRIBUTE_R(bool, allow_root_creation);
       ELLE_ATTRIBUTE_R(bool, map_other_permissions);
