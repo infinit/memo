@@ -54,6 +54,11 @@ namespace infinit
       , _merge(merge)
       , _journal_dir(journal_dir)
     {
+      // Update our metrics when our backend updates its.
+      _backend->register_notifier([this]
+                       {
+                         this->_update_metrics();
+                       });
       if (!_journal_dir.empty())
       {
         bfs::create_directories(_journal_dir);
@@ -161,9 +166,8 @@ namespace infinit
     void
     Async::_push_op(Key k, elle::Buffer const& buf, Operation op)
     {
-      int insert_index = -1;
       _op_cache.push_back(Entry{k, op, elle::Buffer(buf), 0});
-      insert_index = _op_cache.size() + _op_offset - 1;
+      int insert_index = _op_cache.size() + _op_offset - 1;
       _inc(buf.size());
       ELLE_DEBUG("inserting %s: %s(%s) at %x",
                  insert_index, op, buf.size(), k);
@@ -204,14 +208,33 @@ namespace infinit
       }
     }
 
+    void
+    Async::_update_metrics()
+    {
+      // _erase and _set are expected to return deltas, that are
+      // applied by Storage::erase and Storage::set.  But we don't
+      // know these deltas, as the operations are asynchronous.
+      //
+      // Rather, _erase and _set should return 0, so that the metrics
+      // are unchanged when operations are queued.  But we hook the
+      // metrics notifications from the worker and then propagate
+      // them.
+      //
+      // They are no locking issues, as they are atomics.
+      _usage = _backend->usage().load();
+      _block_count = _backend->block_count().load();
+      _notify_metrics();
+    }
+
     int
     Async::_erase(Key k)
     {
       ELLE_DEBUG("queueing erase on %x", k);
       _wait();
       _push_op(k, elle::Buffer(), Operation::erase);
-
-      // FIXME: impl.
+      // Do not let Storage::erase try to update the size: we don't
+      // know yet what the difference will be.  Metrics will be
+      // updated by the worker.
       return 0;
     }
 
@@ -222,8 +245,9 @@ namespace infinit
       ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s",
                  k, _blocks, _bytes);
       _push_op(k, value, Operation::set);
-
-      //FIXME: impl.
+      // Do not let Storage::set try to update the size: we don't know
+      // yet what the difference will be.  Metrics will be updated by
+      // the worker.
       return 0;
     }
 
@@ -282,14 +306,14 @@ namespace infinit
             if (op == Operation::erase)
             {
               // If we merged a set and an erase and the set was a
-              // 'create', erase might legitimaly fail.
+              // 'create', erase might legitimately fail.
               try
               {
                 _backend->erase(k);
               }
-              catch (MissingKey const& mk)
+              catch (MissingKey const& e)
               {
-                ELLE_TRACE("Erase failed with %s", mk);
+                ELLE_TRACE("Erase failed with %s", e);
               }
             }
             else if (op == Operation::set)

@@ -62,6 +62,8 @@ namespace infinit
       void _restore_journal();
       /// Whether one of the quotas (blocks and bytes) is reached.
       bool _queue_full() const;
+      /// Update our metrics, based on those of our backend.
+      void _update_metrics();
 
       std::unique_ptr<Storage> _backend;
       /// Maximum number of blocks in the queue.  -1 for unlimited.

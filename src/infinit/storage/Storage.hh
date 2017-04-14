@@ -115,14 +115,14 @@ namespace infinit
 
       ELLE_ATTRIBUTE_R(boost::optional<int64_t>, capacity, protected);
       /// Number of bytes used.
-      ELLE_ATTRIBUTE_R(int64_t, usage, protected);
+      ELLE_ATTRIBUTE_R(std::atomic<int64_t>, usage, protected);
       ELLE_ATTRIBUTE(int64_t, base_usage);
       ELLE_ATTRIBUTE(int64_t, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache,
                      mutable, protected);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
       /// Number of blocks.
-      ELLE_ATTRIBUTE_R(int64_t, block_count, protected);
+      ELLE_ATTRIBUTE_R(std::atomic<int64_t>, block_count, protected);
     };
 
     std::unique_ptr<Storage>
