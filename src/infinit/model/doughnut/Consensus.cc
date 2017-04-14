@@ -164,6 +164,17 @@ namespace infinit
         }
 
         void
+        Consensus::resign()
+        {
+          ELLE_TRACE_SCOPE("%s: resign");
+          this->_resign();
+        }
+
+        void
+        Consensus::_resign()
+        {}
+
+        void
         Consensus::remove_many(Address address,
                                blocks::RemoveSignature rs,
                                int factor)

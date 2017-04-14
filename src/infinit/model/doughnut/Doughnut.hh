@@ -98,6 +98,8 @@ namespace infinit
         template <typename ... Args>
         Doughnut(Args&& ... args);
         ~Doughnut();
+        void
+        resign();
 
       private:
         using Init = decltype(

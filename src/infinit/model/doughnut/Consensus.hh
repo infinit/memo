@@ -56,6 +56,8 @@ namespace infinit
           remove_many(Address address,
                       blocks::RemoveSignature rs,
                       int factor);
+          void
+          resign();
         protected:
           virtual
           void
@@ -72,6 +74,9 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);
+          virtual
+          void
+          _resign();
 
         /*-----.
         | Stat |

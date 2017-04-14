@@ -285,6 +285,12 @@ namespace infinit
         }
       }
 
+      void
+      Doughnut::resign()
+      {
+        this->consensus()->resign();
+      }
+
       /*-----.
       | Time |
       `-----*/
