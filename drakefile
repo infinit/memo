@@ -279,7 +279,10 @@ def configure(
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
   if grpc.grpc_lib:
-    extra_libs.append(drake.copy(grpc.grpc_lib, windows and 'bin' or 'lib', strip_prefix = True))
+    libdir = 'bin' if windows else 'lib'
+    extra_libs.append(drake.copy(grpc.grpc_lib, libdir, strip_prefix = True))
+    protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True)
+    extra_libs.append(protobuf_lib)
   else:
     infinit_sources += grpc.grpc.sources
   if windows:
@@ -947,6 +950,7 @@ def configure(
   cxx_config_tests += grpc.grpc.cxx_config
   if grpc.grpc_lib:
     cxx_config_tests.library_add(drake.copy(grpc.grpc_lib, 'tests', strip_prefix = True))
+    cxx_config_tests.library_add(protobuf_lib)
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
