@@ -248,6 +248,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 `------*/
 
 class DHT
+  : public elle::Printable
 {
 public:
   using make_consensus_t
@@ -339,6 +340,13 @@ public:
 
   std::shared_ptr<dht::Doughnut> dht;
   Overlay* overlay;
+
+protected:
+  void
+  print(std::ostream& s) const override
+  {
+    elle::fprintf(s, "%s", this->dht);
+  }
 
 private:
   void
