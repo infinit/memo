@@ -1330,6 +1330,109 @@ ELLE_TEST_SCHEDULED(
   }
 }
 
+ELLE_TEST_SCHEDULED(
+  remove,
+  (TestConfiguration, config),
+  (bool, anonymous))
+{
+  auto storage = infinit::storage::Memory::Blocks();
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
+  auto a = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(10),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    dht::consensus::rebalance_auto_expand = false);
+  auto id_b = special_id(11);
+  auto b = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = id_b,
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    dht::consensus::rebalance_auto_expand = false);
+  auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
+  ELLE_LOG("insert block on B")
+    b->dht->seal_and_insert(*block, tcr());
+  ELLE_LOG("connect DHTs")
+    discover(*b, *a, anonymous, false, true, true);
+  BOOST_TEST(
+    a->dht->overlay()->lookup(block->address()).lock()->id() == b->dht->id());
+  ELLE_LOG("remove block on B")
+    b->dht->remove(block->address());
+  ELLE_LOG("check block disappeared on A")
+    try
+    {
+      while (true)
+      {
+        a->dht->overlay()->lookup(block->address());
+        elle::reactor::yield();
+      }
+    }
+    catch (MissingBlock const&)
+    {}
+}
+
+ELLE_TEST_SCHEDULED(
+  remove_disconnected,
+  (TestConfiguration, config),
+  (bool, anonymous))
+{
+  auto storage = infinit::storage::Memory::Blocks();
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
+  auto a = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(10),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
+  auto id_b = special_id(11);
+  auto b = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = id_b,
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
+  auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
+  b->dht->seal_and_insert(*block, tcr());
+  ELLE_LOG("connect DHTs")
+    discover(*b, *a, anonymous, false, true, true);
+  BOOST_TEST(
+    a->dht->overlay()->lookup(block->address()).lock()->id() == b->dht->id());
+  ELLE_LOG("stop second DHT")
+  {
+    auto disappeared = elle::reactor::waiter(
+      a->dht->overlay()->on_disappearance(),
+      [&] (Address id, bool)
+      {
+        BOOST_TEST(id == id_b);
+        return true;
+      });
+    b.reset();
+    elle::reactor::wait(disappeared);
+  }
+  BOOST_CHECK_THROW(a->dht->overlay()->lookup(block->address()), MissingBlock);
+  ELLE_LOG("start second DHT")
+  {
+    b = std::make_unique<DHT>(
+      ::version = config.version,
+      ::id = id_b,
+      ::keys = keys,
+      ::storage = std::make_unique<infinit::storage::Memory>(storage),
+      ::make_overlay = config.overlay_builder,
+      ::protocol = dht::Protocol::tcp);
+    b->dht->remove(block->address());
+    BOOST_CHECK_THROW(b->dht->overlay()->lookup(block->address()),
+                      MissingBlock);
+    discover(*b, *a, anonymous, false, true, true);
+    BOOST_CHECK_THROW(a->dht->overlay()->lookup(block->address()),
+                      MissingBlock);
+  }
+}
+
 /// Factor the creation of a DHT cluster.
 struct Cluster
 {
@@ -1829,4 +1932,8 @@ ELLE_TEST_SUITE()
 
   // TEST_NAMED(kouncil, eviction, eviction, 600);
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
+  // FIXME: Kouncil < 0.8 does not handle removal, but kelips should pass those
+  // two tests.
+  TEST(kouncil, kouncil, "remove", 5, remove, false);
+  TEST(kouncil, kouncil, "remove_disconnected", 5, remove_disconnected, false);
 }
