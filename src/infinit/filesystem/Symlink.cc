@@ -97,12 +97,12 @@ namespace infinit
     }
 
     void
-    Symlink::rename(boost::filesystem::path const& where)
+    Symlink::rename(bfs::path const& where)
     {
       Node::rename(where);
     }
 
-    boost::filesystem::path
+    bfs::path
     Symlink::readlink()
     {
       this->_fetch();
@@ -110,7 +110,7 @@ namespace infinit
     }
 
     void
-    Symlink::link(boost::filesystem::path const& where)
+    Symlink::link(bfs::path const& where)
     {
       auto p = this->_owner.filesystem()->path(where.string());
       Unknown* unk = dynamic_cast<Unknown*>(p.get());

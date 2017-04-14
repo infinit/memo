@@ -1,10 +1,11 @@
 #pragma once
 
+#include <elle/reactor/filesystem.hh>
+
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/umbrella.hh>
-#include <elle/reactor/filesystem.hh>
 
 namespace infinit
 {
@@ -28,10 +29,10 @@ namespace infinit
       void unlink() override;
       void mkdir(mode_t mode) override { THROW_EXIST(); }
       void rmdir() override { THROW_NOTDIR(); }
-      void rename(boost::filesystem::path const& where) override;
-      boost::filesystem::path readlink() override;
-      void symlink(boost::filesystem::path const& where) override { THROW_EXIST(); }
-      void link(boost::filesystem::path const& where) override; //copied symlink
+      void rename(bfs::path const& where) override;
+      bfs::path readlink() override;
+      void symlink(bfs::path const& where) override { THROW_EXIST(); }
+      void link(bfs::path const& where) override; //copied symlink
       void chmod(mode_t mode) override;
       void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override { THROW_NOSYS(); }
