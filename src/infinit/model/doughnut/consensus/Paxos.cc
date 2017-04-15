@@ -381,9 +381,23 @@ namespace infinit
         `----------*/
 
         Paxos::LocalPeer::~LocalPeer()
+        try
         {
           ELLE_TRACE_SCOPE("%s: destruct", *this);
+          // Make sure no eviction thread is started during cleanup.
+          for (auto& timeout: this->_node_timeouts)
+            timeout.second.cancel();
+          // Avoid exceptions from unique_ptr and vector destructors.
           this->_rebalance_thread.terminate_now();
+          for (auto& t: this->_evict_threads)
+            if (t)
+              t->terminate_now();
+        }
+        catch (...)
+        {
+          ELLE_ABORT("exception escaping %s destructor: %s",
+                     elle::type_info<Paxos>(),
+                     elle::exception_string());
         }
 
         void

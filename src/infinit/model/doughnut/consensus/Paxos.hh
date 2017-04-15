@@ -228,7 +228,8 @@ namespace infinit
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
-            ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr, rebalance_inspector);
+            ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr,
+                             rebalance_inspector);
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>,
                            evict_threads);
