@@ -74,6 +74,7 @@ namespace infinit
           ELLE_ATTRIBUTE_R(Address, node);
           ELLE_ATTRIBUTE_R(Address, block);
         };
+
         /// Node / owned block addresses mapping.
         using AddressBook = bmi::multi_index_container<
           Entry,
@@ -84,8 +85,9 @@ namespace infinit
             bmi::hashed_non_unique<
               bmi::const_mem_fun<
                 Entry, Address const&, &Entry::block>>,
-            bmi::sequenced<>
-          >>;
+            bmi::sequenced<>,
+            bmi::hashed_unique<
+              bmi::identity<Entry>>>>;
         /// Peers by id.
         using Peer = Overlay::Member;
         using Peers =
@@ -151,7 +153,8 @@ namespace infinit
       private:
         void
         _broadcast();
-        ELLE_ATTRIBUTE(elle::reactor::Channel<Address>, new_entries);
+        ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
+                       new_entries);
         ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, broadcast_thread);
 
       /*------.

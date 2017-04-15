@@ -26,6 +26,7 @@ namespace infinit
       using Address = model::Address;
       /// A set of Address, used in RPCs.
       using AddressSet = std::unordered_set<Address>;
+      using EntryChangeSet = std::unordered_map<Address, bool>;
 
       namespace
       {
@@ -71,6 +72,23 @@ namespace infinit
         , _block(std::move(block))
       {}
 
+      static
+      std::size_t
+      hash_value(Kouncil::Entry const& entry)
+      {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, entry.node());
+        boost::hash_combine(seed, entry.block());
+        return seed;
+      }
+
+      static
+      bool
+      operator ==(Kouncil::Entry const& lhs, Kouncil::Entry const& rhs)
+      {
+        return lhs.node() == rhs.node() && lhs.block() == rhs.block();
+      }
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -113,15 +131,42 @@ namespace infinit
                     this->_discover(pis);
                   });
               // Notify this node of new blocks owned by the peer.
-              r.rpc_server().add(
-                "kouncil_add_entries",
-                [this, &r] (AddressSet const& entries)
-                {
-                  for (auto const& addr: entries)
-                    this->_address_book.emplace(r.id(), addr);
-                  ELLE_TRACE("%s: added %s entries from %f",
-                             this, entries.size(), r.id());
-                });
+              if (this->doughnut()->version() >= elle::Version(0, 8, 0))
+                r.rpc_server().add(
+                  "kouncil_change_entries",
+                  [this, &r] (EntryChangeSet const& entries)
+                  {
+                    for (auto const& entry: entries)
+                      if (entry.second)
+                        this->_address_book.emplace(r.id(), entry.first);
+                      else
+                      {
+                        Entry e(r.id(), entry.first);
+                        this->_address_book.get<3>().erase(e);
+                      }
+                    ELLE_TRACE("%s: added/removed %s entries from %f",
+                               this, entries.size(), r.id());
+                  });
+              else
+                r.rpc_server().add(
+                  "kouncil_add_entries",
+                  [this, &r] (AddressSet const& entries)
+                  {
+                    for (auto const& addr: entries)
+                      this->_address_book.emplace(r.id(), addr);
+                    ELLE_TRACE("%s: added %s entries from %f",
+                               this, entries.size(), r.id());
+                  });
+              // if (this->doughnut()->version() >= elle::Version(0, 8, 0))
+              //   r.rpc_server().add(
+              //     "kouncil_configure",
+              //     [this, &r] (bool storing)
+              //     {
+              //       for (auto const& addr: entries)
+              //         this->_address_book.emplace(r.id(), addr);
+              //       ELLE_TRACE("%s: added %s entries from %f",
+              //                  this, entries.size(), r.id());
+              //     });
             }));
         // React to peer connection status.
         this->_connections.emplace_back(
@@ -159,7 +204,15 @@ namespace infinit
          {
            ELLE_DEBUG("%s: register new block %f", this, b.address());
            this->_address_book.emplace(this->id(), b.address());
-           this->_new_entries.put(b.address());
+           this->_new_entries.put(std::make_pair(b.address(), true));
+         }));
+       this->_connections.emplace_back(local->on_remove().connect(
+         [this] (model::blocks::Block const& b)
+         {
+           ELLE_DEBUG("%s: unregister block %f", this, b.address());
+           auto entry = Entry(this->id(), b.address());
+           ELLE_ENFORCE_EQ(this->_address_book.get<3>().erase(entry), 1u);
+           this->_new_entries.put(std::make_pair(b.address(), false));
          }));
        // Add server-side kouncil RPCs.
        this->_connections.emplace_back(local->on_connect().connect(
@@ -293,17 +346,38 @@ namespace infinit
         while (true)
         {
           // Get all the available new entries, waiting for at least one.
-          auto entries = [&]
-            {
-              auto res = AddressSet{};
-              do
-                res.insert(this->_new_entries.get());
-              while (!this->_new_entries.empty());
-              return res;
-            }();
-          ELLE_TRACE("%s: broadcast new entry: %f", this, entries);
-          this->local()->broadcast<void>(
-            "kouncil_add_entries", std::move(entries));
+          if (this->doughnut()->version() >= elle::Version(0, 8, 0))
+          {
+            auto entries = [&]
+              {
+                auto res = EntryChangeSet{};
+                do
+                  res.emplace(this->_new_entries.get());
+                while (!this->_new_entries.empty());
+                return res;
+              }();
+            ELLE_TRACE("%s: broadcast entry changes: %f", this, entries);
+            this->local()->broadcast<void>(
+              "kouncil_change_entries", std::move(entries));
+          }
+          else
+          {
+            auto entries = [&]
+              {
+                auto res = AddressSet{};
+                do
+                {
+                  auto e = this->_new_entries.get();
+                  if (e.second)
+                    res.emplace(e.first);
+                }
+                while (!this->_new_entries.empty());
+                return res;
+              }();
+            ELLE_TRACE("%s: broadcast new entry: %f", this, entries);
+            this->local()->broadcast<void>(
+              "kouncil_add_entries", std::move(entries));
+          }
         }
       }
 
@@ -398,6 +472,7 @@ namespace infinit
           this->_infos.modify(
             info, [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
+        this->_address_book.erase(id);
         this->on_disappearance()(id, false);
         peer.reset();
         if (!this->_cleaning)
