@@ -142,7 +142,7 @@ namespace infinit
                       else
                       {
                         Entry e(r.id(), entry.first);
-                        this->_address_book.get<3>().erase(e);
+                        this->_address_book.get<2>().erase(e);
                       }
                     ELLE_TRACE("%s: added/removed %s entries from %f",
                                this, entries.size(), r.id());
@@ -211,7 +211,7 @@ namespace infinit
          {
            ELLE_DEBUG("%s: unregister block %f", this, b.address());
            auto entry = Entry(this->id(), b.address());
-           ELLE_ENFORCE_EQ(this->_address_book.get<3>().erase(entry), 1u);
+           ELLE_ENFORCE_EQ(this->_address_book.get<2>().erase(entry), 1u);
            this->_new_entries.put(std::make_pair(b.address(), false));
          }));
        // Add server-side kouncil RPCs.

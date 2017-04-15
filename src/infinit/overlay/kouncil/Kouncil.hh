@@ -6,7 +6,6 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/random_access_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
 #include <elle/athena/LamportAge.hh>
@@ -85,7 +84,6 @@ namespace infinit
             bmi::hashed_non_unique<
               bmi::const_mem_fun<
                 Entry, Address const&, &Entry::block>>,
-            bmi::sequenced<>,
             bmi::hashed_unique<
               bmi::identity<Entry>>>>;
         /// Peers by id.
