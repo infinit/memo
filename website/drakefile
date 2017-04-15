@@ -132,6 +132,7 @@ def configure(
     'templates/pages/faq.html',
     'templates/pages/home.html',
     'templates/pages/legal.html',
+    'templates/pages/kapsul.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/product.html',

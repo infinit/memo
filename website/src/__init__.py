@@ -81,6 +81,14 @@ class Website(bottle.Bottle):
       'description': 'Infinit provides persistent storage through several solutions well suited to make your containerized Docker applications stateful.',
     }
 
+  @route('/project/kapsul', name = 'kapsul')
+  @view('pages/kapsul.html')
+  def root(self):
+    return {
+      'title': 'Decentralized key-value store, with built-in replication and security.',
+      'description': 'Decentralized key-value store, with built-in replication and security. ',
+    }
+
   @route('/desktop', name = 'drive')
   @view('pages/desktop/desktop.html')
   def root(self):
