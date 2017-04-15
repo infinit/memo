@@ -69,35 +69,40 @@ namespace infinit
                  decltype(cli::kelips_contact_timeout =
                           boost::optional<std::string>()),
                  decltype(cli::encrypt = boost::optional<std::string>()),
-                 decltype(cli::protocol = boost::optional<std::string>())),
+                 decltype(cli::protocol = boost::optional<std::string>()),
+                 decltype(cli::tcp_heartbeat =
+                          boost::optional<std::chrono::milliseconds>())),
            decltype(modes::mode_create)>
       create;
       void
-      mode_create(std::string const& network_name,
-                  boost::optional<std::string> const& description = {},
-                  Strings const& storage = {},
-                  boost::optional<int> port = boost::none,
-                  int replication_factor = 1,
-                  boost::optional<std::string> const& eviction_delay = boost::none,
-                  boost::optional<std::string> const& output_name = boost::none,
-                  bool push_network = false,
-                  bool push = false,
-                  Strings const& admin_r = {},
-                  Strings const& admin_rw = {},
-                  Strings const& peer = {},
-                  // Consensus types.
-                  bool paxos = false,
-                  bool no_consensus = false,
-                  // Overlay types.
-                  bool kelips = false,
-                  bool kalimero = false,
-                  bool kouncil = false,
-                  // Kelips options,
-                  boost::optional<int> nodes = boost::none,
-                  boost::optional<int> k = boost::none,
-                  boost::optional<std::string> const& kelips_contact_timeout = boost::none,
-                  boost::optional<std::string> const& encrypt = boost::none,
-                  boost::optional<std::string> const& protocol = boost::none);
+      mode_create(
+        std::string const& network_name,
+        boost::optional<std::string> const& description = {},
+        Strings const& storage = {},
+        boost::optional<int> port = boost::none,
+        int replication_factor = 1,
+        boost::optional<std::string> const& eviction_delay = boost::none,
+        boost::optional<std::string> const& output_name = boost::none,
+        bool push_network = false,
+        bool push = false,
+        Strings const& admin_r = {},
+        Strings const& admin_rw = {},
+        Strings const& peer = {},
+        // Consensus types.
+        bool paxos = false,
+        bool no_consensus = false,
+        // Overlay types.
+        bool kelips = false,
+        bool kalimero = false,
+        bool kouncil = false,
+        // Kelips options,
+        boost::optional<int> nodes = boost::none,
+        boost::optional<int> k = boost::none,
+        boost::optional<std::string> kelips_contact_timeout = boost::none,
+        boost::optional<std::string> encrypt = boost::none,
+        // Generic options
+        boost::optional<std::string> protocol = boost::none,
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none);
 
 
       /*---------------.

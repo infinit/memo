@@ -172,7 +172,8 @@ namespace infinit
                 init.protocol,
                 init.port,
                 init.listen_address,
-                std::move(init.rdv_host))
+                std::move(init.rdv_host),
+                init.tcp_heartbeat)
         , _overlay(init.overlay_builder(*this, this->_local))
         , _pool([this] { return std::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
@@ -613,7 +614,8 @@ namespace infinit
         boost::optional<int> port_,
         elle::Version version,
         AdminKeys admin_keys,
-        std::vector<Endpoints> peers)
+        std::vector<Endpoints> peers,
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat_)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -625,6 +627,7 @@ namespace infinit
         , port(std::move(port_))
         , admin_keys(std::move(admin_keys))
         , peers(std::move(peers))
+        , tcp_heartbeat(tcp_heartbeat_)
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -655,6 +658,7 @@ namespace infinit
         catch (elle::serialization::Error const&)
         {
         }
+        s.serialize("tcp-heartbeat", this->tcp_heartbeat);
       }
 
       void
@@ -676,6 +680,7 @@ namespace infinit
         }
         catch (elle::serialization::Error const&)
         {}
+        s.serialize("tcp-heartbeat", this->tcp_heartbeat);
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -754,7 +759,8 @@ namespace infinit
           admin_keys,
           std::move(rdv_host),
           std::move(monitoring_socket_path),
-          this->overlay->rpc_protocol);
+          this->overlay->rpc_protocol,
+          doughnut::tcp_heartbeat = this->tcp_heartbeat);
       }
 
       std::string

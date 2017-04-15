@@ -1278,19 +1278,23 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
+  // FIXME: test run in TCP only because the BF for some reason takes forever
+  // (nearly 30s) to detect stale UTP connections.
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(10),
     ::keys = keys,
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
   if (get_kelips(*a))
     return; // kelips cannot handle automatic reconnection after on_disappearance()
   auto b = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(11),
     ::keys = keys,
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
   int port = b->dht->local()->server_endpoint().port();
   ELLE_LOG("connect DHTs")
     discover(*b, *a, anonymous, false, true, true);
@@ -1320,7 +1324,8 @@ ELLE_TEST_SCHEDULED(
       ::id = special_id(11),
       ::keys = keys,
       ::make_overlay = config.overlay_builder,
-      ::port = port);
+      ::port = port,
+      ::protocol = dht::Protocol::tcp);
     elle::reactor::wait(discovered);
   }
 }

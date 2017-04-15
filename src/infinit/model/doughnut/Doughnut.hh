@@ -76,6 +76,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(soft_fail_running);
       ELLE_DAS_SYMBOL(soft_fail_timeout);
       ELLE_DAS_SYMBOL(storage);
+      ELLE_DAS_SYMBOL(tcp_heartbeat);
       ELLE_DAS_SYMBOL(version);
 
       /// Doughnut.
@@ -126,7 +127,9 @@ namespace infinit
             doughnut::soft_fail_timeout =
               std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
             doughnut::soft_fail_running =
-              std::declval<elle::Defaulted<bool>>()));
+              std::declval<elle::Defaulted<bool>>(),
+            doughnut::tcp_heartbeat =
+              std::declval<boost::optional<std::chrono::milliseconds>>()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
@@ -258,6 +261,7 @@ namespace infinit
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat;
         using Model = elle::das::Model<
           Configuration,
           decltype(elle::meta::list(symbols::overlay,
@@ -279,7 +283,8 @@ namespace infinit
           boost::optional<int> port,
           elle::Version version,
           AdminKeys admin_keys,
-          std::vector<Endpoints> peers);
+          std::vector<Endpoints> peers,
+          boost::optional<std::chrono::milliseconds> tcp_heartbeat = {});
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration() override;
