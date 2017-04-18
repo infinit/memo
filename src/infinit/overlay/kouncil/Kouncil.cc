@@ -65,6 +65,14 @@ namespace infinit
         return lhs.node() == rhs.node() && lhs.block() == rhs.block();
       }
 
+      static
+      std::ostream&
+      operator <<(std::ostream& os, Kouncil::Entry const& e)
+      {
+        return elle::fprintf(os, is_fixed(os) ? "%f @ %f" : "%s @ %s",
+                             e.block(), e.node());
+      }
+
       /*-------------.
       | Construction |
       `-------------*/
