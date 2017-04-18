@@ -315,8 +315,8 @@ namespace infinit
             {
               {"peers", this->peer_list()},
               {"id", elle::sprintf("%s", this->doughnut()->id())},
-              {"infos", elle::make_vector(_infos,
-                                          [](auto& pi) -> elle::json::Object
+              {"infos", elle::json::make_array(_infos,
+                       [](auto& pi) -> elle::json::Object
                        {
                          return
                            {
