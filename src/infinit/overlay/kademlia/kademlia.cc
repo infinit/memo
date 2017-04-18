@@ -479,9 +479,10 @@ namespace kademlia
     }
   }
 
-  elle::reactor::Generator<Kademlia::WeakMember>
+  auto
   Kademlia::_allocate(infinit::model::Address address,
                       int n) const
+    -> MemberGenerator
   {
     ELLE_TRACE("%s: allocate %f on %s nodes", this, address, n);
     auto self = const_cast<Kademlia*>(this);
@@ -513,18 +514,18 @@ namespace kademlia
         boost::optional<infinit::model::EndpointsRefetcher>(),
         infinit::model::doughnut::Protocol::tcp));
     ELLE_TRACE("%s: returning", *this);
-    return elle::reactor::generator<WeakMember>(
-      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
+    return [res] (MemberGenerator::yielder const& yield)
       {
         for (auto r: res)
           yield(r);
-      });
+      };
   }
 
-  elle::reactor::Generator<Kademlia::WeakMember>
+  auto
   Kademlia::_lookup(infinit::model::Address address,
                     int n,
                     bool) const
+    -> MemberGenerator
   {
     auto self = const_cast<Kademlia*>(this);
     std::shared_ptr<Query> q = self->startQuery(address, true);
@@ -533,7 +534,6 @@ namespace kademlia
     ELLE_TRACE("%s: waiting done", *this);
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
-    {
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
@@ -542,21 +542,20 @@ namespace kademlia
           boost::optional<elle::reactor::network::UTPServer&>(),
           boost::optional<infinit::model::EndpointsRefetcher>(),
           infinit::model::doughnut::Protocol::tcp));
-    }
     else
       throw infinit::model::MissingBlock(address);
-    return elle::reactor::generator<WeakMember>(
-      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
+    return [res] (MemberGenerator::yielder const& yield)
       {
         for (auto r: res)
           yield(r);
-      });
+      };
   }
 
-  infinit::overlay::Overlay::WeakMember
+  auto
   Kademlia::_lookup_node(infinit::model::Address address) const
+    -> WeakMember
   {
-    return Overlay::WeakMember();
+    return {};
   }
 
   static int qid = 0;

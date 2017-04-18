@@ -8,8 +8,6 @@
 #include <elle/unordered_map.hh>
 #include <elle/Error.hh>
 
-#include <elle/reactor/Generator.hh>
-
 #include <elle/athena/paxos/Client.hh>
 
 #include <infinit/model/doughnut/Consensus.hh>
@@ -49,7 +47,7 @@ namespace infinit
           using PaxosServer = elle::athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address> ;
           using Value = elle::Option<std::shared_ptr<blocks::Block>,
-                               Paxos::PaxosClient::Quorum>;
+                                     Paxos::PaxosClient::Quorum>;
 
         /*-------------.
         | Construction |
@@ -125,13 +123,14 @@ namespace infinit
                      std::unique_ptr<storage::Storage> storage,
                      Protocol p) override;
 
-          using AcceptedOrError = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
-                            std::shared_ptr<elle::Error>>;
+          using AcceptedOrError
+            = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                        std::shared_ptr<elle::Error>>;
           using GetMultiResult = std::unordered_map<Address, AcceptedOrError>;
 
-        /*-----.
-        | Peer |
-        `-----*/
+        /*------------.
+        | Paxos::Peer |
+        `------------*/
         public:
           class Peer
             : public virtual doughnut::Peer
@@ -162,6 +161,9 @@ namespace infinit
                 boost::optional<int> local_version) = 0;
           };
 
+        /*------------------.
+        | Paxos::RemotePeer |
+        `------------------*/
           class RemotePeer
             : public Paxos::Peer
             , public doughnut::Remote
@@ -194,9 +196,9 @@ namespace infinit
                 boost::optional<int> local_version) override;
           };
 
-        /*----------.
-        | LocalPeer |
-        `----------*/
+        /*-----------------.
+        | Paxos::LocalPeer |
+        `-----------------*/
         public:
           class LocalPeer
             : public Paxos::Peer

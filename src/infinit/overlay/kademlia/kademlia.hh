@@ -1,7 +1,6 @@
 #pragma once
 
 #include <elle/reactor/Barrier.hh>
-#include <elle/reactor/Generator.hh>
 #include <elle/reactor/network/udp-socket.hh>
 #include <elle/serialization/Serializer.hh>
 
@@ -69,10 +68,10 @@ namespace kademlia
   protected:
     void
     _discover(infinit::overlay::NodeLocations const& peers) override;
-    elle::reactor::Generator<WeakMember>
+    MemberGenerator
     _allocate(infinit::model::Address address,
             int n) const override;
-    elle::reactor::Generator<WeakMember>
+    MemberGenerator
     _lookup(infinit::model::Address address,
             int n,
             bool fast) const override;

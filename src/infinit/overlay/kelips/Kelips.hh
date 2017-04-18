@@ -8,7 +8,6 @@
 #include <elle/cryptography/SecretKey.hh>
 
 #include <elle/reactor/Barrier.hh>
-#include <elle/reactor/Generator.hh>
 #include <elle/reactor/network/rdv-socket.hh>
 #include <elle/reactor/network/utp-server.hh>
 
@@ -204,11 +203,11 @@ namespace infinit
       | Overlay |
       `--------*/
       protected:
-        elle::reactor::Generator<Overlay::WeakMember>
+        MemberGenerator
         _allocate(infinit::model::Address address, int n) const override;
-        elle::reactor::Generator<Overlay::WeakMember>
+        MemberGenerator
         _lookup(infinit::model::Address address, int n, bool f) const override;
-        elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+        LocationGenerator
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
         WeakMember
         _lookup_node(Address address) const override;

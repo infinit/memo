@@ -246,18 +246,16 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::fetch_from_members(
-          elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
-          Address address,
-          boost::optional<int> local_version)
+        Consensus::fetch_from_members(MemberGenerator& peers,
+                                      Address address,
+                                      boost::optional<int> local_version)
         {
           std::unique_ptr<blocks::Block> result;
           elle::reactor::Channel<overlay::Overlay::Member> connected;
-          using PeerGenerator = elle::reactor::Generator<overlay::Overlay::WeakMember>;
           bool hit = false;
           // try connecting to all peers in parallel
-          auto connected_peers = PeerGenerator(
-            [&](PeerGenerator::yielder yield)
+          auto connected_peers = MemberGenerator(
+            [&](MemberGenerator::yielder yield)
             {
               elle::With<elle::reactor::Scope>() <<
               [&peers,&yield,&hit] (elle::reactor::Scope& s)

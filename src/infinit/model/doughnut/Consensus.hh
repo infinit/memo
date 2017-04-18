@@ -46,12 +46,12 @@ namespace infinit
           fetch(Address address, boost::optional<int> local_version = {});
           void
           remove(Address address, blocks::RemoveSignature rs);
+          using MemberGenerator = overlay::Overlay::MemberGenerator;
           static
           std::unique_ptr<blocks::Block>
-          fetch_from_members(
-            elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
-            Address address,
-            boost::optional<int> local_version);
+          fetch_from_members(MemberGenerator& peers,
+                             Address address,
+                             boost::optional<int> local_version);
           void
           remove_many(Address address,
                       blocks::RemoveSignature rs,

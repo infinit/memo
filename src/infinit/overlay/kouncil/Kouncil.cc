@@ -552,12 +552,11 @@ namespace infinit
       | Lookup |
       `-------*/
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Kouncil::_allocate(Address address, int n) const
+        -> MemberGenerator
       {
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             ELLE_DEBUG("%s: selecting %s nodes from %s peers",
                        this, n, this->_peers.size());
@@ -573,15 +572,14 @@ namespace infinit
               for (auto r: indexes)
                 yield(this->peers().get<1>()[r]);
             }
-          });
+          };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Kouncil::_lookup(Address address, int n, bool) const
+        -> MemberGenerator
       {
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             int count = 0;
             for (auto const& entry:
@@ -634,11 +632,12 @@ namespace infinit
                 }
               }
             }
-          });
+          };
       }
 
-      Overlay::WeakMember
+      auto
       Kouncil::_lookup_node(Address id) const
+        -> WeakMember
       {
         if (auto it = find(this->_peers, id))
           return *it;
