@@ -104,7 +104,8 @@ namespace infinit
     {
       if (peer.endpoints().empty())
         elle::err("missing endpoint for %f", peer.id());
-      return this->doughnut()->dock().make_peer(peer);
+      else
+        return this->doughnut()->dock().make_peer(peer);
     }
 
     /*-----------.
