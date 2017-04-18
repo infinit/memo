@@ -137,7 +137,6 @@ def configure(
   with open(str(doughnut_json.path())) as f:
     with drake.templating.Context(content = {'proto': json.load(f)}):
       drake.node('doughnut.proto.tmpl')
-      drake.node('doughnut.md.tmpl')
   doughnut_proto = drake.node('doughnut.proto')
   global gendn, genfs, plugin
   # plugin = drake.node(grpc.grpc_cpp_plugin)
