@@ -1387,7 +1387,8 @@ ELLE_TEST_SCHEDULED(
     ::id = special_id(10),
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
-    ::protocol = dht::Protocol::tcp);
+    ::protocol = dht::Protocol::tcp,
+    ::paxos = false);
   auto id_b = special_id(11);
   auto b = std::make_unique<DHT>(
     ::version = config.version,
@@ -1395,7 +1396,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys,
     ::storage = std::make_unique<infinit::storage::Memory>(storage),
     ::make_overlay = config.overlay_builder,
-    ::protocol = dht::Protocol::tcp);
+    ::protocol = dht::Protocol::tcp,
+    ::paxos = false);
   auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
   b->dht->seal_and_insert(*block, tcr());
   ELLE_LOG("connect DHTs")
@@ -1414,7 +1416,11 @@ ELLE_TEST_SCHEDULED(
     b.reset();
     elle::reactor::wait(disappeared);
   }
-  BOOST_CHECK_THROW(a->dht->overlay()->lookup(block->address()), MissingBlock);
+  auto fail = [&]{
+    auto res = a->dht->overlay()->lookup(block->address());
+    ELLE_LOG("unexpected result: %s", res);
+  };
+  BOOST_CHECK_THROW(fail(), MissingBlock);
   ELLE_LOG("start second DHT")
   {
     b = std::make_unique<DHT>(
@@ -1423,7 +1429,10 @@ ELLE_TEST_SCHEDULED(
       ::keys = keys,
       ::storage = std::make_unique<infinit::storage::Memory>(storage),
       ::make_overlay = config.overlay_builder,
-      ::protocol = dht::Protocol::tcp);
+      ::protocol = dht::Protocol::tcp,
+      // FIXME: horrible failure if paxos is set to true.  Can't we
+      // get something more readable?
+      ::paxos = false);
     b->dht->remove(block->address());
     BOOST_CHECK_THROW(b->dht->overlay()->lookup(block->address()),
                       MissingBlock);
