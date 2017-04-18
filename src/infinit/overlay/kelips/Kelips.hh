@@ -280,11 +280,11 @@ namespace infinit
         void
         addLocalResults(
           packet::GetFileRequest* p,
-          elle::reactor::yielder<NodeLocation>::type const* yield);
+          elle::reactor::yielder<NodeLocation> const* yield);
         void
         addLocalResults(
           packet::MultiGetFileRequest* p,
-          elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+          elle::reactor::yielder<std::pair<Address, NodeLocation>> const* yield,
           std::vector<std::set<Address>>& result_sets);
         void
         kelipsMGet(

@@ -2300,7 +2300,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::MultiGetFileRequest* p,
-        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+        elle::reactor::yielder<std::pair<Address, NodeLocation>> const* yield,
         std::vector<std::set<Address>>& result_sets)
       {
         ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
@@ -2323,7 +2323,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-                            elle::reactor::yielder<NodeLocation>::type const* yield)
+                            elle::reactor::yielder<NodeLocation> const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -3242,7 +3242,8 @@ namespace infinit
           else
             ++it;
         }
-        int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
+        int time_send_all
+          = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 4)
         {
