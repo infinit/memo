@@ -99,7 +99,7 @@ namespace infinit
     std::ostream&
     operator << (std::ostream& out, Address const& k)
     {
-      if (out.flags() & std::ios::fixed)
+      if (is_fixed(out))
       {
         out << "0x";
         out << elle::format::hexadecimal::encode(
