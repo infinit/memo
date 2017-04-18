@@ -466,14 +466,13 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
-        // The peer will be missing from infos if the error occurs during the
-        // first advertise.
+        // The peer will be missing from `_infos` if the error occurs
+        // during the first advertise.
         if (auto info = find(this->_infos, id))
           this->_infos.modify(
             info, [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
         this->_address_book.erase(id);
-        this->on_disappearance()(id, false);
         peer.reset();
         if (!this->_cleaning)
         {
@@ -486,6 +485,7 @@ namespace infinit
               it, [this] (StaleEndpoint& e) { e.reconnect(*this); });
           }
         }
+        this->on_disappearance()(id, false);
       }
 
       void
