@@ -131,6 +131,12 @@ def configure(
     cmake_env = {
       'GO_EXECUTABLE': go.go,
     })
+  import json
+  doughnut_proto_json = drake.Node('doughnut.json')
+  with open(str(doughnut_proto_json.path())) as f:
+    with drake.templating.Context(content = {'proto': json.load(f)}):
+      drake.node('doughnut.proto.tmpl')
+      drake.node('doughnut.md.tmpl')
   doughnut_proto = drake.node('doughnut.proto')
   global gendn, genfs, plugin
   # plugin = drake.node(grpc.grpc_cpp_plugin)

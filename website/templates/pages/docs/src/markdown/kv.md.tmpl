@@ -1,3 +1,22 @@
+<%!
+  def entry(name, l):
+    return list(filter(lambda x: x['name'] == name, l))[0]
+
+  def rpc(proto, name):
+    e = entry(name, proto['service']['rpcs'])
+    return "`%s(%s) returns (%s)`: %s." % (
+      e['name'], ' '.join(e['arguments']), e['returns'],
+      e['documentation']['abstract'])
+
+  def attribute(proto, object, name, oneof = None):
+    e = entry(object, proto['messages'])
+    if oneof is None:
+      a = entry(name, e['attributes'])
+    else:
+      a = entry(name, entry(oneof, e['attributes'])['values'])
+    return "`%s %s`: %s." % (a['type'], a['name'], a['documentation']['abstract'])
+%>
+
 The Infinit Key-Value store
 ===========================
 
@@ -6,20 +25,20 @@ built-in replication and security. This key-value store is accessible
 through a [grpc](http://www.grpc.io) interface specified in the file
 <a class="open-popup" href="#doughnut-proto">doughnut.proto</a>.
 
-## API overview ##
+API overview
+------------
 
 At its most basic level, a key-value store provides a mapping from an
 Address to its corresponding content. The API relies on of four main
 methods:
 
-* `Fetch(FetchRequest) returns (Block)`: Fetch the block at given
-  address.
-* `Insert(InsertRequest) returns (InsertResponse)`: Insert a new block.
-* `Update(Update) returns (UpdateResponse)`: Update an exsiting block.
-* `Remove(Address) returns (RemoveResponse)`: Erase the block at
-  given address.
+* ${rpc(proto, 'Fetch')}
+* ${rpc(proto, 'Insert')}
+* ${rpc(proto, 'Update')}
+* ${rpc(proto, 'Remove')}
 
-## Blocks ##
+Blocks
+------
 
 The infinit KV store supports many different block types that serve different
 purposes. The most important ones are:
@@ -36,24 +55,24 @@ purposes. The most important ones are:
 Due to the infinit security model, only the KV store can create blocks
 and pick their address through the following methods:
 
-* `MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block)`
-* `MakeMutableBlock(MakeMutableBlockRequest) returns (Block)`
-* `MakeNamedBlock(MakeNamedBlockRequest) returns (Block)`
+* ${rpc(proto, 'MakeImmutableBlock')}
+* ${rpc(proto, 'MakeMutableBlock')}
+* ${rpc(proto, 'MakeNamedBlock')}
 
 You can then fill the `data` (IB) or `data_plain` (MB) field with your
 payload and call the `insert` procedure .
 
-### The Block message type ###
+<h3>The Block message type</h3>
 
 Blocks are read and written on the KV store through the `Block`
 protobuf message type. Most fields are opaque internal data you don't
 need to worry about. The relevant fields common to all blocks are:
 
-* `bytes address`: The address of the Block.
-* `bytes data`: The raw data payload contained in the block.
-* `bytes data_plain`: The decyphered data payload.
+* ${attribute(proto, 'Block', 'address')}
+* ${attribute(proto, 'Block', 'data', 'payload')}
+* ${attribute(proto, 'Block', 'data_plain', 'payload')}
 
-### Immutable blocks (IB) ###
+<h3>Immutable blocks (IB)</h3>
 
 While immutable blocks are less potent that mutable blocks, they are
 much faster because they are cachable and are much easier to verify
@@ -70,7 +89,7 @@ IB exposes one additional feature through the `block.owner` field: if
 set to the address of a mutable block, then removing the IB will only
 be allowed if the user would be allowed to remove said mutable block.
 
-### Mutable blocks (MB) ###
+<h3>Mutable blocks (MB)</h3>
 
 Infinit enforces an atomic update scheme by using a versioning
 mechanism.  When you `Fetch` a mutable block, the returned `Block`
@@ -85,7 +104,7 @@ modification on the new block and retry the update. This system
 enables atomic updates - see the [example](#example) below for an
 illustration of this use case.
 
-<!-- ### ACL blocks (ACB) ### -->
+<h3>ACL blocks (ACB)</h3>
 
 <!-- ACB inherits the features of mutable blocks and provide additional fields to control -->
 <!-- which users can read and write the data. -->
@@ -104,7 +123,7 @@ illustration of this use case.
 <!-- * `read`: give read access to the user. -->
 <!-- * `write`: give write access to the user. -->
 
-### Named blocks (NB) ###
+<h3>Named blocks (NB)</h3>
 
 Since block addresses are picked by infinit, named blocks enable to
 have a named root block to a block hierarchy. NBs are immutable blocks
@@ -112,7 +131,8 @@ and thus cannot be updated once created.  Use the
 `NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse)`
 procedure to obtain the NB block address from its name.
 
-## Example##
+Example
+-------
 
 *A simple multi-user document storage system*
 
@@ -120,7 +140,7 @@ This section provides a complete example of a simple use case of the
 infinit KV store. Our task for this project is to provide a simple
 document storage system for multiple users.
 
-### Public API ###
+<h3>Public API</h3>
 
 Our goal is to implement the following simple API:
 
@@ -132,7 +152,7 @@ void set_document(string user, string name, string data);
 </code>
 </pre>
 
-### Specifying our block layout ###
+<h3>Specifying our block layout</h3>
 
 We will use the following blocks:
 
@@ -147,7 +167,7 @@ For the document list format, we will use a simple text serialization
 scheme of the form `"name=address\nname2=address2\n..."`. We will
 encode addresses in hexadecimal.
 
-### Generating the gRPC and protobuf sources ###
+<h3>Generating the gRPC and protobuf sources</h3>
 
 The first step is to generate the sources from the <a class="open-popup" href="#doughnut-proto">doughnut.proto</a>
 file. This can be achieved by the following two commands:
@@ -179,7 +199,7 @@ $> protoc -I/path --cpp_out=. /path/doughnut.proto
 language.
 
 
-### Connecting to the gRPC KV store server ###
+<h3>Connecting to the gRPC KV store server</h3>
 
 Let us start with the boilerplate needed to connect to the grpc
 server. We will accept the grpc endpoint name into the first command
@@ -313,7 +333,7 @@ int main(int argc, char** argv)
 }
 ```
 
-### create_user ###
+<h3>create_user</h3>
 
 Implementing `create_user` is easy: we first create a Mutable Block with an empty payload,
 which will be our document list block. We then create a Named Block keyed with our user
@@ -389,7 +409,7 @@ void create_user(string user)
 }
 ```
 
-### list_documents ###
+<h3>list_documents</h3>
 
 Let's first factor the serialization functions since we
 are going to need them multiple times.
@@ -555,7 +575,7 @@ vector<string> list_documents(string user)
 }
 ```
 
-### get_document ###
+<h3>get_document</h3>
 
 To get the content of one specific document, we use the above `get_documents` function,
 extract the document address, and fetch its IB:
@@ -595,7 +615,7 @@ string get_document(string user, string name)
 }
 ```
 
-### set_document ###
+<h3>set_document</h3>
 
 To create or update a document, we first need to create a new IB with the document
 content, and then add it to the user document list.
@@ -705,8 +725,70 @@ void set_document(string user, string name, string data)
 }
 ```
 
-## Complete code ##
+Complete code
+-------------
 
 <pre><code class="complete lang-python notInFullCode"></code></pre>
 <pre><code class="complete lang-go notInFullCode"></code></pre>
 <pre><code class="complete cpp notInFullCode"></code></pre>
+
+The complete API
+----------------
+
+<h3>Methods</h3>
+
+% for method in proto['service']['rpcs']:
+
+<h4 name="${method['name']}">${method['name']}</h4>
+
+_${method['documentation']['abstract']}_.
+
+**returns**: [${method['returns']}](#${method['returns']}).
+
+**arguments**: ${' '.join(["[%(arg)s](#%(arg)s)" % {"arg": arg} for arg in method['arguments']])}.
+
+  % for doc in ['description', 'related', 'specific']:
+    % if method.get('documentation', {}).get(doc):
+${method['documentation'][doc]}.
+    % endif
+  % endfor
+
+% endfor
+
+<h3>Messages</h3>
+
+% for message in proto['messages']:
+
+<h4 name="${message['name']}">${message['name']}</h4>
+<table>
+  <tr>
+    <th width="10%">index</th>
+    <th>name</th>
+    <th>type</th>
+    <th>abstract</th>
+  </tr>
+  % for attr in message.get('attributes', []):
+    <tr>
+      % if attr['type'] == 'oneof':
+        <td colspan=1>${attr['name']}<td>
+        <td>${attr['type']}</td>
+        <td>${attr.get('documentation', {}).get('abstract', '')}</td>
+        % for subattr in attr['values']:
+          <tr>
+            <td>${subattr['index']}</td>
+            <td>${subattr['name']}</td>
+            <td>${subattr['type']}</td>
+            <td>${subattr.get('documentation', {}).get('abstract', '')}</td>
+          </tr>
+        % endfor
+      % else:
+        <td>${attr['index']}</td>
+        <td>${attr['name']}</td>
+        <td>${attr['type']}</td>
+        <td>${attr.get('documentation', {}).get('abstract', '')}</td>
+      % endif
+    </tr>
+  % endfor
+</table>
+
+% endfor

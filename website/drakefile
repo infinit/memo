@@ -93,8 +93,15 @@ def configure(
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/ldap.md',
     'templates/pages/docs/src/markdown/docker_volume_plugin.md',
-    'templates/pages/docs/src/markdown/kv.md',
   )
+
+  import json
+  doughnut_proto_json = drake.Node('../src/infinit/grpc/doughnut.json')
+  with open(str(doughnut_proto_json.path())) as f:
+    with drake.templating.Context(content = {'proto': json.load(f)}):
+      drake.node('templates/pages/docs/src/markdown/kv.md.tmpl')
+  markdown.append(drake.node('templates/pages/docs/src/markdown/kv.md'))
+
   changelog = drake.node(
     'ChangeLog.html',
   )
