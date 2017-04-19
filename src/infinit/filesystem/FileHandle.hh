@@ -56,14 +56,17 @@ namespace infinit
       _write_multi_multi(FileHandle* src, elle::ConstWeakBuffer buffer, off_t offset,
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(bool, dirty);
+
       struct CacheEntry
       {
+        CacheEntry() = default;
         std::shared_ptr<elle::Buffer> block;
-        bool dirty;
+        bool dirty = false;
         std::chrono::high_resolution_clock::time_point last_use;
         elle::reactor::Barrier ready;
         std::unordered_set<FileHandle*> writers;
       };
+
       void _commit_first(FileHandle* src);
       void _commit_all(FileHandle* src);
       std::function<void ()>

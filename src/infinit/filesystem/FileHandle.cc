@@ -503,8 +503,7 @@ namespace infinit
         _file._fat.resize(index+1, FileData::FatEntry(Address::null, {}));
       }
       std::shared_ptr<elle::Buffer> b;
-      auto p = this->_blocks.emplace(index,
-        CacheEntry{std::shared_ptr<elle::Buffer>(), false});
+      auto p = this->_blocks.emplace(index, CacheEntry{});
       if (_file._fat[index].first == Address::null)
       {
         b = std::make_shared<elle::Buffer>();
