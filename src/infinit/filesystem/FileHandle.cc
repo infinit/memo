@@ -502,31 +502,30 @@ namespace infinit
           return nullptr;
         _file._fat.resize(index+1, FileData::FatEntry(Address::null, {}));
       }
-      std::shared_ptr<elle::Buffer> b;
       auto p = this->_blocks.emplace(index, CacheEntry{});
+      assert(p.second);
+      auto& c = p.first->second;
       if (_file._fat[index].first == Address::null)
       {
-        b = std::make_shared<elle::Buffer>();
-        p.first->second.ready.open();
+        c.block = std::make_shared<elle::Buffer>();
+        c.ready.open();
       }
       else
       {
-        p.first->second.ready.close();
-        Address addr(this->_file._fat[index].first.value(),
-                     model::flags::immutable_block, false);
-        auto secret = _file._fat[index].second;
+        c.ready.close();
+        auto const addr = Address(this->_file._fat[index].first.value(),
+                                  model::flags::immutable_block, false);
+        auto const secret = _file._fat[index].second;
         ELLE_TRACE("Fetching %s at %f", index, addr);
         elle::SafeFinally open_ready([&] {
-            this->_blocks.at(index).ready.open();
+            c.ready.open();
         });
         auto block = fetch_or_die(*_fs.block_store(), addr, {},
                                   this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
-        auto sk = elle::cryptography::SecretKey(secret);
-        b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
+        auto const sk = elle::cryptography::SecretKey(secret);
+        c.block = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
-      auto& c = this->_blocks.at(index);
-      c.block = b;
       c.last_use = now();
       c.dirty = false; // we just fetched or inserted it
       return c.block;
@@ -554,17 +553,19 @@ namespace infinit
     {
       ELLE_TRACE("%s: prefetch index %s", *this, idx);
       auto p = this->_blocks.emplace(idx, CacheEntry{});
-      p.first->second.last_use = now();
-      p.first->second.dirty = false;
-      auto addr = Address(this->_file._fat[idx].first.value(),
-                          model::flags::immutable_block, false);
-      auto key = _file._fat[idx].second;
+      auto& c = p.first->second;
+      c.last_use = now();
+      c.dirty = false;
+      auto const addr = Address(this->_file._fat[idx].first.value(),
+                                model::flags::immutable_block, false);
+      auto const key = _file._fat[idx].second;
       ++_prefetchers_count;
       new elle::reactor::Thread("prefetcher", [this, addr, idx, key] {
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            bl = fetch_or_die(*_fs.block_store(), addr, {}, this->_file.path() / elle::sprintf("<%f>", addr));
+            bl = fetch_or_die(*_fs.block_store(), addr, {},
+                              this->_file.path() / elle::sprintf("<%f>", addr));
           }
           catch (elle::Error const& e)
           {
