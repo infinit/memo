@@ -1,6 +1,6 @@
 #include <infinit/grpc/serializer.hh>
 
-#include <elle/serialization/json/MissingKey.hh>
+#include <elle/serialization/json/Error.hh> // serialization::MissingKey.
 #include <grpc++/grpc++.h>
 #include <google/protobuf/message.h>
 

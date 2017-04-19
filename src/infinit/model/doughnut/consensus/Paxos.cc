@@ -6,7 +6,7 @@
 
 #include <elle/memory.hh>
 #include <elle/bench.hh>
-#include <elle/serialization/json/MissingKey.hh>
+#include <elle/serialization/json/Error.hh>
 
 #include <elle/cryptography/rsa/PublicKey.hh>
 #include <elle/cryptography/hash.hh>
