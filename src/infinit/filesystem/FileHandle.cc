@@ -1,5 +1,9 @@
 #include <infinit/filesystem/FileHandle.hh>
 
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/min_element.hpp>
+
+#include <elle/algorithm.hh>
 #include <elle/cryptography/SecretKey.hh>
 #include <elle/cryptography/random.hh>
 
@@ -12,6 +16,14 @@
 #include <infinit/model/MissingBlock.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.FileHandle");
+
+namespace
+{
+  using elle::os::getenv;
+  const int max_embed_size = getenv("INFINIT_MAX_EMBED_SIZE", 8192);
+  const int lookahead_blocks = getenv("INFINIT_LOOKAHEAD_BLOCKS", 5);
+  const int max_lookahead_threads = getenv("INFINIT_LOOKAHEAD_THREADS", 3);
+}
 
 namespace infinit
 {
@@ -26,14 +38,8 @@ namespace infinit
       }
     }
 
-    const uint64_t FileBuffer::default_first_block_size =
-      std::stoi(elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", "0"));;
-    static const int max_embed_size =
-      std::stoi(elle::os::getenv("INFINIT_MAX_EMBED_SIZE", "8192"));
-    static const int lookahead_blocks =
-      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
-    static const int max_lookahead_threads =
-      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
+    const uint64_t FileBuffer::default_first_block_size
+      = elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", 0);
 
     FileHandle::FileHandle(FileSystem& owner,
                            FileData data,
@@ -714,19 +720,19 @@ namespace infinit
         // Final flush, wait on all async ops concerning src
         while (true)
         {
-          auto it = std::find_if(_flushers.begin(), _flushers.end(),
-            [&](Flusher const& f) {
-              return f.second.find(src) != f.second.end();
-            });
+          auto it = boost::find_if(_flushers,
+                                   [&](Flusher const& f) {
+                                     return elle::contains(f.second, src);
+                                   });
           if (it == _flushers.end())
             break;
           it->second.erase(src);
           auto thread = it->first.get();
           elle::reactor::wait(*it->first);
-          it = std::find_if(_flushers.begin(), _flushers.end(),
-            [&](Flusher const& f) {
-              return f.first.get() == thread;
-            });
+          it = boost::find_if(_flushers,
+                              [&](Flusher const& f) {
+                                return f.first.get() == thread;
+                              });
           if (it != _flushers.end() && it->second.empty())
             _flushers.erase(it);
         }
@@ -737,7 +743,7 @@ namespace infinit
         for (int i=0; i<signed(_flushers.size()); ++i)
         {
           if (_flushers[i].first->done()
-            && _flushers[i].second.find(src) != _flushers[i].second.end())
+              && contains(_flushers[i].second, src))
           {
             elle::reactor::wait(*_flushers[i].first); // will not yield
             _flushers[i].second.erase(src);
@@ -752,17 +758,17 @@ namespace infinit
       }
       // optimize by embeding data in ACB for small payloads
       if (cache_size == 0 && max_embed_size && !default_first_block_size
-        && this->_blocks.size() == 1
-        && this->_blocks.begin()->first == 0
-        && this->_blocks.at(0).dirty
-        && this->_file._fat.size() == 1
-        && this->_file._fat[0].first == Address::null
-        && signed(this->_blocks.at(0).block->size()
-          + this->_file._data.size()) <= max_embed_size)
+          && this->_blocks.size() == 1
+          && this->_blocks.begin()->first == 0
+          && this->_blocks.at(0).dirty
+          && this->_file._fat.size() == 1
+          && this->_file._fat[0].first == Address::null
+          && signed(this->_blocks.at(0).block->size()
+                    + this->_file._data.size()) <= max_embed_size)
       {
         ELLE_TRACE_SCOPE("%s: enabling data embed", this);
         this->_file._data.append(this->_blocks.at(0).block->contents(),
-          this->_blocks.at(0).block->size());
+                                 this->_blocks.at(0).block->size());
         this->_file._fat.clear();
         this->_blocks.clear();
         this->_commit_first(src);
@@ -773,10 +779,10 @@ namespace infinit
       if (cache_size == 0)
       {
         // flush all blocks src wrote to
-        std::vector<std::function<void ()>> flushers;
+        auto flushers = std::vector<std::function<void ()>>{};
         for (auto& b: this->_blocks)
         {
-          if (b.second.dirty && b.second.writers.find(src) != b.second.writers.end())
+          if (b.second.dirty && contains(b.second.writers, src))
           {
             flushers.emplace_back(this->_flush_block(b.first, b.second));
             b.second.dirty = false;
@@ -790,15 +796,14 @@ namespace infinit
       {
         while (this->_blocks.size() > unsigned(cache_size))
         {
-          auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
-            [](Elem const& a, Elem const& b) -> bool
+          auto it = boost::min_element(this->_blocks,
+            [](Elem const& a, Elem const& b)
             {
               if (a.second.ready.opened() != b.second.ready.opened())
                 return a.second.ready.opened();
-              if (a.second.last_use == b.second.last_use)
-                return a.first < b.first;
               else
-                return a.second.last_use < b.second.last_use;
+                return (std::tie(a.second.last_use, a.first)
+                        < std::tie(b.second.last_use, b.first));
             });
           ELLE_TRACE("Removing block %s from cache", it->first);
           {

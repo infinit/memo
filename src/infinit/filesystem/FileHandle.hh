@@ -78,9 +78,8 @@ namespace infinit
       std::shared_ptr<elle::Buffer> _block_at(int index, bool create);
       FileSystem& _fs;
       FileData _file;
-      using Flusher = std::pair<
-        elle::reactor::Thread::unique_ptr,
-        std::unordered_set<FileHandle*>>;
+      using Flusher = std::pair<elle::reactor::Thread::unique_ptr,
+                                std::unordered_set<FileHandle*>>;
       std::vector<Flusher> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
       bool _first_block_new;
