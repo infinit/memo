@@ -138,8 +138,6 @@ namespace infinit
       ELLE_TRACE("%s: have %s bytes and %s fat entries totalling %s", *this,
         _file._data.size(), _file._fat.size(), _file._header.size);
       ELLE_ASSERT_EQ(buffer.size(), size);
-      int64_t total_size;
-      int32_t block_size;
       if (offset < signed(_file._data.size()))
       {
         size_t size1 = std::min(size, size_t(_file._data.size() - offset));
@@ -154,8 +152,8 @@ namespace infinit
           size - size1, offset + size1);
       }
       // multi case
-      total_size = _file._header.size;
-      block_size = _file._header.block_size;
+      int64_t total_size = _file._header.size;
+      int32_t block_size = _file._header.block_size;
       if (offset >= total_size)
       {
         ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
@@ -177,7 +175,8 @@ namespace infinit
       _check_prefetch();
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
-      { // single block case
+      {
+        // single block case
         off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
         auto it = _blocks.find(start_block);
         std::shared_ptr<elle::Buffer> block;
@@ -185,15 +184,15 @@ namespace infinit
         {
           ELLE_DEBUG("obtained block %s from cache", start_block);
           elle::reactor::wait(it->second.ready);
-          if (!it->second.block)
-          {
-            ELLE_WARN("read failure on block %s", start_block);
-            _blocks.erase(start_block);
-          }
-          else
+          if (it->second.block)
           {
             block = it->second.block;
             it->second.last_use = now();
+          }
+          else
+          {
+            ELLE_WARN("read failure on block %s", start_block);
+            _blocks.erase(start_block);
           }
         }
         if (!block)
@@ -211,7 +210,8 @@ namespace infinit
         }
         ELLE_ASSERT_LTE(signed(block_offset + size), block_size);
         if (signed(block->size()) < signed(block_offset + size))
-        { // sparse file, eof shrinkage of size was handled above
+        {
+          // sparse file, eof shrinkage of size was handled above
           long available = block->size() - block_offset;
           if (available < 0)
             available = 0;
@@ -219,8 +219,8 @@ namespace infinit
               size - available, size);
           if (available)
             memcpy(buffer.mutable_contents(),
-                block->contents() + block_offset,
-                available);
+                   block->contents() + block_offset,
+                   available);
           memset(buffer.mutable_contents() + available, 0, size - available);
         }
         else
@@ -231,7 +231,8 @@ namespace infinit
         return size;
       }
       else
-      { // overlaps two blocks case
+      {
+        // overlaps two blocks case
         ELLE_ASSERT(start_block == end_block - 1);
         int64_t second_size = (offset + size) % block_size; // second block
         int64_t first_size = size - second_size;
@@ -280,7 +281,8 @@ namespace infinit
       this->_dirty = true;
       _file._header.mtime = time(nullptr);
       if (offset < signed(max_first_block_size))
-      { // write on first block
+      {
+        // write on first block
         _fat_changed = true;
         auto wend = std::min(uint64_t(size + offset), max_first_block_size);
         if (_file._data.size() < wend)
@@ -302,20 +304,23 @@ namespace infinit
           elle::ConstWeakBuffer(buffer.contents() + to_write, size - to_write),
           size - to_write, offset + to_write);
       }
-      this->_file._header.size = std::max(this->_file._header.size,
-                                            uint64_t(offset + size));
-      // In case we skipped embeded first block, fill it
-      this->_file._data.size(max_first_block_size);
-      offset -= max_first_block_size;
-      uint64_t const block_size = this->_file._header.block_size;
-      int const start_block = offset / block_size;
-      int const end_block = (offset + size - 1) / block_size;
-      if (start_block == end_block)
-        return this->_write_multi_single(
-            src, std::move(buffer), offset, start_block);
       else
-        return this->_write_multi_multi(
-            src, std::move(buffer), offset, start_block, end_block);
+      {
+        this->_file._header.size = std::max(this->_file._header.size,
+                                              uint64_t(offset + size));
+        // In case we skipped embeded first block, fill it
+        this->_file._data.size(max_first_block_size);
+        offset -= max_first_block_size;
+        uint64_t const block_size = this->_file._header.block_size;
+        int const start_block = offset / block_size;
+        int const end_block = (offset + size - 1) / block_size;
+        if (start_block == end_block)
+          return this->_write_multi_single(
+              src, std::move(buffer), offset, start_block);
+        else
+          return this->_write_multi_multi(
+              src, std::move(buffer), offset, start_block, end_block);
+      }
     }
 
     int
@@ -494,22 +499,20 @@ namespace infinit
       {
         ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
         if (!create)
-        {
           return nullptr;
-        }
         _file._fat.resize(index+1, FileData::FatEntry(Address::null, {}));
       }
       std::shared_ptr<elle::Buffer> b;
-      auto inserted = this->_blocks.emplace(index,
+      auto p = this->_blocks.emplace(index,
         CacheEntry{std::shared_ptr<elle::Buffer>(), false});
       if (_file._fat[index].first == Address::null)
       {
         b = std::make_shared<elle::Buffer>();
-        inserted.first->second.ready.open();
+        p.first->second.ready.open();
       }
       else
       {
-        inserted.first->second.ready.close();
+        p.first->second.ready.close();
         Address addr(this->_file._fat[index].first.value(),
                      model::flags::immutable_block, false);
         auto secret = _file._fat[index].second;
@@ -520,7 +523,7 @@ namespace infinit
         auto block = fetch_or_die(*_fs.block_store(), addr, {},
                                   this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
-        elle::cryptography::SecretKey sk(secret);
+        auto sk = elle::cryptography::SecretKey(secret);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
       auto& c = this->_blocks.at(index);
@@ -554,9 +557,9 @@ namespace infinit
     FileBuffer::_prefetch(int idx)
     {
       ELLE_TRACE("%s: prefetch index %s", *this, idx);
-      auto inserted = this->_blocks.emplace(idx, CacheEntry{});
-      inserted.first->second.last_use = now();
-      inserted.first->second.dirty = false;
+      auto p = this->_blocks.emplace(idx, CacheEntry{});
+      p.first->second.last_use = now();
+      p.first->second.dirty = false;
       auto addr = Address(this->_file._fat[idx].first.value(),
                           model::flags::immutable_block, false);
       auto key = _file._fat[idx].second;
@@ -675,7 +678,7 @@ namespace infinit
           });
           auto const key
             = elle::cryptography::random::generate<elle::Buffer>(32).string();
-          std::unique_ptr<ImmutableBlock> block;
+          auto block = std::unique_ptr<ImmutableBlock>{};
           if (data_.size() >= 262144)
           {
             elle::reactor::background([&] {
@@ -714,7 +717,6 @@ namespace infinit
     {
       if (cache_size < 0)
         cache_size = max_cache_size;
-      using Elem = std::pair<const int, CacheEntry>;
       if (cache_size == 0)
       {
         // Final flush, wait on all async ops concerning src
@@ -797,7 +799,7 @@ namespace infinit
         while (this->_blocks.size() > unsigned(cache_size))
         {
           auto it = boost::min_element(this->_blocks,
-            [](Elem const& a, Elem const& b)
+            [](auto const& a, auto const& b)
             {
               if (a.second.ready.opened() != b.second.ready.opened())
                 return a.second.ready.opened();
