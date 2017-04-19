@@ -536,21 +536,18 @@ namespace infinit
     void
     FileBuffer::_check_prefetch()
     {
-      // Check if we need to relaunch a prefetcher
-      int nidx = _last_read_block + 1;
-      for (; nidx < _last_read_block + lookahead_blocks
-        && _prefetchers_count < max_lookahead_threads; ++nidx)
-      {
-        if (nidx >= signed(_file._fat.size()))
-          break;
-        if (_file._fat[nidx].first == Address::null)
-          continue;
-        if (this->_blocks.find(nidx) == this->_blocks.end())
+      // Check if we need to relaunch a prefetcher.
+      for (int nidx = _last_read_block + 1;
+           nidx < _last_read_block + lookahead_blocks
+             && nidx < signed(_file._fat.size())
+             && _prefetchers_count < max_lookahead_threads;
+           ++nidx)
+        if (_file._fat[nidx].first != Address::null
+            && !elle::contains(this->_blocks, nidx))
         {
           _prefetch(nidx);
           break;
         }
-      }
     }
 
     void
