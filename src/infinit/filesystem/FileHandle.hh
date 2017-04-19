@@ -8,6 +8,7 @@ namespace infinit
   namespace filesystem
   {
     class FileBuffer;
+
     class FileHandle
       : public rfs::Handle
       , public elle::Printable

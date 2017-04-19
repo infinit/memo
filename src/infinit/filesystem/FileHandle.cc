@@ -650,56 +650,63 @@ namespace infinit
     std::function<void ()>
     FileBuffer::_flush_block(int id, CacheEntry& entry)
     {
-      if (!entry.dirty)
-        return {};
-      return [this, id, data_ = elle::Buffer(*entry.block)] () mutable
-      {
-        boost::optional<CacheEntry*> ent;
-        auto it = this->_blocks.find(id);
-        if (it != this->_blocks.end())
+      if (entry.dirty)
+        return [this, id, data_ = elle::Buffer(*entry.block)] () mutable
         {
-          ent = &it->second;
-          // FIXME: is this safe?
-          elle::reactor::wait((*ent)->ready);
-          (*ent)->ready.close();
-        }
-        elle::SafeFinally interrupt_guard([&] {
-            ELLE_WARN("Flusher %s was interrupted", id);
-            if (ent)
-              (*ent)->ready.open();
-        });
-        auto const key
-          = elle::cryptography::random::generate<elle::Buffer>(32).string();
-        std::unique_ptr<ImmutableBlock> block;
-        if (data_.size() >= 262144)
-        {
-          elle::reactor::background([&] {
+          auto ent = [this, id]() -> CacheEntry*
+            {
+              auto it = this->_blocks.find(id);
+              if (it != this->_blocks.end())
+              {
+                auto res = &it->second;
+                // FIXME: is this safe?
+                elle::reactor::wait(res->ready);
+                return res;
+              }
+              else
+                return nullptr;
+            }();
+          if (ent)
+            ent->ready.close();
+          elle::SafeFinally interrupt_guard([&] {
+              ELLE_WARN("Flusher %s was interrupted", id);
+              if (ent)
+                ent->ready.open();
+          });
+          auto const key
+            = elle::cryptography::random::generate<elle::Buffer>(32).string();
+          std::unique_ptr<ImmutableBlock> block;
+          if (data_.size() >= 262144)
+          {
+            elle::reactor::background([&] {
+              auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
+              block = this->_fs.block_store()->make_block<ImmutableBlock>(
+                std::move(cdata), this->_file._address);
+            });
+          }
+          else
+          {
             auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
             block = this->_fs.block_store()->make_block<ImmutableBlock>(
               std::move(cdata), this->_file._address);
-          });
-        }
-        else
-        {
-          auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
-          block = this->_fs.block_store()->make_block<ImmutableBlock>(
-            std::move(cdata), this->_file._address);
-        }
-        auto baddr = block->address();
-        this->_fs.block_store()->insert(
-          std::move(block),
-          std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
-        Address prev = Address::null;
-        if (signed(this->_file._fat.size()) > id)
-          prev = _file._fat.at(id).first;
-        this->_file._fat[id] = FileData::FatEntry(baddr, key);
-        this->_fat_changed = true;
-        if (prev != Address::null)
-          unchecked_remove(*this->_fs.block_store(), prev);
-        if (ent)
-          (*ent)->ready.open();
-        interrupt_guard.abort();
-      };
+          }
+          auto baddr = block->address();
+          this->_fs.block_store()->insert(
+            std::move(block),
+            std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
+          auto prev = Address::null;
+          if (signed(this->_file._fat.size()) > id)
+            prev = _file._fat.at(id).first;
+          this->_file._fat[id] = FileData::FatEntry(baddr, key);
+          this->_fat_changed = true;
+          if (prev != Address::null)
+            unchecked_remove(*this->_fs.block_store(), prev);
+          if (ent)
+            ent->ready.open();
+          interrupt_guard.abort();
+        };
+      else
+        return {};
     }
 
     bool
