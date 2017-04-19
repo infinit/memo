@@ -44,8 +44,7 @@ namespace infinit
     FileHandle::FileHandle(FileSystem& owner,
                            FileData data,
                            bool dirty)
-    : _owner(owner)
-    , _close_failure(false)
+      : _owner(owner)
     {
       auto it = owner.file_buffers().find(data.address());
       if (it != owner.file_buffers().end())
@@ -67,14 +66,8 @@ namespace infinit
                            bool dirty)
       : _dirty(dirty)
       , _fs(fs)
-      , _file(data)
-      , _first_block_new(false)
-      , _fat_changed(false)
-      , _prefetchers_count(0)
-      , _last_read_block(0)
-      , _remove_data(false)
-    {
-    }
+      , _file(std::move(data))
+    {}
 
     FileHandle::~FileHandle()
     {
