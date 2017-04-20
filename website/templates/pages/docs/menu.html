@@ -1,8 +1,12 @@
-<nav id="sidebar">
+<nav class="side-menu" id="sidebar">
   <div id="menu-anchor"></div>
 
-  <ul class="menu">
+  <ul class="tier1">
     <li><input type="text" id="docsearch"></li>
+
+    % if request.route.name == 'doc_kv':
+      <li class="title platform">Storage Platform</li>
+    % endif
 
     <li class="scroll_menu reference ${'active clicked' if request.route.name == 'doc_reference' else ''}">
       <a href="${route('doc_reference')}">Reference </a>
@@ -108,6 +112,15 @@
     <li ${'class="active"' if request.route.name == 'doc_status' else ''}>
       <a href="${route('doc_status')}">Status</a>
     </li>
+
+    % if request.route.name == 'doc_kv':
+      <li class="title kv">KV Store</li>
+
+      <li ${'class="active"' if request.route.name == 'doc_kv' else ''}>
+        <a href="${route('doc_kv')}">Overview</a>
+      </li>
+
+    % endif
 
   </ul>
 </nav>

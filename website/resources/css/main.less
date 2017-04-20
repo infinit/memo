@@ -1131,6 +1131,10 @@ section.doc {
 body.documentation, body.legal, body.contact, body.solutions,
 body.pricing, body.press { 
 
+  section.doc {
+    float: left; width: 50%; padding: 0 15% 100px 31%; margin-top: 15px;
+  }
+
   // header { position: fixed; width: 100%;}
   // .content { padding-top: 80px; }
   progress {
@@ -1150,11 +1154,21 @@ body.pricing, body.press {
     padding-left: 8%; width: 10%; margin-top: 10px; margin-bottom: 30px;
   }
 
+  #page-menu {
+    margin-top: 30px; margin-left: 3%; float: left; width: 13%;
+
+    ul.tier1 { max-width: 180px; }
+    ul li a { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    li.title { 
+      margin-bottom: 20px;
+    }
+  }
+
   #docsearch {
     padding: 8px 15px 8px 33px; max-width: 120px; border-radius: 30px; margin-left: -5px;
     margin-bottom: 15px; background-size: 14px 14px;
     .at2x('../images/icons/search.png', 14px, 14px);
-    background-color: transparent;
+    background-color: white; border: 1px solid #d6d6d6;
     background-repeat: no-repeat; background-position: 13px 8px;
   }
 
@@ -1185,108 +1199,118 @@ body.pricing, body.press {
 
   .algolia-docsearch-suggestion__secondary { border-top: 1px solid #E0E0E0; }
 
-  ul.menu {
-    position: absolute; margin-top: 20px; max-width: 250px;
-    &:before, &:after { content: " "; display: table; }
-    &:after { clear: both; }
-  }
-  ul.menu #menu-anchor { height: 1px; width: 100%;}
-  ul.menu.fixed { position: fixed; top: 20px;}
+  .side-menu {
+    ul.tier1 {
+      position: absolute; margin-top: 20px; max-width: 250px;
+      &:before, &:after { content: " "; display: table; }
+      &:after { clear: both; }
+      &.fixed { position: fixed; top: 20px;}
 
-  ul.menu li { position: relative;}
-  ul.menu li a {
-    font-family: @helvetica; font-weight: 400; outline: none;
-    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-  }
-  ul.menu li.notice {
-    width: 75%; margin-bottom: 20px; font-style: italic; color: @infinitgray;
-  }
-  ul.menu li a:hover,
-  ul.menu li.active > a {
-    color: @infinitred;
-  }
+      #menu-anchor { height: 1px; width: 100%;}
 
-  ul.menu > li { padding-top: 3px; padding-bottom: 5px; }
-  ul.menu > li hr {
-    border: 0px; height: 1px; background: #D2D2D2; padding: 0;
-    margin: 10px 0 7px 0; width: 70%;
-  }
-  ul.menu li > a { font-size: 15px;  }
+      li > a { font-size: 15px; }
+      li { 
+        position: relative; 
 
-  ul.menu li ul {
-    list-style-type: circle; padding-left: 20px; margin-top: 7px;
+        a {
+          font-family: @helvetica; font-weight: 400; outline: none; .transition();
+        }
 
-    li { margin: 5px 0;}
-    li a { font-size: 13px; }
-  }
-
-  ul.menu li.examples ul,
-  ul.menu li.reference ul { display: none; }
-
-  ul.menu li.examples.active ul,
-  ul.menu li.reference.active ul { display: block; }
-
-  ul.menu li.dropdown {
-    ul {
-      opacity: 0;
-      transition: transform 0.1s; transform: translateY(10px); display: none;
-    }
-    > a img {
-      transform: rotate(0deg);
-      transition: transform 0.2s linear;
-    }
-  }
-
-  ul.menu li.dropdown.clicked {
-    > ul {
-      opacity: 1; visibility: visible; transform: translateX(0px); display: block;
-    }
-    > a img {
-      transform: rotate(-180deg);
-      transition: transform 0.2s linear;
-    }
-  }
-
-  ul.menu li.request {
-    font-style: italic;
-    a { color: darken(@infinitgray, 10%); }
-  }
-
-  ul.menu li.comparisons {
-    padding-right: 10px;
-    ul {
-      position:absolute; left: 0%; top: -146px; padding: 25px 30px 20px 50px;
-      width: 100%; visibility: hidden; opacity: 0;
-      transition: transform 0.2s; transform: translateX(50px);
-      list-style-type: none; background: #FFFFFF; z-index: 12;
-      box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.50);
-      border-radius: 2px; width: 830px; max-height: 250px;
-      overflow: hidden; .transition();
-      li { margin-right: 10px; float: left; display: inline; width: 23%; }
-      li:nth-child(4n+1) { clear: both;}
-      li img {
-        max-width: 17px; margin-right: 4px; max-height: 17px;
+        a:hover, &.active > a { color: @infinitblue; .transition(); }
+        &.notice {
+          width: 75%; margin-bottom: 20px; font-style: italic; color: @infinitgray;
+        }
       }
-      > a img {
-        transform: rotate(0deg);
-        transition: transform 0.2s linear;
+
+      li.title { 
+        font-family: @sf; text-transform: uppercase; font-size: 11px; color: #B8B8B8; 
+      }
+
+      > li { padding-top: 3px; padding-bottom: 5px; }
+      > li hr {
+        border: 0px; height: 1px; background: #e8e8e8; padding: 0;
+        margin: 10px 0 7px 0; width: 70%;
+      }
+
+      ul {
+        list-style-type: circle; padding-left: 20px; margin-top: 7px;
+
+        li { margin: 5px 0;}
+        li a { font-size: 13px; }
+      }
+
+      li.examples ul,
+      li.reference ul { display: none; }
+
+      li.examples.active ul,
+      li.reference.active ul { display: block; }
+
+      li.dropdown {
+        ul {
+          opacity: 0;
+          transition: transform 0.1s; transform: translateY(10px); display: none;
+        }
+        > a img {
+          transform: rotate(0deg);
+          transition: transform 0.2s linear;
+        }
+      }
+
+      li.dropdown.clicked {
+        > ul {
+          opacity: 1; visibility: visible; transform: translateX(0px); display: block;
+        }
+        > a img {
+          transform: rotate(-180deg);
+          transition: transform 0.2s linear;
+        }
+      }
+
+      li.request {
+        font-style: italic;
+        a { color: darken(@infinitgray, 10%); }
+      }
+
+      li.comparisons {
+        padding-right: 10px;
+        ul {
+          position:absolute; left: 0%; top: -146px; padding: 25px 30px 20px 50px;
+          width: 100%; visibility: hidden; opacity: 0;
+          transition: transform 0.2s; transform: translateX(50px);
+          list-style-type: none; background: #FFFFFF; z-index: 12;
+          box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.50);
+          border-radius: 2px; width: 830px; max-height: 250px;
+          overflow: hidden; .transition();
+          li { margin-right: 10px; float: left; display: inline; width: 23%; }
+          li:nth-child(4n+1) { clear: both;}
+          li img {
+            max-width: 17px; margin-right: 4px; max-height: 17px;
+          }
+          > a img {
+            transform: rotate(0deg);
+            transition: transform 0.2s linear;
+          }
+        }
+      }
+
+      li.comparisons.clicked {
+        > ul {
+          left: 85%; visibility: visible; opacity: 1;
+          transform: translateX(0px);
+        }
+        > a img {
+          transform: rotate(-90deg);
+          transition: transform 0.2s linear;
+        }
       }
     }
   }
 
-  ul.menu li.comparisons.clicked {
-    > ul {
-      left: 85%; visibility: visible; opacity: 1;
-      transform: translateX(0px);
+  #sidebar {
+    ul.tier1 {
+      li.title { margin-top: 35px; }
+      li.title.platform { margin-top: 0; }
     }
-    > a img {
-      transform: rotate(-90deg);
-      transition: transform 0.2s linear;
-    }
-  }
-
-  section.doc {
-    float: left; width: 50%; padding: 0 15% 100px 31%; margin-top: 15px;
   }
 }
 
@@ -1431,7 +1455,25 @@ body.doc_get_started {
 }
 
 body.doc_kv {
+
+  header { padding-left: 3%; padding-right: 3%; }
+
+  .content { background: #f9f9f9; }
+
+  .side-menu#sidebar {
+    padding-left: 3%;  float: left; width: 15.5%; padding-top: 20px;  margin-top: -2px;
+    background: #f9f9f9;
+
+    ul.tier1 { position: relative;}
+    ul.tier1>li { padding-bottom: 10px; }
+  }
+
   section.doc {
+    padding: 55px 10% 100px 21%; width: 50%; border-left: 2px solid #f3f3f3;
+    background: white; margin-left: 18.5%; float: none; margin-top: 0;
+
+    &:after { display: table; content: ''; clear: both; }
+
     h1 + p { font-size: 21px; }
 
     a.active { color: @infinitred; }

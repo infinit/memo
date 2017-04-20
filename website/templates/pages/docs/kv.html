@@ -1,23 +1,24 @@
 <%inherit file="/base.html"/>
 
 <%block name="content">
+  
+  <%include file='menu.html'/>
 
-  <nav id="sidebar">
+  <nav class="side-menu" id="page-menu">
     <div id="menu-anchor"></div>
 
-    <ul class="menu">
+    <ul class="tier1">
+      <li class="title"><strong>Page Contents</strong></li>
       <li class="api-overview"><a href="#api-overview">API overview</a></li>
       <li class="block-types">
-      	<a href="#block-types">Block types</a>
+      	<a href="#blocks">Blocks</a>
       	<ul>
           <li class="the-block-message-type"><a href="#the-block-message-type">The Block message type</a></li>
           <li class="immutable-blocks--ib-"><a href="#immutable-blocks--ib-">Immutable blocks (IB)</a></li>
           <li class="mutable-blocks--mb-"><a href="#mutable-blocks--mb-">Mutable blocks (MB)</a></li>
-          <li class="acl-blocks--aclb-"><a href="#acl-blocks--aclb-">ACL blocks (ACLB)</a></li>
           <li class="named-blocks--nb-"><a href="#named-blocks--nb-">Named blocks (NB)</a></li>
         </ul>
       </li>
-      <li class="creating-and-inserting-new-blocks"><a href="#creating-and-inserting-new-blocks">Creating and inserting new blocks</a></li>
       <li class="example">
       	<a href="#example">Example</a>
       	<ul>
