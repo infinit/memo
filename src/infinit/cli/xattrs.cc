@@ -129,7 +129,7 @@ namespace infinit
     mountpoint_root(std::string const& path_in_mount, bool fallback)
     {
       enforce_in_mountpoint(path_in_mount, fallback);
-      bfs::path res = bfs::absolute(path_in_mount);
+      auto res = bfs::absolute(path_in_mount);
       while (!path_is_root(res.string(), fallback))
         res = res.parent_path();
       return res;
