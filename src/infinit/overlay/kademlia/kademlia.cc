@@ -1,5 +1,7 @@
 #include <infinit/overlay/kademlia/kademlia.hh>
 
+#include <random>
+
 #include <elle/json/exceptions.hh>
 #include <elle/log.hh>
 #include <elle/serialization/Serializer.hh>
@@ -15,8 +17,6 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
-
-#include <random>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kademlia");
 
@@ -187,6 +187,7 @@ namespace kademlia
       Address target;
     };
     REGISTER(FindNode, "findN");
+
     struct FindNodeReply: public Packet
     {
       PACKET(FindNodeReply, sender, requestId, nodes);
@@ -194,6 +195,7 @@ namespace kademlia
       std::unordered_map<Address, Endpoint> nodes;
     };
     REGISTER(FindNodeReply, "foundN");
+
     struct FindValue: public Packet
     {
       PACKET(FindValue, sender, target, requestId);
@@ -201,6 +203,7 @@ namespace kademlia
       Address target;
     };
     REGISTER(FindValue, "findV");
+
     struct FindValueReply: public Packet
     {
       PACKET(FindValueReply, sender, requestId, nodes, results);
@@ -209,6 +212,7 @@ namespace kademlia
       std::vector<Endpoint> results;
     };
     REGISTER(FindValueReply, "foundV");
+
     struct Store: public Packet
     {
       PACKET(Store, sender, key, value);
@@ -252,13 +256,19 @@ namespace kademlia
     _mask = Address(v);
     if (local)
     {
-      local->on_fetch().connect(std::bind(&Kademlia::fetch, this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
-      local->on_store().connect(std::bind(&Kademlia::store, this,
-                                          std::placeholders::_1));
-      local->on_remove().connect(std::bind(&Kademlia::remove, this,
-                                           std::placeholders::_1));
+      local->on_fetch().connect(
+         [this](Address a, std::unique_ptr<infinit::model::blocks::Block> & b)
+         {
+           this->fetch(a, b);
+         });
+      local->on_store().connect([this](infinit::model::blocks::Block const& block)
+         {
+           this->store(b);
+         });
+      local->on_remove().connect([this](Address a)
+         {
+           this->remove(a);
+         });
       this->_port = local->server_endpoint().port();
       this->_config.port = this->_port;
     }
@@ -469,9 +479,10 @@ namespace kademlia
     }
   }
 
-  elle::reactor::Generator<Kademlia::WeakMember>
+  auto
   Kademlia::_allocate(infinit::model::Address address,
                       int n) const
+    -> MemberGenerator
   {
     ELLE_TRACE("%s: allocate %f on %s nodes", this, address, n);
     auto self = const_cast<Kademlia*>(this);
@@ -503,18 +514,18 @@ namespace kademlia
         boost::optional<infinit::model::EndpointsRefetcher>(),
         infinit::model::doughnut::Protocol::tcp));
     ELLE_TRACE("%s: returning", *this);
-    return elle::reactor::generator<WeakMember>(
-      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
+    return [res] (MemberGenerator::yielder const& yield)
       {
         for (auto r: res)
           yield(r);
-      });
+      };
   }
 
-  elle::reactor::Generator<Kademlia::WeakMember>
+  auto
   Kademlia::_lookup(infinit::model::Address address,
                     int n,
                     bool) const
+    -> MemberGenerator
   {
     auto self = const_cast<Kademlia*>(this);
     std::shared_ptr<Query> q = self->startQuery(address, true);
@@ -523,7 +534,6 @@ namespace kademlia
     ELLE_TRACE("%s: waiting done", *this);
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
-    {
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
@@ -532,21 +542,20 @@ namespace kademlia
           boost::optional<elle::reactor::network::UTPServer&>(),
           boost::optional<infinit::model::EndpointsRefetcher>(),
           infinit::model::doughnut::Protocol::tcp));
-    }
     else
       throw infinit::model::MissingBlock(address);
-    return elle::reactor::generator<WeakMember>(
-      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
+    return [res] (MemberGenerator::yielder const& yield)
       {
         for (auto r: res)
           yield(r);
-      });
+      };
   }
 
-  infinit::overlay::Overlay::WeakMember
+  auto
   Kademlia::_lookup_node(infinit::model::Address address) const
+    -> WeakMember
   {
-    return Overlay::WeakMember();
+    return {};
   }
 
   static int qid = 0;
@@ -980,15 +989,15 @@ namespace kademlia
   `-----------*/
 
   std::string
-  Kademlia::type_name()
+  Kademlia::type_name() const
   {
     return "kademlia";
   }
 
   elle::json::Array
-  Kademlia::peer_list()
+  Kademlia::peer_list() const
   {
-    return elle::json::Array();
+    return {};
   }
 
   elle::json::Object

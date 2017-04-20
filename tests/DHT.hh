@@ -142,19 +142,19 @@ public:
   }
 
 protected:
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _allocate(infinit::model::Address address, int n) const override
   {
     return this->_find(address, n, true);
   }
 
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _lookup(infinit::model::Address address, int n, bool) const override
   {
     return this->_find(address, n, false);
   }
 
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _find(infinit::model::Address address, int n, bool write) const
   {
     if (_yield)
@@ -164,7 +164,7 @@ protected:
                      this, n, write ? " new" : "", address);
     return elle::reactor::generator<Overlay::WeakMember>(
       [=]
-      (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+      (MemberGenerator::yielder const& yield)
       {
         if (this->_fail_addresses.find(address) != this->_fail_addresses.end())
           return;

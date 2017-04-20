@@ -58,20 +58,20 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Stonehenge::_allocate(model::Address address, int n) const
+      -> MemberGenerator
     {
       return this->_lookup(address, n, false);
     }
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Stonehenge::_lookup(model::Address address, int n, bool) const
+      -> MemberGenerator
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      return elle::reactor::generator<Overlay::WeakMember>(
-        [this, address, n]
-        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+      return [this, address, n](MemberGenerator::yielder const& yield)
         {
           int size = this->_peers.size();
           ELLE_ASSERT_LTE(n, size);
@@ -86,11 +86,12 @@ namespace infinit
             i = (i + 1) % size;
           }
           while (i != (owner + n) % size);
-        });
+        };
     }
 
-    Overlay::WeakMember
+    auto
     Stonehenge::_lookup_node(model::Address address) const
+      -> WeakMember
     {
       for (auto const& peer: this->_peers)
         if (peer.id() == address)
@@ -104,7 +105,8 @@ namespace infinit
     {
       if (peer.endpoints().empty())
         elle::err("missing endpoint for %f", peer.id());
-      return this->doughnut()->dock().make_peer(peer);
+      else
+        return this->doughnut()->dock().make_peer(peer);
     }
 
     /*-----------.

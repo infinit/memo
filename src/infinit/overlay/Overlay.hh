@@ -118,22 +118,29 @@ namespace infinit
     | Lookup |
     `-------*/
     public:
+      /// A generator of members.
+      using MemberGenerator = elle::reactor::Generator<WeakMember>;
+
+      /// A generator of addresses, i.e., for each address, a provider
+      using LocationGenerator
+        = elle::reactor::Generator<std::pair<model::Address, WeakMember>>;
+
       /// Find owner for a new block
       ///
       /// @arg address  Address of the blocks to place
       /// @arg n        How many owners to look for
       /// @arg fast     Whether to prefer a faster, partial answer.
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)
-      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
+      LocationGenerator
       lookup(std::vector<model::Address> const& addresses, int n) const;
       /// Lookup blocks
       ///
       /// @arg address  Address of the blocks to search
       /// @arg n        How many owners to look for
       /// @arg fast     Whether to prefer a faster, partial answer.
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       lookup(model::Address address, int n, bool fast = false) const;
       /// Lookup a single block owner
       WeakMember
@@ -148,17 +155,17 @@ namespace infinit
       ///
       /// @arg ids ids of the nodes to lookup.
       /// @raise elle::Error if the node is not found.
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       _allocate(model::Address address, int n) const = 0;
       virtual
-      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
+      LocationGenerator
       _lookup(std::vector<model::Address> const& addresses, int n) const;
       virtual
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       _lookup(model::Address address, int n, bool fast) const = 0;
       /// Lookup a node by id
       ///

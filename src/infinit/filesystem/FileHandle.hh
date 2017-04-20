@@ -8,6 +8,7 @@ namespace infinit
   namespace filesystem
   {
     class FileBuffer;
+
     class FileHandle
       : public rfs::Handle
       , public elle::Printable
@@ -34,7 +35,7 @@ namespace infinit
     private:
       std::shared_ptr<FileBuffer> _buffer;
       FileSystem& _owner;
-      bool _close_failure;
+      bool _close_failure = false;
     };
 
     class FileBuffer
@@ -55,14 +56,17 @@ namespace infinit
       _write_multi_multi(FileHandle* src, elle::ConstWeakBuffer buffer, off_t offset,
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(bool, dirty);
+
       struct CacheEntry
       {
+        CacheEntry() = default;
         std::shared_ptr<elle::Buffer> block;
-        bool dirty;
+        bool dirty = false;
         std::chrono::high_resolution_clock::time_point last_use;
         elle::reactor::Barrier ready;
         std::unordered_set<FileHandle*> writers;
       };
+
       void _commit_first(FileHandle* src);
       void _commit_all(FileHandle* src);
       std::function<void ()>
@@ -78,16 +82,15 @@ namespace infinit
       std::shared_ptr<elle::Buffer> _block_at(int index, bool create);
       FileSystem& _fs;
       FileData _file;
-      using Flusher = std::pair<
-        elle::reactor::Thread::unique_ptr,
-        std::unordered_set<FileHandle*>>;
+      using Flusher = std::pair<elle::reactor::Thread::unique_ptr,
+                                std::unordered_set<FileHandle*>>;
       std::vector<Flusher> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
-      bool _first_block_new;
-      bool _fat_changed;
-      int _prefetchers_count; // number of running prefetchers
-      int _last_read_block; // block hit by last read operation
-      bool _remove_data; // there are no more links, remove data.
+      bool _first_block_new = false;
+      bool _fat_changed = false;
+      int _prefetchers_count = 0; // number of running prefetchers
+      int _last_read_block = 0; // block hit by last read operation
+      bool _remove_data = false; // there are no more links, remove data.
       static const uint64_t default_first_block_size;
       static const unsigned long max_cache_size = 20; // in blocks
       friend class File;

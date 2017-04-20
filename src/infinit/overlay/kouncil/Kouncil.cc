@@ -2,6 +2,7 @@
 
 #include <boost/range/algorithm/sort.hpp>
 
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
@@ -38,31 +39,6 @@ namespace infinit
         }
       }
 
-      template <typename I>
-      struct BoolIterator
-        : public I
-      {
-        BoolIterator(I it, bool v = true)
-          : I(it)
-          , value(v)
-        {}
-
-        operator bool() const
-        {
-          return this->value;
-        }
-
-        bool value;
-      };
-
-      template <typename C, typename E>
-      auto
-      find(C& c, E const& e)
-      {
-        auto it = c.find(e);
-        return BoolIterator<decltype(it)>(it, it != c.end());
-      }
-
       /*------.
       | Entry |
       `------*/
@@ -87,6 +63,14 @@ namespace infinit
       operator ==(Kouncil::Entry const& lhs, Kouncil::Entry const& rhs)
       {
         return lhs.node() == rhs.node() && lhs.block() == rhs.block();
+      }
+
+      static
+      std::ostream&
+      operator <<(std::ostream& os, Kouncil::Entry const& e)
+      {
+        return elle::fprintf(os, is_fixed(os) ? "%f @ %f" : "%s @ %s",
+                             e.block(), e.node());
       }
 
       /*-------------.
@@ -176,7 +160,7 @@ namespace infinit
               peer->connected().connect(
                 [this, p = std::weak_ptr<Remote>(peer)]
                 {
-		  this->_peer_connected(ELLE_ENFORCE(p.lock()));
+                  this->_peer_connected(ELLE_ENFORCE(p.lock()));
                 });
               peer->disconnected().connect(
                 [this, p = std::weak_ptr<Remote>(peer)]
@@ -315,8 +299,8 @@ namespace infinit
             {
               {"peers", this->peer_list()},
               {"id", elle::sprintf("%s", this->doughnut()->id())},
-              {"infos", elle::make_vector(_infos,
-                                          [](auto& pi) -> elle::json::Object
+              {"infos", elle::json::make_array(_infos,
+                       [](auto& pi) -> elle::json::Object
                        {
                          return
                            {
@@ -392,7 +376,7 @@ namespace infinit
         for (auto const& peer: peers)
         {
           ELLE_DEBUG("endpoints for %f: %s", peer, peer.endpoints());
-          if (!find(this->_peers, peer.id()))
+          if (!elle::find(this->_peers, peer.id()))
             ELLE_TRACE("connect to new %f", peer)
               this->doughnut()->dock().connect(peer);
           if (peer.id() != Address::null)
@@ -405,7 +389,7 @@ namespace infinit
       {
         ELLE_ASSERT_NEQ(pi.id(), Address::null);
         auto changed = true;
-        if (auto it = find(this->_infos, pi.id()))
+        if (auto it = elle::find(this->_infos, pi.id()))
           this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi);});
         else
           this->_infos.insert(pi);
@@ -413,7 +397,7 @@ namespace infinit
         {
           ELLE_DEBUG("discover new endpoints for %s", pi);
           auto& stale = this->_remember_stale(pi.location());
-          if (!find(this->_peers, pi.id()))
+          if (!elle::find(this->_peers, pi.id()))
           {
             auto c = this->doughnut()->dock().connect(pi.location());
             stale._slot = c->on_disconnection().connect(
@@ -439,7 +423,7 @@ namespace infinit
       bool
       Kouncil::_discovered(Address id)
       {
-        return find(this->_peers, id);
+        return elle::find(this->_peers, id);
       }
 
       void
@@ -448,7 +432,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
-        if (auto it = find(this->_stale_endpoints, peer->id()))
+        if (auto it = elle::find(this->_stale_endpoints, peer->id()))
           // Stop reconnection/eviction timers.
           this->_stale_endpoints.modify(
             it, [] (StaleEndpoint& e) { e.clear(); });
@@ -466,18 +450,17 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
-        // The peer will be missing from infos if the error occurs during the
-        // first advertise.
-        if (auto info = find(this->_infos, id))
+        // The peer will be missing from `_infos` if the error occurs
+        // during the first advertise.
+        if (auto info = elle::find(this->_infos, id))
           this->_infos.modify(
             info, [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
         this->_address_book.erase(id);
-        this->on_disappearance()(id, false);
         peer.reset();
         if (!this->_cleaning)
         {
-          auto it = ELLE_ENFORCE(find(this->_stale_endpoints, id));
+          auto it = ELLE_ENFORCE(elle::find(this->_stale_endpoints, id));
           ELLE_TRACE("retry connection with %s stale endpoints",
                      it->endpoints().size())
           {
@@ -486,6 +469,7 @@ namespace infinit
               it, [this] (StaleEndpoint& e) { e.reconnect(*this); });
           }
         }
+        this->on_disappearance()(id, false);
       }
 
       void
@@ -522,7 +506,7 @@ namespace infinit
       {
         bool changed = false;
         StaleEndpoint* res = nullptr;
-        if (auto it = find(this->_stale_endpoints, peer.id()))
+        if (auto it = elle::find(this->_stale_endpoints, peer.id()))
         {
           this->_stale_endpoints.modify(
             it,
@@ -552,12 +536,11 @@ namespace infinit
       | Lookup |
       `-------*/
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Kouncil::_allocate(Address address, int n) const
+        -> MemberGenerator
       {
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             ELLE_DEBUG("%s: selecting %s nodes from %s peers",
                        this, n, this->_peers.size());
@@ -573,20 +556,19 @@ namespace infinit
               for (auto r: indexes)
                 yield(this->peers().get<1>()[r]);
             }
-          });
+          };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Kouncil::_lookup(Address address, int n, bool) const
+        -> MemberGenerator
       {
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             int count = 0;
             for (auto const& entry:
                    elle::as_range(this->_address_book.get<1>().equal_range(address)))
-              if (auto p = find(this->peers(), entry.node()))
+              if (auto p = elle::find(this->peers(), entry.node()))
               {
                 yield(*p);
                 if (++count >= n)
@@ -634,13 +616,14 @@ namespace infinit
                 }
               }
             }
-          });
+          };
       }
 
-      Overlay::WeakMember
+      auto
       Kouncil::_lookup_node(Address id) const
+        -> WeakMember
       {
-        if (auto it = find(this->_peers, id))
+        if (auto it = elle::find(this->_peers, id))
           return *it;
         else
           return Overlay::WeakMember();
@@ -868,7 +851,7 @@ namespace infinit
           elle::athena::LamportAge::Duration age;
           // If we're not in the info, we got disconnected before the
           // advertisement and the age is pretty much 0.
-          if (auto info = find(kouncil._infos, this->id()))
+          if (auto info = elle::find(kouncil._infos, this->id()))
             age = info->disappearance().age();
           // How much it is still credited.
           auto respite = kouncil._eviction_delay - age;
@@ -878,13 +861,13 @@ namespace infinit
           this->_evict_timer.async_wait(
             [this, &kouncil] (boost::system::error_code const& e)
             {
-	      if (e == boost::system::errc::operation_canceled)
-		return;
-	      if (e)
-		ELLE_ABORT("unexpected timer error: %s", e);
-	      ELLE_TRACE("%f: reconnection to %f timed out, evicting",
-			 kouncil, id());
-	      kouncil._peer_evicted(id());
+              if (e == boost::system::errc::operation_canceled)
+                return;
+              if (e)
+                ELLE_ABORT("unexpected timer error: %s", e);
+              ELLE_TRACE("%f: reconnection to %f timed out, evicting",
+                         kouncil, id());
+              kouncil._peer_evicted(id());
             });
         }
         // Initiate the reconnection attempts.
@@ -911,11 +894,11 @@ namespace infinit
         this->_retry_timer.async_wait(
           [this, &kouncil] (boost::system::error_code const& e)
           {
-	    if (e == boost::system::errc::operation_canceled)
-	      return;
-	    if (e)
-	      ELLE_ABORT("unexpected timer error: %s", e);
-	    this->connect(kouncil);
+            if (e == boost::system::errc::operation_canceled)
+              return;
+            if (e)
+              ELLE_ABORT("unexpected timer error: %s", e);
+            this->connect(kouncil);
           });
       }
 

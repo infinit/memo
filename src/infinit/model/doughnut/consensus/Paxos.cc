@@ -6,7 +6,7 @@
 
 #include <elle/memory.hh>
 #include <elle/bench.hh>
-#include <elle/serialization/json/MissingKey.hh>
+#include <elle/serialization/json/Error.hh>
 
 #include <elle/cryptography/rsa/PublicKey.hh>
 #include <elle/cryptography/hash.hh>
@@ -197,16 +197,15 @@ namespace infinit
           std::shared_ptr<Paxos::Peer>
           _lock_member()
           {
-            auto member = this->_member.lock();
-            if (!member)
+            if (auto member = this->_member.lock())
+              return member;
+            else
             {
               ELLE_WARN("%s: peer %f was deleted", this, this->id());
               throw elle::athena::paxos::Unavailable();
             }
-            return member;
           }
 
-          virtual
           boost::optional<Paxos::PaxosClient::Accepted>
           propose(Paxos::PaxosClient::Quorum const& q,
                   Paxos::PaxosClient::Proposal const& p) override
@@ -220,7 +219,6 @@ namespace infinit
               });
           }
 
-          virtual
           Paxos::PaxosClient::Proposal
           accept(Paxos::PaxosClient::Quorum const& q,
                  Paxos::PaxosClient::Proposal const& p,
@@ -235,7 +233,6 @@ namespace infinit
               });
           }
 
-          virtual
           void
           confirm(Paxos::PaxosClient::Quorum const& q,
                   Paxos::PaxosClient::Proposal const& p) override
@@ -251,7 +248,6 @@ namespace infinit
               });
           }
 
-          virtual
           boost::optional<Paxos::PaxosClient::Accepted>
           get(Paxos::PaxosClient::Quorum const& q) override
           {
@@ -264,8 +260,7 @@ namespace infinit
               });
           }
 
-          ELLE_ATTRIBUTE_R(
-            std::ambivalent_ptr<Paxos::Peer>, member);
+          ELLE_ATTRIBUTE_R(std::ambivalent_ptr<Paxos::Peer>, member);
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };

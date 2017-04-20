@@ -37,28 +37,31 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Kalimero::_allocate(model::Address address, int n) const
+      -> MemberGenerator
     {
       return this->_lookup(address, n, false);
     }
 
-    elle::reactor::Generator<Kalimero::WeakMember>
+    auto
     Kalimero::_lookup(model::Address address, int n, bool) const
+      -> MemberGenerator
     {
       if (n != 1)
         elle::err("kalimero cannot fetch several (%s) nodes", n);
-      if (!this->local())
+      else if (!this->local())
         elle::err("kalimero can only be a server");
-      return elle::reactor::generator<Kalimero::WeakMember>(
-        [this] (std::function<void (Kalimero::WeakMember)> yield)
+      else
+        return [this] (std::function<void (Kalimero::WeakMember)> yield)
         {
           yield(this->local());
-        });
+        };
     }
 
-    Overlay::WeakMember
+    auto
     Kalimero::_lookup_node(model::Address address) const
+      -> WeakMember
     {
       return this->local();
     }

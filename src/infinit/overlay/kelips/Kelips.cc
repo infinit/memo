@@ -2300,7 +2300,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::MultiGetFileRequest* p,
-        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+        elle::reactor::yielder<std::pair<Address, NodeLocation>> const* yield,
         std::vector<std::set<Address>>& result_sets)
       {
         ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
@@ -2323,7 +2323,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-                            elle::reactor::yielder<NodeLocation>::type const* yield)
+                            elle::reactor::yielder<NodeLocation> const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -3242,7 +3242,8 @@ namespace infinit
           else
             ++it;
         }
-        int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
+        int time_send_all
+          = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 4)
         {
@@ -3346,13 +3347,14 @@ namespace infinit
         return Overlay::WeakMember::own(w.lock());
       }
 
-      elle::reactor::Generator<std::pair<model::Address, Node::WeakMember>>
+      auto
       Node::_lookup(std::vector<infinit::model::Address> const& addresses,
                     int n) const
+        -> LocationGenerator
       {
         if (this->doughnut()->version() < elle::Version(0, 6, 0))
           return Overlay::_lookup(addresses, n);
-        std::vector<std::vector<model::Address>> grouped;
+        auto grouped = std::vector<std::vector<model::Address>>{};
         for (auto a: addresses)
         {
           int g = group_of(a);
@@ -3360,8 +3362,7 @@ namespace infinit
             grouped.resize(g+1);
           grouped[g].push_back(a);
         }
-        return elle::reactor::generator<std::pair<Address, Node::WeakMember>>(
-          [this, n, grouped] (elle::reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
+        return [this, n, grouped](LocationGenerator::yielder const& yield)
         {
           for (auto g: grouped)
             if (!g.empty())
@@ -3373,32 +3374,29 @@ namespace infinit
                                      elle::unconst(this)->make_peer(ap.second)));
               });
             }
-        });
+        };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
-      Node::_allocate(infinit::model::Address address,
-                      int n) const
+
+      auto
+      Node::_allocate(infinit::model::Address address, int n) const
+        -> MemberGenerator
       {
         BENCH("allocate");
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             for (auto r: elle::unconst(this)->kelipsPut(address, n))
               yield(elle::unconst(this)->make_peer(r));
-          });
+          };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Node::_lookup(infinit::model::Address address,
-                    int n,
-                    bool fast) const
+                    int n, bool fast) const
+        -> MemberGenerator
       {
         BENCH("lookup");
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n, fast]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n, fast](MemberGenerator::yielder const& yield)
           {
             std::function<void(NodeLocation)> handle = [&](NodeLocation hosts)
               {
@@ -3406,7 +3404,7 @@ namespace infinit
               };
             elle::unconst(this)->kelipsGet(
               address, n, false, -1, false, fast, handle);
-          });
+          };
       }
 
       void
