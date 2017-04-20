@@ -542,7 +542,6 @@ namespace infinit
         elle::cryptography::hash(
           password, elle::cryptography::Oneway::sha256).string()
         );
-      return password;
     };
 
     std::string
