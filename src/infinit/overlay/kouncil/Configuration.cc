@@ -1,4 +1,7 @@
 #include <infinit/overlay/kouncil/Configuration.hh>
+
+#include <elle/serialization/json/Error.hh>
+
 #include <infinit/overlay/kouncil/Kouncil.hh>
 
 namespace infinit
@@ -36,7 +39,17 @@ namespace infinit
       Configuration::serialize(elle::serialization::Serializer& s)
       {
         Super::serialize(s);
-        s.serialize("eviction_delay", _eviction_delay);
+        // `eviction_delay` has not always been serialized.
+        if (s.in())
+          try
+          {
+            s.serialize("eviction_delay", _eviction_delay);
+          }
+          catch (elle::serialization::MissingKey const&)
+          {
+          }
+        else
+          s.serialize("eviction_delay", _eviction_delay);
       }
 
       namespace
