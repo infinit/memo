@@ -336,23 +336,18 @@ namespace infinit
     }
 
     void
-    port_to_file(uint16_t port,
-                 bfs::path const& path_)
+    port_to_file(uint16_t port, bfs::path const& path)
     {
       bfs::ofstream f;
-      auto path = bfs::path(
-        path_ == path_.filename() ? bfs::absolute(path_) : path_);
       Infinit::_open_write(f, path, "", "port file", true);
       f << port << std::endl;
     }
 
     void
     endpoints_to_file(infinit::model::Endpoints endpoints,
-                      bfs::path const& path_)
+                      bfs::path const& path)
     {
       bfs::ofstream f;
-      auto path = bfs::path(
-        path_ == path_.filename() ? bfs::absolute(path_) : path_);
       Infinit::_open_write(f, path, "", "endpoint file", true);
       for (auto const& ep: endpoints)
         f << ep << std::endl;
