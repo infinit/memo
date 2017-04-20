@@ -66,7 +66,7 @@ class Infinit(TemporaryDirectory):
 
   @property
   def version(self):
-    return self.run(['infinit-volume', '--version'])[0]
+    return self.run(['infinit', '--version'])[0]
 
   @property
   def user(self):
@@ -184,6 +184,7 @@ class Infinit(TemporaryDirectory):
           valgrind = False,
           timeout = 600,
           noscript = False):
+    '''Return (stdout, stderr).'''
     try:
       process = self.spawn(
         args, input, return_code, env,

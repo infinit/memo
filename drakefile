@@ -830,6 +830,7 @@ def configure(
       tests = list(
         map(lambda x: functional_test(x),
             [
+              'cli-basics',
               'cli-backward-compatibility',
               'device_cli',
               'drive_cli',
