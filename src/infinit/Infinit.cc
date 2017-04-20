@@ -1004,8 +1004,9 @@ namespace infinit
   {
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
-    elle::reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                             elle::reactor::http::Method::POST, std::move(c));
+    auto r = elle::reactor::http::Request
+      (elle::sprintf("%s/users/%s/login", beyond(), name),
+       elle::reactor::http::Method::POST, std::move(c));
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
     if (r.status() != elle::reactor::http::StatusCode::OK)
@@ -1020,13 +1021,10 @@ namespace infinit
              std::string const& name,
              infinit::Headers const& extra_headers = {})
   {
-    infinit::Headers headers;
-    for (auto const& header: extra_headers)
-      headers[header.first] = header.second;
+    auto headers = extra_headers;
     elle::reactor::http::Request::Configuration c;
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-    auto r = elle::make_unique<elle::reactor::http::Request>(
+    c.header_add(headers);
+    auto r = std::make_unique<elle::reactor::http::Request>(
       url, elle::reactor::http::Method::GET, std::move(c));
     elle::reactor::wait(*r);
     if (r->status() == elle::reactor::http::StatusCode::OK)
@@ -1077,13 +1075,11 @@ namespace infinit
                              boost::optional<User const&> self,
                              Headers const& extra_headers) const
   {
-    Headers headers;
-    if (self)
-    {
-      headers = signature_headers(elle::reactor::http::Method::GET, where, self.get());
-    }
-    for (auto const& header: extra_headers)
-      headers[header.first] = header.second;
+    auto headers =
+      self
+      ? signature_headers(elle::reactor::http::Method::GET, where, self.get())
+      : Headers{};
+    headers.insert(extra_headers.begin(), extra_headers.end());
     return fetch_data(elle::sprintf("%s/%s", beyond(), where),
                       type,
                       name,
@@ -1109,12 +1105,10 @@ namespace infinit
                          bool ignore_missing,
                          bool purge) const
   {
-    elle::reactor::http::Request::Configuration c;
-    auto headers = signature_headers(elle::reactor::http::Method::DELETE,
-                                     where,
-                                     self);
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
+    auto c = elle::reactor::http::Request::Configuration{};
+    c.header_add(signature_headers(elle::reactor::http::Method::DELETE,
+                                   where,
+                                   self));
     auto url = elle::sprintf("%s/%s", beyond(), where);
     elle::reactor::http::Request::QueryDict query;
     if (purge)
@@ -1181,11 +1175,9 @@ namespace infinit
   {
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);
-    auto headers = signature_headers(
-      elle::reactor::http::Method::PUT, where, self, object);
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-    elle::reactor::http::Request r(
+    c.header_add(signature_headers(
+      elle::reactor::http::Method::PUT, where, self, object));
+    auto r = elle::reactor::http::Request(
       elle::sprintf("%s/%s", beyond(), where),
       elle::reactor::http::Method::PUT, std::move(c));
     r << object.string();
