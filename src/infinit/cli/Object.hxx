@@ -109,24 +109,19 @@ namespace infinit
           Self::Modes::template map<mode_call, Self>::value(
             this->cli(), static_cast<Self&>(*this), args, found);
           if (!found)
-            throw elle::das::cli::Error(
-              elle::sprintf("unknown mode for object %s: %s",
-                            Symbol::name(), args[0]));
+            elle::err<elle::das::cli::Error>(
+              "unknown mode for object %s: %s", Symbol::name(), args[0]);
         }
       }
-      catch (CLIError const& e)
+      catch (CLIError& e)
       {
         throw;
       }
       catch (elle::das::cli::Error const& e)
       {
-        std::stringstream s;
-        s << e.what() << "\n\n";
-        this->help(s);
-        // Discard trailing newline
-        auto msg = s.str();
-        msg = msg.substr(0, msg.size() - 1);
-        throw CLIError(msg);
+        auto ex = CLIError(e.what());
+        ex.object(Symbol::name());
+        throw ex;
       }
     }
 
@@ -152,15 +147,15 @@ namespace infinit
         cli::compatibility_version = boost::none,
         script = false,
         as = infinit.default_user_name());
+      auto const verb = infinit.command_line().at(1);
+      auto const vars = VarMap{
+        {"action", elle::sprintf("to %s", verb)},
+        {"hub", beyond(true)},
+        {"object", infinit.command_line().at(0)},
+        {"verb", verb},
+      };
       auto show_help = [&] (std::ostream& s)
         {
-          auto const verb = infinit.command_line().at(1);
-          auto const vars = VarMap{
-            {"action", elle::sprintf("to %s", verb)},
-            {"hub", beyond(true)},
-            {"object", infinit.command_line().at(0)},
-            {"verb", verb},
-          };
           Infinit::usage(s, vars.expand("{object} {verb} [OPTIONS]"));
           s << vars.expand(this->description) << "\n\nOptions:\n";
           {
@@ -196,14 +191,9 @@ namespace infinit
       }
       catch (elle::das::cli::Error const& e)
       {
-        std::stringstream s;
-        s << e.what() << "\n\n";
-        show_help(s);
-        // object.help(s);
-        // Discard trailing newline
-        auto msg = s.str();
-        msg = msg.substr(0, msg.size() - 1);
-        throw CLIError(msg);
+        auto ex = CLIError(e.what());
+        ex.object(vars.expand("{object} {verb}"));
+        throw ex;
       }
     }
   }

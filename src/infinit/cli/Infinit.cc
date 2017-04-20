@@ -25,8 +25,9 @@
 #include <elle/das/Symbol.hh>
 #include <elle/das/cli.hh>
 
-#include <infinit/utility.hh>
+#include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit");
 
@@ -563,6 +564,20 @@ namespace infinit
   }
 }
 
+namespace
+{
+  int
+  cli_error(std::string const& error, boost::optional<std::string> object = {})
+  {
+    elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
+    auto obj = object ? " " + *object : "";
+    elle::fprintf(std::cerr,
+                  "Try '%s%s --help' for more information.\n",
+                  argv_0, obj);
+    return 2;
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -574,13 +589,13 @@ main(int argc, char** argv)
     elle::reactor::Thread main(s, "main", [&] { infinit::cli::main(args); });
     s.run();
   }
+  catch (infinit::cli::CLIError const& e)
+  {
+    return cli_error(e.what(), e.object());
+  }
   catch (elle::das::cli::Error const& e)
   {
-    elle::fprintf(std::cerr, "%s: command line error: %s\n", argv[0], e.what());
-    elle::fprintf(std::cerr,
-                  "Try '%s --help' for more information.\n",
-                  argv[0]);
-    return 2;
+    return cli_error(e.what());
   }
   catch (elle::Error const& e)
   {
