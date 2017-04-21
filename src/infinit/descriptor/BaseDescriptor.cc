@@ -38,10 +38,6 @@ namespace infinit
     | Name |
     `-----*/
 
-    BaseDescriptor::Name::Name()
-      : Name("")
-    {}
-
     BaseDescriptor::Name::Name(std::string name)
       : std::string(std::move(name))
     {}
