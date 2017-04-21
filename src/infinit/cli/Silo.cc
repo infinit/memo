@@ -26,27 +26,27 @@ namespace infinit
   {
     namespace
     {
-      int64_t
+      long double
       convert_capacity(long double value, std::string const& quantifier)
       {
         if (quantifier == "b" || quantifier == "")
-          return std::llround(value);
+          return value;
         if (quantifier == "kb")
-          return std::llround(value * 1000);
+          return value * 1000;
         if (quantifier == "kib")
-          return std::llround(value * 1024);
+          return value * 1024;
         if (quantifier == "mb")
-          return std::llround(value * 1000 * 1000);
+          return value * 1000 * 1000;
         if (quantifier == "mib")
-          return std::llround(value * 1024 * 1024);
+          return value * 1024 * 1024;
         if (quantifier == "gb")
-          return std::llround(value * 1000 * 1000 * 1000);
+          return value * 1000 * 1000 * 1000;
         if (quantifier == "gib")
-          return std::llround(value * 1024 * 1024 * 1024);
+          return value * 1024 * 1024 * 1024;
         if (quantifier == "tb")
-          return std::llround(value * 1000 * 1000 * 1000 * 1000);
+          return value * 1000 * 1000 * 1000 * 1000;
         if (quantifier == "tib")
-          return std::llround(value * 1024 * 1024 * 1024 * 1024);
+          return value * 1024 * 1024 * 1024 * 1024;
         elle::err("invalid capacity: %s", quantifier);
       }
 
@@ -67,7 +67,7 @@ namespace infinit
         }();
         auto double_value =
           std::stold(value.substr(0, value.size() - quantifier.size()));
-        return convert_capacity(double_value, quantifier);
+        return std::llround(convert_capacity(double_value, quantifier));
       }
 
       boost::optional<int64_t>
