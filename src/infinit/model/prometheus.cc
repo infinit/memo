@@ -23,6 +23,7 @@ namespace infinit
   {
     void endpoint(std::string e)
     {
+      ELLE_TRACE("setting endpoint to %s", e);
       ::prometheus_endpoint = std::move(e);
     }
 
@@ -50,7 +51,6 @@ namespace infinit
           {
             ELLE_LOG("exposer: create: %s", addr);
             auto res = std::make_unique<::prometheus::Exposer>(addr);
-            ELLE_LOG("exposer: creation succeeded");
             return res;
           }
           catch (std::exception const& e)
@@ -94,6 +94,7 @@ namespace infinit
                                   std::string const& help)
       -> Family<Gauge>*
     {
+      ELLE_TRACE("creating gauge family %s", name);
       // Add a new member gauge family to the registry.
       if (auto reg = registry())
       {
@@ -112,6 +113,7 @@ namespace infinit
                      Labels const& labels)
       -> UniquePtr<Gauge>
     {
+      ELLE_TRACE("creating gauge: %s", labels);
       if (family)
         return {&family->Add(labels), Deleter<Gauge>{family}};
       else
