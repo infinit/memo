@@ -250,8 +250,6 @@ namespace infinit
                                       Address address,
                                       boost::optional<int> local_version)
         {
-          std::unique_ptr<blocks::Block> result;
-          elle::reactor::Channel<overlay::Overlay::Member> connected;
           bool hit = false;
           // try connecting to all peers in parallel
           auto connected_peers = MemberGenerator(

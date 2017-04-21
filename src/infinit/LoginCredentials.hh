@@ -11,7 +11,6 @@ namespace infinit
     LoginCredentials(std::string const& name,
                      std::string const& password_hash,
                      std::string const& password = "");
-    // LoginCredentials(elle::serialization::SerializerIn& s);
 
     std::string name;
     std::string password_hash;
