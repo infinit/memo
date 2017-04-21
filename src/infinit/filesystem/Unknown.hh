@@ -8,6 +8,8 @@ namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
+
     class Unknown
       : public Node
       , public rfs::Path
@@ -23,10 +25,10 @@ namespace infinit
       void unlink() override { THROW_NOENT(); }
       void mkdir(mode_t mode) override;
       void rmdir() override { THROW_NOENT(); }
-      void rename(boost::filesystem::path const& where) override { THROW_NOENT(); }
-      boost::filesystem::path readlink() override { THROW_NOENT(); }
-      void symlink(boost::filesystem::path const& where) override;
-      void link(boost::filesystem::path const& where) override;
+      void rename(bfs::path const& where) override { THROW_NOENT(); }
+      bfs::path readlink() override { THROW_NOENT(); }
+      void symlink(bfs::path const& where) override;
+      void link(bfs::path const& where) override;
       void chmod(mode_t mode) override { THROW_NOENT(); }
       void chown(int uid, int gid) override { THROW_NOENT(); }
       void statfs(struct statvfs *) override { THROW_NOENT(); }

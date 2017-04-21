@@ -29,11 +29,10 @@ namespace infinit
       : public model::DummyConflictResolver
     {
       using Super = infinit::model::DummyConflictResolver;
-      NewFolderResolver(boost::filesystem::path const& path)
-        : Super()
-        , _path(path.string())
-      {
-      }
+
+      NewFolderResolver(bfs::path const& path)
+        : _path(path.string())
+      {}
 
       NewFolderResolver(elle::serialization::Serializer& s,
                         elle::Version const& version)
@@ -75,7 +74,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: make directory", *this);
       if (_owner.read_only())
-        throw rfs::Error(EACCES, "Access denied.");
+        THROW_ACCES();
       auto b = this->_owner.block_store()->
         make_block<infinit::model::blocks::ACLBlock>();
       auto address = b->address();
@@ -196,7 +195,7 @@ namespace infinit
     Unknown::create(int flags, mode_t mode)
     {
       if (_owner.read_only())
-        throw rfs::Error(EACCES, "Access denied.");
+        THROW_ACCES();
       mode |= S_IFREG;
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
@@ -261,8 +260,8 @@ namespace infinit
       : public model::DummyConflictResolver
     {
       using Super = infinit::model::DummyConflictResolver;
-      NewSymlinkResolver(boost::filesystem::path const& source,
-                         boost::filesystem::path const& destination)
+      NewSymlinkResolver(bfs::path const& source,
+                         bfs::path const& destination)
         : Super()
         , _source(source.string())
         , _destination(destination.string())
@@ -300,7 +299,7 @@ namespace infinit
       "NewSymlinkResolver");
 
     void
-    Unknown::symlink(boost::filesystem::path const& where)
+    Unknown::symlink(bfs::path const& where)
     {
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       auto parent_block = this->_owner.block_store()->fetch(_parent->address());
@@ -332,7 +331,7 @@ namespace infinit
     }
 
     void
-    Unknown::link(boost::filesystem::path const& where)
+    Unknown::link(bfs::path const& where)
     {
       throw rfs::Error(ENOENT, "link source does not exist");
     }
