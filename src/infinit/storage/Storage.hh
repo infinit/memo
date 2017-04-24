@@ -30,6 +30,7 @@ namespace infinit
       unknown
     };
 
+
     class Storage
     {
     public:
@@ -55,6 +56,7 @@ namespace infinit
        *                           the data.
        *  \throw MissingKey if the key is absent and not \a insert.
        */
+      // FIXME: why not passing `value` by value?
       int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);

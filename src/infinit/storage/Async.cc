@@ -3,13 +3,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <infinit/model/Address.hh>
-#include <infinit/storage/MissingKey.hh>
-
 #include <elle/os/environ.hh>
 #include <elle/factory.hh>
+#include <elle/find.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
+
+#include <infinit/model/Address.hh>
+#include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs.async");
 
@@ -99,10 +100,13 @@ namespace infinit
       ELLE_TRACE("...~Async");
     }
 
-    unsigned
-    get_id(bfs::directory_entry const& d)
+    namespace
     {
-      return std::stou(d.path().filename().string());
+      unsigned
+      get_id(bfs::directory_entry const& d)
+      {
+        return std::stou(d.path().filename().string());
+      }
     }
 
     void
@@ -173,8 +177,7 @@ namespace infinit
                  insert_index, op, buf.size(), k);
       if (_merge)
       {
-        auto it = _op_index.find(k);
-        if (it != _op_index.end())
+        if (auto it = elle::find(_op_index, k))
         {
           if (max_entry_hop >= 0 &&
               signed(_op_cache[it->second - _op_offset].hop) >= max_entry_hop)
