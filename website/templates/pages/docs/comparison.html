@@ -9,7 +9,7 @@
     <p>
       ${competitor['description']}
       % if competitor['links']['wikipedia']:
-        <em><a target="_blank" href="${competitor['links']['wikipedia']}">More on Wikipedia</a></em>
+        <em><a target="_blank" href="${competitor['links']['wikipedia']}">See more</a></em>
       % endif
     </p>
 
@@ -103,37 +103,14 @@
           </p>
         </td>
         <td class="competitor">
-          <span class="value ${'unknown' if 'Unknown' in value or value == '' else ''}">
-            <%
-            if value == '':
-              value = 'Not Applicable'
-
-            elif isinstance(value, list):
-              value = ", ".join([str(x).title() for x in value])
-
-            else:
-              value = value.title()
-            %>
-
-            ${value}
-          </span>
-          <br>
-          <a href="#" class="help">?</span>
+          % for item in value:
+            <span class="value ${'unknown' if 'Unknown' in item or item == '' else ''}">${item}</span>
+          % endfor
         </td>
         <td class="infinit">
-          <span>
-            <%
-            if isinstance(value_infinit, list):
-              value_infinit = ", ".join([str(x).title() for x in value_infinit])
-
-            else:
-              value_infinit = value_infinit.title()
-            %>
-
-            ${value_infinit}
-            <br>
-            <a href="#" class="help">?</span>
-          </span>
+          % for item in value_infinit:
+            <span class="value">${item}</span>
+          % endfor
         </td>
       </tr>
     % endfor

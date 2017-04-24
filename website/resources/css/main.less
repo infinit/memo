@@ -2226,6 +2226,11 @@ body.doc_comparison {
       td.competitor, td.infinit { text-align: center; width: 20%; padding: 0 2%; }
 
       td img { float: left; max-width: 50px; height: auto; margin-right: 22px; padding-bottom: 55px;}
+      td span { 
+        background: #ebf0f3; padding: 5px 8px; display: inline-block; margin: 4px;
+        border-radius: 3px;
+      }
+
       a.open-popup { outline: none; }
 
       h2 {
@@ -2241,17 +2246,12 @@ body.doc_comparison {
 
       a.help { display: none; }
 
-      span.platforms {
-        font-style: italic; color: @infinitgray; display: block;
-        margin-top: 5px;
-      }
-
       td.desc p.note { color: @infinitblack; margin-top: 8px; }
 
       &.same {
-        td.infinit, td.competitor, td.desc h2, td.desc p.note { color: #a5a5a5; }
-        a.open-popup { background: #a5a5a5; }
-        img { .grayScaleOn(); opacity: 0.7; }
+        td.infinit, td.competitor { color: #a5a5a5; }
+        // a.open-popup { background: #a5a5a5; }
+        // img { .grayScaleOn(); opacity: 0.7; }
       }
 
       &.different { 
