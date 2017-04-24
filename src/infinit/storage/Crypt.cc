@@ -15,12 +15,10 @@ namespace infinit
       {
         auto backend = instantiate(args[0], args[1]);
         auto const& password = args[2];
-        auto const salt = 3 < args.size() : to_bool(args[3]) : false;
+        auto const salt = 3 < args.size() ? to_bool(args[3]) : false;
         return std::make_unique<Crypt>(std::move(backend), password, salt);
       }
     }
-
-    using SecretKey = elle::cryptography::SecretKey;
 
     Crypt::Crypt(std::unique_ptr<Storage> backend,
                  std::string const& password,
@@ -30,29 +28,30 @@ namespace infinit
       , _salt(salt)
     {}
 
+    auto
+    Crypt::_secret_key(Key const& k) const
+      -> SecretKey
+    {
+      return _salt ? _password + elle::sprintf("%x", k) : _password;
+    }
+
     elle::Buffer
     Crypt::_get(Key k) const
     {
-      elle::Buffer e = this->_backend->get(k);
-      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : _password);
-      return enc.decipher(e);
+      auto const enc = this->_backend->get(k);
+      return _secret_key(k).decipher(enc);
     }
 
     int
     Crypt::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      SecretKey enc(
-        _salt ? _password + elle::sprintf("%x", k) : this->_password);
-      this->_backend->set(k, enc.encipher(value), insert, update);
-
-      return 0;
+      return this->_backend->set(k, _secret_key(k).encipher(value), insert, update);
     }
 
     int
     Crypt::_erase(Key k)
     {
-      this->_backend->erase(k);
-      return 0;
+      return this->_backend->erase(k);
     }
 
     std::vector<Key>

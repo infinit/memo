@@ -29,6 +29,11 @@ namespace infinit
       std::vector<Key>
       _list() override;
 
+      using SecretKey = elle::cryptography::SecretKey;
+      /// The secret key corresponding to @a k.
+      SecretKey
+      _secret_key(Key const& k) const;
+
     private:
       std::unique_ptr<Storage> _backend;
       std::string _password;
