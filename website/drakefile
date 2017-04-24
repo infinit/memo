@@ -542,8 +542,8 @@ def configure(
     'resources/images/icons/caret-down@2x.png',
     'resources/images/icons/interoperability.png',
     'resources/images/icons/interoperability@2x.png',
-    'resources/images/icons/logics.png',
-    'resources/images/icons/logics@2x.png',
+    'resources/images/icons/logic.png',
+    'resources/images/icons/logic@2x.png',
     'resources/images/icons/redundancy.png',
     'resources/images/icons/redundancy@2x.png',
     'resources/images/icons/model.png',
@@ -668,8 +668,8 @@ def configure(
     'resources/images/icons/pricing@2x.png',
     'resources/images/icons/consistency.png',
     'resources/images/icons/consistency@2x.png',
-    'resources/images/icons/opensource.png',
-    'resources/images/icons/opensource@2x.png',
+    'resources/images/icons/open source.png',
+    'resources/images/icons/open source@2x.png',
   )
 
   resources = resources + resources_icons + resources_logos

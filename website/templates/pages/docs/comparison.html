@@ -7,7 +7,7 @@
   <section class="doc ${competitor_name}">
     <h1>${competitor['name']}</h1>
     <p>
-      ${competitor['description']} 
+      ${competitor['description']}
       % if competitor['links']['wikipedia']:
         <em><a target="_blank" href="${competitor['links']['wikipedia']}">More on Wikipedia</a></em>
       % endif
@@ -15,32 +15,30 @@
 
     <table class="properties ${'compared' if show_comparison else ''}">
     <%
-      properties = [None]*11
+      properties = [None]*10
 
       for property, value in competitor['properties'].items():
-        if property == 'logics':
-          properties[0] = ['logics', value]
+        if property == 'logic':
+          properties[0] = ['model', value]
         elif property == 'model':
-          properties[1] = ['model', value]
+          properties[1] = ['logic', value]
         elif property == 'interface':
           properties[2] = ['interface', value]
         elif property == 'environment':
           properties[3] = ['environment', value]
+        elif property == 'scalability':
+          properties[4] = ['scalability', value]
         elif property == 'redundancy':
-          properties[4] = ['redundancy', value]
+          properties[5] = ['redundancy', value]
         elif property == 'fault-tolerance':
-          properties[5] = ['fault-tolerance', value]
-        elif property == 'consistency':
-          properties[6] = ['consistency', value]
+          properties[6] = ['fault-tolerance', value]
         elif property == 'security':
           properties[7] = ['security', value]
-        elif property == 'scalability':
-          properties[8] = ['scalability', value]
+        elif property == 'open source':
+          properties[8] = ['open source', value]
         elif property == 'pricing':
           properties[9] = ['pricing', value]
-        elif property == 'opensource':
-          properties[10] = ['opensource', value]
-    %> 
+    %>
 
     <tr>
       <th></th>
@@ -62,108 +60,45 @@
         <td class="desc">
           <img class="" src="${url('images/icons/' + property + '.png')}" alt="${property}">
           <h2 id="${competitor_name}_${property}">${property.replace('-', ' ').title()}</h2>
-          
-          % if property == 'logics':
-            <a class="open-popup" href="#object-file">?</a>
-            <p class="note">
-            % if 'object' in value:
-              Object-based storage architecture manage data as objects and are used mostly to store application-specific data. 
-            % elif 'block' in value:
-              Block storage solutions offer an interface at the lowest level possible which existing file systems can leverage to provide human-level functionalities. 
-            % else:
-              File-based solutions provide humans with a way to store and collaborate around files organized through a hierarchy of folders.
-            % endif
-            </p>
 
-          % elif property == 'scalability':
-            <a class="open-popup" href="#scalability">?</a>
-            <p class="note">
-            % if value == 'heterogeneous':
-              Heterogeneous systems can scale by integrating additional storage capacity from resources of different nature being a cloud storage provider, a local disk, a SAN etc. 
-            % elif value == 'gomogeneous':
-              Homogeneous systems can scale up and out but are limited to resources that are under the control of the infrastructure's administrator: local disk, NAS etc.
-            % else:
-              Some systems do not allow for the overall storage capacity to evolve over time.
-            % endif
-            </p>
+          % if property == 'model':
+            <a class="open-popup" href="#model">?</a>
+            <p class="note">The model impacts the system's ability to scale while maintaining an efficient, secure and reliable service.</p>
 
-          % elif property == 'redundancy':
-            <a class="open-popup" href="#redundancy">?</a>
-            <p class="note">
-            % if 'Erasure Codes' in value:
-              Erasure codes consume less storage capacity than replication. However, writes are slower while retrieval latency is increased. 
-            % elif value == 'replication':
-              Replication is a simple redundancy mechanism that consumes more storage capacity than erasure codes but are more adapted to primary storage.
-            % else:
-              Redundancy mechanisms ensure the availability and durability of the files stored in the storage infrastructure. 
-            % endif
-            </p>
-
-          % elif property == 'security':
-            <a class="open-popup" href="#security">?</a>
-            <p class="note">
-            % if 'in-transit' in value and 'at-rest' not in value:
-              Every communication is encrypted (in transit) but data, once stored, is not (at rest). 
-            % else:
-              Every communication is encrypted (in transit) while every piece of data is also encrypted on disk (at rest). 
-            % endif
-            </p>
-
-          % elif property == 'interoperability':
-            <a class="open-popup" href="#security">?</a>
-            <p class="note">
-            The ways a user or program can interact with a storage system; either through specific desktop/mobile applications or standard protocols.
-            </p>
+          % elif property == 'logic':
+            <a class="open-popup" href="#logic">?</a>
+            <p class="note">The logic allows for applications to benefit from more advanced functionalities than just a key-value store.</p>
 
           % elif property == 'interface':
             <a class="open-popup" href="#interface">?</a>
-            <p class="note">
-            % if value == 'File Synchronization':
-              File synchronization solutions clone all the files from a master copy onto one's local device, hence consuming some of the device's local storage capacity.
-            % else:
-              File systems are better suited for accessing storage infrastructure with large amounts of data since, unlike file synchronization, the files do not need to be downloaded locally first but can be accessed on-demand.
-            % endif
-            </p>
-
-          % elif property == 'fault-tolerance':
-            <a class="open-popup" href="#fault_tolerance">?</a>
-            <p class="note">
-            The ability to maintain a storage system operational depends on algorithms that need to adapt depending on the nature of the environment. 
-            </p>
-
-          % elif property == 'consistency':
-            <a class="open-popup" href="#consistency">?</a>
-            <p class="note">
-            The data consistency model specifies that the system guarantees that if the programmer follows the rules, memory will be consistent and the results of memory operations will be predictable.
-            </p>
+            <p class="note">An interface allows an application or use to access a storage logic through a standard protocol, GUI or else.</p>
 
           % elif property == 'environment':
             <a class="open-popup" href="#environment">?</a>
-            <p class="note">
-            % if value == 'worldwide':
-              Worldwide environments can be worrying for businesses that need to control where and how their files are stored. 
-            % else:
-              A controlled environment is a set of servers and clients that are under the control of a single entity e.g a company. 
-            %endif
-            </p>
+            <p class="note">A storage solution can be deployed over an environment which is or not under total control.</p>
 
-          % elif property == 'model':
-            <a class="open-popup" href="#model">?</a>
-            <p class="note">
-            % if value == 'centralized':
-              Centralized systems store both the data and metadata on a single server. The reliability of the whole infrastructure depends on a single server. 
-            % elif value == 'distributed':
-              Distributed storage systems distribute the data between a set of storage servers while some specific metadata server control the overall infrastructure, possibly acting as single points of failure and/or bottlenecks.
-            % else:
-              Decentralized systems distribute both the data and metadata so as to remove any potential single point of failure or bottleneck.
-            %endif
-            </p>
+          % elif property == 'scalability':
+            <a class="open-popup" href="#scalability">?</a>
+            <p class="note">The ability to scale out heteroegeneously allows for more diverse storage infrastructure.</p>
+
+          % elif property == 'redundancy':
+            <a class="open-popup" href="#redundancy">?</a>
+            <p class="note">Different redundancy mechanisms can be implemented, each with its tradeoffs.</p>
+
+          % elif property == 'fault-tolerance':
+            <a class="open-popup" href="#fault-tolerance">?</a>
+            <p class="note">The ability to maintain a storage system operational requires being able to cope with "unexpected" behaviors.</p>
+
+          % elif property == 'security':
+            <a class="open-popup" href="#security">?</a>
+            <p class="note">A secure storage system must be designed with encrypted communication, access control etc. from the ground up.</p>
+
+          % elif property == 'open source':
+            <br><p class="note">Storage products and projects may or may not have their source code available to the public.</p>
 
           % elif property == 'pricing':
-            <br><p class="note">Is the platform totally free, are some of the features free, do you need an entreprise license or are you paying according to your use?</p>
-          
-          % elif property == 'opensource':
-            <br><p class="note">The platform has made its source code available with a license in which the copyright holder provides the rights to study, change, and distribute the software.</p>
+            <br><p class="note">Storage solutions differ in their pricing model from licenses, freemium and more.</p>
+
           % endif
           </p>
         </td>
@@ -213,12 +148,66 @@
       </ul><br>
     % endif
 
-    <div class="popup mfp-hide" id="object-file">
-      <p class="title">Architecture</p>
+    <div class="popup mfp-hide" id="model">
+      <p class="title">Model</p>
       <section class="doc">
-      <p><strong><a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">Object storage</a></strong> architecture manage data as objects. Object storage is mostly used to store application-specific, movies in the case of <em>Netflix</em> for example.</p>
+      <p>The way the different servers and clients are arranged in a storage system can have a drastic impact on the overall infrastructure's performance, <a class="open-popup" href="#scalability">scalability</a> and reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault-tolerance">fault tolerance</a>).</p>
+
+      <h3>Centralized</h3>
+      <p><strong>Centralized storage systems</strong> store both the data and metadata on a single server. Even though such models are interesting for their simplicity, the <a href="https://en.wikipedia.org/wiki/Data_availability" target="_blank">availability</a> and <a href="https://en.wikipedia.org/wiki/Durability_(database_systems)" target="_blank">durability</a> of the whole infrastructure depends upon a single server.</p>
+
+      <h3>Distributed</h3>
+      <p>Adding more servers would increase complexity to the overall infrastructure but would allow it to support a larger number of clients as well as increase its total storage capacity. Such storage systems distribute the data blocks between the different storage servers effectively rendering the system <a href="https://en.wikipedia.org/wiki/Scalability" target="_blank">scalable</a> and <a href="https://en.wikipedia.org/wiki/Resilience_(network)" target="_blank">resilient</a>.</p>
+      <p><strong>Distributed storage systems</strong> handle such elasticity by introducing more specific and privileged <em>master servers</em>, also known as <em>managers</em>, to <a href="https://en.wikipedia.org/wiki/Master/slave_(technology)" target="_blank">orchestrate</a> the whole system, from routing requests to the other servers, known as <em>slave nodes</em> or <em>workers</em>, managing metadata and more.</p>
+
+      <h3>Decentralized</h3>
+      <p>For some systems, the distributed model, also known as manager/worker model, is limited by the capacity of <a href="https://en.wikipedia.org/wiki/Metadata" target="_blank">metadata</a> servers to process client requests, handle worker nodes and achieve consensus with the other managers. With too many requests to process, the system could suffer <a href="https://en.wikipedia.org/wiki/Bottleneck_(software)" target="_blank">bottlenecks</a>, <a href="https://en.wikipedia.org/wiki/Single_point_of_failure" target="_blank">single point of failures</a>, performance degradations, <a href="https://en.wikipedia.org/wiki/Cascading_failure" target="_blank">cascading effects</a> and more, not to mention that the managers cannot be scaled out as easily as the workers, limiting further the system's scalability and performance.
+      <p><strong>Decentralized systems</strong> are designed for extreme scalability by distributing the data, metadata and requests between all the nodes that have the particularity of being equally unprivileged. By doing away with <em>managers</em>, such systems exhibit better performance (natural distribution), scalability (per-block quorums), resilience (no critical node) and security (reduced surface of attack).
+      </section>
+    </div>
+
+    <div class="popup mfp-hide" id="logic">
+      <p class="title">Logic</p>
+      <section class="doc">
+      <p><strong><a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">Object storage</a></strong> systems manage data as objects or <em>blobs</em>. Object storage is mostly used for storing application-specific, movies in the case of <em>Netflix</em>, file content in the case of <em>Dropbox</em>, etc.</p>
       <p><strong><a href="https://en.wikipedia.org/wiki/File_system" target="_blank">File storage</a></strong> solutions represent data in files organized in folders and subfolders. This organization of information into a <a href="https://en.wikipedia.org/wiki/Directory_structure" target="_blank">hierarchical view</a> is perfectly adapted for humans to store and collaborate. In addition, file systems often provide an <a href="https://en.wikipedia.org/wiki/Computer_access_control" target="_blank">access control</a> mechanism, in particular in multi-user environments, to control which files/directories can be seen/edited by other users/groups.</p>
-      <p>Another architecture exists, known as <strong><a href="https://en.wikipedia.org/wiki/Block_(data_storage)" target="_blank">block storage</a></strong>, which manages data as blocks within sectors and tracks i.e very much like a raw hard disk drive.</p>
+      <p>Another storage logic exists, known as <strong><a href="https://en.wikipedia.org/wiki/Block_(data_storage)" target="_blank">block storage</a></strong>, which manages data as blocks within a virtual raw partition i.e very much as for raw hard disk drive. Note that such block storage logics are made accessible through a <a href="https://en.wikipedia.org/wiki/Device_file#BLOCKDEV">virtual block device</a> which needs to be formatted in a local file system, <em>ext4</em> for instance. Such block storage logics have the particularity of being usually only accessible from a single node while a distributed file system handles concurrent accesses from multiple client nodes.</p>
+      </section>
+    </div>
+
+    <!--     <div class="popup mfp-hide" id="interoperability">
+      <p class="title">Interoperability</p>
+      <section class="doc">
+      <p>File-based storage systems need to take into account the multitude of platforms in use today, both mobile and desktop, for human end-users to be able to manipulate their files through well designed <strong>applications</strong>.</p>
+
+      <p>Object-based and block-based systems tend to comply with standard <strong>protocols</strong> to interact with the system, from <a href="https://en.wikipedia.org/wiki/Server_Message_Block" target="_blank">SMB</a> to specific <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank">HTTP-based APIs</a> for cloud-based solutions. Likewise, many file-based storage systems integrate with existing protocols to ease the process of deploying clients on thousands of machines e.g <a href="https://en.wikipedia.org/wiki/Network_File_System" target="_blank">NFS</a>. Noteworthy is that many operating systems (Windows, MacOS X etc.) and mobile applications allow for the connection through such protocols to access remote file systems.</p>
+      </section>
+    </div> -->
+
+    <div class="popup mfp-hide" id="interface">
+      <p class="title">Interface</p>
+      <section class="doc">
+      <p>A storage solution may provide a set of interfaces for accessing the different storage logics it offers.</p>
+
+      <h3>File Synchronization</h3>
+      <p><a href="https://en.wikipedia.org/wiki/File_synchronization" target="_blank"><strong>Synchronization</strong> technologies</a> clone all the files from a master copy (in the cloud for instance) to one's local device. This process has the advantage of keeping all the files local at any time, ensuring access even in worst case scenarios e.g when completely disconnected from the Internet.</p>
+      <p>Unfortunately, such a technology also has its drawbacks, mainly to consume the local storage capacity of one's device. This becomes particularly problematic as the amount of data stored increases and exceeds the storage capacity available locally.</p>
+      <p>As a result, file synchronization solutions tend to provide a mechanism &horbar; named <em>Selective Sync</em> for Dropbox &horbar; for the user to select which files and folders should not be cloned locally, rendering those inaccessible from this device.</p>
+
+      <h3>File System</h3>
+      <p>File synchronization is performed by a small program running in the background (i.e a daemon) that monitores changes between the master and local copies. <a href="https://en.wikipedia.org/wiki/POSIX" target="_blank">POSIX</a>-compliant <a href="https://en.wikipedia.org/wiki/File_system" target="_blank"><strong>file systems</strong></a> however is a low-level layer that emulates a hard disk drive. As such, file systems can capture low-level requests from applications and users such as reading and writing data from/to a file, adding an entry to a directory and so forth.</p>
+      <p>File systems are better suited when users need to access large amount of data without having to download everything locally since everything can be retrieved on-demand i.e <a href="https://en.wikipedia.org/wiki/Streaming_media" target="_blank">streamed</a>. The limitation of file systems lies in the need for additional mechanisms to allow users to access information when offline e.g <a href="https://en.wikipedia.org/wiki/Cache_(computing)" target="_blank">caching</a>.</p>
+
+      <h3>Desktop/Web Application</h3>
+      <p>Some file storage solutions provide a <a href="https://en.wikipedia.org/wiki/Web_application" target="_blank">Web</a> or specific <a href="https://en.wikipedia.org/wiki/Graphical_user_interface" target="_blank">desktop graphical user interface</a> to access and manage files.</p>
+      <p><strong>Web</strong> interfaces are appreciated because users do not need to install an application on their computer. However, the user may lose in productivity because some <a href="https://en.wikipedia.org/wiki/File_format" target="_blank">file formats</a> may not be supported for online edition e.g <em>Photoshop</em>, <em>Catia</em> etc.</p>
+      <p><strong>Desktop</strong> applications bring the worst of both worlds as users need to learn a new way to manipulate their files, as for a Web interface, while requiring an application to be installed locally; not to mention that very few file formats are usually supported.</p>
+
+      <br>
+      <p class="note">Most enterprise solutions provide a file system because such an interface is well-suited to environments with a lot of data (no local storage consumption) while not degrading productivity by forcing users to learn to manipulate their files through a new and specific application or constraining them regarding the support file formats.</p>
+
+      <h3>API/SDK</h3>
+      <p>Object storage solutions, since mostly accessed by applitions, generally provide an <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank"><strong>API</strong></a> or <a href="https://en.wikipedia.org/wiki/Software_development_kit" target="_blank"><strong>SDK</strong></a>.</p>
       </section>
     </div>
 
@@ -229,7 +218,7 @@
 
       <p>There exists two types of systems when it comes to scalability. The first category contains systems that can <strong>scale over homogeneous resources</strong> such as local disks, network-attached storage resources etc; resources that are under the control of the infrastructure's administrator.</p>
 
-      <p>Systems capable of <strong>heterogeneous scalability</strong> are able to integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API or else. Heterogeneous-scalable storage systems often rely on <a class="open-popup" href="#security">at-rest encryption</a> and <a class="open-popup" href="#fault_tolerance">Byzantine consensus algorithms</a> to cope with potentially malicious behaviors since the integrated storage resources are often not under the control of the infrastructure's administrator.</p>
+      <p>Systems capable of <strong>heterogeneous scalability</strong> are able to integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API or else. Heterogeneous-scalable storage systems often rely on <a class="open-popup" href="#security">at-rest encryption</a> and <a class="open-popup" href="#fault-tolerance">Byzantine consensus algorithms</a> to cope with potentially malicious behaviors since the integrated storage resources are often not under the control of the infrastructure's administrator.</p>
       <p>Note that should such a system provide these mechanisms, it would exhibit most of the prerequisites to be deployed in a <a class="open-popup" href="#environment">worldwide environment</a>.</p>
       </section>
     </div>
@@ -237,7 +226,7 @@
     <div class="popup mfp-hide" id="redundancy">
       <p class="title">Redundancy</p>
       <section class="doc">
-      <p>Many storage systems provide <strong>no <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">redundancy</a> mechanism</strong> and therefore cannot ensure the <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">reliability</a> of the data they store. As a result, should a <a class="open-popup" href="#fault_tolerance">server fail</a> in such a system, some of (and possibly all) the data would be made <a href="https://en.wikipedia.org/wiki/Downtime" target="_blank">unavailable</a> &horbar; temporarily or permanently depending on the nature of the failure.</p>
+      <p>Many storage systems provide <strong>no <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">redundancy</a> mechanism</strong> and therefore cannot ensure the <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">reliability</a> of the data they store. As a result, should a <a class="open-popup" href="#fault-tolerance">server fail</a> in such a system, some of (and possibly all) the data would be made <a href="https://en.wikipedia.org/wiki/Downtime" target="_blank">unavailable</a> &horbar; temporarily or permanently depending on the nature of the failure.</p>
 
       <p>Reliability &horbar; represented by both <a href="https://en.wikipedia.org/wiki/Durability_(database_systems)" target="_blank">durability</a> (data stored remain in the system) and <a href="https://en.wikipedia.org/wiki/Data_availability" target="_blank">availability</a> (data is always accessible) &horbar; implies that a system provides some sort of a redundancy mechanism. There are basically two categories of redundancy algorithms: replication and erasure codes (which are error-correcting codes).</p>
 
@@ -269,50 +258,7 @@
       </section>
     </div>
 
-<!--     <div class="popup mfp-hide" id="interoperability">
-      <p class="title">Interoperability</p>
-      <section class="doc">
-      <p>File-based storage systems need to take into account the multitude of platforms in use today, both mobile and desktop, for human end-users to be able to manipulate their files through well designed <strong>applications</strong>.</p>
-
-      <p>Object-based and block-based systems tend to comply with standard <strong>protocols</strong> to interact with the system, from <a href="https://en.wikipedia.org/wiki/Server_Message_Block" target="_blank">SMB</a> to specific <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank">HTTP-based APIs</a> for cloud-based solutions. Likewise, many file-based storage systems integrate with existing protocols to ease the process of deploying clients on thousands of machines e.g <a href="https://en.wikipedia.org/wiki/Network_File_System" target="_blank">NFS</a>. Noteworthy is that many operating systems (Windows, MacOS X etc.) and mobile applications allow for the connection through such protocols to access remote file systems.</p>
-      </section>
-    </div> -->
-
-    <div class="popup mfp-hide" id="interface">
-      <p class="title">Interface</p>
-      <section class="doc">
-      <p>A storage solution, in particular file-based, can be accessed in different ways. Every interface has its benefits and disadvantages that are summarized next.</p>
-
-      <h3>File Synchronization</h3>
-      <p><a href="https://en.wikipedia.org/wiki/File_synchronization" target="_blank"><strong>Synchronization</strong> technologies</a> clone all the files from a master copy (in the cloud for instance) to one's local device. This process has the advantage of keeping all the files local at any time, ensuring access even in worst case scenarios e.g when completely disconnected from the Internet.</p>
-      <p>Unfortunately, such a technology also has its drawbacks, mainly to consume the local storage capacity of one's device. This becomes particularly problematic as the amount of data stored increases and exceeds the storage capacity available locally.</p>
-      <p>As a result, file synchronization solutions tend to provide a mechanism &horbar; named <em>Selective Sync</em> for Dropbox &horbar; for the user to select which files and folders should not be cloned locally, rendering those inaccessible from this device.</p>
-
-      <h3>File System</h3>
-      <p>File synchronization is performed by a small program running in the background (i.e a daemon) that monitores changes between the master and local copies. <a href="https://en.wikipedia.org/wiki/POSIX" target="_blank">POSIX</a>-compliant <a href="https://en.wikipedia.org/wiki/File_system" target="_blank"><strong>file systems</strong></a> however is a low-level layer that emulates a hard disk drive. As such, file systems can capture low-level requests from applications and users such as reading and writing data from/to a file, adding an entry to a directory and so forth.</p>
-      <p>File systems are better suited when users need to access large amount of data without having to download everything locally since everything can be retrieved on-demand i.e <a href="https://en.wikipedia.org/wiki/Streaming_media" target="_blank">streamed</a>. The limitation of file systems lies in the need for additional mechanisms to allow users to access information when offline e.g <a href="https://en.wikipedia.org/wiki/Cache_(computing)" target="_blank">caching</a>.</p>
-
-      <h3>Desktop/Web Application</h3>
-      <p>Some file storage solutions provide a <a href="https://en.wikipedia.org/wiki/Web_application" target="_blank">Web</a> or specific <a href="https://en.wikipedia.org/wiki/Graphical_user_interface" target="_blank">desktop graphical user interface</a> to access and manage files.</p>
-      <p><strong>Web</strong> interfaces are appreciated because users do not need to install an application on their computer. However, the user may lose in productivity because some <a href="https://en.wikipedia.org/wiki/File_format" target="_blank">file formats</a> may not be supported for online edition e.g <em>Photoshop</em>, <em>Catia</em> etc.</p>
-      <p><strong>Desktop</strong> applications bring the worst of both worlds as users need to learn a new way to manipulate their files, as for a Web interface, while requiring an application to be installed locally; not to mention that very few file formats are usually supported.</p>
-
-      <br>
-      <p class="note">Most enterprise solutions provide a file system because such an interface is well-suited to environments with a lot of data (no local storage consumption) while not degrading productivity by forcing users to learn to manipulate their files through a new and specific application or constraining them regarding the support file formats.</p>
-
-      <h3>API/SDK</h3>
-      <p>Object storage solutions, since mostly accessed by applitions, generally provide an <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank"><strong>API</strong></a> or <a href="https://en.wikipedia.org/wiki/Software_development_kit" target="_blank"><strong>SDK</strong></a>.</p>
-      </section>
-    </div>
-
-    <div class="popup mfp-hide" id="consistency">
-      <p class="title">Consistency</p>
-      <section class="doc">
-        <p>blablabla</p>
-      </section>
-    </div>
-
-    <div class="popup mfp-hide" id="fault_tolerance">
+    <div class="popup mfp-hide" id="fault-tolerance">
       <p class="title">Fault Tolerance</p>
       <section class="doc">
       <p>The capacity to maintain a storage system operational in the event of failure is referred to as <a href="https://en.wikipedia.org/wiki/Fault_tolerance" target="_blank">fault tolerance</a>.</p>
@@ -320,7 +266,7 @@
 
       <p>The distributed storage systems that do offer some means of redundancy, often integrate a mechanism that monitors storage servers to detect potential failures. Note however that such <strong>standard fault tolerance</strong> algorithms assume that the servers will always follow the system's protocol because distributed storage solutions are generally deployed within a <a class="open-popup" href="#environment">controlled environment</a> e.g a company's network.</p>
 
-      <p>If some of the storage resources composing the infrastructure are not under the control of the administrator, the assumption cannot hold and the fault tolerance algorithm must be adapted to tolerate failures known as <a href="https://en.wikipedia.org/wiki/Hacker_(computer_security)" target="_blank"><strong>Byzantine</strong></a> i.e potentially malicous behaviors.</p>
+      <p>If some of the storage resources composing the infrastructure are not under the control of the administrator, the assumption cannot hold and the fault tolerance algorithm must be adapted to tolerate failures known as <a href="https://en.wikipedia.org/wiki/Byzantine_fault_tolerance" target="_blank"><strong>Byzantine</strong></a> i.e potentially malicous behaviors.</p>
 
       <p>Finally, some systems &horbar; in particular distributed file storage without a redundancy mechanism &horbar; may be <strong>partially fault tolerant</strong>, allowing users to access the files that remain available while returning an error should the file be located on the server that failed.</p>
       </section>
@@ -329,7 +275,7 @@
     <div class="popup mfp-hide" id="environment">
       <p class="title">Environment</p>
       <section class="doc">
-      <p>The environment in which is deployed a storage system radically changes the constrains it must take into account for designing <a class="open-popup" href="#security">security</a>, reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault_tolerance">fault tolerance</a>) and <a class="open-popup" href="#scalability">scalability</a> mechanisms.</p>
+      <p>The environment in which is deployed a storage system radically changes the constrains it must take into account for designing <a class="open-popup" href="#security">security</a>, reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault-tolerance">fault tolerance</a>) and <a class="open-popup" href="#scalability">scalability</a> mechanisms.</p>
 
       <h3>Controlled</h3>
       <p>The vast majority of storage solutions have been designed to operate in a <strong>controlled</strong> environment i.e a set of servers and clients that are under the control of a single entity e.g a company.</p>
@@ -342,24 +288,6 @@
 
       <br>
       <p class="note">Note that some solutions provide tools allowing developers to create their own storage infrastructure: <a href="${route('doc_comparisons')}tahoe-lafs">Tahoe-LAFS</a>, <a href="${route('doc_comparisons')}ipfs">IPFS</a> and <strong>Infinit</strong>. As such, a developer can decide which computers are involved in the infrastructure while defining scalability policies, allowing or not untrustworthy nodes to join the network etc. As a result, such solutions can be deployed in both controlled and worldwide environments.</p>
-      </section>
-    </div>
-
-    <div class="popup mfp-hide" id="model">
-      <p class="title">Model</p>
-      <section class="doc">
-      <p>The way the different servers and clients are arranged in a storage system can have a drastic impact on the overall infrastructure's performance, <a class="open-popup" href="#scalability">scalability</a> and reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault_tolerance">fault tolerance</a>).</p>
-
-      <h3>Centralized</h3>
-      <p><strong>Centralized storage systems</strong> store both the data and metadata on a single server. Even though such models are interesting for their simplicity, the <a href="https://en.wikipedia.org/wiki/Data_availability" target="_blank">availability</a> and <a href="https://en.wikipedia.org/wiki/Durability_(database_systems)" target="_blank">durability</a> of the whole infrastructure depends upon a single server.</p>
-
-      <h3>Distributed</h3>
-      <p>Adding more servers would increase complexity to the overall infrastructure but would allow it to support a larger number of clients. Such storage systems distribute the requests and data between the different storage servers so as to increase <a href="https://en.wikipedia.org/wiki/Scalability" target="_blank">scalability</a> and <a href="https://en.wikipedia.org/wiki/Resilience_(network)" target="_blank">resilience</a>. <strong>Distributed storage system</strong> however have the particularity of storing the metadata on specific servers, sometimes referred to as <em>metadata servers</em> or <em>master servers</em> (as opposed to <em>data servers</em> and <em>slave servers</em>).</p>
-      <p>For some large-scale infrastructure, distributed systems are limited by the capacity of <a href="https://en.wikipedia.org/wiki/Metadata" target="_blank">metadata</a> servers. Indeed, should there be too many clients' requests, a metadata server could fail. A <a href="https://en.wikipedia.org/wiki/Load_balancing_(computing)" target="_blank">load balancing</a> mechanism being often provided, following such a failure the clients will start re-routing their requests to the other metadata servers, implicitely increasing the load on those, possibly leading to a <a href="https://en.wikipedia.org/wiki/Cascading_failure" target="_blank">cascading failure</a>.</p>
-
-      <h3>Decentralized</h3>
-      <p><strong>Decentralized systems</strong> are designed for extreme scalability, taking into account that nodes will fail eventually.</p>
-      <p>As a result, such systems distribute on the storage servers both the data and metadata so that no server performs a specific task. There is no <em>metadata server</em> that could act as a <a href="https://en.wikipedia.org/wiki/Single_point_of_failure" target="_blank">single point of failure</a> or <a href="https://en.wikipedia.org/wiki/Bottleneck_(software)" target="_blank">bottleneck</a>.</p>
       </section>
     </div>
 

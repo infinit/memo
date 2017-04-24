@@ -1,9 +1,9 @@
 {
   "infinit": {
     "name": "Infinit",
-    "description": "Infinit is a peer-to-peer file system that allows for the creation of secure, reliable and scalable storage infrastructure by aggregating both on-premise and cloud resources.",
+    "description": "Infinit is a decentralized storage platform that has the particularity to be customized through a set of policies.",
     "properties": {
-      "logics": ["file", "object", "block"],
+      "logic": ["file", "object", "block"],
       "interface": "?",
       "model": "decentralized",
       "environment": ["controlled", "worldwide"],
@@ -13,8 +13,7 @@
       "security": ["in-transit", "at-rest"],
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)",
       "pricing": "freemium",
-      "consistency": "strong",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Infinit_(storage_platform)"
@@ -25,7 +24,7 @@
     "name": "Andrew File System",
     "description": "Andrew File System is a distributed file system originally developed at Carnegie Mellon University as part of the Andrew Project.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -35,8 +34,7 @@
       "scalability": "homogeneous",
       "interoperability": "Applications (Windows, MacOS X, Linux)",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Andrew_File_System"
@@ -44,10 +42,10 @@
     "similar_to": ["nfs"]
   },
   "aws-s3": {
-    "name": "AWS S3",
+    "name": "Amazon S3",
     "description": "Amazon S3 (Simple Storage Service) is a cloud-based object storage web service. S3 provides availability and durability guarantees along with extreme scalability.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -57,8 +55,7 @@
       "scalability": "",
       "interoperability": "protocols",
       "pricing": "pay-as-you-go",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Amazon_S3"
@@ -69,7 +66,7 @@
     "name": "BackBlaze B2",
     "description": "Backblaze B2 is a cloud-based object storage service that competes against <a href='/documentation/comparison/aws-s3'>Amazon S3</a> by promising the lowest storage cost on the market.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -79,8 +76,7 @@
       "scalability": "",
       "interoperability": "protocols",
       "pricing": "pay-as-you-go",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Backblaze"
@@ -91,7 +87,7 @@
     "name": "Ceph",
     "description": "Ceph is an object storage platform that stores data on a single distributed computer cluster. Ceph's distributed model aims at providing scalability at the exabyte level without single points of failure.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -101,8 +97,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "strong",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Ceph_(software)"
@@ -112,7 +107,7 @@
     "name": "Coda",
     "description": "Coda is a distributed file system developed as a research project at Carnegie Mellon University since 1987. It descended directly from an older version of Andrew File System and offers many similar features.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -122,8 +117,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "license",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Coda_(file_system)"
@@ -134,7 +128,7 @@
     "name": "ConvergeIO",
     "description": "ConvergeIO is a software-defined storage platform built for containers and microservices.",
     "properties": {
-      "logics": ["block"],
+      "logic": ["block"],
       "interface": "?",
       "model": "unknown",
       "environment": ["controlled"],
@@ -144,8 +138,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "license",
-      "consistency": "unknown",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": ""
@@ -156,7 +149,7 @@
     "name": "GlusterFS",
     "description": "GlusterFS is a scale-out network-attached storage file system. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "decentralized",
       "environment": ["controlled"],
@@ -166,8 +159,7 @@
       "scalability": "homogeneous",
       "interoperability": "Applications (MacOS X, Linux, NetBSD)",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
@@ -178,7 +170,7 @@
     "name": "Google Cloud Storage",
     "description": "Google Cloud Storage is a cloud-based object storage web service for storing and accessing data on Google's infrastructure. The service is comparable to <a href='/documentation/comparison/gcs'>Amazon S3</a> online storage service.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -188,8 +180,7 @@
       "scalability": "",
       "interoperability": "protocols",
       "pricing": "pay-as-you-go",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Google_Storage"
@@ -200,7 +191,7 @@
     "name": "HAMMER",
     "description": "HAMMER is a high-availability 64-bit distributed file system developed for DragonFly BSD.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -210,8 +201,7 @@
       "scalability": "homogeneous",
       "interoperability": "Applications (Linux, *BSD)",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/HAMMER"
@@ -222,7 +212,7 @@
     "name": "HDFS",
     "description": "The Hadoop distributed File system (HDFS) is a distributed, scalable, and portable file-system written in Java for the Hadoop framework. A Hadoop cluster is composed of a single namenode plus a cluster of datanodes, although redundancy options are available for the namenode due to its criticality.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -232,8 +222,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Apache_Hadoop#HDFS"
@@ -242,9 +231,9 @@
   },
   "hedvig": {
     "name": "Hedvig",
-    "description": "Hedvig (formerly Quexascale) is a software-defined storage platform.",
+    "description": "Hedvig is a software-defined storage platform for private and hybrid clouds.",
     "properties": {
-      "logics": ["file", "object", "block"],
+      "logic": ["file", "object", "block"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -254,8 +243,7 @@
       "scalability": "heterogeneous",
       "interoperability": "protocols",
       "pricing": "License",
-      "consistency": "strong",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": ""
@@ -266,7 +254,7 @@
     "name": "IPFS",
     "description": "The InterPlanetary File System (IPFS) is a content-addressable peer-to-peer hypermedia distribution protocol. In some ways, IPFS is similar to the Web, but IPFS could be seen as a single BitTorrent swarm, exchanging objects within one Git repository. Note however that IPFS does not focus on providing high-level file system functionalities such as access control, POSIX compliance etc.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "?",
       "model": "decentralized",
       "environment": ["controlled", "worldwide"],
@@ -276,8 +264,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/InterPlanetary_File_System"
@@ -285,9 +272,9 @@
   },
   "leofs": {
     "name": "LeoFS",
-    "description": "LeoFS is an unstructured Object Storage for the Web and a highly available, distributed, eventually consistent storage system.",
+    "description": "LeoFS is an unstructured Object Storage for the Web and a highly available, distributed, eventually-consistent storage system.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -297,8 +284,7 @@
       "scalability": "heterogeneous",
       "interoperability": "?",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
@@ -309,7 +295,7 @@
     "name": "Lustre",
     "description": "Lustre is a parallel distributed file system generally used for large-scale cluster computing. Lustre provides high performance file systems for computer clusters ranging in size from small workgroup clusters to large-scale, multi-site clusters.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -319,8 +305,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(file_system)"
@@ -331,7 +316,7 @@
     "name": "MooseFS",
     "description": "MooseFS is a distributed file system developed by Core Technology. MooseFS aims to be fault-tolerant, highly available, highly performing, scalable general-purpose network distributed file system for data centers.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -341,8 +326,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Moose_File_System"
@@ -353,7 +337,7 @@
     "name": "NFS",
     "description": "Network File System (NFS) is a distributed file system protocol originally developed by Sun Microsystems in 1984, allowing a user on a client computer to access files over a computer network much like local storage is accessed.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -363,8 +347,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Network_File_System"
@@ -375,7 +358,7 @@
     "name": "Portworx",
     "description": "Portworx is a software-defined storage platform for hosting stateful applications in Linux containers.",
     "properties": {
-      "logics": ["block"],
+      "logic": ["block"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -385,8 +368,7 @@
       "scalability": "homogeneous",
       "interoperability": "protocols",
       "pricing": "freemium",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": ""
@@ -397,7 +379,7 @@
     "name": "StorageOS",
     "description": "StorageOS delivers persistent storage for containers, delivering scalable, deterministic storage performance, while enabling secure data mobility for containers to move data between bare metal, virtual machines or cloud storage.",
     "properties": {
-      "logics": ["block"],
+      "logic": ["block"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -407,8 +389,7 @@
       "scalability": "heterogeneous",
       "interoperability": "protocols",
       "pricing": "freemium",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     },
     "links": {
       "wikipedia": ""
@@ -419,7 +400,7 @@
     "name": "Storj",
     "description": "Storj's aim is to become an object storage platform that can’t be censored or monitored, or have downtime. Storj is a platform, cryptocurrency, and suite of decentralized applications that allows users to store data in a secure and decentralized manner. It uses blockchain features like a transaction ledger, public/private key encryption, and cryptographic hash functions for security.",
     "properties": {
-      "logics": ["object"],
+      "logic": ["object"],
       "interface": "?",
       "model": "decentralized",
       "environment": ["worldwide"],
@@ -429,15 +410,14 @@
       "scalability": "homogeneous",
       "interoperability": "Applications",
       "pricing": "pay-as-you-go",
-      "consistency": "eventual",
-      "opensource": "no"
+      "open source": "no"
     }
   },
   "tahoe-lafs": {
     "name": "Tahoe-LAFS",
     "description": "Tahoe-LAFS is a free and open, secure, decentralized, fault-tolerant, distributed data store and distributed file system. It can be used as an online backup system, or to serve as a file or Web host similar to Freenet, depending on the front-end used to insert and access files in the Tahoe system. Tahoe can also be used in a RAID-like manner to use multiple disks to make a single large reliable/redundant array of independent/inexpensive nodes (RAIN) pool of data storage.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "decentralized",
       "environment": ["controlled", "worldwide"],
@@ -447,8 +427,7 @@
       "scalability": "homogeneous",
       "interoperability": "Applications (Linux, NetBSD)",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Tahoe-LAFS"
@@ -459,7 +438,7 @@
     "name": "XtreemFS",
     "description": "XtreemFS is a distributed file system for wide area networks. XtreemFS provides fault tolerance while maintaining POSIX file system semantics. Fault tolerance is achieved by using Paxos-based lease negotiation algorithms and is used to replicate files and metadata.",
     "properties": {
-      "logics": ["file"],
+      "logic": ["file"],
       "interface": "?",
       "model": "distributed",
       "environment": ["controlled"],
@@ -469,8 +448,7 @@
       "scalability": "homogeneous",
       "interoperability": "Applications (Windows, MacOS X, Linux)",
       "pricing": "free",
-      "consistency": "eventual",
-      "opensource": "yes"
+      "open source": "yes"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/XtreemFS"
