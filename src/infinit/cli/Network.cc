@@ -397,37 +397,32 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-      auto overlay_config =
-        [&] () -> std::unique_ptr<infinit::overlay::Configuration>
-        {
+      auto overlay_config = [&]{
+          auto res = std::unique_ptr<infinit::overlay::Configuration>{};
           if (1 < kalimero + kelips + kouncil)
             elle::err<CLIError>("only one overlay type must be specified");
           if (kalimero)
-            return std::make_unique<infinit::overlay::KalimeroConfiguration>();
+            res = std::make_unique<infinit::overlay::KalimeroConfiguration>();
           else if (kelips)
-            return make_kelips_config(nodes, k, kelips_contact_timeout,
-                                      encrypt, protocol);
+            res = make_kelips_config(nodes, k, kelips_contact_timeout,
+                                     encrypt, protocol);
           else
-            return std::make_unique<infinit::overlay::kouncil::Configuration>();
+            res = std::make_unique<infinit::overlay::kouncil::Configuration>();
+          if (protocol)
+            res->rpc_protocol = protocol_get(protocol);
+          return res;
         }();
-      if (protocol)
-        overlay_config->rpc_protocol = protocol_get(protocol);
-      auto silo = make_silo_config(ifnt, silos_names);
-      auto consensus_config = make_consensus_config(paxos,
-                                                    no_consensus,
-                                                    replication_factor,
-                                                    eviction_delay);
-      auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
-      infinit::model::doughnut::EncryptOptions encrypt_options(
+      auto const encrypt_options = infinit::model::doughnut::EncryptOptions(
         !disable_encrypt_at_rest,
         !disable_encrypt_rpc,
         !disable_signature);
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
-          std::move(consensus_config),
+          make_consensus_config(paxos, no_consensus, replication_factor,
+                                eviction_delay),
           std::move(overlay_config),
-          std::move(silo),
+          make_silo_config(ifnt, silos_names),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
@@ -438,7 +433,7 @@ namespace infinit
           owner.name,
           std::move(port),
           infinit::version(),
-          admin_keys,
+          make_admin_keys(ifnt, admin_r, admin_rw),
           parse_peers(peer),
           tcp_heartbeat,
           encrypt_options);
@@ -446,7 +441,7 @@ namespace infinit
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
                                         description);
-        auto desc = [&] {
+        auto const desc = [&] {
             if (output_name)
             {
               auto output = cli.get_output(output_name);
