@@ -11,7 +11,6 @@
       "fault-tolerance": "Byzantine",
       "scalability": "heterogeneous",
       "security": ["in-transit", "at-rest"],
-      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)",
       "pricing": "freemium",
       "open source": "yes"
     },
@@ -32,7 +31,6 @@
       "fault-tolerance": "standard",
       "security": ["in-transit"],
       "scalability": "homogeneous",
-      "interoperability": "Applications (Windows, MacOS X, Linux)",
       "pricing": "free",
       "open source": "yes"
     },
@@ -53,7 +51,6 @@
       "fault-tolerance": "Unknown (proprietary)",
       "security": ["in-transit"],
       "scalability": "",
-      "interoperability": "protocols",
       "pricing": "pay-as-you-go",
       "open source": "no"
     },
@@ -74,7 +71,6 @@
       "fault-tolerance": "Unknown (proprietary)",
       "security": ["in-transit"],
       "scalability": "",
-      "interoperability": "protocols",
       "pricing": "pay-as-you-go",
       "open source": "no"
     },
@@ -95,7 +91,6 @@
       "fault-tolerance": "standard",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "no"
     },
@@ -115,7 +110,6 @@
       "fault-tolerance": "standard",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "license",
       "open source": "no"
     },
@@ -136,7 +130,6 @@
       "fault-tolerance": "unknown",
       "security": "unknown",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "license",
       "open source": "no"
     },
@@ -157,7 +150,6 @@
       "fault-tolerance": "standard",
       "security": ["in-transit"],
       "scalability": "homogeneous",
-      "interoperability": "Applications (MacOS X, Linux, NetBSD)",
       "pricing": "free",
       "open source": "yes"
     },
@@ -178,7 +170,6 @@
       "fault-tolerance": "Unknown (proprietary)",
       "security": ["in-transit"],
       "scalability": "",
-      "interoperability": "protocols",
       "pricing": "pay-as-you-go",
       "open source": "no"
     },
@@ -199,7 +190,6 @@
       "fault-tolerance": "standard",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "Applications (Linux, *BSD)",
       "pricing": "free",
       "open source": "no"
     },
@@ -220,7 +210,6 @@
       "fault-tolerance": "standard",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "yes"
     },
@@ -241,7 +230,6 @@
       "fault-tolerance": "unknown",
       "security": "unknown",
       "scalability": "heterogeneous",
-      "interoperability": "protocols",
       "pricing": "License",
       "open source": "no"
     },
@@ -262,7 +250,6 @@
       "fault-tolerance": "Partial",
       "security": ["in-transit"],
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "no"
     },
@@ -282,7 +269,6 @@
       "fault-tolerance": "standard",
       "security": ["in-transit"],
       "scalability": "heterogeneous",
-      "interoperability": "?",
       "pricing": "free",
       "open source": "yes"
     },
@@ -303,7 +289,6 @@
       "fault-tolerance": "Partial",
       "security": "none",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "yes"
     },
@@ -324,7 +309,6 @@
       "fault-tolerance": "standard",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "yes"
     },
@@ -345,7 +329,6 @@
       "fault-tolerance": "Partial",
       "security": "None",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "free",
       "open source": "yes"
     },
@@ -366,7 +349,6 @@
       "fault-tolerance": "unknown",
       "security": "none",
       "scalability": "homogeneous",
-      "interoperability": "protocols",
       "pricing": "freemium",
       "open source": "no"
     },
@@ -387,7 +369,6 @@
       "fault-tolerance": "unknown",
       "security": ["in-transit", "at-rest"],
       "scalability": "heterogeneous",
-      "interoperability": "protocols",
       "pricing": "freemium",
       "open source": "no"
     },
@@ -408,7 +389,6 @@
       "fault-tolerance": "Byzantine",
       "security": ["in-transit", "at-rest"],
       "scalability": "homogeneous",
-      "interoperability": "Applications",
       "pricing": "pay-as-you-go",
       "open source": "no"
     }
@@ -425,7 +405,6 @@
       "fault-tolerance": "Byzantine",
       "security": ["in-transit", "at-rest"],
       "scalability": "homogeneous",
-      "interoperability": "Applications (Linux, NetBSD)",
       "pricing": "free",
       "open source": "yes"
     },
@@ -446,7 +425,6 @@
       "fault-tolerance": "standard",
       "security": ["in-transit"],
       "scalability": "homogeneous",
-      "interoperability": "Applications (Windows, MacOS X, Linux)",
       "pricing": "free",
       "open source": "yes"
     },

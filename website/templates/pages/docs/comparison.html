@@ -18,9 +18,9 @@
       properties = [None]*10
 
       for property, value in competitor['properties'].items():
-        if property == 'logic':
+        if property == 'model':
           properties[0] = ['model', value]
-        elif property == 'model':
+        elif property == 'logic':
           properties[1] = ['logic', value]
         elif property == 'interface':
           properties[2] = ['interface', value]
@@ -171,55 +171,60 @@
       <section class="doc">
       <p><strong><a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">Object storage</a></strong> systems manage data as objects or <em>blobs</em>. Object storage is mostly used for storing application-specific, movies in the case of <em>Netflix</em>, file content in the case of <em>Dropbox</em>, etc.</p>
       <p><strong><a href="https://en.wikipedia.org/wiki/File_system" target="_blank">File storage</a></strong> solutions represent data in files organized in folders and subfolders. This organization of information into a <a href="https://en.wikipedia.org/wiki/Directory_structure" target="_blank">hierarchical view</a> is perfectly adapted for humans to store and collaborate. In addition, file systems often provide an <a href="https://en.wikipedia.org/wiki/Computer_access_control" target="_blank">access control</a> mechanism, in particular in multi-user environments, to control which files/directories can be seen/edited by other users/groups.</p>
-      <p>Another storage logic exists, known as <strong><a href="https://en.wikipedia.org/wiki/Block_(data_storage)" target="_blank">block storage</a></strong>, which manages data as blocks within a virtual raw partition i.e very much as for raw hard disk drive. Note that such block storage logics are made accessible through a <a href="https://en.wikipedia.org/wiki/Device_file#BLOCKDEV">virtual block device</a> which needs to be formatted in a local file system, <em>ext4</em> for instance. Such block storage logics have the particularity of being usually only accessible from a single node while a distributed file system handles concurrent accesses from multiple client nodes.</p>
+      <p>Another storage logic exists, known as <strong><a href="https://en.wikipedia.org/wiki/Block_(data_storage)" target="_blank">block storage</a></strong>, which manages data as blocks within a virtual raw partition i.e very much as for raw hard disk drive. Note that such block storage logics are made accessible through a <a href="https://en.wikipedia.org/wiki/Device_file#BLOCKDEV" target="_blank">virtual block device</a> which needs to be formatted in a local file system, <em>ext4</em> for instance. Such block storage logics have the particularity of being usually only accessible from a single node while a distributed file system handles concurrent accesses from multiple client nodes.</p>
       </section>
     </div>
-
-    <!--     <div class="popup mfp-hide" id="interoperability">
-      <p class="title">Interoperability</p>
-      <section class="doc">
-      <p>File-based storage systems need to take into account the multitude of platforms in use today, both mobile and desktop, for human end-users to be able to manipulate their files through well designed <strong>applications</strong>.</p>
-
-      <p>Object-based and block-based systems tend to comply with standard <strong>protocols</strong> to interact with the system, from <a href="https://en.wikipedia.org/wiki/Server_Message_Block" target="_blank">SMB</a> to specific <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank">HTTP-based APIs</a> for cloud-based solutions. Likewise, many file-based storage systems integrate with existing protocols to ease the process of deploying clients on thousands of machines e.g <a href="https://en.wikipedia.org/wiki/Network_File_System" target="_blank">NFS</a>. Noteworthy is that many operating systems (Windows, MacOS X etc.) and mobile applications allow for the connection through such protocols to access remote file systems.</p>
-      </section>
-    </div> -->
 
     <div class="popup mfp-hide" id="interface">
       <p class="title">Interface</p>
       <section class="doc">
       <p>A storage solution may provide a set of interfaces for accessing the different storage logics it offers.</p>
 
-      <h3>File Synchronization</h3>
-      <p><a href="https://en.wikipedia.org/wiki/File_synchronization" target="_blank"><strong>Synchronization</strong> technologies</a> clone all the files from a master copy (in the cloud for instance) to one's local device. This process has the advantage of keeping all the files local at any time, ensuring access even in worst case scenarios e.g when completely disconnected from the Internet.</p>
-      <p>Unfortunately, such a technology also has its drawbacks, mainly to consume the local storage capacity of one's device. This becomes particularly problematic as the amount of data stored increases and exceeds the storage capacity available locally.</p>
-      <p>As a result, file synchronization solutions tend to provide a mechanism &horbar; named <em>Selective Sync</em> for Dropbox &horbar; for the user to select which files and folders should not be cloned locally, rendering those inaccessible from this device.</p>
+      <h3>Block & File Storage</h3>
 
-      <h3>File System</h3>
-      <p>File synchronization is performed by a small program running in the background (i.e a daemon) that monitores changes between the master and local copies. <a href="https://en.wikipedia.org/wiki/POSIX" target="_blank">POSIX</a>-compliant <a href="https://en.wikipedia.org/wiki/File_system" target="_blank"><strong>file systems</strong></a> however is a low-level layer that emulates a hard disk drive. As such, file systems can capture low-level requests from applications and users such as reading and writing data from/to a file, adding an entry to a directory and so forth.</p>
-      <p>File systems are better suited when users need to access large amount of data without having to download everything locally since everything can be retrieved on-demand i.e <a href="https://en.wikipedia.org/wiki/Streaming_media" target="_blank">streamed</a>. The limitation of file systems lies in the need for additional mechanisms to allow users to access information when offline e.g <a href="https://en.wikipedia.org/wiki/Cache_(computing)" target="_blank">caching</a>.</p>
+      <p>Block and file storage logics are usually accessed through standard low-level <strong>protocols</strong> such as <em><a href="https://en.wikipedia.org/wiki/Network_block_device" target="_blank">network block device (NBD)</a></em>, <em><a href="https://en.wikipedia.org/wiki/ISCSI" target="_blank">iSCSI</a></em>, etc. and <em><a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace" target="_blank">FUSE/OSX FUSE</a>/Dokan</em>, <em><a href="https://en.wikipedia.org/wiki/Network_File_System" target="_blank">network file system (NFS)</a></em> etc., respectively.</p>
 
-      <h3>Desktop/Web Application</h3>
-      <p>Some file storage solutions provide a <a href="https://en.wikipedia.org/wiki/Web_application" target="_blank">Web</a> or specific <a href="https://en.wikipedia.org/wiki/Graphical_user_interface" target="_blank">desktop graphical user interface</a> to access and manage files.</p>
-      <p><strong>Web</strong> interfaces are appreciated because users do not need to install an application on their computer. However, the user may lose in productivity because some <a href="https://en.wikipedia.org/wiki/File_format" target="_blank">file formats</a> may not be supported for online edition e.g <em>Photoshop</em>, <em>Catia</em> etc.</p>
-      <p><strong>Desktop</strong> applications bring the worst of both worlds as users need to learn a new way to manipulate their files, as for a Web interface, while requiring an application to be installed locally; not to mention that very few file formats are usually supported.</p>
+      <h3>Object Storage</h3>
+
+      <p>An object storage logic is however accessed through a more modern HTTP-based <strong>API</strong> such as <em><a href="https://en.wikipedia.org/wiki/Amazon_S3" target="_blank">Amazon S3</a></em>, <em>Google Cloud Storage (GCS)</em> or <em><a href="https://en.wikipedia.org/wiki/OpenStack#Object_Storage_.28Swift.29" target="_blank">OpenStack Swift</a></em>.</p>
+
+      <h3>Other</h3>
+
+      <p>Other interfaces include <strong>file synchronization</strong> as used by popular cloud file storage services likes <em>Dropbox</em>, <em>Box</em>, <em>Google Drive</em> etc.<p>
+      <p>In addition to existing interfaces, many products, in particular consumer oriented, provide <strong><a href="https://en.wikipedia.org/wiki/Graphical_user_interface" target="_blank">graphical user interfaces</a> (GUI)</strong> for desktop, mobile and Web while other also offer specific <strong><a href="https://en.wikipedia.org/wiki/Application_programming_interface" target="_blank">application programming interfaces</a> (API)</strong> or <a href="https://en.wikipedia.org/wiki/Software_development_kit" target="_blank"><strong>software development kits (SDK)</strong></a>.</p>
+      </section>
+    </div>
+
+    <div class="popup mfp-hide" id="environment">
+      <p class="title">Environment</p>
+      <section class="doc">
+      <p>The environment in which is deployed a storage system radically changes the constrains it must take into account when it comes to <a class="open-popup" href="#security">security</a>, reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault-tolerance">fault tolerance</a>) and <a class="open-popup" href="#scalability">scalability</a> mechanisms.</p>
+
+      <h3>Controlled</h3>
+      <p>The vast majority of storage solutions have been designed to operate in a <strong>controlled</strong> environment i.e a set of servers and clients that are under the control of a single entity e.g a company.</p>
+      <p>By evolving in a controlled environment, such solutions can better apprehend the infrastructure variations (<a href="https://en.wikipedia.org/wiki/Latency_(engineering)" target="_blank">latency</a>, <a href="https://en.wikipedia.org/wiki/Uptime" target="_blank">uptime</a> etc.) in order to optimize the protocols and algortihms.</p>
+      <p>As an example, the latency in a local area network will not be a constraint while the data may not need to be encrypted at rest since hosted on trusted servers.</p>
+
+      <h3>Uncontrolled</h3>
+      <p>Storage solutions that can be deployed over a cluster of untrustworthy nodes are known to evolve in <strong>uncontrolled</strong> environments and as such face unique challenges when it comes to latency, security etc.</p>
+      <p>Indeed, in such environments, the data is spread across a large number of computing devices that are under the control of different entities. As such, the data blocks stored by a user may end up on computers located in different countries (e.g US, China, Germany etc.) and controlled by a potentially malicious user.</p>
+      <p>A user may not feel comfortable knowing that his/her files are stored on someone else's computer, even though the blocks are encrypted. This is particularly worrying for businesses that could be interested in the technology but need to control where and how data is actually stored.</p>
 
       <br>
-      <p class="note">Most enterprise solutions provide a file system because such an interface is well-suited to environments with a lot of data (no local storage consumption) while not degrading productivity by forcing users to learn to manipulate their files through a new and specific application or constraining them regarding the support file formats.</p>
-
-      <h3>API/SDK</h3>
-      <p>Object storage solutions, since mostly accessed by applitions, generally provide an <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank"><strong>API</strong></a> or <a href="https://en.wikipedia.org/wiki/Software_development_kit" target="_blank"><strong>SDK</strong></a>.</p>
+      <p class="note">Note that some solutions provide tools allowing developers and operators to create their own storage infrastructure. With <a href="${route('doc_comparisons')}tahoe-lafs">Tahoe-LAFS</a> and <strong>Infinit</strong>, an operator can decide which computers are involved in the infrastructure while defining scalability policies, allowing (or not) for untrustworthy nodes to join the network. As a result, such solutions can be deployed in both controlled and uncontrolled environments.</p>
       </section>
     </div>
 
     <div class="popup mfp-hide" id="scalability">
       <p class="title">Scalability</p>
       <section class="doc">
-      <p>Some systems <strong>do not allow for the overall storage capacity to evolve</strong> over time. The ones that do are said to be <a href="https://en.wikipedia.org/wiki/Scalability" target="_blank">scalable</a>. Scalable storage systems could be further categorized into those that can scale without any interruption of service and those that require shutting down the system. In reality, the vast majority of existing scalable systems can scale dynamically i.e without requiring shutting down the service.</p>
+      <p>Some systems <strong>do not allow for the overall storage capacity to evolve</strong> over time. The ones that do are said to be <a href="https://en.wikipedia.org/wiki/Scalability" target="_blank">scalable</a>. Scalable storage systems could be further categorized into those that can scale without any interruption of service and those that require shutting down the system. In reality, the vast majority of existing scalable systems can scale (to some extent) dynamically i.e without requiring shutting down the service.</p>
 
-      <p>There exists two types of systems when it comes to scalability. The first category contains systems that can <strong>scale over homogeneous resources</strong> such as local disks, network-attached storage resources etc; resources that are under the control of the infrastructure's administrator.</p>
+      <p>There exists two types of systems when it comes to scalability. The first category contains systems that can <strong>scale over homogeneous resources</strong> such as local disks, network-attached storage resources etc; resources that are under the control of the infrastructure's administrator (<em><a href="https://en.wikipedia.org/wiki/Direct-attached_storage" target="_blank">DAS</a></em>, <em><a href="https://en.wikipedia.org/wiki/Network-attached_storage" target="_blank">NAS</a></em>, <em><a href="https://en.wikipedia.org/wiki/Storage_area_network" target="_blank">SAN</a></em> etc.).</p>
+      <p>Systems capable of <strong>heterogeneous scalability</strong> are able to integrate additional storage capacity from resources and providers of different nature leading to more complex deployment such as hybrid clouds, multi clouds etc.</p>
 
-      <p>Systems capable of <strong>heterogeneous scalability</strong> are able to integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API or else. Heterogeneous-scalable storage systems often rely on <a class="open-popup" href="#security">at-rest encryption</a> and <a class="open-popup" href="#fault-tolerance">Byzantine consensus algorithms</a> to cope with potentially malicious behaviors since the integrated storage resources are often not under the control of the infrastructure's administrator.</p>
-      <p>Note that should such a system provide these mechanisms, it would exhibit most of the prerequisites to be deployed in a <a class="open-popup" href="#environment">worldwide environment</a>.</p>
+      <p>Heterogeneous-scalable storage systems may rely on <a class="open-popup" href="#security">at-rest encryption</a> to secure the data when stored through a storage provider with limited trust. Likewise, the most advanced storage systems can make use of a <a class="open-popup" href="#fault-tolerance">Byzantine consensus algorithm</a> to cope with potentially malicious behaviors since the servers are not under the administrator's control.</p>
+      <p>Note that should such a system provide these mechanisms, it would exhibit most of the prerequisites to be deployed in a <a class="open-popup" href="#environment">uncontrolled environment</a>.</p>
       </section>
     </div>
 
@@ -232,7 +237,7 @@
 
       <h3>Replication</h3>
       <p><a href="https://en.wikipedia.org/wiki/Replication_(computing)" target="_blank"><strong>Replication</strong></a> consists in creating exact copies of a data item to ensure that, if a copy goes missing (following a server failure, corruption or else), the system can keep operating with the remaining copies.</p>
-      <p>There are many ways to decompose the original file, distribute it and replicate it between the storage media (server, disk etc.) in order to benefit from different properties. The <a href="https://en.wikipedia.org/wiki/RAID" target="_blank">RAID</a> technology for instance provides several schemas, or RAID levels, to achieve different balance between reliability, availability, performance and capacity.</p>
+      <p>There are many ways to decompose the original data piece, distribute it and replicate it between the storage media (server, disk etc.) in order to benefit from different properties. The <a href="https://en.wikipedia.org/wiki/RAID" target="_blank">RAID</a> technology for instance provides several schemas, or RAID levels, to achieve different balance between reliability, availability, performance and capacity.</p>
 
       <h3>Erasure Codes</h3>
       <p><a href="https://en.wikipedia.org/wiki/Erasure_code" target="_blank"><strong>Erasure codes</strong></a>, such as <a href="https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction" target="_blank">Reed-Solomon</a>, do not create raw copies of a data item as replication does. Instead, error-correcting codes transform a data block of <em>k</em> symbols into a longer of <em>n</em> symbols such that the original data block can be recovered from a subset of the <em>n</em> symbols.</p>
@@ -247,50 +252,31 @@
       </section>
     </div>
 
-    <div class="popup mfp-hide" id="security">
-      <p class="title">Security</p>
-      <section class="doc">
-      <p>Most storage systems <strong>do not encrypt data</strong> <a href="https://en.wikipedia.org/wiki/Data_in_transit" target="_blank">in transit</a> (between clients and servers) nor <a href="https://en.wikipedia.org/wiki/Data_at_rest" target="_blank">at rest</a> (once stored on a server) because the environment allows it i.e the clients and servers are located in a trusted network such as a company's.</p>
-
-      <p>Large-scale <a class="open-popup" href="#environment">worldwide environments</a> require a storage solution that both encrypts <strong>in transit and at rest</strong> so that a block of data cannot be decrypted by a potentially malicious storage server. Such at-rest encryption mechanisms are necessary because worldwide environments are usually considered untrustworthy since composed of many devices under the control of unknown entities.</p>
-
-      <p>In some cases, for instance cloud-based storage services, only the communications (<strong>in transit</strong>) are encrypted while the blocks are stored in plain form on the servers. This is required for those solutions to be able to offer users with a <a class="open-popup" href="#interface">Web-based interface</a> to browse and manipulate their files online.</p>
-      </section>
-    </div>
-
     <div class="popup mfp-hide" id="fault-tolerance">
       <p class="title">Fault Tolerance</p>
       <section class="doc">
-      <p>The capacity to maintain a storage system operational in the event of failure is referred to as <a href="https://en.wikipedia.org/wiki/Fault_tolerance" target="_blank">fault tolerance</a>.</p>
-      <p>While some systems provide <strong>no fault tolerance mechanism</strong>, most do. Depending on the nature of the resources composing a storage infrastructure, a system will need a different algorithms to detect potential failures: <a href="https://en.wikipedia.org/wiki/Software_bug" target="_blank">bug</a>, <a href="https://en.wikipedia.org/wiki/Crash_(computing)" target="_blank">crash</a> (temporary or permanent) or even <a href="https://en.wikipedia.org/wiki/Hacker_(computer_security)" target="_blank">malicious behavior</a>.</p>
+      <p>The capacity to maintain a storage system operational in the event of failures is referred to as <a href="https://en.wikipedia.org/wiki/Fault_tolerance" target="_blank">fault tolerance</a>.</p>
+      <p>While some systems provide <strong>no fault tolerance mechanism</strong>, most storage products do. Depending on the nature of the resources composing a storage infrastructure, a system will need a different algorithms to detect and deal with potential failures: <a href="https://en.wikipedia.org/wiki/Software_bug" target="_blank">bug</a>, <a href="https://en.wikipedia.org/wiki/Crash_(computing)" target="_blank">crash</a> (temporary or permanent) and even <a href="https://en.wikipedia.org/wiki/Hacker_(computer_security)" target="_blank">malicious behavior</a>.</p>
 
-      <p>The distributed storage systems that do offer some means of redundancy, often integrate a mechanism that monitors storage servers to detect potential failures. Note however that such <strong>standard fault tolerance</strong> algorithms assume that the servers will always follow the system's protocol because distributed storage solutions are generally deployed within a <a class="open-popup" href="#environment">controlled environment</a> e.g a company's network.</p>
+      <p>The scale-out software-defined storage systems that do offer some means of redundancy, often integrate a mechanism that monitors storage servers to detect potential failures. Note however that such <strong>standard fault tolerance</strong> algorithms assume that the servers will always follow the system's protocol because distributed storage solutions are generally deployed within a <a class="open-popup" href="#environment">controlled environment</a> e.g a company's network.</p>
 
       <p>If some of the storage resources composing the infrastructure are not under the control of the administrator, the assumption cannot hold and the fault tolerance algorithm must be adapted to tolerate failures known as <a href="https://en.wikipedia.org/wiki/Byzantine_fault_tolerance" target="_blank"><strong>Byzantine</strong></a> i.e potentially malicous behaviors.</p>
 
-      <p>Finally, some systems &horbar; in particular distributed file storage without a redundancy mechanism &horbar; may be <strong>partially fault tolerant</strong>, allowing users to access the files that remain available while returning an error should the file be located on the server that failed.</p>
+      <p>Finally, some systems &horbar; in particular distributed storage without a redundancy mechanism &horbar; may be <strong>partially fault tolerant</strong>. In such cases, a server failing may render a number of data pieces unavailable until those servers come back online or an administration operation is manually performed.</p>
       </section>
     </div>
 
-    <div class="popup mfp-hide" id="environment">
-      <p class="title">Environment</p>
+    <div class="popup mfp-hide" id="security">
+      <p class="title">Security</p>
       <section class="doc">
-      <p>The environment in which is deployed a storage system radically changes the constrains it must take into account for designing <a class="open-popup" href="#security">security</a>, reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault-tolerance">fault tolerance</a>) and <a class="open-popup" href="#scalability">scalability</a> mechanisms.</p>
+      <p>Most storage systems <strong>do not encrypt data</strong> <a href="https://en.wikipedia.org/wiki/Data_in_transit" target="_blank">in transit</a> (between clients and servers) nor <a href="https://en.wikipedia.org/wiki/Data_at_rest" target="_blank">at rest</a> (once stored on a server).</p>
 
-      <h3>Controlled</h3>
-      <p>The vast majority of storage solutions have been designed to operate in a <strong>controlled</strong> environment i.e a set of servers and clients that are under the control of a single entity e.g a company.</p>
-      <p>By evolving in a controlled environment, such solutions can better apprehend the infrastructure variations (<a href="https://en.wikipedia.org/wiki/Latency_(engineering)" target="_blank">latency</a>, <a href="https://en.wikipedia.org/wiki/Uptime" target="_blank">uptime</a> etc.) in order to optimize the protocols and algortihms. As an example, the latency in a local area network will not be a constraint while the data will not need to be encrypted at rest since hosted on trusted servers.</p>
+      <p>Large-scale deployments in <a class="open-popup" href="#environment">uncontrolled environments</a> require a storage solution that both encrypts <strong>in transit and at rest</strong> so that a piece of data cannot be decrypted by a potentially malicious storage server. Such at-rest encryption mechanisms are necessary because uncontrolled environments are usually considered untrustworthy since composed of many devices under the control of unknown entities.</p>
 
-      <h3>Worldwide</h3>
-      <p>Storage solutions that evolve in a globally distributed environment, also known as <strong>worldwide</strong>, face unique challenges regarding latency, trust etc.</p>
-      <p>Indeed, in such environments, the data is spread across a large number of computing devices that are under the control of different entities. As such, the blocks composing the file of a user may end up being stored on computers located in different countries e.g US, China, Germany etc.</p>
-      <p>A user may not feel comfortable knowing that his/her files are stored on someone else's computer, even though the blocks are encrypted. This is particularly worrying for businesses that could be interested in the technology but need to control where and how their files are actually stored.</p>
-
-      <br>
-      <p class="note">Note that some solutions provide tools allowing developers to create their own storage infrastructure: <a href="${route('doc_comparisons')}tahoe-lafs">Tahoe-LAFS</a>, <a href="${route('doc_comparisons')}ipfs">IPFS</a> and <strong>Infinit</strong>. As such, a developer can decide which computers are involved in the infrastructure while defining scalability policies, allowing or not untrustworthy nodes to join the network etc. As a result, such solutions can be deployed in both controlled and worldwide environments.</p>
+      <p>In some cases, for instance cloud-based storage services, only the communications (<strong>in transit</strong>) are encrypted while the blocks are stored in plain form on the servers. Although this is required for those solutions to be able to offer users with a <a class="open-popup" href="#interface">Web-based interface</a> to browse and manipulate their data online, it is recommended to always encrypt data at rest, in particular on cloud storage services.</p>
       </section>
     </div>
 
-  </section>
+</section>
 
 </%block>
