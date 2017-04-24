@@ -24,4 +24,7 @@ with Infinit() as bob:
            "./bin/infinit: command line error: unknown option: --foo\n"
            "Try './bin/infinit network list --help' for more information.\n")
 
+  assertEq(bob.run(['infinit', 'volume', 'create', 'name', '--network'], return_code = 2)[1],
+           "./bin/infinit: command line error: option requires an argument: --network\n"
+           "Try './bin/infinit volume create --help' for more information.\n")
   
