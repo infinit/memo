@@ -440,7 +440,7 @@ namespace infinit
             << std::endl
             << "To perform tests, run the following command from another node:"
             << std::endl;
-          std::cout << "> infinit-doctor --networking";
+          std::cout << "> infinit doctor networking";
           if (!protocol.with_all())
             std::cout << " --protocol " << protocol;
           if (base_port)
@@ -448,11 +448,11 @@ namespace infinit
           else
           {
             if (tcp_port_)
-              std::cout << " --tcp_port " << tcp_port_;
+              std::cout << " --tcp-port " << tcp_port_;
             if (utp_port_)
-              std::cout << " --utp_port " << utp_port_;
+              std::cout << " --utp-port " << utp_port_;
             if (xored_utp_port_)
-              std::cout << " --xored_utp_port " << xored_utp_port_;
+              std::cout << " --xored-utp-port " << xored_utp_port_;
           }
           std::cout << " --host <address_of_this_machine>" <<std::endl;
         }
