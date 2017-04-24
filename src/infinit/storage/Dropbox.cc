@@ -62,10 +62,11 @@ namespace infinit
       ELLE_DEBUG("set %s", _key_str(key));
       if (insert)
       {
-        auto insertion =
+        auto const insertion =
           this->_dropbox.put(this->_path(key), value, update);
         if (!insertion && !update)
           throw Collision(key);
+        return value.size();
       }
       else if (update)
       {
@@ -73,7 +74,6 @@ namespace infinit
       }
       else
         elle::err("neither inserting neither updating");
-
       // FIXME: impl.
       return 0;
     }
@@ -100,16 +100,16 @@ namespace infinit
     {
       try
       {
-        auto metadata = this->_dropbox.metadata("/" + this->_root.string());
+        auto const metadata = this->_dropbox.metadata("/" + this->_root.string());
         if (!metadata.is_dir)
           elle::err("%s is not a directory", this->_root.string());
-        if (metadata.contents)
+        else if (metadata.contents)
           return elle::make_vector(metadata.contents.get(),
                                    [](auto const& entry)
             {
-              std::string address =
-                entry.path.substr(entry.path.find_last_of('/') + 1);
-              return model::Address::from_string(address);
+              auto const addr
+                = entry.path.substr(entry.path.find_last_of('/') + 1);
+              return model::Address::from_string(addr);
             });
         else
           return {};
@@ -126,7 +126,7 @@ namespace infinit
       auto const p = bfs::path("/" + this->_root.string()) / _key_str(k);
       try
       {
-        auto metadata = this->_dropbox.local_metadata(p);
+        auto const metadata = this->_dropbox.local_metadata(p);
         ELLE_DEBUG("status check on %x: %s", p, metadata? "exists" : "unknown");
         return metadata ? BlockStatus::exists : BlockStatus::unknown;
       }
