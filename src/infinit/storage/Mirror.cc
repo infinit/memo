@@ -88,18 +88,13 @@ namespace infinit
 
     namespace
     {
-      bool
-      means_yes(std::string const& s)
-      {
-        return s == "true" || s == "1" || s =="yes";
-      }
-
       std::unique_ptr<Storage>
       make(std::vector<std::string> const& args)
       {
-        bool balance_reads = means_yes(args[0]);
-        bool parallel = means_yes(args[1]);
+        bool balance_reads = to_bool(args[0]);
+        bool parallel = to_bool(args[1]);
         auto backends = std::vector<std::unique_ptr<Storage>>{};
+        // FIXME: we don't check that i+1 is ok.
         for (int i = 2; i < signed(args.size()); i += 2)
           backends.emplace_back(instantiate(args[i], args[i+1]));
         return std::make_unique<Mirror>(std::move(backends), balance_reads, parallel);

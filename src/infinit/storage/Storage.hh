@@ -3,8 +3,8 @@
 #include <iosfwd>
 #include <cstdint>
 
-#include <boost/signals2.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/signals2.hpp>
 
 #include <elle/Buffer.hh>
 #include <elle/attribute.hh>
@@ -30,6 +30,11 @@ namespace infinit
       unknown
     };
 
+    /// Conversion to bool.
+    ///
+    /// To move eventually to elle.
+    bool
+    to_bool(std::string const& s);
 
     class Storage
     {

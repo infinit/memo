@@ -14,13 +14,8 @@ namespace infinit
       make(std::vector<std::string> const& args)
       {
         auto backend = instantiate(args[0], args[1]);
-        std::string const& password = args[2];
-        bool salt = true;
-        if (args.size() > 3)
-        {
-          std::string const& v = args[3];
-          salt = v == "1" || v == "yes" || v == "true";
-        }
+        auto const& password = args[2];
+        auto const salt = 3 < args.size() : to_bool(args[3]) : false;
         return std::make_unique<Crypt>(std::move(backend), password, salt);
       }
     }
