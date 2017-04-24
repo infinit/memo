@@ -177,7 +177,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     ELLE_DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(username_pattern, 'U', "Hub unique username to set (default: $(cn)%). Remove the '%' to disable unique username generator", false);
-    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
+    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1)", false);
     ELLE_DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     ELLE_DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     ELLE_DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
