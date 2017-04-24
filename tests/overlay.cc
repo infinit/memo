@@ -1411,7 +1411,7 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
     ::protocol = dht::Protocol::tcp,
-    ::paxos = false);
+    dht::consensus::rebalance_auto_expand = false);
   auto id_b = special_id(11);
   auto b = std::make_unique<DHT>(
     ::version = config.version,
@@ -1420,7 +1420,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = std::make_unique<infinit::storage::Memory>(storage),
     ::make_overlay = config.overlay_builder,
     ::protocol = dht::Protocol::tcp,
-    ::paxos = false);
+    dht::consensus::rebalance_auto_expand = false);
   auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
   b->dht->seal_and_insert(*block, tcr());
   ELLE_LOG("connect DHTs")
@@ -1453,9 +1453,7 @@ ELLE_TEST_SCHEDULED(
       ::storage = std::make_unique<infinit::storage::Memory>(storage),
       ::make_overlay = config.overlay_builder,
       ::protocol = dht::Protocol::tcp,
-      // FIXME: horrible failure if paxos is set to true.  Can't we
-      // get something more readable?
-      ::paxos = false);
+      dht::consensus::rebalance_auto_expand = false);
     b->dht->remove(block->address());
     BOOST_CHECK_THROW(b->dht->overlay()->lookup(block->address()),
                       MissingBlock);
