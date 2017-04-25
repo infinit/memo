@@ -499,8 +499,13 @@ namespace infinit
           this->_dock._connected.erase(this->_connected_it.get());
           this->_connected_it.reset();
         }
-        if (this->_thread)
-          this->_thread->terminate_now(false);
+        // Delay termination from destructor.
+        elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
+        {
+          if (this->_thread)
+            this->_thread->terminate_now(false);
+          this->_channels.reset();
+        };
       }
 
       void
