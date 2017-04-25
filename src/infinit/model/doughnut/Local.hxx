@@ -15,34 +15,51 @@ namespace infinit
         // Copy peers to hold connections refcount, as for_each_parallel
         // captures values by ref.
         auto peers = this->_peers;
-        elle::reactor::for_each_parallel(
-          peers,
-          [&] (std::shared_ptr<Connection> const& c)
+        auto clear = [&]
           {
-            // Arguments taken by reference as they will be passed multiple
-            // times.
-            RPC<R (Args const& ...)> rpc(
-              name,
-              c->_channels,
-              this->version(),
-              c->_rpcs._key);
-            // Workaround GCC 4.9 ICE: argument packs don't work through
-            // lambdas.
-            auto const f = std::bind(
-              &RPC<R (Args const& ...)>::operator (),
-              &rpc, std::ref(args)...);
-            try
+            // Delay termination from destructor.
+            elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
             {
-              return RPCServer::umbrella(f);
-            }
-            catch (UnknownRPC const& e)
+              peers.clear();
+            };
+          };
+        try
+        {
+          elle::reactor::for_each_parallel(
+            peers,
+            [&] (std::shared_ptr<Connection> const& c)
             {
-              // FIXME: Ignore ? Evict ? Should probably be configurable. So far
-              // only Kouncil uses this, and it's definitely an ignore.
-              ELLE_WARN("error contacting %s: %s", c, e);
-            }
-          },
-          elle::sprintf("%s: broadcast RPC %s", this, name));
+              // Arguments taken by reference as they will be passed multiple
+              // times.
+              RPC<R (Args const& ...)> rpc(
+                name,
+                c->_channels,
+                this->version(),
+                c->_rpcs._key);
+              // Workaround GCC 4.9 ICE: argument packs don't work through
+              // lambdas.
+              auto const f = std::bind(
+                &RPC<R (Args const& ...)>::operator (),
+                &rpc, std::ref(args)...);
+              try
+              {
+                return RPCServer::umbrella(f);
+              }
+              catch (UnknownRPC const& e)
+              {
+                // FIXME: Ignore ? Evict ? Should probably be configurable. So
+                // far only Kouncil uses this, and it's definitely an ignore.
+                ELLE_WARN("error contacting %s: %s", c, e);
+              }
+            },
+            elle::sprintf("%s: broadcast RPC %s", this, name));
+        }
+        catch (...)
+        {
+          clear();
+          throw;
+        }
+        clear();
       }
     }
   }
