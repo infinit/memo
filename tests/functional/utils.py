@@ -8,6 +8,8 @@ import sys
 import tempfile
 import time
 
+from difflib import unified_diff as udiff
+
 import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
@@ -247,7 +249,10 @@ class Infinit(TemporaryDirectory):
 
 def assertEq(a, b):
   if a != b:
-    raise AssertionError('%r != %r' % (a, b))
+    diff = ''.join(udiff(a.splitlines(1),
+                         b.splitlines(1),
+                         fromfile='a', tofile='b'))
+    raise AssertionError('%r != %r\n%s' % (a, b, diff))
 
 def assertNeq(a, b):
   if a == b:
