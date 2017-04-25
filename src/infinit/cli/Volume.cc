@@ -144,7 +144,11 @@ namespace infinit
               cli::fetch_endpoints_interval = elle::defaulted(300),
               cli::input = boost::optional<std::string>(),
               cli::disable_UTF_8_conversion = false,
-              cli::grpc = boost::optional<std::string>())
+              cli::grpc = boost::optional<std::string>()
+#if INFINIT_ENABLE_PROMETHEUS
+              , cli::prometheus = boost::optional<std::string>()
+#endif
+        )
       , pull(*this,
              "Remove a volume from {hub}",
              cli::name,
@@ -195,7 +199,11 @@ namespace infinit
             cli::fetch_endpoints_interval = elle::defaulted(300),
             cli::input = boost::optional<std::string>(),
             cli::disable_UTF_8_conversion = false,
-            cli::grpc = boost::optional<std::string>())
+            cli::grpc = boost::optional<std::string>()
+#if INFINIT_ENABLE_PROMETHEUS
+              , cli::prometheus = boost::optional<std::string>()
+#endif
+      )
 #if !defined INFINIT_WINDOWS
       , start(*this,
               "Start a volume through the daemon",
@@ -731,7 +739,11 @@ namespace infinit
                        Defaulted<int> fetch_endpoints_interval,
                        boost::optional<std::string> input_name,
                        bool disable_UTF_8_conversion,
-                       boost::optional<std::string> grpc)
+                       boost::optional<std::string> grpc
+#if INFINIT_ENABLE_PROMETHEUS
+                     , boost::optional<std::string> prometheus
+#endif
+                       )
     {
       ELLE_TRACE_SCOPE("mount");
       auto& cli = this->cli();
@@ -740,7 +752,7 @@ namespace infinit
       if (!mountpoint)
       {
         auto owner = cli.as_user();
-        auto name = ifnt.qualified_name(volume_name, owner);
+        auto const name = ifnt.qualified_name(volume_name, owner);
         auto volume = ifnt.volume_get(name);
         if (!volume.mount_options.mountpoint)
           elle::err<CLIError>("option --mountpoint is needed");
@@ -786,7 +798,11 @@ namespace infinit
                fetch_endpoints_interval,
                input_name,
                disable_UTF_8_conversion,
-               grpc);
+               grpc
+#if INFINIT_ENABLE_PROMETHEUS
+               , prometheus
+#endif
+               );
     }
 
 
@@ -802,7 +818,7 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-      auto name = ifnt.qualified_name(volume_name, owner);
+      auto const name = ifnt.qualified_name(volume_name, owner);
       ifnt.beyond_delete("volume", name, owner, false, purge);
     }
 
@@ -818,7 +834,7 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-      auto name = ifnt.qualified_name(volume_name, owner);
+      auto const name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
       // Don't push the mountpoint to beyond.
       volume.mount_options.mountpoint = boost::none;
@@ -987,7 +1003,11 @@ namespace infinit
                      Defaulted<int> fetch_endpoints_interval,
                      boost::optional<std::string> input_name,
                      bool disable_UTF_8_conversion,
-                     boost::optional<std::string> grpc)
+                     boost::optional<std::string> grpc
+#if INFINIT_ENABLE_PROMETHEUS
+                     , boost::optional<std::string> prometheus
+#endif
+                     )
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
@@ -998,7 +1018,7 @@ namespace infinit
       resolve_aliases(fetch, fetch_endpoints);
       resolve_aliases(push, push_endpoints);
 
-      auto name = ifnt.qualified_name(volume_name, owner);
+      auto const name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
       auto& mo = volume.mount_options;
       MOUNT_OPTIONS_MERGE(mo);
@@ -1068,7 +1088,7 @@ namespace infinit
       // Only push if we are contributing storage.
       bool push_p = mo.push.value_or(mo.publish.value_or(false)) &&
         model->local();
-      auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
+      auto local_endpoint = boost::optional<model::Endpoint>{};
       if (model->local())
       {
         local_endpoint = model->local()->server_endpoint();
@@ -1100,12 +1120,15 @@ namespace infinit
                              );
         if (grpc)
         {
-          model::Endpoints eps(*grpc);
-          auto ep = *eps.begin();
+          auto const ep = *model::Endpoints(*grpc).begin();
           new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), ep] {
               infinit::grpc::serve_grpc(dht, *fs, ep);
           });
         }
+#if INFINIT_ENABLE_PROMETHEUS
+        if (prometheus)
+          infinit::prometheus::endpoint(*prometheus);
+#endif
         auto killer = cli.killed.connect([&, count = std::make_shared<int>(0)]
           {
             switch ((*count)++)

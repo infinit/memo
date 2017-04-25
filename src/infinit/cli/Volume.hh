@@ -256,7 +256,11 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::optional<std::string>())),
+                 decltype(cli::grpc = boost::optional<std::string>())
+#if INFINIT_ENABLE_PROMETHEUS
+                 , decltype(cli::prometheus = boost::optional<std::string>())
+#endif
+                 ),
            decltype(modes::mode_mount)>
       mount;
       void
@@ -301,7 +305,11 @@ namespace infinit
                  Defaulted<int> fetch_endpoints_interval = 300,
                  boost::optional<std::string> input = {},
                  bool disable_UTF_8_conversion = false,
-                 boost::optional<std::string> grpc = boost::none);
+                 boost::optional<std::string> grpc = boost::none
+#if INFINIT_ENABLE_PROMETHEUS
+                 , boost::optional<std::string> prometheus = {}
+#endif
+                 );
 
       /*-------------.
       | Mode: pull.  |
@@ -373,7 +381,11 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::optional<std::string>())),
+                 decltype(cli::grpc = boost::optional<std::string>())
+#if INFINIT_ENABLE_PROMETHEUS
+                 , decltype(cli::prometheus = boost::optional<std::string>())
+#endif
+                 ),
            decltype(modes::mode_run)>
       run;
       void
@@ -418,7 +430,11 @@ namespace infinit
                Defaulted<int> fetch_endpoints_interval = 300,
                boost::optional<std::string> input = {},
                bool disable_UTF_8_conversion = false,
-               boost::optional<std::string> grpc = boost::none);
+               boost::optional<std::string> grpc = {}
+#if INFINIT_ENABLE_PROMETHEUS
+               , boost::optional<std::string> prometheus = {}
+#endif
+               );
 
       /*--------------.
       | Mode: start.  |
