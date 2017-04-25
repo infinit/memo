@@ -102,16 +102,18 @@
           % endif
           </p>
         </td>
-        <td class="competitor">
+        <td class="competitor" ${'colspan="2"' if is_similar else ''}>
           % for item in value:
             <span class="value ${'unknown' if 'Unknown' in item or item == '' else ''}">${item}</span>
           % endfor
         </td>
-        <td class="infinit">
-          % for item in value_infinit:
-            <span class="value">${item}</span>
-          % endfor
-        </td>
+        % if not is_similar:
+          <td class="infinit">
+            % for item in value_infinit:
+              <span class="value">${item}</span>
+            % endfor
+          </td>
+        % endif
       </tr>
     % endfor
     </table>

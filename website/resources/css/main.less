@@ -2228,7 +2228,8 @@ body.doc_comparison {
       td img { float: left; max-width: 50px; height: auto; margin-right: 22px; padding-bottom: 55px;}
       td span { 
         background: #ebf0f3; padding: 5px 8px; display: inline-block; margin: 4px;
-        border-radius: 3px;
+        border-radius: 3px; font-weight: bold; 
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
       }
 
       a.open-popup { outline: none; }
@@ -2249,14 +2250,11 @@ body.doc_comparison {
       td.desc p.note { color: @infinitblack; margin-top: 8px; }
 
       &.same {
-        td.infinit, td.competitor { color: #a5a5a5; }
+        td.infinit span, td.competitor span { 
+          background: #f2f7c6; 
+        }
         // a.open-popup { background: #a5a5a5; }
         // img { .grayScaleOn(); opacity: 0.7; }
-      }
-
-      &.different { 
-        td.infinit span,
-        td.competitor span { font-weight: 600;}
       }
 
       p { font-size: 14px; line-height: 19px; margin-top: 0; margin-left: 60px; padding-right: 5%; }
