@@ -309,7 +309,8 @@ def configure(
                                 strip_prefix = True)
     extra_libs.append(prometheus_lib)
     drake.node('src/infinit/model/prometheus.hh')\
-         .dependencies_add(drake.nodes('prometheus/prometheus-cpp/lib/cpp/metrics.pb.h'))
+         .dependencies_add(grpc.grpc.protobuf_headers
+                           + drake.nodes('prometheus/prometheus-cpp/lib/cpp/metrics.pb.h'))
 
   if windows:
     cxx_config_infinit.lib('shlwapi')
