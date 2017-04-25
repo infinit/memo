@@ -25,6 +25,7 @@ namespace infinit
     {
       ELLE_TRACE("setting endpoint to %s", e);
       ::prometheus_endpoint = std::move(e);
+      instance().bind(::prometheus_endpoint);
     }
 
     std::string const& endpoint()
@@ -34,39 +35,54 @@ namespace infinit
 
     Prometheus& instance()
     {
-      static auto res = Prometheus();
+      static auto res = Prometheus(endpoint());
       return res;
     }
 
-    /// An HTTP server to answer Prometheus's requests.
+    Prometheus::Prometheus(std::string const& addr)
+    {
+      bind(addr);
+    }
+
+    void
+    Prometheus::bind(std::string const& addr)
+    {
+      if (addr != "no" && addr != "0")
+        try
+        {
+          if (_exposer)
+          {
+            ELLE_LOG("exposer: rebind: %s", addr);
+            _exposer->rebind(addr);
+          }
+          else
+          {
+            ELLE_LOG("exposer: create: %s", addr);
+            _exposer = std::make_unique<::prometheus::Exposer>(addr);
+          }
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_LOG("exposer: creation failed,"
+                   " metrics will not be exposed: %s", e);
+          _exposer.reset();
+        }
+        catch (...)
+        {
+          ELLE_LOG("exposer: creation failed with unknown"
+                   " exception type: %s",
+                   boost::current_exception_diagnostic_information());
+          _exposer.reset();
+        }
+    }
+
+    /// An HTTP server to answer Prometheus' requests.
     ///
     /// Maybe nullptr if set up failed.
     ::prometheus::Exposer*
     exposer()
     {
-      static auto res = []() -> std::unique_ptr<::prometheus::Exposer> {
-        auto const addr = endpoint();
-        if (addr != "no" || addr != "0")
-          try
-          {
-            ELLE_LOG("exposer: create: %s", addr);
-            auto res = std::make_unique<::prometheus::Exposer>(addr);
-            return res;
-          }
-          catch (std::exception const& e)
-          {
-            ELLE_LOG("exposer: creation failed,"
-                     " metrics will not be exposed: %s", e);
-          }
-          catch (...)
-          {
-            ELLE_LOG("exposer: creation failed with unknown"
-                     " exception type: %s",
-                     boost::current_exception_diagnostic_information());
-          }
-        return {};
-      }();
-      return res.get();
+      return instance()._exposer.get();
     }
 
     /// Where to register the measurements to expose to Prometheus.

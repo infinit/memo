@@ -7,6 +7,11 @@
 # include <prometheus/family.h>
 # include <prometheus/gauge.h>
 
+namespace prometheus
+{
+  class Exposer;
+}
+
 namespace infinit
 {
   namespace prometheus
@@ -40,6 +45,12 @@ namespace infinit
     class Prometheus
     {
     public:
+      Prometheus(std::string const& addr);
+
+      /// Specify/change the publishing port.
+      void
+      bind(std::string const& addr);
+
       /// Create a family of gauges.
       Family<Gauge>*
       make_gauge_family(std::string const& name,
@@ -50,6 +61,9 @@ namespace infinit
       UniquePtr<Gauge>
       make(Family<Gauge>* family,
            Labels const& labels);
+
+      /// The http exposer.
+      std::unique_ptr<::prometheus::Exposer> _exposer;
     };
 
     /// Set the Prometheus publishing address.
