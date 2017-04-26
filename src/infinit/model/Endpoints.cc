@@ -48,6 +48,8 @@ namespace infinit
 {
   namespace model
   {
+    namespace bfs = boost::filesystem;
+
     /*-----------.
     | Endpoint.  |
     `-----------*/
@@ -63,25 +65,23 @@ namespace infinit
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
-      : _address(ep.address())
-      , _port(ep.port())
+      : Self{ep.address(), ep.port()}
     {}
 
     Endpoint::Endpoint(boost::asio::ip::udp::endpoint ep)
-      : _address(ep.address())
-      , _port(ep.port())
+      : Self{ep.address(), ep.port()}
     {}
 
     boost::asio::ip::tcp::endpoint
     Endpoint::tcp() const
     {
-      return boost::asio::ip::tcp::endpoint(this->_address, this->_port);
+      return {this->_address, static_cast<unsigned short>(this->_port)};
     }
 
     boost::asio::ip::udp::endpoint
     Endpoint::udp() const
     {
-      return boost::asio::ip::udp::endpoint(this->_address, this->_port);
+      return {this->_address, static_cast<unsigned short>(this->_port)};
     }
 
     void
@@ -257,9 +257,9 @@ namespace infinit
     }
 
     Endpoints
-    endpoints_from_file(boost::filesystem::path const& path)
+    endpoints_from_file(bfs::path const& path)
     {
-      boost::filesystem::ifstream f;
+      bfs::ifstream f;
       f.open(path);
       if (!f.good())
         elle::err("unable to open for reading: %s", path);

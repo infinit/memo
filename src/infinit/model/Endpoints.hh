@@ -22,6 +22,7 @@ namespace infinit
       , private boost::totally_ordered<Endpoint>
     {
     public:
+      using Self = Endpoint;
       Endpoint(boost::asio::ip::address address, int port);
       Endpoint(boost::asio::ip::tcp::endpoint ep);
       Endpoint(boost::asio::ip::udp::endpoint ep);
