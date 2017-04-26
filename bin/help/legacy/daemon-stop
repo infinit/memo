@@ -1,0 +1,5 @@
+daemon: stop: Usage: _build/macosx64/bin/infinit-daemon --stop [OPTIONS...]
+
+Stop daemon:
+
+

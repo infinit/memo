@@ -1,0 +1,13 @@
+Usage: infinit-doctor doctor [MODE|--help]
+Infinit doctor management utility.
+
+Modes:
+  all        Perform all possible checks
+  configuration Perform integrity checks on the Infinit configuration files
+  connectivity Perform connectivity checks
+  networking Perform networking speed tests between nodes
+  system     Perform sanity checks on your system
+
+Options:
+  -h, --help                show this help message
+

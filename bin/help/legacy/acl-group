@@ -1,0 +1,28 @@
+acl: group: Usage: _build/macosx64/bin/infinit-acl --group --name NAME --path PATH [OPTIONS...]
+
+Group control:
+
+Group options:
+  -n [ --name ] arg      Group name
+  -c [ --create ]        Create the group
+  --description arg      Description of group
+  --show                 List group users, administrators and description
+  --add-user arg         Add user to group
+  --add-admin arg        Add administrator to group
+  --add-group arg        Add group to group
+  --add arg              Add users, administrators and groups to group (prefix:
+                         @<group>, ^<admin>)
+  --remove-user arg      Remove user from group
+  --remove-admin arg     Remove administrator from group
+  --remove-group arg     Remove group from group
+  --remove arg           Remove users, administrators and groups from group 
+                         (prefix: @<group>, ^<admin>)
+  -p [ --path ] arg      A path within the volume
+  --verbose              Verbose output
+  --fetch                Fetch users from the Hub if needed
+
+Hidden options:
+  --fallback-xattrs      Fallback to alternate xattr mode if system xattrs are 
+                         not suppported
+
+

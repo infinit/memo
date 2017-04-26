@@ -1,0 +1,17 @@
+passport: create: Usage: infinit-passport passport create [OPTIONS]
+Create a passport for a user to a network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -N, --network arg         network to create passport for
+  -u, --user arg            user to create passport for
+      --push-passport       push passport to the Hub
+  -p, --push                push passport to the Hub
+      --deny-write          deny user write access to the network
+      --deny-storage        deny user ability to contribute storage to the network
+      --allow-create-passport  allow user to create passports for network
+  -o, --output arg          file to write the passport to (default: null)
+

@@ -1,0 +1,11 @@
+Usage: infinit-journal journal [MODE|--help]
+Infinit journal management utility.
+
+Modes:
+  describe   Describe asynchronous operation(s)
+  export     Export an operation
+  stat       Show the remaining asynchronous operations count and size
+
+Options:
+  -h, --help                show this help message
+

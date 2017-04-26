@@ -1,0 +1,12 @@
+network: inspect: Usage: _build/macosx64/bin/infinit-network --inspect --name NETWORK [OPTIONS...]
+
+Get information about a running network:
+
+Inspect options:
+  -n [ --name ] arg      Network name
+  --status               Check if network is running
+  --peers                List connected peers
+  --all                  All informtation
+  --redundancy           Describe data redundancy
+
+

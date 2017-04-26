@@ -1,0 +1,9 @@
+journal: export: Usage: _build/macosx64/bin/infinit-journal --export --network NETWORK --operation OPERATION [OPTIONS...]
+
+Export an operation:
+
+Export options:
+  -N [ --network ] arg    Network to check
+  -O [ --operation ] arg  Operation to export
+
+

@@ -1,0 +1,11 @@
+volume: push: Usage: _build/macosx64/bin/infinit-volume --push --name VOLUME   |volume: push: Usage: _build/macosx64/bin/infinit-volume volume push [OPTIONS]
+[OPTIONS...]								       |Push a volume to https://beyond.infinit.sh
+									       |
+Push a volume to the Hub:						       |Options:
+									       |  -h, --help		    show this help message
+Push options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Volume to push					       |  -s, --script		    suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the volume to push
+									       |

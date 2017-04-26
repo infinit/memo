@@ -1,0 +1,5 @@
+drive: list: Usage: _build/macosx64/bin/infinit-drive --list [OPTIONS...]
+
+List drives:
+
+

@@ -1,0 +1,36 @@
+daemon: run: Usage: _build/macosx64/bin/infinit-daemon --run [OPTIONS...]
+
+Run daemon in the foreground:
+
+Run options:
+  --login-user arg                Login with selected user(s), of form 
+                                  'user:password'
+  --mount-root arg                Default root path for all mounts
+                                  (default: /run/user/505/infinit/filesystem/mn
+                                  t)
+  --default-network arg           Default network for volume creation
+  --advertise-host arg            Advertise given hostname as an extra endpoint
+                                  when running volumes
+  -f [ --fetch ]                  Run volumes with --fetch
+  -p [ --push ]                   Run volumes with --push
+  --publish                       Alias for --publish
+  --docker [=arg(=true)] (=true)  Enable the Docker plugin
+                                  (default: true)
+  --docker-user arg               System user to use for docker plugin
+                                  (default: akim)
+  --docker-home arg               Home directory to use for Docker user
+                                  (default: /home/<docker-user>)
+  --docker-socket-tcp             Use a TCP socket for docker plugin
+  --docker-socket-port arg        TCP port to use to communicate with Docker
+                                  (default: random)
+  --docker-socket-path arg        Path for plugin socket
+                                  (default: /run/docker/plugins)
+  --docker-descriptor-path arg    Path to add plugin descriptor
+                                  (default: /usr/lib/docker/plugins)
+  --docker-mount-substitute arg   [from:to|prefix] : Substitute 'from' to 'to' 
+                                  in advertised path
+  -l [ --log-level ] arg          Log level to start volumes with (default: 
+                                  LOG)
+  -d [ --log-path ] arg           Store volume logs in given path
+
+

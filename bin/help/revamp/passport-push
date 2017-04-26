@@ -1,0 +1,11 @@
+passport: push: Usage: infinit-passport passport push [OPTIONS]
+Push a user's network passport to the Hub
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -N, --network arg         network to push passport for
+  -u, --user arg            user to push passport for
+

@@ -1,0 +1,8 @@
+network: import: Usage: _build/macosx64/bin/infinit-network --import [OPTIONS...]
+
+Import a network:
+
+Import options:
+  -i [ --input ] arg     File to read the network from (default: stdin)
+
+

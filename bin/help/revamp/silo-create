@@ -1,0 +1,13 @@
+storage: create: Usage: infinit-storage create [MODE|--help]
+Infinit create management utility.
+
+Modes:
+  filesystem Store blocks on local filesystem
+  dropbox    Store blocks on Dropbox
+  gcs        Store blocks on Google Cloud Storage
+  google-drive Store blocks on Google Drive
+  s3         Store blocks on AWS S3
+
+Options:
+  -h, --help                show this help message
+

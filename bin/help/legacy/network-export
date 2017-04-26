@@ -1,0 +1,10 @@
+network: export: Usage: _build/macosx64/bin/infinit-network --export --name NETWORK [OPTIONS...]
+
+Export a network:
+
+Export options:
+  -n [ --name ] arg      Network to export
+  -o [ --output ] arg    File to write the network to
+                         (default: stdout)
+
+

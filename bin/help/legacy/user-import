@@ -1,0 +1,8 @@
+user: import: Usage: _build/macosx64/bin/infinit-user --import [OPTIONS...]
+
+Import a user:
+
+Import options:
+  -i [ --input ] arg     File to read the user from (default: stdin)
+
+

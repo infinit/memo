@@ -1,0 +1,9 @@
+#! /usr/bin/env sh
+
+# where gpr is GNU pr.
+
+for i in legacy/*
+    do
+      m=$(basename $i)
+      gpr -w160 -S'|' -t -m =(fold -s $i) =(fold -s revamp/$m)  > diffs/$m
+    done

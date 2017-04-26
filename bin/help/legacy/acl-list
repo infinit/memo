@@ -1,0 +1,14 @@
+acl: list: Usage: _build/macosx64/bin/infinit-acl --list --path PATHS [OPTIONS...]
+
+List current ACL:
+
+List options:
+  -p [ --path ] arg      Paths
+  -R [ --recursive ]     List recursively
+  --verbose              Verbose output
+
+Hidden options:
+  --fallback-xattrs      Fallback to alternate xattr mode if system xattrs are 
+                         not suppported
+
+

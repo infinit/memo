@@ -1,0 +1,9 @@
+doctor: system: Usage: _build/macosx64/bin/infinit-doctor --system [OPTIONS...]
+
+Perform sanity checks on your system:
+
+System options:
+  --no-color             Don't use colored output
+  -v [ --verbose ]       Output everything
+
+

@@ -1,0 +1,37 @@
+network: run: Usage: infinit-network network run [OPTIONS]
+Run a network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the network to run
+  -i, --input arg           file to read network from (default: null)
+  -d, --daemon              run as a background daemon
+      --monitoring          enable monitoring
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
+      --async               use asynchronous write operations
+      --cache               enable caching with default values
+      --cache-ram-size arg  maximum RAM block cache size in bytes (default: 64MB) (default: null)
+      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5min) (default: null)
+      --cache-ram-invalidation arg  RAM block cache invalidation time in seconds (default: 15s) (default: null)
+      --cache-disk-size arg  size of disk cache for immutable data in bytes (default: 512MB) (default: null)
+      --fetch-endpoints     fetch endpoints from the Hub
+  -f, --fetch               fetch network from the Hub
+      --push-endpoints      push endpoints to the Hub
+  -p, --push                push network to the Hub
+      --publish             alias for --fetch-endpoints --push-endpoints
+      --endpoints-file arg  write node listening endpoints to file (format: host:port) (default: null)
+      --port-file arg       write node listening port to file (default: null)
+      --port arg            outbound port to use (default: null)
+      --peers-file arg      Periodically write list of known peers to given file (default: null)
+      --listen arg          specify which IP address to listen on (default: all) (default: null)
+      --fetch-endpoints-interval arg  period for repolling endpoints from the Hub in seconds (default: null)
+      --no-local-endpoints  Disable automatic detection of local endpoints
+      --no-public-endpoints  Disable automatic detection of public endpoints
+      --advertise-host arg  advertise extra endpoint using given host (default: [])
+      --grpc arg            start grpc server on given endpoint (default: null)
+      --paxos-rebalancing-auto-expand arg  whether to automatically rebalance under-replicated blocks (default: null)
+      --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup and trigger rebalancing (default: null)
+

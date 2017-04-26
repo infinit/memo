@@ -1,0 +1,10 @@
+Usage: infinit-device device [MODE|--help]
+Infinit device management utility.
+
+Modes:
+  receive    Receive an object from another device using the Hub
+  transmit   transmit an object to another device using the Hub
+
+Options:
+  -h, --help                show this help message
+

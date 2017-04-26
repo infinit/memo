@@ -1,0 +1,57 @@
+network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK [OPTIONS...]
+
+Run a network:
+
+Run options:
+  -i [ --input ] arg                    File to read the commands from 
+                                        (default: stdin)
+  -d [ --daemon ]                       Run as a background daemon
+  --monitoring [=arg(=true)] (=true)    Enable monitoring (default: true)
+  -n [ --name ] arg                     Network to run
+  --peer arg                            Peer address or file with list of peer 
+                                        addresses (host:port)
+  --async                               Use asynchronous operations
+  --cache [=arg(=true)]                 Enable caching with default values
+  --cache-ram-size arg                  Maximum RAM block cache size in bytes
+                                        (default: 64 MB)
+  --cache-ram-ttl arg                   RAM block cache time-to-live in seconds
+                                        (default: 5 minutes)
+  --cache-ram-invalidation arg          RAM block cache invalidation time in
+                                        seconds (default: 15 seconds)
+  --cache-disk-size arg                 Size of disk cache for immutable data
+                                        in bytes (default: 512 MB)
+  --fetch-endpoints                     Fetch endpoints from the Hub
+  -f [ --fetch ]                        Alias for --fetch-endpoints
+  --push-endpoints                      Push endpoints to the Hub
+  -p [ --push ]                         Alias for --push-endpoints
+  --publish                             Alias for --fetch-endpoints 
+                                        --push-endpoints
+  --endpoints-file arg                  Write node listening endpoints to file
+                                        (format: host:port\n)
+  --port-file arg                       Write node listening port to file
+  --port arg                            Outbound port to use
+  --peers-file arg                      File to write peers to periodically
+  --listen arg                          Specify which IP address to listen on 
+                                        (default: all)
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the
+                                        Hub in seconds (default: 300s)
+  --no-local-endpoints [=arg(=true)]    Disable automatic detection of local 
+                                        endpoints
+  --no-public-endpoints [=arg(=true)]   Disable automatic detection of public 
+                                        endpoints
+  --advertise-host arg                  Advertise extra endpoint using given 
+                                        host
+
+Deprecated options:
+  --cache-size arg                      Use "--cache-ram-size" instead
+  --cache-ttl arg                       Use "--cache-ram-ttl" instead
+  --cache-invalidation arg              Use "--cache-ram-invalidation" instead
+  --disk-cache-size arg                 Use "--cache-disk-size" instead
+
+Hidden options:
+  --paxos-rebalancing-auto-expand arg   Whether to automatically rebalance 
+                                        under-replicated blocks
+  --paxos-rebalancing-inspect arg       Whether to inspect all blocks on 
+                                        startup and trigger rebalancing
+
+

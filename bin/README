@@ -1,0 +1,5 @@
+We need to manually check the new CLI against the old. The tools in the help
+directory allow for this.
+
+Once a mode has been checked, it should be removed from the list. Once all modes
+have been checked, this directory can be removed.
