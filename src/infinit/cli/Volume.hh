@@ -38,7 +38,9 @@ namespace infinit
                                     cli::status,
                                     cli::stop,
 #endif
-                                    cli::update));
+                                    cli::update,
+                                    cli::syscall));
+
 
       using Strings = std::vector<std::string>;
       template <typename T>
@@ -618,6 +620,43 @@ namespace infinit
                   boost::optional<std::string> input = {},
                   boost::optional<std::string> user = {},
                   boost::optional<int> block_size = {});
+
+            using Objects = decltype(elle::meta::list(cli::syscall));
+
+      // Syscall.
+      class Syscall
+        : public Object<Syscall, Volume>
+      {
+      public:
+        using Super = Object<Syscall, Volume>;
+        using Modes = decltype(elle::meta::list(cli::getxattr,
+                                                cli::setxattr));
+        Syscall(Infinit& infinit);
+        // getxattr.
+        Mode<Syscall,
+             void (decltype(cli::path)::Formal<std::string const&>,
+                   decltype(cli::name)::Formal<std::string const&>),
+             decltype(modes::mode_get_xattr) >
+        getxattr;
+        void
+        mode_get_xattr(std::string const& path,
+                       std::string const& name);
+
+        // setxattr.
+        Mode<Syscall,
+             void (decltype(cli::path)::Formal<std::string const&>,
+                   decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::value)::Formal<std::string const&>),
+             decltype(modes::mode_set_xattr)>
+        setxattr;
+        void
+        mode_set_xattr(std::string const& path,
+                       std::string const& attribute,
+                       std::string const& value);
+
+        std::string const description = "Syscalls";
+      } syscall;
+
     };
   }
 }

@@ -28,6 +28,7 @@
 #include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
+#include <infinit/cli/Syscall.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/cli/Volume.hh>
 

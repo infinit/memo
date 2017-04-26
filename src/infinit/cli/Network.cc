@@ -1441,9 +1441,9 @@ namespace infinit
         if (!mountpoint)
           elle::err("A mountpoint is required to fetch groups.");
         char buf[32768];
-        int res = getxattr(*mountpoint,
-                           "infinit.group.control_key." + name,
-                           buf, 16384, true);
+        int res = get_xattr(*mountpoint,
+                            "infinit.group.control_key." + name,
+                            buf, 16384, true);
         if (res <= 0)
           elle::err("Unable to fetch group %s", name);
         auto b = elle::Buffer(buf, res);

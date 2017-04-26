@@ -203,7 +203,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(enable_storage);
     ELLE_DAS_SYMBOL(filesystem);
     ELLE_DAS_SYMBOL(gcs);
-    ELLE_DAS_SYMBOL(get_xattr);
+    ELLE_DAS_SYMBOL(getxattr);
     ELLE_DAS_SYMBOL(google_drive);
     ELLE_DAS_SYMBOL(hash);
     ELLE_DAS_SYMBOL(import);
@@ -224,13 +224,14 @@ namespace infinit
     ELLE_DAS_SYMBOL(run);
     ELLE_DAS_SYMBOL(s3);
     ELLE_DAS_SYMBOL(set);
-    ELLE_DAS_SYMBOL(set_xattr);
+    ELLE_DAS_SYMBOL(setxattr);
     ELLE_DAS_SYMBOL(signup);
     ELLE_DAS_SYMBOL(silo);
     ELLE_DAS_SYMBOL(start);
     ELLE_DAS_SYMBOL(stats);
     ELLE_DAS_SYMBOL(status);
     ELLE_DAS_SYMBOL(stop);
+    ELLE_DAS_SYMBOL(syscall);
     ELLE_DAS_SYMBOL(system);
     ELLE_DAS_SYMBOL(transmit);
     ELLE_DAS_SYMBOL(unlink);
