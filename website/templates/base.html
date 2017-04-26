@@ -55,8 +55,11 @@
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
     <div id="full"></div>
 
-    % if route_name == 'home4':
-      <div id="announcement">We're joining Docker! <a href="http://blog.infinit.sh/infinit-joins-docker" target="_blank"> Read our full announcement 🐳🎈</a></div>
+    % if route_name == 'home':
+      <div id="announcement">
+        <img src="${url('images/logos/meetup.png')}" alt="meetup logo">
+        Next Infinit Meetup in Paris: 10 May — <a href="https://www.meetup.com/Infinit-Paris/events/239323584/" target="_blank"> Join us!</a>
+      </div>
     % endif
 
     <header>
