@@ -72,7 +72,7 @@ namespace infinit
                       *doughnut.local()->utp_server() :
                       *this->_local_utp_server)
       {
-        ELLE_TRACE_SCOPE("%s: construct");
+        ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("tcp heartbeat: %s", tcp_heartbeat);
         if (this->_local_utp_server)
         {
@@ -86,7 +86,7 @@ namespace infinit
         }
         if (rdv_host)
         {
-          auto uid = elle::sprintf("%x", _doughnut.id());
+          auto const uid = elle::sprintf("%x", _doughnut.id());
           this->_rdv_connect_thread.reset(
             new elle::reactor::Thread(
               "rdv_connect",
