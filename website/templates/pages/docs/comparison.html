@@ -118,15 +118,6 @@
     % endfor
     </table>
 
-    % if 'similar_to' in competitor:
-      <h3 class="links">Similar To</h3>
-      <ul class="similar_to">
-        % for value in competitor['similar_to']:
-          <li><img src="${url('images/logos/' + value + '.png')}"><a href="${value}">${json[value]['name']}</a></li>
-        % endfor
-      </ul><br>
-    % endif
-
     <div class="popup mfp-hide" id="model">
       <p class="title">Model</p>
       <section class="doc">

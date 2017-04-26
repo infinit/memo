@@ -158,7 +158,7 @@
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
     },
-    "similar_to": ["infinit", "tahoe-lafs"]
+    "similar_to": ["tahoe-lafs"]
   },
   "gcs": {
     "name": "Google Cloud Storage",
@@ -278,7 +278,7 @@
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
     },
-    "similar_to": ["infinit", "tahoe-lafs"]
+    "similar_to": ["tahoe-lafs"]
   },
   "lustre": {
     "name": "Lustre",
@@ -415,7 +415,7 @@
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Tahoe-LAFS"
     },
-    "similar_to": ["glusterfs", "infinit"]
+    "similar_to": ["glusterfs"]
   },
   "xtreemfs": {
     "name": "XtreemFS",
