@@ -1,5 +1,6 @@
 #pragma once
 
+#include <elle/algorithm.hh>
 #include <elle/factory.hh>
 
 #include <infinit/model/doughnut/Cache.hh>
@@ -166,7 +167,7 @@ protected:
       [=]
       (MemberGenerator::yielder const& yield)
       {
-        if (this->_fail_addresses.find(address) != this->_fail_addresses.end())
+        if (elle::contains(this->_fail_addresses, address))
           return;
         int count = n;
         auto it = this->_partial_addresses.find(address);
@@ -250,6 +251,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 class DHT
   : public elle::Printable
 {
+  ELLE_LOG_COMPONENT("tests.DHT");
 public:
   using make_consensus_t
     = std::function<std::unique_ptr<dht::consensus::Consensus>
@@ -263,6 +265,7 @@ public:
   template <typename ... Args>
   DHT(Args&& ... args)
   {
+    ELLE_TRACE("contruct: %s", this);
     // FIXME: use named::extend to not repeat dht::Doughnut arguments
     elle::das::named::prototype(
       paxos = true,
@@ -334,8 +337,18 @@ public:
   elle::reactor::network::TCPSocket
   connect_tcp()
   {
-    return elle::reactor::network::TCPSocket(
-      this->dht->local()->server_endpoint().tcp());
+    ELLE_TRACE("connect_tcp: %s, endpoint: %s",
+               this, this->dht->local()->server_endpoint());
+    try
+    {
+      return this->dht->local()->server_endpoint().tcp();
+    }
+    catch (...)
+    {
+      ELLE_LOG("%s: connection failed: %s",
+               *this, elle::exception_string());
+      throw;
+    }
   }
 
   std::shared_ptr<dht::Doughnut> dht;
