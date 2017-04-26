@@ -1571,7 +1571,7 @@ ELLE_TEST_SCHEDULED(group_description)
     BOOST_CHECK_EQUAL(get_description(owner), description);
     // Unset the description.
     set_description(owner, "");
-    BOOST_CHECK(!contains(group_list(admin), "description"));
+    BOOST_CHECK(!elle::contains(group_list(admin), "description"));
   }
 }
 
