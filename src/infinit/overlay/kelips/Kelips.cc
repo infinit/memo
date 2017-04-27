@@ -2161,7 +2161,12 @@ namespace infinit
           {
             ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
             if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
-              target[c.first] = Contact{{}, c.second, c.first, Duration(), Time(), 0};
+            {
+              target[c.first] = Contact{{}, c.second, c.first,
+                                        Duration(), Time(), 0, {}, {}, true};
+              this->on_discovery()(NodeLocation(c.first, to_endpoints(c.second)),
+                                   false);
+            }
           }
           else
             endpoints_update(it->second.endpoints, c.second);
