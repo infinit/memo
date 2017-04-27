@@ -514,7 +514,8 @@ namespace infinit
         if (!this->_disconnected && this->_thread && !this->_thread->done())
         {
           ELLE_TRACE_SCOPE("%s: disconnect", this);
-          this->_thread->terminate_now();
+          // Do not suicide we might be unwinding.
+          this->_thread->terminate_now(false);
           if (this->_cleanup_on_disconnect)
             this->_cleanup_on_disconnect();
         }
