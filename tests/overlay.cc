@@ -1068,6 +1068,14 @@ ELLE_TEST_SCHEDULED(
               {
                 except = std::current_exception();
               }
+              catch (elle::Error const& e)
+              {
+                // also intercept "no peer available for..." exceptions,
+                // which currently are not typed(FIXME when they are).
+                if (std::string(e.what()).find("no peer available for") == std::string::npos)
+                  throw;
+                except = std::current_exception();
+              }
               if (except)
               {
                 // This can be legit if a delete crossed our path
