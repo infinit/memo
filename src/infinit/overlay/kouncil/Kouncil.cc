@@ -188,7 +188,7 @@ namespace infinit
          {
            ELLE_DEBUG("%s: register new block %f", this, b.address());
            this->_address_book.emplace(this->id(), b.address());
-           this->_new_entries.put(std::make_pair(b.address(), true));
+           this->_new_entries.emplace(b.address(), true);
          }));
        this->_connections.emplace_back(local->on_remove().connect(
          [this] (model::blocks::Block const& b)
@@ -196,7 +196,7 @@ namespace infinit
            ELLE_DEBUG("%s: unregister block %f", this, b.address());
            auto entry = Entry(this->id(), b.address());
            ELLE_ENFORCE_EQ(this->_address_book.get<2>().erase(entry), 1u);
-           this->_new_entries.put(std::make_pair(b.address(), false));
+           this->_new_entries.emplace(b.address(), false);
          }));
        // Add server-side kouncil RPCs.
        this->_connections.emplace_back(local->on_connect().connect(
