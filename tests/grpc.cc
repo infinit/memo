@@ -707,6 +707,14 @@ ELLE_TEST_SCHEDULED(doughnut)
       ELLE_LOG("...called");
       BOOST_CHECK_EQUAL(res, ::grpc::NOT_FOUND);
     }
+    { // malformed address
+      grpc::ClientContext context;
+      ::FetchRequest req;
+      ::FetchResponse repl;
+      req.set_address("foobar");
+      auto res = stub->Fetch(&context, req, &repl);
+      BOOST_CHECK_EQUAL(res, ::grpc::INVALID_ARGUMENT);
+    }
     // Basic CHB
     ::Block chb;
     { // make
