@@ -216,7 +216,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        elle::make_unique<infinit::storage::DropboxStorageConfig>(
+        std::make_unique<infinit::storage::DropboxStorageConfig>(
           name,
           account->token,
           std::move(root),
@@ -245,7 +245,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+        std::make_unique<infinit::storage::FilesystemStorageConfig>(
           name,
           std::move(path.string()),
           convert_capacity(capacity),
@@ -267,7 +267,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        elle::make_unique<infinit::storage::GCSConfig>(
+        std::make_unique<infinit::storage::GCSConfig>(
           name,
           bucket,
           root.value_or(elle::print("{}_blocks", name)),
@@ -316,7 +316,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        elle::make_unique<infinit::storage::S3StorageConfig>(
+        std::make_unique<infinit::storage::S3StorageConfig>(
           name,
           std::move(aws_credentials),
           silo_class,
@@ -339,7 +339,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        elle::make_unique<infinit::storage::GoogleDriveStorageConfig>(
+        std::make_unique<infinit::storage::GoogleDriveStorageConfig>(
           name,
           std::move(root),
           account->refresh_token,

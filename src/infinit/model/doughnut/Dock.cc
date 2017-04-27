@@ -310,12 +310,12 @@ namespace infinit
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
                   auto serializer =
-                    elle::make_unique<elle::protocol::Serializer>(
+                    std::make_unique<elle::protocol::Serializer>(
                       *socket, sv, false,
                       ping,
                       ping);
                   auto channels =
-                    elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
+                    std::make_unique<elle::protocol::ChanneledStream>(*serializer);
                   try
                   {
                     if (!disable_key)
@@ -370,7 +370,7 @@ namespace infinit
                         [&, e]
                         {
                           using elle::reactor::network::TCPSocket;
-                          handshake(elle::make_unique<TCPSocket>(e.tcp()),
+                          handshake(std::make_unique<TCPSocket>(e.tcp()),
                                     this->_dock._tcp_heartbeat);
                           this->_serializer->ping_timeout().connect(
                             [this]
@@ -396,7 +396,7 @@ namespace infinit
                         if (this->_location.id() != Address::null)
                           cid = elle::sprintf("%x", this->_location.id());
                         auto socket =
-                          elle::make_unique<elle::reactor::network::UTPSocket>(
+                          std::make_unique<elle::reactor::network::UTPSocket>(
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
@@ -609,7 +609,7 @@ namespace infinit
                 this->_location.id(res.id);
               return std::make_pair(
                 res.challenge,
-                elle::make_unique<Passport>(std::move(res.passport)));
+                std::make_unique<Passport>(std::move(res.passport)));
             }
             else if (version >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);

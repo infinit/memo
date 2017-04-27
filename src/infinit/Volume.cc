@@ -67,7 +67,7 @@ namespace infinit
     auto mountpoint = boost::optional<boost::filesystem::path>{};
     if (this->mount_options.mountpoint)
       mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
-    auto fs = elle::make_unique<filesystem::FileSystem>(
+    auto fs = std::make_unique<filesystem::FileSystem>(
       infinit::filesystem::model = dht,
       infinit::filesystem::allow_root_creation = allow_root_creation,
       infinit::filesystem::volume_name = this->name,
@@ -76,7 +76,7 @@ namespace infinit
       infinit::filesystem::map_other_permissions = map_other_permissions,
       infinit::filesystem::block_size = block_size);
     auto driver =
-      elle::make_unique<elle::reactor::filesystem::FileSystem>(std::move(fs), true);
+      std::make_unique<elle::reactor::filesystem::FileSystem>(std::move(fs), true);
     if (mountpoint)
     {
       auto fuse_options = std::vector<std::string>{
