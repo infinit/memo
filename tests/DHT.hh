@@ -337,18 +337,19 @@ public:
   elle::reactor::network::TCPSocket
   connect_tcp()
   {
-    ELLE_TRACE("connect_tcp: %s, endpoint: %s",
-               this, this->dht->local()->server_endpoint());
-    try
-    {
-      return this->dht->local()->server_endpoint().tcp();
-    }
-    catch (...)
-    {
-      ELLE_LOG("%s: connection failed: %s",
-               *this, elle::exception_string());
-      throw;
-    }
+    for (auto const& ep: this->dht->local()->server_endpoints())
+      try
+      {
+        ELLE_TRACE("connect_tcp: %s, endpoint: %s", this, ep);
+        return ep.tcp();
+      }
+      catch (...)
+      {
+        ELLE_LOG("%s: connection failed: %s",
+                 *this, elle::exception_string());
+      }
+    ELLE_ERR("connect_tcp: all connection attemps failed");
+    abort();
   }
 
   std::shared_ptr<dht::Doughnut> dht;
