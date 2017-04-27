@@ -8,7 +8,7 @@
     <h1>${competitor['name']}</h1>
     <p>
       ${competitor['description']}
-      % if competitor['links']['wikipedia']:
+      % if 'wikipedia' in competitor['links']:
         <em><a target="_blank" href="${competitor['links']['wikipedia']}">See more</a></em>
       % endif
     </p>
@@ -34,8 +34,8 @@
           properties[6] = ['fault-tolerance', value]
         elif property == 'security':
           properties[7] = ['security', value]
-        elif property == 'open source':
-          properties[8] = ['open source', value]
+        elif property == 'open-source':
+          properties[8] = ['open-source', value]
         elif property == 'pricing':
           properties[9] = ['pricing', value]
     %>
@@ -93,7 +93,7 @@
             <a class="open-popup" href="#security">?</a>
             <p class="note">A secure storage system must be designed with encrypted communication, access control etc. from the ground up.</p>
 
-          % elif property == 'open source':
+          % elif property == 'open-source':
             <br><p class="note">Storage products and projects may or may not have their source code available to the public.</p>
 
           % elif property == 'pricing':
@@ -104,7 +104,7 @@
         </td>
         <td class="competitor" ${'colspan="2"' if is_similar else ''}>
           % for item in value:
-            <span class="value ${'unknown' if 'Unknown' in item or item == '' else ''}">${item}</span>
+            <span class="value ${'unknown' if 'Unknown' in item or item == '' else ''}">${item}</span> XXX Unknown n'existe plus
           % endfor
         </td>
         % if not is_similar:
@@ -230,7 +230,7 @@
 
       <p>The scale-out software-defined storage systems that do offer some means of redundancy, often integrate a mechanism that monitors storage servers to detect potential failures. Note however that such <strong>standard fault tolerance</strong> algorithms assume that the servers will always follow the system's protocol because distributed storage solutions are generally deployed within a <a class="open-popup" href="#environment">controlled environment</a> e.g a company's network.</p>
 
-      <p>If some of the storage resources composing the infrastructure are not under the control of the administrator, the assumption cannot hold and the fault tolerance algorithm must be adapted to tolerate failures known as <a href="https://en.wikipedia.org/wiki/Byzantine_fault_tolerance" target="_blank"><strong>Byzantine</strong></a> i.e potentially malicous behaviors.</p>
+      <p>If some of the storage resources composing the infrastructure are not under the control of the administrator, the assumption cannot hold and the fault tolerance algorithm must be adapted to tolerate failures known as <a href="https://en.wikipedia.org/wiki/Byzantine_fault_tolerance" target="_blank">Byzantine</a> i.e potentially malicous behaviors.</p>
 
       <p>Finally, some systems &horbar; in particular distributed storage without a redundancy mechanism &horbar; may be <strong>partially fault tolerant</strong>. In such cases, a server failing may render a number of data pieces unavailable until those servers come back online or an administration operation is manually performed.</p>
       </section>
