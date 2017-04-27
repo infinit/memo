@@ -84,7 +84,16 @@ namespace infinit
                      cli::verbose = false)
       , networking(*this,
                    "Perform networking speed tests between nodes",
-                   elle::das::cli::Options(),
+                   elle::das::cli::Options{
+                     {
+                       "host", elle::das::cli::Option{
+                         '\0', "The host to connect to", false}
+                     },
+                     {
+                       "port", elle::das::cli::Option{
+                         '\0', "The host's port to connect to", false}
+                     }
+                   },
                    cli::mode = boost::none,
                    cli::protocol = boost::none,
                    cli::packet_size = boost::none,
@@ -94,7 +103,7 @@ namespace infinit
                    cli::tcp_port = boost::none,
                    cli::utp_port = boost::none,
                    cli::xored_utp_port = boost::none,
-                   cli::xored = boost::none,
+                   cli::xored = std::string{"both"},
                    cli::no_color = false,
                    cli::verbose = false)
       , system(*this,

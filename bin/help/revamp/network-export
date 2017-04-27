@@ -1,0 +1,11 @@
+network: export: Usage: infinit-network network export [OPTIONS]
+Export a network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the network to export
+  -o, --output arg          file to write the network to (default: null)
+

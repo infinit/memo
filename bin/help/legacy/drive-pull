@@ -1,0 +1,9 @@
+drive: pull: Usage: _build/macosx64/bin/infinit-drive --pull --name NAME [OPTIONS...]
+
+Remove a drive from the Hub:
+
+Pull options:
+  -n [ --name ] arg      Drive to remove
+  --purge                Remove objects that depend on the drive
+
+

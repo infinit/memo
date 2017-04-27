@@ -5,6 +5,7 @@
 #include <infinit/MountOptions.hh>
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/cli/xattrs.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/grpc/grpc.hh>
 #include <infinit/model/Model.hh>
@@ -296,8 +297,8 @@ namespace infinit
                cli::input = boost::optional<std::string>(),
                cli::user = boost::optional<std::string>(),
                cli::block_size = boost::optional<int>())
+      , syscall(infinit)
     {}
-
 
     namespace
     {
@@ -1846,6 +1847,43 @@ namespace infinit
       ifnt.volume_save(volume, true);
       if (push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
+    }
+
+    Volume::Syscall::Syscall(Infinit& infinit)
+      : Object(infinit)
+      , getxattr(*this,
+                 "Get an extended attribute value",
+                 cli::path,
+                 cli::name)
+      , setxattr(*this,
+                 "Set an extended attribute value",
+                 cli::path,
+                 cli::name,
+                 cli::value)
+    {}
+
+    /*----------------.
+    | Mode: get_xattr |
+    `----------------*/
+    void
+    Volume::Syscall::mode_get_xattr(std::string const& path,
+                                    std::string const& name)
+    {
+      char result[16384];
+      int length = get_xattr(path, name, result, sizeof(result) - 1, true);
+      result[length] = 0;
+      std::cout << result << std::endl;
+    }
+
+    /*----------------.
+    | Mode: set_xattr |
+    `----------------*/
+    void
+    Volume::Syscall::mode_set_xattr(std::string const& path,
+                                    std::string const& name,
+                                    std::string const& value)
+    {
+      set_xattr(path, name, value, true);
     }
   }
 }

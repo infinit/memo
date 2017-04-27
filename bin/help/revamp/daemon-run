@@ -1,0 +1,26 @@
+daemon: run: Usage: infinit-daemon daemon run [OPTIONS]
+Run daemon in the foreground
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+      --login-user arg      Login with selected user(s), of form 'user:password' (default: [])
+      --mount arg           mount given volumes on startup, keep trying on error (default: [])
+      --mount-root arg      Default root path for all mounts (default: null)
+      --default-network arg  Default network for volume creation (default: null)
+      --advertise-host arg  advertise extra endpoint using given host (default: [])
+  -f, --fetch               fetch daemon from the Hub
+  -p, --push                push daemon to the Hub
+      --docker              Enable the Docker plugin
+      --docker-user arg     System user to use for docker plugin (default: null)
+      --docker-home arg     Home directory to use for Docker user (default: /home/<docker-user>) (default: null)
+      --docker-socket-tcp   Use a TCP socket for docker plugin
+      --docker-socket-port arg  TCP port to use to communicate with Docker, 0 for random (default: 0)
+      --docker-socket-path arg  Path for plugin socket (default: /run/docker/plugins)
+      --docker-descriptor-path arg  Path to add plugin descriptor (default: /usr/lib/docker/plugins)
+      --docker-mount-substitute arg  [from:to|prefix] : Substitute 'from' to 'to' in advertised path (default: )
+      --log-level arg       Log level to start volumes with (default: LOG) (default: null)
+      --log-path arg        Store volume logs in given path (default: null)
+

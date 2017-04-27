@@ -178,7 +178,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     ELLE_DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(username_pattern, 'U', "Hub unique username to set (default: $(cn)%). Remove the '%' to disable unique username generator", false);
-    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
+    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1)", false);
     ELLE_DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     ELLE_DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     ELLE_DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
@@ -204,7 +204,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(enable_storage);
     ELLE_DAS_SYMBOL(filesystem);
     ELLE_DAS_SYMBOL(gcs);
-    ELLE_DAS_SYMBOL(get_xattr);
+    ELLE_DAS_SYMBOL(getxattr);
     ELLE_DAS_SYMBOL(google_drive);
     ELLE_DAS_SYMBOL(hash);
     ELLE_DAS_SYMBOL(import);
@@ -225,13 +225,14 @@ namespace infinit
     ELLE_DAS_SYMBOL(run);
     ELLE_DAS_SYMBOL(s3);
     ELLE_DAS_SYMBOL(set);
-    ELLE_DAS_SYMBOL(set_xattr);
+    ELLE_DAS_SYMBOL(setxattr);
     ELLE_DAS_SYMBOL(signup);
     ELLE_DAS_SYMBOL(silo);
     ELLE_DAS_SYMBOL(start);
     ELLE_DAS_SYMBOL(stats);
     ELLE_DAS_SYMBOL(status);
     ELLE_DAS_SYMBOL(stop);
+    ELLE_DAS_SYMBOL(syscall);
     ELLE_DAS_SYMBOL(system);
     ELLE_DAS_SYMBOL(transmit);
     ELLE_DAS_SYMBOL(unlink);

@@ -1,0 +1,9 @@
+journal: describe: Usage: _build/macosx64/bin/infinit-journal --describe --network NETWORK [--operation OPERATION] [OPTIONS...]
+
+Describe asynchronous operation(s):
+
+Describe options:
+  -N [ --network ] arg    Network to check
+  -O [ --operation ] arg  Operation to describe
+
+

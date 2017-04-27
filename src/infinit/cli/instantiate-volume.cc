@@ -6,5 +6,6 @@ namespace infinit
   namespace cli
   {
     template class Object<Volume>;
+    template class Object<Volume::Syscall, Volume>;
   }
 }

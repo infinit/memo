@@ -175,6 +175,7 @@ namespace infinit
                  RESP* response)
     {
       ::grpc::Status status = ::grpc::Status::OK;
+      ::grpc::StatusCode code = ::grpc::INTERNAL;
       sched.mt_run<void>("invoke", [&] {
           try
           {
@@ -182,7 +183,9 @@ namespace infinit
                        elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
+            code = ::grpc::INVALID_ARGUMENT;
             auto call = typename NF::Call(sin);
+            code = ::grpc::INTERNAL;
             auto res = nf(std::move(call));
             ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
@@ -200,8 +203,8 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_ERR("boum %s", e);
-            ELLE_ERR("%s", e.backtrace());
+            ELLE_TRACE("GRPC invoke failed with %s", e);
+            status = ::grpc::Status(code, e.what());
           }
       });
       return status;

@@ -1,0 +1,9 @@
+volume: pull: Usage: _build/macosx64/bin/infinit-volume --pull --name VOLUME [OPTIONS...]
+
+Remove a volume from the Hub:
+
+Pull options:
+  -n [ --name ] arg      Volume to remove
+  --purge                Remove objects that depend on the volume
+
+

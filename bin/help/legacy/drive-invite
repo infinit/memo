@@ -1,0 +1,19 @@
+drive: invite: Usage: _build/macosx64/bin/infinit-drive --invite --name DRIVE --user USER [OPTIONS...]
+
+Invite a user to join the drive:
+
+Invite options:
+  -n [ --name ] arg      Drive to invite the user to
+  -u [ --user ] arg      Existing users to invite to the drive via user name
+  -e [ --email ] arg     New users to invite to the drive via email
+  --fetch-drive          Update local drive descriptor
+  -f [ --fetch ]         Alias for --fetch-drive
+  --push-invitations     Update remote drive descriptor and send invitations
+  -p [ --push ]          Alias for --push-invitations
+  --passport             Create passports for each invitee
+
+Hidden options:
+  --permissions arg      Set default user permissions to XXX
+  -h [ --home ]          Creates a home directory for the invited user
+
+

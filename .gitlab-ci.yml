@@ -17,14 +17,16 @@ stages:
   - build
 
 variables:
-  PYTHONUNBUFFERED: "1"
+  DRAKE_EXPLAIN: "1" # still testing the whole cache thing
+  DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
+#  DRAKE_RAW: "1"     # debuging cmake issues
   LC_ALL: "C.UTF-8"
+  PYTHONUNBUFFERED: "1"
 
 x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
@@ -46,13 +48,13 @@ x86_64-centos6-gcc4:
     - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
-    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
-    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
+    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
     - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
     - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 ${SOURCE_DIR}/note-bench-stats ./bench"
-    - GIT_DIR="$SOURCE_DIR"/.git git push --force git@git.infinit.io:fs refs/notes/bench
+    - git -C "$SOURCE_DIR" push --force git@git.infinit.io:fs refs/notes/bench
     - cd "$SOURCE_DIR"
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
   tags:
@@ -65,7 +67,6 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
@@ -108,7 +109,6 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
@@ -123,14 +123,13 @@ x86_64-alpine-gcc:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
     - time python3 drake --website=false --beyond=false -j $(nproc) //build
     - time python3 drake --website=false --beyond=false -j $(nproc) //check
     - time python3 drake --website=false --beyond=false -j $(nproc) //install
-    - TARBALL=infinit-x86_64-alpine-gcc-$DESC.tbz
-    - tar -cvjf /tmp/$TARBALL -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
-    - scp /tmp/$TARBALL buildslave@packages.infinit.sh:tmp
-    - rm /tmp/$TARBALL
+    - TARBALL=/tmp/infinit-x86_64-alpine-gcc-$DESC.tbz
+    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
+    - rm "$TARBALL"
     - python3 drake --website=false //docker-alpine
     - docker tag infinit-alpine:$DESC mefyl/infinit-alpine:$DESC
     - docker push mefyl/infinit-alpine:$DESC
@@ -151,7 +150,6 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
@@ -166,14 +164,13 @@ x86_64-jessie-gcc4:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
     - time python3 drake --website=false --beyond=false -j $(nproc) //build
     - time python3 drake --website=false --beyond=false -j $(nproc) //check
     - time python3 drake --website=false --beyond=false -j $(nproc) //install
     - time python3 drake --website=false --beyond=false -j $(nproc) //debian
     - time scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - rm "infinit_${DESC}_amd64.deb"
-    - time if GIT_DIR="${SOURCE_DIR}/.git" git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
+    - time if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - time ssh buildslave@packages.infinit.sh 'make debian'
     - time cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
@@ -187,7 +184,6 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
@@ -224,28 +220,30 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
-    - export DRAKE_RAW=1 # debuging cmake issues
+    - SOURCE_DIR=${CI_PROJECT_DIR}
+    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
+    - INSTALL_DIR=${SOURCE_DIR}/_install
+    - DESC=$(git describe)
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
-    - mkdir -p ../fs-build
-    - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - mkdir -p "$BUILD_DIR"
+    - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd ../fs-build
     - python3 drake -j 4 //build
     - python3 drake -j 4 //check
     - python3 drake -j 4 //beyond/check
-    - rm -rf ../fs-install && mkdir -p ../fs-install
+    - rm -rf "$INSTALL_DIR$" && mkdir -p "$INSTALL_DIR$"
     - python3 drake -j 4 //install
-    - TARBALL=infinit-x86_64-osx-clang3-$(GIT_DIR=../fs/.git git describe).tbz
-    - gtar -cvjf /tmp/$TARBALL -C ../fs-install . --show-transformed-names --transform "s,^\\./,infinit-$(GIT_DIR=../fs/.git git describe)/,"
-    - scp /tmp/$TARBALL buildslave@packages.infinit.sh:tmp
+    - TARBALL=/tmp/infinit-x86_64-osx-clang3-$DESC.tbz
+    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - ssh debian@debian.infinit.io 'make brew'
-    - rm /tmp/$TARBALL
+    - rm "$TARBALL"
     - python3 drake -j 4 //debian-debug
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-macosx-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
+    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "$BUILD_DIR"/infinit-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
   tags:
     - x86_64
     - osx
@@ -256,15 +254,14 @@ x86_64-osx-clang:
 website:
   stage: build
   script:
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - SOURCE_DIR=${CI_PROJECT_DIR}
+    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
+    - INSTALL_DIR=${SOURCE_DIR}/_install
     - mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
     - DESC=$(git describe)
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"

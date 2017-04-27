@@ -1,0 +1,22 @@
+Usage: infinit-volume volume [MODE|--help]
+Infinit volume management utility.
+
+Modes:
+  create     Create a volume
+  delete     Delete a volume locally
+  export     Export a volume for someone else to import
+  fetch      Fetch a volume from the Hub
+  import     Import a volume
+  list       List volumes
+  mount      Mount a volume
+  pull       Remove a volume from the Hub
+  push       Push a volume to the Hub
+  run        Run a volume
+  start      Start a volume through the daemon
+  status     Get volume status
+  stop       Stop a volume
+  update     Update a volume with default run options
+
+Options:
+  -h, --help                show this help message
+

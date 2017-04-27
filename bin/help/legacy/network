@@ -1,0 +1,32 @@
+Usage: _build/macosx64/bin/infinit-network MODE [OPTIONS...]
+
+Infinit network management utility:
+
+Modes:
+  --create                     Create a network
+  --update                     Update a network
+  --export                     Export a network
+  --fetch                      Fetch a network from the Hub
+  --import                     Import a network
+  --link                       Link this device to a network
+  --unlink                     Unlink this device from a network
+  --list                       List networks
+  --push                       Push a network to the Hub
+  --delete                     Delete a network locally
+  --pull                       Remove a network from the Hub
+  --run                        Run a network
+  --list-services              List network registered services
+  --list-storage               List all storage contributed by this device to a
+                               network
+  --stats                      Fetch stats of a network on the Hub
+  --inspect                    Get information about a running network
+
+Miscellaneous:
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
+  -a [ --as ] arg              User to run commands as (default: system user)
+
+

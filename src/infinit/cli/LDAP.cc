@@ -227,7 +227,7 @@ namespace infinit
           auto passport_ser = elle::serialization::json::serialize(passport, false);
           {
             char buf[4096];
-            int r = getxattr(mountpoint,
+            int r = get_xattr(mountpoint,
                              elle::sprintf("infinit.resolve.%s", user_name),
                              buf, 4095, true);
             if (r > 0)
@@ -238,7 +238,7 @@ namespace infinit
               continue;
             }
           }
-          setxattr(mountpoint, "infinit.register." + user_name,
+          set_xattr(mountpoint, "infinit.register." + user_name,
                    passport_ser.string(), true);
           elle::fprintf(std::cout,
                         "Registered user \"%s\" to network.\n", user_name);
@@ -248,7 +248,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("Creating group %s", g.first);
           char buf[4096];
-          int r = getxattr(mountpoint,
+          int r = get_xattr(mountpoint,
                            elle::sprintf("infinit.resolve.%s", g.first),
                            buf, 4095, true);
           if (r > 0)
@@ -258,7 +258,7 @@ namespace infinit
           }
           else
           {
-            setxattr(mountpoint, "infinit.group.create", g.first, true);
+            set_xattr(mountpoint, "infinit.group.create", g.first, true);
             elle::fprintf(std::cout, "Added group \"%s\" to network.", g.first)
               << std::endl;
           }
@@ -270,7 +270,7 @@ namespace infinit
               continue;
             }
             ELLE_TRACE("adding user %s", m);
-            setxattr(mountpoint, "infinit.group.add",
+            set_xattr(mountpoint, "infinit.group.add",
                      g.first + ':' + res.at(m).name, true);
             elle::fprintf(std::cout, "Added user \"%s\" to group \"%s\" on network.",
                          m, g.first)
@@ -325,7 +325,7 @@ namespace infinit
         auto const& user_name = u.second.name;
         auto set_permissions = [&user_name] (bfs::path const& folder,
                                              std::string const& perms) {
-          setxattr(folder.string(),
+          set_xattr(folder.string(),
             elle::sprintf("user.infinit.auth.%s", perms), user_name, true);
         };
         if (!mode.empty()

@@ -25,8 +25,6 @@ namespace infinit
 {
   namespace storage
   {
-
-
     Memory::Memory()
       : _blocks(new Blocks, std::default_delete<Blocks>())
     {}

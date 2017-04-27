@@ -1,0 +1,67 @@
+volume: run: Usage: _build/macosx64/bin/infinit-volume --run --name VOLUME [--mountpoint PATH] [OPTIONS...]
+
+Run a volume:
+
+Run options:
+  --name arg                            Volume name
+  --allow-root-creation [=arg(=true)]   Create the filesystem root if not found
+  -m [ --mountpoint ] arg               Where to mount the filesystem
+  --readonly [=arg(=true)]              Mount as readonly
+  --mount-name arg                      Name of mounted volume
+  --mount-icon arg                      Path to an icon for mounted volume
+  --finder-sidebar [=arg(=true)]        Show volume in Finder sidebar
+  --async [=arg(=true)]                 Use asynchronous write operations
+  -d [ --daemon ] [=arg(=true)]         Run as a background daemon
+  --monitoring [=arg(=true)] (=true)    Enable monitoring (default: true)
+  --fuse-option arg                     Option to pass directly to FUSE
+  --cache [=arg(=true)]                 Enable caching with default values
+  --cache-ram-size arg                  Maximum RAM block cache size in bytes
+                                        (default: 64 MB)
+  --cache-ram-ttl arg                   RAM block cache time-to-live in seconds
+                                        (default: 5 minutes)
+  --cache-ram-invalidation arg          RAM block cache invalidation time in
+                                        seconds (default: 15 seconds)
+  --cache-disk-size arg                 Size of disk cache for immutable data
+                                        in bytes (default: 512 MB)
+  --fetch-endpoints [=arg(=true)]       Fetch endpoints from the Hub
+  -f [ --fetch ] [=arg(=true)]          Alias for --fetch-endpoints
+  --peer arg                            Peer address or file with list of peer 
+                                        addresses (host:port)
+  --peers-file arg                      Periodically write list of known peers 
+                                        to given file
+  --push-endpoints [=arg(=true)]        Push endpoints to the Hub
+  -r [ --register-service ] [=arg(=true)]
+                                        Register volume in the network
+  --no-local-endpoints [=arg(=true)]    Disable automatic detection of local 
+                                        endpoints
+  --no-public-endpoints [=arg(=true)]   Disable automatic detection of public 
+                                        endpoints
+  -p [ --push ] [=arg(=true)]           Alias for --push-endpoints
+  --map-other-permissions [=arg(=true)] (=true)
+                                        Allow chmod to set world permissions
+  --publish [=arg(=true)]               Alias for --fetch-endpoints 
+                                        --push-endpoints
+  --advertise-host arg                  Advertise extra endpoint using given 
+                                        host
+  --endpoints-file arg                  Write node listening endpoints to file
+                                        (format: host:port\n)
+  --port-file arg                       Write node listening port to file
+  --port arg                            Outbound port to use
+  --listen arg                          Specify which IP address to listen on 
+                                        (default: all)
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the
+                                        Hub in seconds (default: 300s)
+  -i [ --input ] arg                    File to read the commands from 
+                                        (default: stdin)
+
+Deprecated options:
+  --cache-size arg                      Use "--cache-ram-size" instead
+  --cache-ttl arg                       Use "--cache-ram-ttl" instead
+  --cache-invalidation arg              Use "--cache-ram-invalidation" instead
+  --disk-cache-size arg                 Use "--cache-disk-size" instead
+
+Hidden options:
+  --disable-utf-8-conversion            Disable FUSE conversion of UTF-8 to 
+                                        native format
+
+

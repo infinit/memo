@@ -1,0 +1,21 @@
+acl: set: Usage: infinit-acl acl set [OPTIONS]
+Set ACLs
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+      --path arg            file whose acl to set
+  -u, --user arg            user to set acl for
+  -g, --group arg           group to set acl for
+  -m, --mode arg            access mode to set: r, w, rw, none (default: null)
+  -o, --others-mode arg     access mode to set for other users: r, w, rw, none (default: null)
+  -i, --enable-inherit      make new files and directories inherit permissions
+      --disable-inherit     make new files and directories not inherit permissions
+  -R, --recursive           set acl recursively
+  -t, --traverse            set read permission on parent directories
+  -v, --verbose             use verbose output
+  -f, --fetch               fetch acl from the Hub
+      --fallback-xattrs     use fallback special file if extended attributes are not supported
+

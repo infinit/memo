@@ -1,0 +1,5 @@
+storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]
+
+List storages:
+
+

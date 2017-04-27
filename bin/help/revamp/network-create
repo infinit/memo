@@ -1,0 +1,32 @@
+network: create: Usage: infinit-network network create [OPTIONS]
+Create a network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the network to create
+      --description arg     network description (default: null)
+  -S, --storage arg         storage to contribute (optional, data striped over multiple) (default: [])
+      --port arg            outbound port to use (default: null)
+  -r, --replication-factor arg  data replication factor (default: 1) (default: 1)
+  -e, --eviction-delay arg  missing servers eviction delay (default: 10min) (default: null)
+  -o, --output arg          file to write the network to (default: null)
+      --push-network        push the network to the Hub
+  -p, --push                push network to the Hub
+      --admin-r arg         Set admin users that can read all data (default: [])
+      --admin-rw arg        Set admin users that can read and write all data (default: [])
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
+      --paxos               use Paxos consensus algorithm (default)
+      --no-consensus        use no consensus algorithm
+      --kelips              use a Kelips overlay network (default)
+      --kalimero            use a Kalimero overlay network. Used for local testing
+      --kouncil             use a Kouncil overlay network
+      --nodes arg           estimate of the total number of nodes (default: null)
+      --k arg               number of groups (default: 1) (default: null)
+      --kelips-contact-timeout arg  ping timeout before considering a peer lost (default: 2min) (default: null)
+      --encrypt arg         use encryption: no, lazy, yes (default: yes) (default: null)
+      --protocol arg        RPC protocol to use: tcp, utp, all (default: all) (default: null)
+      --tcp-heartbeat arg   tcp heartbeat period and timeout (default: null)
+

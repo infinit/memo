@@ -1,0 +1,10 @@
+volume: fetch: Usage: _build/macosx64/bin/infinit-volume --fetch [OPTIONS...]
+
+Fetch a volume from the Hub:
+
+Fetch options:
+  -n [ --name ] arg        Volume to fetch (optional)
+  --network arg            Network to fetch all volumes for (optional)
+  --service [=arg(=true)]  Fetch volume from the network, not beyond
+
+

@@ -1,0 +1,10 @@
+network: push: Usage: infinit-network network push [OPTIONS]
+Push a network to the Hub
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the network to push
+

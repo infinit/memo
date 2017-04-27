@@ -1,0 +1,10 @@
+volume: export: Usage: _build/macosx64/bin/infinit-volume --export --name VOLUME [OPTIONS...]
+
+Export a volume for someone else to import:
+
+Export options:
+  -n [ --name ] arg      Volume to export
+  -o [ --output ] arg    File to write the volume to
+                         (default: stdout)
+
+

@@ -1,0 +1,25 @@
+Usage: _build/macosx64/bin/infinit-daemon MODE [OPTIONS...]
+
+Infinit daemon:
+
+Modes:
+  --status                     Query daemon status
+  --run                        Run daemon in the foreground
+  --start                      Start daemon in the background
+  --stop                       Stop daemon
+
+Hidden Modes:
+  --fetch                      Fetch volume and its dependencies from the Hub
+  --enable-storage             Enable storage on associated network
+  --disable-storage            Disable storage on associated network
+  --manage-volumes             Manage daemon controlled volumes
+
+Miscellaneous:
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
+  -a [ --as ] arg              User to run commands as (default: system user)
+
+

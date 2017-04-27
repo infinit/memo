@@ -1,0 +1,11 @@
+network: delete: Usage: _build/macosx64/bin/infinit-network --delete --name NETWORK [OPTIONS...]
+
+Delete a network locally:
+
+Delete options:
+  -n [ --name ] arg      Network to delete
+  --pull                 Pull the network if it is on the Hub
+  --purge                Remove objects that depend on the network
+  --unlink               Automatically unlink network if linked
+
+

@@ -1,0 +1,8 @@
+volume: status: Usage: _build/macosx64/bin/infinit-volume --status --name VOLUME [OPTIONS...]
+
+Get volume status:
+
+Status options:
+  -n [ --name ] arg      Volume to query
+
+

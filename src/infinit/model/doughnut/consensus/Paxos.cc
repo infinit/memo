@@ -1,11 +1,11 @@
-#include <utility>
-
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 #include <functional>
+#include <utility>
 
-#include <elle/memory.hh>
 #include <elle/bench.hh>
+#include <elle/memory.hh>
+#include <elle/multi_index_container.hh>
 #include <elle/serialization/json/Error.hh>
 
 #include <elle/cryptography/rsa/PublicKey.hh>
@@ -480,7 +480,7 @@ namespace infinit
                 ELLE_LOG_COMPONENT(
                   "infinit.model.doughnut.consensus.Paxos.rebalance");
                 PaxosServer::Quorum q;
-                if (this->_quorums.find(address) == this->_quorums.end())
+                if (!elle::contains(this->_quorums, address))
                 {
                   for (auto wpeer: this->doughnut().overlay()->lookup(
                          address, this->_factor))
@@ -496,7 +496,7 @@ namespace infinit
                   {
                     ELLE_DUMP("schedule %f for rebalancing after load",
                               address);
-                    this->_rebalancable.put(std::make_pair(address, false));
+                    this->_rebalancable.emplace(address, false);
                   }
                 }
               }
@@ -554,7 +554,7 @@ namespace infinit
               signed(quorum.size()) < this->_factor)
           {
             ELLE_DUMP("schedule %f for rebalancing after load", address);
-            this->_rebalancable.put(std::make_pair(address, false));
+            this->_rebalancable.emplace(address, false);
           }
           return this->_addresses.emplace(
             address, std::move(decision)).first->second;
@@ -578,7 +578,7 @@ namespace infinit
           this->_nodes.emplace(id);
           this->_node_timeouts.erase(id);
           if (this->_rebalance_auto_expand)
-            this->_rebalancable.put(std::make_pair(id, true));
+            this->_rebalancable.emplace(id, true);
         }
 
         void
@@ -650,7 +650,7 @@ namespace infinit
                       {
                         ELLE_DUMP("schedule %f for rebalancing after eviction",
                                   address);
-                        this->_rebalancable.put(std::make_pair(address, false));
+                        this->_rebalancable.emplace(address, false);
                       }
                     }
                     break;
@@ -668,7 +668,7 @@ namespace infinit
               }
               else
               {
-                auto addr = block.block->address();
+                auto const addr = block.block->address();
                 auto it = this->_quorums.find(addr);
                 ELLE_ASSERT(it != this->_quorums.end());
                 auto q = it->quorum;
@@ -679,8 +679,7 @@ namespace infinit
                   {
                     ELLE_DUMP("schedule %f for rebalancing after eviction",
                               addr);
-                    this->_rebalancable.put(
-                      std::make_pair(block.block->address(), false));
+                    this->_rebalancable.emplace(block.block->address(), false);
                   }
                 }
               }
@@ -1013,7 +1012,7 @@ namespace infinit
               {
                 ELLE_DUMP("schedule %f for rebalancing after confirmation",
                           address);
-                this->_rebalancable.put(std::make_pair(address, false));
+                this->_rebalancable.emplace(address, false);
               }
             }
           }
@@ -1025,7 +1024,7 @@ namespace infinit
             {
               ELLE_DUMP("schedule %f for rebalancing after confirmation",
                         address);
-              this->_rebalancable.put(std::make_pair(address, false));
+              this->_rebalancable.emplace(address, false);
             }
           }
         }

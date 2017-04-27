@@ -1,0 +1,9 @@
+doctor: configuration: Usage: _build/macosx64/bin/infinit-doctor --configuration [OPTIONS...]
+
+Perform integrity checks on the Infinit configuration files:
+
+Configuration options:
+  --no-color             Don't use colored output
+  -v [ --verbose ]       Output everything
+
+

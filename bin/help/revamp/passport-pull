@@ -1,0 +1,11 @@
+passport: pull: Usage: infinit-passport passport pull [OPTIONS]
+Remove a user's network passport from the Hub
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -N, --network arg         network to pull passport for
+  -u, --user arg            user to pull passport for
+
