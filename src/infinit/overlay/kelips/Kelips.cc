@@ -2219,20 +2219,21 @@ namespace infinit
         {
           NodeLocation peer(p->sender, {ep});
           elle::reactor::Thread::unique_ptr t(
-            new elle::reactor::Thread("reverse bootstraper",
-            [this, peer] {
-              try
-              {
-                SerState state = get_serstate(peer);
-                state.second.pop_back(); // pop remote address
-                ELLE_DEBUG("%s: inserting serstate from %s", *this, peer);
-                process_update(state);
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("Error processing bootstrap data: %s", e);
-              }
-            }, false));
+            new elle::reactor::Thread(
+              elle::sprintf("rbootstrap(%f->%f)", this->id(), p->sender),
+              [this, peer] {
+                try
+                {
+                  SerState state = get_serstate(peer);
+                  state.second.pop_back(); // pop remote address
+                  ELLE_DEBUG("%s: inserting serstate from %s", *this, peer);
+                  process_update(state);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("Error processing bootstrap data: %s", e);
+                }
+              }, false));
           auto ptr = t.get();
           _bootstraper_threads.emplace(ptr, std::move(t));
         }
