@@ -107,8 +107,7 @@ message Block {
 
 
 message FetchResponse {
-  string type = 1;
-  Block block = 2;
+  Block block = 1;
 }
 
 message InsertResponse {

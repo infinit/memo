@@ -162,7 +162,9 @@ namespace infinit
          else
          {
            if (!is_void)
-             sout.serialize_forward(v);
+             sout.serialize(
+               cxx_to_message_name(elle::type_info<A>().name()),
+               v.template get<A>());
          }
       }
     };
