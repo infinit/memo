@@ -2,6 +2,7 @@
 
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
+#include <elle/os/environ.hh>
 #include <elle/log.hh>
 #include <elle/bench.hh>
 
@@ -9,6 +10,7 @@
 
 #include <elle/reactor/network/Error.hh>
 #include <elle/reactor/network/socket.hh>
+#include <elle/reactor/Scope.hh>
 #include <elle/reactor/storage.hh>
 
 #include <elle/protocol/ChanneledStream.hh>
@@ -314,13 +316,25 @@ namespace infinit
     _serve(elle::protocol::Serializer& serializer)
     {
       auto&& chans = elle::protocol::ChanneledStream{serializer};
-      this->_serve(chans);
+      this->serve(chans);
     }
 
     void
     serve(elle::protocol::ChanneledStream& channels)
     {
-      umbrella([&] { this->_serve(channels); });
+      static int nthreads = std::stoi(
+        elle::os::getenv("INFINIT_RPC_SERVE_THREADS", "1"));
+      if (nthreads == 1)
+        umbrella([&] { this->_serve(channels); });
+      else
+        elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
+        {
+          for (int i=0; i<nthreads; ++i)
+            s.run_background("serve", [&] {
+              umbrella([&] { this->_serve(channels); });
+            });
+          s.wait();
+        };
     }
 
     void
