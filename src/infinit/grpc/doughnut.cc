@@ -129,7 +129,8 @@ namespace infinit
       template <typename T>
       static
       void value(SerializerOut& sout, T& v, ::grpc::Status& err,
-                 elle::Version const& version)
+                 elle::Version const& version,
+                 bool is_void)
       {
          if (v.template is<E>())
          {
@@ -160,7 +161,8 @@ namespace infinit
          }
          else
          {
-           sout.serialize_forward(v);
+           if (!is_void)
+             sout.serialize_forward(v);
          }
       }
     };
@@ -193,12 +195,13 @@ namespace infinit
             if (NOEXCEPT) // it will compile anyway no need for static switch
             {
               auto* adapted = OptionFirst<typename NF::Result::Super>::value(res, status);
-              if (status.ok())
+              if (status.ok() && !decltype(res)::is_void::value)
                 sout.serialize_forward(*adapted);
             }
             else
             {
-              ExceptionExtracter<typename NF::Result::Super>::value(sout, res, status, dht.version());
+              ExceptionExtracter<typename NF::Result::Super>::value(
+                sout, res, status, dht.version(), decltype(res)::is_void::value);
             }
           }
           catch (elle::Error const& e)
