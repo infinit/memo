@@ -129,10 +129,11 @@ using Nodes = std::vector<
            elle::reactor::Thread::unique_ptr
            >>;
 
+/// \param count   number of nodes to create.
 static
 Nodes
 run_nodes(bfs::path where,
-	  elle::cryptography::rsa::KeyPair const& kp,
+          elle::cryptography::rsa::KeyPair const& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false,
           int beyond_port = 0, int base_id=0)
@@ -159,14 +160,14 @@ run_nodes(bfs::path where,
     std::unique_ptr<infinit::storage::Storage> s;
     bfs::create_directories(where / "store");
     s.reset(new infinit::storage::Filesystem(where / ("store" + std::to_string(n))));
-    infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
-    infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
+    auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
+    auto consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
           return std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
         };
-    infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
+    auto overlay =
         [&] (infinit::model::doughnut::Doughnut& dht,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
@@ -193,7 +194,7 @@ run_nodes(bfs::path where,
       infinit::overlay::NodeLocations locs;
       tptr = net.make_poll_beyond_thread(*dn, locs, 1);
     }
-    res.push_back(std::make_pair(dn, std::move(tptr)));
+    res.emplace_back(dn, std::move(tptr));
     //if (res.size() == 1)
     endpoints.emplace_back(
         infinit::model::Endpoints{{
@@ -204,7 +205,8 @@ run_nodes(bfs::path where,
   return res;
 }
 
-static std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
+static
+std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
 make_observer(std::shared_ptr<imd::Doughnut>& root_node,
               bfs::path where,
               elle::cryptography::rsa::KeyPair const& kp,
@@ -384,100 +386,68 @@ static int dir_size(rfs::FileSystem& fs, std::string const& name)
   return count;
 }
 
+namespace
+{
+  /// \param count  number of nodes to create
+  /// \param replication_factor   passed to each observer
+  void
+  check_list_directory(int count, int replication_factor)
+  {
+    elle::filesystem::TemporaryDirectory d;
+    auto tmp = d.path();
+    elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+    auto kp = elle::cryptography::rsa::keypair::generate(512);
+    auto nodes = run_nodes(tmp, kp, count);
+    auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, false, false);
+    auto fsc =     make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, false, false);
+    auto fsca =    make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, true, false);
+    auto fsa =     make_observer(nodes.front().first, tmp, kp, 1, replication_factor, false, true, false);
+
+    ELLE_TRACE("write");
+    make_files(*fswrite.first, "50", 50);
+    ELLE_TRACE("list fsc");
+    BOOST_TEST(dir_size(*fsc.first,  "50") == 50);
+    ELLE_TRACE("list fsca");
+    BOOST_TEST(dir_size(*fsca.first, "50") == 50);
+    ELLE_TRACE("list fsa");
+    BOOST_TEST(dir_size(*fsa.first,  "50") == 50);
+    ELLE_TRACE("list fsc");
+    BOOST_TEST(dir_size(*fsc.first,  "50") == 50);
+    ELLE_TRACE("list fsca");
+    BOOST_TEST(dir_size(*fsca.first, "50") == 50);
+    ELLE_TRACE("list fsa");
+    BOOST_TEST(dir_size(*fsa.first,  "50") == 50);
+    ELLE_TRACE("done");
+
+    ELLE_TRACE("kill fsa");
+    fsa.first.reset();
+    ELLE_TRACE("kill fsca");
+    fsca.first.reset();
+    ELLE_TRACE("kill fsc");
+    fsc.first.reset();
+    ELLE_TRACE("kill fswrite");
+    fswrite.first.reset();
+    ELLE_TRACE("kill nodes");
+    nodes.clear();
+    ELLE_TRACE("kill the rest");
+  }
+}
+
 ELLE_TEST_SCHEDULED(list_directory)
 {
-  elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 1);
-  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
-  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
-  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 1, true, true, false);
-  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 1, false, true, false);
-  ELLE_TRACE("write");
-  make_files(*fswrite.first, "50", 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("done");
+  check_list_directory(1, 1);
 }
 
 ELLE_TEST_SCHEDULED(list_directory_3)
 {
-  elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 3);
-  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
-  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
-  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 3, true, true, false);
-  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 3, false, true, false);
-  ELLE_TRACE("write");
-  make_files(*fswrite.first, "50", 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("done");
+  check_list_directory(3, 3);
 }
 
 ELLE_TEST_SCHEDULED(list_directory_5_3)
 {
-  elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 5, 1, 3);
-  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
-  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
-  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 3, true, true, false);
-  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 3, false, true, false);
-  ELLE_TRACE("write");
-  make_files(*fswrite.first, "50", 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
-  ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
-  ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
-  ELLE_TRACE("done");
-  ELLE_TRACE("kill fsa");
-  fsa.first.reset();
-  ELLE_TRACE("kill fsca");
-  fsca.first.reset();
-  ELLE_TRACE("kill fsc");
-  fsc.first.reset();
-  ELLE_TRACE("kill fswrite");
-  fswrite.first.reset();
-  ELLE_TRACE("kill nodes");
-  nodes.clear();
-  ELLE_TRACE("kill the rest");
+  check_list_directory(5, 3);
 }
+
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
 //   auto tmp = bfs::temp_directory_path() / bfs::unique_path();
