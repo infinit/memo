@@ -723,9 +723,8 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 | Paxos: wrong quorum |
 `--------------------*/
 
-// Make one of the overlay return a partial quorum, missing one of the three
-// members, and check it gets fixed.
-
+/// Make one of the overlay return a partial quorum, missing one of the three
+/// members, and check it gets fixed.
 class WrongQuorumStonehenge
   : public infinit::overlay::Stonehenge
 {
@@ -749,8 +748,8 @@ public:
 
 ELLE_TEST_SCHEDULED(wrong_quorum)
 {
-  WrongQuorumStonehenge* stonehenge;
-  DHTs dhts(
+  auto stonehenge = static_cast<WrongQuorumStonehenge*>(nullptr);
+  auto dhts = DHTs(
     make_overlay =
     [&stonehenge] (int dht,
                    infinit::model::NodeLocations peers,
