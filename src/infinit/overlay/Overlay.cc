@@ -24,6 +24,7 @@ namespace infinit
                      std::shared_ptr<infinit::model::doughnut::Local> local)
       : _doughnut(dht)
       , _local(local)
+      , _storing(true)
     {
 #if INFINIT_ENABLE_PROMETHEUS
       if (auto* g = _doughnut->member_gauge().get())

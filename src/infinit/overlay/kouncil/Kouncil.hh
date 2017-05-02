@@ -22,6 +22,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(disappearance);
     ELLE_DAS_SYMBOL(endpoints);
     ELLE_DAS_SYMBOL(stamp);
+    ELLE_DAS_SYMBOL(storing);
   }
 
   namespace overlay
@@ -94,8 +95,7 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::global_fun<
-                Peer const&, Address, &_details::peer_id>>,
-            bmi::random_access<>>>;
+                Peer const&, Address, &_details::peer_id>>>>;
 
         /// Local node.
         using Local = infinit::model::doughnut::Local;
@@ -138,6 +138,14 @@ namespace infinit
         _validate() const;
         ELLE_ATTRIBUTE(std::vector<boost::signals2::scoped_connection>,
                        connections);
+
+      /*-----------.
+      | Properties |
+      `-----------*/
+      protected:
+        using Overlay::storing;
+        void
+        storing(bool v) override;
 
       /*-------------.
       | Address book |
@@ -199,6 +207,8 @@ namespace infinit
           /// Time when we lost connection with this peer, or
           /// LamportAge::null() if all is well.
           ELLE_ATTRIBUTE_RWX(LamportAge, disappearance);
+          /// Whether that host accepts new blocks
+          ELLE_ATTRIBUTE_RW(bool, storing);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
@@ -212,7 +222,9 @@ namespace infinit
           PeerInfo,
           bmi::indexed_by<
             bmi::hashed_unique<
-              bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
+              bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>,
+            bmi::hashed_non_unique<
+              bmi::const_mem_fun<PeerInfo, bool, &PeerInfo::storing>>>>;
         /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
 

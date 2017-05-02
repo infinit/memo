@@ -75,6 +75,13 @@ namespace infinit
       void
       _cleanup();
 
+    /*-----------.
+    | Properties |
+    `-----------*/
+    public:
+      /// Whether we accept new blocks.
+      ELLE_ATTRIBUTE_RW(bool, storing, virtual);
+
     /*------.
     | Peers |
     `------*/

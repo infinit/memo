@@ -7,6 +7,8 @@
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
 
+#include <elle/das/tuple.hh>
+
 #include <elle/reactor/network/Error.hh>
 
 // FIXME: can be avoided with a `Dock` accessor in `Overlay`
@@ -28,6 +30,9 @@ namespace infinit
       /// A set of Address, used in RPCs.
       using AddressSet = std::unordered_set<Address>;
       using EntryChangeSet = std::unordered_map<Address, bool>;
+      /// Peer configuration
+      using Configuration = elle::das::tuple<
+        decltype(symbols::storing)::Formal<bool>>;
 
       namespace
       {
@@ -141,16 +146,19 @@ namespace infinit
                     ELLE_TRACE("%s: added %s entries from %f",
                                this, entries.size(), r.id());
                   });
-              // if (this->doughnut()->version() >= elle::Version(0, 8, 0))
-              //   r.rpc_server().add(
-              //     "kouncil_configure",
-              //     [this, &r] (bool storing)
-              //     {
-              //       for (auto const& addr: entries)
-              //         this->_address_book.emplace(r.id(), addr);
-              //       ELLE_TRACE("%s: added %s entries from %f",
-              //                  this, entries.size(), r.id());
-              //     });
+              if (this->doughnut()->version() >= elle::Version(0, 8, 0))
+              {
+                r.rpc_server().add(
+                  "kouncil_configure",
+                  [this, &r] (Configuration const& conf)
+                  {
+                    ELLE_TRACE_SCOPE(
+                      "%s: peer %f storing: %s", this, r.id(), conf.storing);
+                    auto info = ELLE_ENFORCE(elle::find(this->_infos, r.id()));
+                    this->_infos.modify(
+                      info, [&] (auto& p) { p.storing(conf.storing); });
+                  });
+              }
             }));
         // React to peer connection status.
         this->_connections.emplace_back(
@@ -233,6 +241,7 @@ namespace infinit
                  ELLE_TRACE_SCOPE(
                    "%s: receive advertisement of %s peers on %s",
                    this, peers.size(), rpcs);
+                 ELLE_DUMP("peers: %s", peers);
                  this->_discover(peers);
                  auto res = elle::make_vector(
                    this->_infos,
@@ -248,8 +257,10 @@ namespace infinit
                    ELLE_TRACE_SCOPE(
                      "%s: receive advertisement of %s peers on %s",
                      this, infos.size(), rpcs);
+                   ELLE_DUMP("peers: %s", infos);
                    this->_discover(infos);
-                   return this->_infos;
+                   return std::make_pair(
+                     this->_infos, Configuration(this->storing()));
                  });
          }));
       }
@@ -319,6 +330,22 @@ namespace infinit
       void
       Kouncil::_validate() const
       {}
+
+      /*-----------.
+      | Properties |
+      `-----------*/
+
+      void
+      Kouncil::storing(bool storing)
+      {
+        if (storing != this->storing())
+        {
+          this->Overlay::storing(storing);
+          // FIXME: don't block if some node fail to respond
+          this->local()->broadcast<void>(
+            "kouncil_configure", Configuration(storing));
+        }
+      }
 
       /*-------------.
       | Address book |
@@ -390,7 +417,7 @@ namespace infinit
         ELLE_ASSERT_NEQ(pi.id(), Address::null);
         auto changed = true;
         if (auto it = elle::find(this->_infos, pi.id()))
-          this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi);});
+          this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi); });
         else
           this->_infos.insert(pi);
         if (changed)
@@ -454,7 +481,11 @@ namespace infinit
         // during the first advertise.
         if (auto info = elle::find(this->_infos, id))
           this->_infos.modify(
-            info, [this] (PeerInfo& pi) { pi.disappearance().start(); });
+            info,
+            [this] (PeerInfo& pi)
+            {
+              pi.disappearance().start();
+            });
         this->_peers.erase(id);
         this->_address_book.erase(id);
         peer.reset();
@@ -542,19 +573,25 @@ namespace infinit
       {
         return [this, address, n](MemberGenerator::yielder const& yield)
           {
-            ELLE_DEBUG("%s: selecting %s nodes from %s peers",
-                       this, n, this->_peers.size());
-            if (static_cast<unsigned int>(n) >= this->_peers.size())
-              for (auto p: this->_peers)
-                yield(p);
+            ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers",
+                             n, this->_peers.size());
+            auto count = static_cast<int>(this->_infos.get<1>().count(true));
+            auto range = this->_infos.get<1>().equal_range(true);
+            if (n >= count)
+              for (auto p = range.first; p != range.second; ++p)
+                yield(*ELLE_ENFORCE(elle::find(this->peers(), p->id())));
             else
             {
-              std::vector<int> indexes = pick_n(
-                this->_gen,
-                static_cast<int>(this->_peers.size()),
-                n);
+              std::vector<int> indexes = pick_n(this->_gen, count, n);
+              auto pos = 0;
               for (auto r: indexes)
-                yield(this->peers().get<1>()[r]);
+              {
+                auto range = this->_infos.get<1>().equal_range(true);
+                auto it = range.first;
+                std::advance(it, r - pos);
+                pos = r;
+                yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
+              }
             }
           };
       }
@@ -744,11 +781,16 @@ namespace infinit
           else
           {
             auto advertise =
-              r.make_rpc<PeerInfos(PeerInfos const&)>("kouncil_advertise");
-            auto npi = advertise(send_peers ? this->_infos : PeerInfos());
-            ELLE_TRACE("fetched %s peers", npi.size());
-            ELLE_DUMP("peers: %s", npi);
-            this->_discover(npi);
+              r.make_rpc<std::pair<PeerInfos, Configuration> (PeerInfos const&)>
+              ("kouncil_advertise");
+            auto res = advertise(send_peers ? this->_infos : PeerInfos());
+            if (!res.second.storing)
+              this->_infos.modify(
+                ELLE_ENFORCE(elle::find(this->_infos, r.id())),
+                [&] (auto& p) { p.storing(false); });
+            ELLE_TRACE("fetched %s peers", res.first.size());
+            ELLE_DUMP("peers: %s", res.first);
+            this->_discover(res.first);
           }
         }
         catch (elle::reactor::network::Error const& e)
@@ -782,6 +824,7 @@ namespace infinit
         , _endpoints(std::move(endpoints))
         , _stamp(stamp)
         , _disappearance(d)
+        , _storing(true)
       {}
 
       Kouncil::PeerInfo::PeerInfo(Address id,
