@@ -158,6 +158,66 @@ ELLE_TEST_SCHEDULED(bidirectional)
   t->terminate_now();
 }
 
+ELLE_TEST_SCHEDULED(parallel)
+{
+  auto const delay_ms = valgrind(100, 4);
+  auto const delay = std::chrono::milliseconds(delay_ms);
+  {
+    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "5", 1);
+    Server s(
+      [&] (infinit::RPCServer& s)
+      {
+        s.add("ping", [&] (int a) {
+            elle::reactor::sleep(1_ms * delay_ms);
+            return a+1;
+        });
+      });
+    auto stream = s.connect();
+    elle::protocol::Serializer serializer(stream, infinit::version(), false);
+    auto&& channels = elle::protocol::ChanneledStream{serializer};
+    infinit::RPC<int (int)> ping("ping", channels, infinit::version());
+    auto start = std::chrono::system_clock::now();
+    elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
+    {
+      for (int i=0; i<10; ++i)
+        s.run_background("ping", [&] {
+            BOOST_CHECK_EQUAL(ping(10), 11);
+        });
+      elle::reactor::wait(s);
+    };
+    auto duration = std::chrono::system_clock::now() - start;
+    BOOST_CHECK_GE(duration, delay * 2);
+    BOOST_CHECK_LE(duration, delay * 3);
+  }
+  {
+    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "0", 1);
+    Server s(
+      [&] (infinit::RPCServer& s)
+      {
+        s.add("ping", [&] (int a) {
+            elle::reactor::sleep(1_ms * delay_ms);
+            return a+1;
+        });
+      });
+    auto stream = s.connect();
+    elle::protocol::Serializer serializer(stream, infinit::version(), false);
+    auto&& channels = elle::protocol::ChanneledStream{serializer};
+    infinit::RPC<int (int)> ping("ping", channels, infinit::version());
+    auto start = std::chrono::system_clock::now();
+    elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
+    {
+      for (int i=0; i<10; ++i)
+        s.run_background("ping", [&] {
+            BOOST_CHECK_EQUAL(ping(10), 11);
+        });
+      elle::reactor::wait(s);
+    };
+    auto duration = std::chrono::system_clock::now() - start;
+    BOOST_CHECK_GE(duration, delay * 1);
+    BOOST_CHECK_LE(duration, delay * 2);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -165,4 +225,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(unknown));
   suite.add(BOOST_TEST_CASE(bidirectional));
   suite.add(BOOST_TEST_CASE(simultaneous));
+  suite.add(BOOST_TEST_CASE(parallel));
 }
