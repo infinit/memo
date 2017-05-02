@@ -1316,8 +1316,10 @@ ELLE_TEST_SCHEDULED(
         BOOST_TEST(id == special_id(11));
         return true;
       });
+    ELLE_LOG("stop b");
     b.reset();
     elle::reactor::wait(disappeared);
+    ELLE_LOG("a saw b disappear");
   }
   ELLE_LOG("start second DHT on port %s", port)
   {
@@ -1335,6 +1337,7 @@ ELLE_TEST_SCHEDULED(
       ::make_overlay = config.overlay_builder,
       ::port = port,
       ::protocol = dht::Protocol::tcp);
+    ELLE_LOG("waiting for %f to discover %f", a, b)
     elle::reactor::wait(discovered);
   }
 }
