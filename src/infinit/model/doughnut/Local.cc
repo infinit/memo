@@ -347,6 +347,8 @@ namespace infinit
                   res.emplace(boost::asio::ip::address::from_string(addr),
                               ep.port());
           }
+          if (res.empty())
+            elle::err("local not listening on any endpoint");
           return res;
         }
       }
