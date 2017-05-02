@@ -932,6 +932,7 @@ def configure(
         sendwithus = sendwithus,
         PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
+        doughnut_json = grpc.doughnut_json,
       )
 
   ## ----- ##
