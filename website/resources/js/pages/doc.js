@@ -48,7 +48,7 @@ $(document).ready(function() {
   if ($('body').hasClass('documentation')) {
     var menu;
 
-    if ($('body').hasClass('doc_kv')) {
+    if ($('body').attr('class').indexOf("doc_kv") >= 0) {
       menu = $("#page-menu ul.tier1");
     } else {
       menu = $(".side-menu ul.tier1");
@@ -170,12 +170,12 @@ $(document).ready(function() {
   }
 
 
-  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
+  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').attr('class').indexOf("doc_kv") >= 0) {
     var enableSubMenu = function () {
       var position = $(window).scrollTop() + 100;
       var anchors, targets;
 
-      if ($('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
+      if ($('body').hasClass('doc_get_started') || $('body').attr('class').indexOf("doc_kv") >= 0) {
         anchors = $('h2, h3');
       } else {
         anchors = $('h2');
@@ -193,7 +193,7 @@ $(document).ready(function() {
         {
           if ($('body').hasClass('doc_get_started')) {
             targets = '.side-menu ul.tier1 li';
-          } else if ($('body').hasClass('doc_kv')) {
+          } else if ($('body').attr('class').indexOf("doc_kv") >= 0) {
             targets = '#page-menu ul.tier1 li';
           } else {
             targets = '.side-menu ul.tier1 li.scroll_menu ul li';

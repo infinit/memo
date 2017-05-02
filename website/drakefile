@@ -22,6 +22,7 @@ def configure(
     sendwithus,
     PatchAndInstall,
     doughnut_proto,
+    doughnut_json,
     prefix = drake.Path('/usr'),
 ):
 
@@ -162,6 +163,7 @@ def configure(
     'templates/pages/docs/technology.html',
     'templates/pages/docs/docker_volume_plugin.html',
     'templates/pages/docs/kv.html',
+    'templates/pages/docs/kv_api.html',
 
     'templates/pages/docs/get_started.html',
 
@@ -686,11 +688,11 @@ def configure(
       yield n
   def copy_templates(where, how = drake.copy):
     where = drake.Path(where)
-    for node in how(templates, where / 'share/infinit/website'):
-      yield node
-    for node in how(resources, where / 'share/infinit/website'):
-      yield node
+    yield from how(templates, where / 'share/infinit/website')
+    yield from how(resources, where / 'share/infinit/website')
     yield drake.copy(doughnut_proto, where / 'share/infinit/website/resources/scripts/kv',
+                              strip_prefix = True)
+    yield drake.copy(doughnut_json, where / 'share/infinit/website/resources/scripts/kv',
                               strip_prefix = True)
 
   build = drake.Rule('build')

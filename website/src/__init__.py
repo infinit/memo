@@ -310,9 +310,27 @@ class Website(bottle.Bottle):
   @route('/documentation/key-value-store', name = 'doc_kv')
   @view('pages/docs/kv.html')
   def root(self):
+    file = resources_path() + '/scripts/kv/doughnut.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
     return {
       'title': 'Key-Value Store',
-      'description': 'Learn about the Infinit key-value store.',
+      'description': 'Infinit provides a distributed decentralized key-value store, with built-in replication and security.',
+      'proto': json_data
+    }
+
+  @route('/documentation/key-value-store-api', name = 'doc_kv_api')
+  @view('pages/docs/kv_api.html')
+  def root(self):
+    file = resources_path() + '/scripts/kv/doughnut.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
+    return {
+      'title': 'API Key-Value Store',
+      'description': 'Check out the API of our decentralized key-value store.',
+      'proto': json_data
     }
 
   @route('/open-source', name = 'opensource')

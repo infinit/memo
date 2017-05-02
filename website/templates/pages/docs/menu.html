@@ -4,7 +4,7 @@
   <ul class="tier1">
     <li><input type="text" id="docsearch"></li>
 
-    % if request.route.name == 'doc_kv':
+    % if 'doc_kv' in request.route.name:
       <li class="title platform">Storage Platform</li>
     % endif
 
@@ -113,11 +113,15 @@
       <a href="${route('doc_status')}">Status</a>
     </li>
 
-    % if request.route.name == 'doc_kv':
+    % if 'doc_kv' in request.route.name:
       <li class="title kv">KV Store</li>
 
       <li ${'class="active"' if request.route.name == 'doc_kv' else ''}>
         <a href="${route('doc_kv')}">Overview</a>
+      </li>
+
+      <li ${'class="active"' if request.route.name == 'doc_kv_api' else ''}>
+        <a href="${route('doc_kv_api')}">API Reference</a>
       </li>
 
     % endif

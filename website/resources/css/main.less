@@ -981,7 +981,7 @@ section.doc {
     width: 90%; letter-spacing: -0.2px;
   }
 
-  p a:after, li a::after {
+  p a:after, li a::after, table a:after {
     position: absolute;
     top: 100%;
     left: 0;
@@ -998,17 +998,17 @@ section.doc {
     transform: translateY(7px);
   }
 
-  p a:hover::after, li a:hover:after,
-  p a:focus::after, li a:focus:after {
+  p a:hover::after, li a:hover:after, table a:hover:after,
+  p a:focus::after, li a:focus:after, table a:focus:after {
     opacity: 1;
     -webkit-transform: translateY(0px);
     -moz-transform: translateY(0px);
     transform: translateY(0px);
   }
 
-  p a, li a { color: @infinitblue; .transition(); padding-bottom: 1px; position: relative;}
+  p a, li a, table a { color: @infinitblue; .transition(); padding-bottom: 1px; position: relative;}
 
-  p a:hover, li a:hover {
+  p a:hover, li a:hover, table a:hover {
     color: darken(@infinitblue, 10%);
     // border-bottom: 2px solid darken(@infinitblue, 10%);
   }
@@ -1456,8 +1456,8 @@ body.doc_get_started {
   }
 }
 
-body.doc_kv {
-
+body.doc_kv,
+body.doc_kv_api {
   header { padding-left: 3%; padding-right: 3%; }
 
   .content { background: #f9f9f9; }
@@ -1471,7 +1471,7 @@ body.doc_kv {
   }
 
   .content > section.doc {
-    padding: 55px 10% 100px 21%; width: 50%; border-left: 2px solid #f3f3f3;
+    padding: 55px 9% 100px 22%; width: 50%; border-left: 2px solid #f3f3f3;
     background: white; margin-left: 18.5%; float: none; margin-top: 0;
 
     &:after { display: table; content: ''; clear: both; }
@@ -1487,10 +1487,12 @@ body.doc_kv {
 
       li { 
         float: left; margin: 0 15px 0 0;
-        a { 
+
+        a {
           color: @infinitgray; font-family: @sf; text-transform: uppercase; font-size: 13px;  
           outline: none; 
         }
+
         a.active { color: @infinitblue; }
         a:after { opacity: 0; }
       }
@@ -1500,6 +1502,43 @@ body.doc_kv {
   .popup {
     max-width: 600px; 
     section.doc { float: none; width: 100%; padding: 0; }
+  }
+}
+
+body.doc_kv_api {
+  section.doc {
+    table tr td,
+    table tr th { text-align: left; }
+
+    table.method, table.message {
+      width: 100%; margin-top: 70px;
+
+      tr td { padding: 10px 0; }
+      tr:nth-child(2) td { border-bottom: 1px solid #dcdcdc; }
+      tr td:first-child { width: 30%; padding-left: 22px; }
+      
+      tr:first-child th { 
+        width: 100%; font-weight: normal; background: #252d3b;
+        padding: 16px 23px; border-radius: 3px; border-bottom: 0px;
+        border-bottom-left-radius: 0px; border-bottom-right-radius: 0;
+
+        h3 { font-size: 1.3em; }
+        h3, p em { color: white; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;} 
+      }
+
+      tr td a { font-size: 15px; color: @infinitblue }
+    }
+
+    table.message {
+      tr:first-child th { padding: 12px 20px 8px 20px; }
+      tr:nth-child(2) td { border-bottom: 1px solid #dcdcdc; font-weight: bold; }
+      tr td:first-child { width: 10%; padding-left: 22px; }
+      tr td:nth-child(2) { width: 20%; }
+      tr td:nth-child(3) { width: 20%; }
+    }
+
+    h3 + p { margin: 0px; }
+    h3 { margin-top: 0; }
   }
 }
 
