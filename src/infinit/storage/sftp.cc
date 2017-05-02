@@ -4,7 +4,7 @@
 # include <sys/wait.h>
 #endif
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
 
 #include <elle/bench.hh>
 #include <elle/err.hh>
