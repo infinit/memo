@@ -9,6 +9,7 @@ plugin = None
 sources = None
 cxx_config_grpc = None
 doughnut_proto = None
+doughnut_json = None
 gendn = None
 genfs = None
 
@@ -122,7 +123,7 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global doughnut_proto, grpc_lib, grpc, sources
+  global doughnut_proto, doughnut_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -132,8 +133,8 @@ def configure(
       'GO_EXECUTABLE': go.go,
     })
   import json
-  doughnut_proto_json = drake.Node('doughnut.json')
-  with open(str(doughnut_proto_json.path())) as f:
+  doughnut_json = drake.Node('doughnut.json')
+  with open(str(doughnut_json.path())) as f:
     with drake.templating.Context(content = {'proto': json.load(f)}):
       drake.node('doughnut.proto.tmpl')
       drake.node('doughnut.md.tmpl')
