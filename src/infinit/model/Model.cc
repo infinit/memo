@@ -46,7 +46,6 @@ namespace infinit
                  ELLE_TRACE_SCOPE("%s: insert %f", this, block);
                  block->seal();
                  this->_insert(std::move(block), std::move(resolver));
-                 return true;
                },
                block,
                conflict_resolver = nullptr)
@@ -66,7 +65,6 @@ namespace infinit
                      c.current()->decrypt();
                    throw;
                  }
-                 return true;
                },
                block,
                conflict_resolver = nullptr,
@@ -83,7 +81,6 @@ namespace infinit
                    ELLE_ASSERT(block);
                    this->_remove(address, block->sign_remove(*this));
                  }
-                 return true;
                },
                address,
                signature = boost::none)

@@ -2,6 +2,7 @@
 
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
+#include <elle/os/environ.hh>
 #include <elle/log.hh>
 #include <elle/bench.hh>
 
@@ -9,6 +10,8 @@
 
 #include <elle/reactor/network/Error.hh>
 #include <elle/reactor/network/socket.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/semaphore.hh>
 #include <elle/reactor/storage.hh>
 
 #include <elle/protocol/ChanneledStream.hh>
@@ -314,7 +317,7 @@ namespace infinit
     _serve(elle::protocol::Serializer& serializer)
     {
       auto&& chans = elle::protocol::ChanneledStream{serializer};
-      this->_serve(chans);
+      this->serve(chans);
     }
 
     void
@@ -327,96 +330,120 @@ namespace infinit
     _serve(elle::protocol::ChanneledStream& channels)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
-      while (true)
+      static auto nthreads = elle::os::getenv("INFINIT_RPC_SERVE_THREADS", 1);
+      elle::reactor::Semaphore sem(nthreads? nthreads+1 : 1000000000);
+      elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
       {
-	auto channel = channels.accept();
-	auto request = channel.read();
-	ELLE_TRACE_SCOPE("%s: process RPC", this);
-	bool had_key = !!_key;
-	if (had_key)
-	{
-          ELLE_DEBUG_SCOPE("decipher RPC");
-	  try
-	  {
-	    static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
-	    elle::Bench::BenchScope bs(bench);
-	    if (request.size() > 262144)
-	    {
-	      auto& key = this->_key.get();
-	      elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
-	        elle::reactor::background([&] {
-	            request = key.decipher(request);
-	        });
-	      };
-	    }
-	    else
-	      request = this->_key->decipher(request);
-	  }
-	  catch(std::exception const& e)
-	  {
-	    ELLE_ERR("decypher request: %s", e.what());
-	    throw;
-	  }
-	}
-	elle::IOStream ins(request.istreambuf());
-	auto versions = elle::serialization::get_serialization_versions
-	  <infinit::serialization_tag>(this->_version);
-	elle::serialization::binary::SerializerIn input(ins, versions, false);
-	input.set_context(this->_context);
-	std::string name;
-	input.serialize("procedure", name);
-        elle::Buffer response;
+        while (true)
         {
-          auto it = this->_rpcs.find(name);
-          elle::IOStream outs(response.ostreambuf());
-          elle::serialization::binary::SerializerOut output(
-            outs, versions, false);
-          if (it == this->_rpcs.end())
-          {
-            ELLE_WARN("%s: unknown RPC: %s", *this, name);
-            output.serialize("success", false);
-            output.serialize(
-              "exception", std::make_exception_ptr<UnknownRPC>(name));
-          }
+          elle::reactor::Lock l(sem);
+          auto channel = channels.accept();
+          if (nthreads == 1)
+            this->_serve(channel);
           else
           {
-            ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
+            auto schannel = std::make_shared<decltype(channel)>(std::move(channel));
+            s.run_background(elle::sprintf("serve %s", *schannel),
+              [&, schannel]
+              {
+                elle::reactor::Lock l(sem);
+                this->_serve(*schannel);
+              });
+          }
+        }
+      };
+    }
+
+    void
+    _serve(elle::protocol::Channel& channel)
+    {
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      auto request = channel.read();
+      ELLE_TRACE_SCOPE("%s: process RPC", this);
+      bool had_key = !!_key;
+      if (had_key)
+      {
+        ELLE_DEBUG_SCOPE("decipher RPC");
+        try
+        {
+          static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
+          if (request.size() > 262144)
+          {
+            auto& key = this->_key.get();
+            elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+              elle::reactor::background([&] {
+                  request = key.decipher(request);
+              });
+            };
+          }
+          else
+            request = this->_key->decipher(request);
+        }
+        catch(std::exception const& e)
+        {
+          ELLE_ERR("decypher request: %s", e.what());
+          throw;
+        }
+	    }
+	    elle::IOStream ins(request.istreambuf());
+	    auto versions = elle::serialization::get_serialization_versions
+	    <infinit::serialization_tag>(this->_version);
+	    elle::serialization::binary::SerializerIn input(ins, versions, false);
+	    input.set_context(this->_context);
+	    std::string name;
+	    input.serialize("procedure", name);
+      elle::Buffer response;
+      {
+        auto it = this->_rpcs.find(name);
+        elle::IOStream outs(response.ostreambuf());
+        elle::serialization::binary::SerializerOut output(
+          outs, versions, false);
+        if (it == this->_rpcs.end())
+        {
+          ELLE_WARN("%s: unknown RPC: %s", *this, name);
+          output.serialize("success", false);
+          output.serialize(
+            "exception", std::make_exception_ptr<UnknownRPC>(name));
+        }
+        else
+        {
+          ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
+          {
+            output.set_context(this->_context);
+            try
             {
-              output.set_context(this->_context);
-              try
-              {
-                it->second->handle(input, output);
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("%s: deserialization error: %s",
-                          *this, e);
-                throw;
-              }
+              it->second->handle(input, output);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: deserialization error: %s",
+                        *this, e);
+              throw;
             }
           }
         }
-	if (had_key)
-	{
-	  static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);
-	  elle::Bench::BenchScope bs(bench);
-	  if (response.size() >= 262144)
-	  {
-	    auto& key = this->_key.get();
-	    elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
-	      elle::reactor::background([&] {
-	          response = key.encipher(
-	            elle::ConstWeakBuffer(response.contents(),
-                                          response.size()));
-	      });
-	    };
-	  }
-	  else
-	    response = _key->encipher(
-	      elle::ConstWeakBuffer(response.contents(), response.size()));
-	}
-	channel.write(response);
       }
+      if (had_key)
+      {
+        static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);
+        elle::Bench::BenchScope bs(bench);
+        if (response.size() >= 262144)
+        {
+          auto& key = this->_key.get();
+          elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+            elle::reactor::background([&] {
+                response = key.encipher(
+	          elle::ConstWeakBuffer(response.contents(),
+	            response.size()));
+	          });
+	        };
+	      }
+	      else
+	      response = _key->encipher(
+	        elle::ConstWeakBuffer(response.contents(), response.size()));
+	    }
+	    channel.write(response);
     }
 
     template <typename T>

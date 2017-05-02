@@ -151,5 +151,12 @@ namespace infinit
       std::vector<std::string> _array_handler;
       int _last_serialized_int;
     };
+
+    /** Map a C++ type name to a valid message name.
+    * We take the first type seen without the namespace, with
+    * special handling of smart pointers.
+    */
+    std::string
+    cxx_to_message_name(std::string name);
   }
 }

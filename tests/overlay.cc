@@ -756,7 +756,7 @@ ELLE_TEST_SCHEDULED(
     discover(*dht_c, *dht_b, anonymous, false, true, true);
   }
   unsigned int pa = 0, pb = 0, pc = 0;
-  for (auto tgt: std::vector<DHT*>{dht_a.get(), dht_b.get(), dht_c.get()})
+  for (auto tgt: {dht_a.get(), dht_b.get(), dht_c.get()})
   {
     ELLE_LOG("store blocks in %s", tgt);
     auto client = std::make_unique<DHT>(
@@ -766,7 +766,7 @@ ELLE_TEST_SCHEDULED(
       ::paxos = false,
       ::storage = nullptr);
     discover(*client, *tgt, anonymous, false, true);
-    std::vector<infinit::model::Address> addrs;
+    auto addrs = std::vector<infinit::model::Address>{};
     for (int a = 0; a < 20; ++a)
     {
       try
@@ -783,13 +783,15 @@ ELLE_TEST_SCHEDULED(
         ELLE_ERR("Exception storing blocks: %s", e);
         throw;
       }
-      if (b1.size() - pa >= 5 && b2.size() - pb >= 5 && b3.size() - pc >=5)
+      if (b1.size() - pa >= 5
+          && b2.size() - pb >= 5
+          && b3.size() - pc >=5)
         break;
     }
     ELLE_LOG("stores: %s %s %s", b1.size(), b2.size(), b3.size());
-    BOOST_CHECK_GE(b1.size() - pa, 5);
-    BOOST_CHECK_GE(b2.size() - pb, 5);
-    BOOST_CHECK_GE(b3.size() - pc, 5);
+    BOOST_TEST(b1.size() - pa >= 5);
+    BOOST_TEST(b2.size() - pb >= 5);
+    BOOST_TEST(b3.size() - pc >= 5);
     pa = b1.size();
     pb = b2.size();
     pc = b3.size();
@@ -1068,11 +1070,18 @@ ELLE_TEST_SCHEDULED(
               {
                 except = std::current_exception();
               }
+              catch (elle::Error const& e)
+              {
+                // also intercept "no peer available for..." exceptions,
+                // which currently are not typed(FIXME when they are).
+                if (std::string(e.what()).find("no peer available for") == std::string::npos)
+                  throw;
+                except = std::current_exception();
+              }
               if (except)
               {
                 // This can be legit if a delete crossed our path
-                if (std::find(addrs.begin(), addrs.end(), addr)
-                    != addrs.end())
+                if (elle::contains(addrs, addr))
                 {
                   ELLE_ERR("exception on supposedly live block %f: %s",
                            addr, elle::exception_string(except));

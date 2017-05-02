@@ -107,23 +107,17 @@ message Block {
 
 
 message FetchResponse {
-  string type = 1;
-  Block block = 2;
+  Block block = 1;
 }
 
 message InsertResponse {
-  string type = 1;
-  bool bool = 2;
 }
 
 message UpdateResponse {
   string type = 1;
   bytes message = 2;
   Block current = 3;
-  bool bool = 4;
 }
 
 message RemoveResponse {
-  string type = 1;
-  bool bool = 2;
 }
