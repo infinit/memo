@@ -62,6 +62,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(admin_keys);
       ELLE_DAS_SYMBOL(connect_timeout);
       ELLE_DAS_SYMBOL(consensus_builder);
+      ELLE_DAS_SYMBOL(encrypt_options);
       ELLE_DAS_SYMBOL(id);
       ELLE_DAS_SYMBOL(keys);
       ELLE_DAS_SYMBOL(listen_address);
@@ -78,6 +79,33 @@ namespace infinit
       ELLE_DAS_SYMBOL(storage);
       ELLE_DAS_SYMBOL(tcp_heartbeat);
       ELLE_DAS_SYMBOL(version);
+
+      struct EncryptOptions
+      {
+        bool encrypt_at_rest;     // encrypt data on storage
+        bool encrypt_rpc;         // encrypt data in-flight
+        bool validate_signatures; // compute and validate signatures
+
+        EncryptOptions(bool at_rest, bool rpc, bool sig)
+          : encrypt_at_rest(at_rest)
+          , encrypt_rpc(rpc)
+          , validate_signatures(sig)
+          {}
+        EncryptOptions()
+         : encrypt_at_rest(true)
+         , encrypt_rpc(true)
+         , validate_signatures(true)
+         {}
+        EncryptOptions(EncryptOptions&& b) = default;
+        EncryptOptions(EncryptOptions const& b) = default;
+        EncryptOptions&
+        operator = (EncryptOptions &&) = default;
+        using Model = elle::das::Model<
+          EncryptOptions,
+          elle::meta::List<symbols::Symbol_encrypt_at_rest,
+                           symbols::Symbol_encrypt_rpc,
+                           symbols::Symbol_validate_signatures>>;
+      };
 
       /// Doughnut.
       ///
@@ -131,7 +159,8 @@ namespace infinit
             doughnut::soft_fail_running =
               std::declval<elle::Defaulted<bool>>(),
             doughnut::tcp_heartbeat =
-              std::declval<boost::optional<std::chrono::milliseconds>>()));
+              std::declval<boost::optional<std::chrono::milliseconds>>(),
+            doughnut::encrypt_options = EncryptOptions()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
@@ -164,6 +193,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
+        ELLE_ATTRIBUTE_R(EncryptOptions, encrypt_options);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
@@ -264,6 +294,7 @@ namespace infinit
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
         boost::optional<std::chrono::milliseconds> tcp_heartbeat;
+        EncryptOptions encrypt_options;
         using Model = elle::das::Model<
           Configuration,
           decltype(elle::meta::list(symbols::overlay,
@@ -271,7 +302,6 @@ namespace infinit
                                     symbols::owner,
                                     symbols::passport,
                                     symbols::name))>;
-
 
         Configuration(
           Address id,
@@ -286,7 +316,8 @@ namespace infinit
           elle::Version version,
           AdminKeys admin_keys,
           std::vector<Endpoints> peers,
-          boost::optional<std::chrono::milliseconds> tcp_heartbeat = {});
+          boost::optional<std::chrono::milliseconds> tcp_heartbeat = {},
+          EncryptOptions encrypt_options = EncryptOptions());
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration() override;

@@ -44,7 +44,8 @@ namespace infinit
                      doughnut::soft_fail_timeout =
                      elle::defaulted(std::chrono::milliseconds(20000)),
                      doughnut::soft_fail_running = elle::defaulted(false),
-                     doughnut::tcp_heartbeat = boost::none).template map<
+                     doughnut::tcp_heartbeat = boost::none,
+                     doughnut::encrypt_options = EncryptOptions()).template map<
                    Address,
                    std::shared_ptr<elle::cryptography::rsa::KeyPair>,
                    std::shared_ptr<elle::cryptography::rsa::PublicKey>,
@@ -63,7 +64,8 @@ namespace infinit
                    elle::Defaulted<std::chrono::milliseconds>,
                    elle::Defaulted<std::chrono::milliseconds>,
                    elle::Defaulted<bool>,
-                   boost::optional<std::chrono::milliseconds>>(
+                   boost::optional<std::chrono::milliseconds>,
+                   EncryptOptions>(
                      std::forward<Args>(args)...))
       {}
     }
@@ -71,3 +73,4 @@ namespace infinit
 }
 
 ELLE_DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);
+ELLE_DAS_SERIALIZE(infinit::model::doughnut::EncryptOptions);

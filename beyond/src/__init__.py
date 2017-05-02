@@ -858,7 +858,11 @@ class Network(metaclass = Entity,
                 storages = {},
                 admin_keys = {},
                 peers = [],
-                description = Optional())):
+                description = Optional(),
+                encrypt_options = {'encrypt_at_rest': True,
+                                   'encrypt_rpc': True,
+                                   'validate_signatures': True}
+                )):
 
   @property
   def id(self):

@@ -646,8 +646,11 @@ namespace infinit
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
-            this->_rpc_server._key.emplace(key);
-            this->_credentials = std::move(password);
+            if (this->dock().doughnut().encrypt_options().encrypt_rpc)
+            {
+              this->_rpc_server._key.emplace(key);
+              this->_credentials = std::move(password);
+            }
           }
         }
         catch (elle::Error& e)

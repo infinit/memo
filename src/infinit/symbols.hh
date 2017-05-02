@@ -13,6 +13,8 @@ namespace infinit
     ELLE_DAS_SYMBOL(challenge);
     ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(description);
+    ELLE_DAS_SYMBOL(encrypt_at_rest);
+    ELLE_DAS_SYMBOL(encrypt_rpc);
     ELLE_DAS_SYMBOL(email);
     ELLE_DAS_SYMBOL(fullname);
     ELLE_DAS_SYMBOL(host);
@@ -38,6 +40,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(resolver);
     ELLE_DAS_SYMBOL(title);
     ELLE_DAS_SYMBOL(token);
+    ELLE_DAS_SYMBOL(validate_signatures);
     ELLE_DAS_SYMBOL(write);
   }
 }

@@ -148,7 +148,9 @@ namespace infinit
           boost::optional<int>(),
           desc.version,
           desc.admin_keys,
-          std::vector<infinit::model::Endpoints>()),
+          std::vector<infinit::model::Endpoints>(),
+          desc.tcp_heartbeat,
+          std::move(desc.encrypt_options)),
         boost::none);
       ifnt.network_save(*user, network, true);
       ifnt.network_save(std::move(network), true);
