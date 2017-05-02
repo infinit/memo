@@ -1,7 +1,8 @@
 #pragma once
 
-#include <iosfwd>
+#include <atomic>
 #include <cstdint>
+#include <iosfwd>
 
 #include <boost/filesystem.hpp>
 #include <boost/signals2.hpp>
