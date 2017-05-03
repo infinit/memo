@@ -918,14 +918,22 @@ namespace infinit
         start();
         if (auto l = local)
         {
-          l->on_fetch().connect(std::bind(&Node::fetch, this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
-          l->on_store().connect(std::bind(&Node::store, this,
-                                          std::placeholders::_1));
-          l->on_remove().connect(std::bind(&Node::remove, this,
-                                           std::placeholders::_1));
-
+          l->on_fetch().connect(
+            [this]
+            (Address a, std::unique_ptr<infinit::model::blocks::Block> & b)
+            {
+              this->fetch(a, b);
+            });
+          l->on_store().connect(
+            [this](infinit::model::blocks::Block const& b)
+            {
+              this->store(b);
+            });
+          l->on_remove().connect(
+            [this](Address a)
+            {
+              this->remove(a);
+            });
           l->on_connect().connect(
             [this](RPCServer& rpcs)
             {
@@ -1237,19 +1245,17 @@ namespace infinit
         if (!_observer)
           this->bootstrap();
         this->doughnut()->dock().utp_server().socket()->register_reader(
-          "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
-            std::placeholders::_2));
+          "KELIPSGS", [this](elle::ConstWeakBuffer nbuf, Endpoint source)
+          {
+            this->onPacket(nbuf, source);
+          });
         ELLE_LOG("%s: listening on %s",
           this, this->doughnut()->dock().utp_server().local_endpoint());
         this->_pinger_thread.reset(
-          new elle::reactor::Thread(
-            "pinger", std::bind(&Node::pinger, this)));
+          new elle::reactor::Thread("pinger", [this]{  this->pinger(); }));
         if (!_observer)
-        {
           this->_emitter_thread.reset(
-            new elle::reactor::Thread(
-              "emitter", std::bind(&Node::gossipEmitter, this)));
-        }
+            new elle::reactor::Thread("emitter", [this]{ this->gossipEmitter(); }));
         ELLE_DEBUG("contact group nodes")
           for (auto& c: _state.contacts[_group])
             this->send_bootstrap(
