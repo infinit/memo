@@ -3470,7 +3470,7 @@ namespace infinit
           if (c.first == _self)
             continue;
           int g = group_of(c.first);
-          Contacts& target = _state.contacts[g];
+          Contacts& target = _state.contacts.at(g);
           auto it = target.find(c.first);
           if (it == target.end())
           {
