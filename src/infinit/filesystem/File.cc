@@ -637,7 +637,7 @@ namespace infinit
           // kick the block
           ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
           if (_filedata->_fat[i].first != Address::null)
-            _owner.unchecked_remove(_filedata->_fat[i].first);
+            unchecked_remove_chb(*_owner.block_store(), _filedata->_fat[i].first, _address);
           _filedata->_fat.pop_back();
         }
         else if (signed(offset + _filedata->_header.block_size) >= new_size)
@@ -654,7 +654,7 @@ namespace infinit
             buf.size(targetsize);
           auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
             sk.encipher(buf), _address);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          unchecked_remove_chb(*_owner.block_store(), _filedata->_fat[i].first, this->_address);
           _filedata->_fat[i].first = newblock->address();
           this->_owner.store_or_die(
             std::move(newblock), true,
