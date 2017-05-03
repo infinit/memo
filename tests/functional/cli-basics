@@ -8,7 +8,7 @@ with Infinit() as bob:
   def xfail(command, message):
     err = bob.run(['infinit'] + command, return_code = 2)[1]
     # Replace Window paths with Unix ones.
-    err = re.sub('Z:.*?\\infinit.exe', './bin/infinit', err)
+    err = re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', err)
     # Gee...  Maybe do this in assertEq?
     err = err.replace('\r\n', '\n')
     assertEq(message, err)
