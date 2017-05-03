@@ -892,6 +892,26 @@ namespace infinit
         return res;
       }
 
+      template<typename Gen>
+      auto
+      random_indexes(int num, int size, Gen& gen)
+      {
+        // FIXME: inefficient.  See Fisher-Yates.
+        assert(num <= size);
+        auto random = std::uniform_int_distribution<>(0, size-1);
+        auto res = std::vector<int>{};
+        for (int i=0; i<num; ++i)
+        {
+          int v = random(gen);
+          if (any_of_equal(res, v))
+            --i;
+          else
+            res.push_back(v);
+        }
+        boost::sort(res);
+        return res;
+      }
+
       Node::Node(Configuration const& config,
                  std::shared_ptr<Local> local,
                  infinit::model::doughnut::Doughnut* doughnut)
@@ -1895,17 +1915,7 @@ namespace infinit
         if (new_candidates  >= max_new * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          std::uniform_int_distribution<> random(0, new_candidates-1);
-          std::vector<int> indexes;
-          for (int i=0; i<max_new; ++i)
-          {
-            int v = random(_gen);
-            if (any_of_equal(indexes, v))
-              --i;
-            else
-              indexes.push_back(v);
-          }
-          boost::sort(indexes);
+          auto indexes = random_indexes(max_new, new_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
@@ -1950,17 +1960,7 @@ namespace infinit
         if (old_candidates >= max_old * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          std::uniform_int_distribution<> random(0, old_candidates-1);
-          std::vector<int> indexes;
-          for (int i=0; i<max_old; ++i)
-          {
-            int v = random(_gen);
-            if (any_of_equal(indexes, v))
-              --i;
-            else
-              indexes.push_back(v);
-          }
-          boost::sort(indexes);
+          auto indexes = random_indexes(max_old, old_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
