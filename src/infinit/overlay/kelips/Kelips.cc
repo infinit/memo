@@ -1031,6 +1031,7 @@ namespace infinit
         this->doughnut()->dock().utp_server().socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
+        elle::reactor::wait(_in_use);
         this->_state.contacts.clear();
       }
 
@@ -1112,6 +1113,7 @@ namespace infinit
       void
       Node::onPacket(elle::ConstWeakBuffer nbuf, Endpoint source)
       {
+        auto lock = this->_in_use.lock();
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
         elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
         static bool async = getenv("INFINIT_KELIPS_ASYNC");

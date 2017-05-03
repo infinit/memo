@@ -8,6 +8,7 @@
 #include <elle/cryptography/SecretKey.hh>
 
 #include <elle/reactor/Barrier.hh>
+#include <elle/reactor/MultiLockBarrier.hh>
 #include <elle/reactor/network/rdv-socket.hh>
 #include <elle/reactor/network/utp-server.hh>
 
@@ -375,6 +376,7 @@ namespace infinit
           std::pair<elle::reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
+        elle::reactor::MultiLockBarrier _in_use;
       };
     }
   }
