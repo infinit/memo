@@ -3465,56 +3465,53 @@ namespace infinit
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
-        {
-          if (c.first == _self)
-            continue;
-          int g = group_of(c.first);
-          Contacts& target = _state.contacts.at(g);
-          auto it = target.find(c.first);
-          if (it == target.end())
+          if (c.first != _self)
           {
-            if (g == this->_group ||
-                signed(target.size()) < this->_config.max_other_contacts)
+            int g = group_of(c.first);
+            Contacts& target = _state.contacts.at(g);
+            auto it = target.find(c.first);
+            if (it == target.end())
             {
-              auto contact =
-                Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+              if (g == this->_group ||
+                  signed(target.size()) < this->_config.max_other_contacts)
+              {
+                auto contact =
+                  Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+                for (auto const& ep: c.second)
+                  contact.endpoints.push_back(TimedEndpoint(ep, now()));
+                auto nl = NodeLocation(c.first, c.second);
+                ELLE_LOG("%s: register %f", this, contact);
+                target[c.first] = std::move(contact);
+                this->on_discovery()(nl, false);
+                notify_observers(nl);
+              }
+            }
+            else
+            {
               for (auto const& ep: c.second)
-                contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              auto nl = NodeLocation(c.first, c.second);
-              ELLE_LOG("%s: register %f", this, contact);
-              target[c.first] = std::move(contact);
-              this->on_discovery()(nl, false);
-              notify_observers(nl);
+                endpoints_update(it->second.endpoints, ep);
+              if (!it->second.discovered)
+              {
+                it->second.discovered = true;
+                auto nl =
+                  NodeLocation(it->first, to_endpoints(it->second.endpoints));
+                this->on_discovery()(nl, false);
+                notify_observers(nl);
+              }
             }
           }
-          else
-          {
-            for (auto const& ep: c.second)
-              endpoints_update(it->second.endpoints, ep);
-            if (!it->second.discovered)
-            {
-              it->second.discovered = true;
-              auto nl =
-                NodeLocation(it->first, to_endpoints(it->second.endpoints));
-              this->on_discovery()(nl, false);
-              notify_observers(nl);
-            }
-          }
-        }
         for (auto const& f: s.second)
-        {
-          if (group_of(f.first) != _group)
-            continue;
-          if (f.second == _self)
-            continue;
-          auto its = _state.files.equal_range(f.first);
-          auto it = boost::find_if(its, [&](auto const& i) {
-              return i.second.home_node == f.second;});
-          if (it == its.second)
-            _state.files.emplace(f.first,
-                                 File{f.first, f.second, now(), now(),
-                                     this->_config.gossip.new_threshold + 1});
-        }
+          if (group_of(f.first) == _group
+              && f.second != _self)
+          {
+            auto its = _state.files.equal_range(f.first);
+            auto it = boost::find_if(its, [&](auto const& i) {
+                return i.second.home_node == f.second;});
+            if (it == its.second)
+              _state.files.emplace(f.first,
+                                   File{f.first, f.second, now(), now(),
+                                       this->_config.gossip.new_threshold + 1});
+          }
       }
 
       void
