@@ -410,7 +410,6 @@ namespace infinit
     {
       auto& infinit = this->cli().infinit();
       auto storage = infinit.storage_get(name);
-      auto user = this->cli().as_user();
       auto fs_storage =
         dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get());
       if (clear && !fs_storage)
