@@ -451,6 +451,18 @@ def configure(
     'resources/images/logos/openstack-small@2x.png',
     'resources/images/logos/gnu.png',
     'resources/images/logos/gnu@2x.png',
+    'resources/images/logos/hedvig.png',
+    'resources/images/logos/hedvig@2x.png',
+    'resources/images/logos/portworx.png',
+    'resources/images/logos/portworx@2x.png',
+    'resources/images/logos/storageos.png',
+    'resources/images/logos/storageos@2x.png',
+    'resources/images/logos/convergeio.png',
+    'resources/images/logos/convergeio@2x.png',
+    'resources/images/logos/leofs.png',
+    'resources/images/logos/leofs@2x.png',
+    'resources/images/logos/wikipedia.png',
+    'resources/images/logos/wikipedia@2x.png',
   )
 
   resources_icons = drake.nodes(
@@ -466,8 +478,8 @@ def configure(
     'resources/images/icons/scalable@2x.png',
     'resources/images/icons/scalability.png',
     'resources/images/icons/scalability@2x.png',
-    'resources/images/icons/fault_tolerance.png',
-    'resources/images/icons/fault_tolerance@2x.png',
+    'resources/images/icons/fault-tolerance.png',
+    'resources/images/icons/fault-tolerance@2x.png',
     'resources/images/icons/idea.png',
     'resources/images/icons/idea@2x.png',
     'resources/images/icons/arrow-right.png',
@@ -542,8 +554,8 @@ def configure(
     'resources/images/icons/caret-down@2x.png',
     'resources/images/icons/interoperability.png',
     'resources/images/icons/interoperability@2x.png',
-    'resources/images/icons/architecture.png',
-    'resources/images/icons/architecture@2x.png',
+    'resources/images/icons/logic.png',
+    'resources/images/icons/logic@2x.png',
     'resources/images/icons/redundancy.png',
     'resources/images/icons/redundancy@2x.png',
     'resources/images/icons/model.png',
@@ -664,6 +676,12 @@ def configure(
     'resources/images/icons/server-red@2x.png',
     'resources/images/icons/block-size.png',
     'resources/images/icons/block-size@2x.png',
+    'resources/images/icons/pricing.png',
+    'resources/images/icons/pricing@2x.png',
+    'resources/images/icons/consistency.png',
+    'resources/images/icons/consistency@2x.png',
+    'resources/images/icons/open-source.png',
+    'resources/images/icons/open-source@2x.png',
   )
 
   resources = resources + resources_icons + resources_logos

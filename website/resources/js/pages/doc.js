@@ -235,6 +235,7 @@ $(document).ready(function() {
       ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
     });
 
+    // Enable platform tabs
     $('.tabs-circle a').click(function(e) {
       $('.tabs-circle li').removeClass('active');
       $(this).parent().addClass('active');
@@ -245,41 +246,19 @@ $(document).ready(function() {
       e.preventDefault();
     });
 
+    // Initiate platform instructions when not Windows
     if (!$('#get_started').hasClass('windows')) {
       showInstallProcedure($('.tabs-circle li.active').attr('data-platform'));
     }
 
-    var winHeight = $(window).height(),
-        docHeight = $(document).height(),
-        progressBar = $('progress'),
-        tooltip = $('#progressTooltip'),
-        max, value, porcent;
+    // var winHeight = $(window).height(),
+    //     docHeight = $(document).height(),
+    //     progressBar = $('progress'),
+    //     tooltip = $('#progressTooltip'),
+    //     max, value, porcent;
 
-    max = docHeight - winHeight - ($("footer").height() + $('.next').height());
-    progressBar.attr('max', max);
-
-    $(document).on('scroll', function(){
-       value = $(window).scrollTop();
-       porcent = value / max * 100;
-
-      if (porcent > 1 && porcent < 98) {
-        tooltip.text(Math.round(porcent) + '%');
-        tooltip.css('left', (porcent - 1) + '%');
-        tooltip.show();
-      }
-
-      if (value > $('#go-further').offset().top - 200) {
-        tooltip.text('👍');
-      }
-
-      if (porcent < 96) {
-        progressBar.attr('value', value);
-      }
-
-      if (porcent < 1) {
-        tooltip.hide();
-      }
-    });
+    // max = docHeight - winHeight - ($("footer").height() + $('.next').height());
+    // progressBar.attr('max', max);
   }
 
   if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_storages_s3')) {
@@ -356,34 +335,6 @@ $(document).ready(function() {
     $('pre code').each(function(i, block) {
       hljs.highlightBlock(block);
     });
-  }
-
-
-
-
-  /*----------------.
-  | Comparisons     |
-  `----------------*/
-
-  function displayComparison() {
-    if (elem.checked) {
-      $('.properties').addClass('compared');
-      $('.property .infinit').show();
-    } else {
-      $('.properties').removeClass('compared');
-      $('.property .infinit').hide();
-    }
-  }
-
-  if ($('body').hasClass('doc_comparison')) {
-    var elem = document.querySelector('.js-switch');
-    var switcher = new Switchery(elem, { color: "#252d3b"});
-
-    elem.onchange = function() {
-      displayComparison();
-    };
-
-    displayComparison();
   }
 
 });

@@ -28,7 +28,7 @@ $> export INFINIT_DATA_HOME="/some/where/"
 
 ### Nomenclature ###
 
-All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most binaries have options named `--create`, `--list`, `--fetch`, etc.
+All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most commands have options named `--create`, `--list`, `--fetch`, etc.
 
 For more information on the options provided by a binary, do not hesitate to rely on the `--help` option. Note that the help is relative to the options already provided.
 
@@ -99,17 +99,17 @@ $> infinit volume push personal
 Hub
 ---
 
-All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
+All objects (users, silos, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
 
 The command-line tools however provide a way to rely on the Hub for certain operations in order to simplify some administrative tasks such as inviting a user to a drive, sharing the volumes created within a network, moving the user identity to another of your devices and so on. In addition, some functionalities such as the consumption of storage capacity in a network are only available through the Hub. As a rule of thumb, we advise you to always rely on the Hub, unless you know exactly what you are doing.
 
-The use of the Hub can be activated through specific options, mostly `push`, `fetch` and `pull`. The `push` option pushes an object on the Hub for other users to retrieve it. The `pull` option does the exact opposite, removing the object from the Hub. Finally, the `fetch` option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the `$INFINIT_DATA_HOME` directory.
+The use of the Hub can be activated through specific options, mostly `--push`, `--fetch` and `--pull`. The `--push` option pushes an object on the Hub for other users to retrieve it. The `--pull` option does the exact opposite, removing the object from the Hub. Finally, the `--fetch` option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the `$INFINIT_DATA_HOME` directory.
 
 One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying `push` option when invoking the command.
 
 Note that some binaries operate in hub mode by default. For instance the _infinit drive_ binary would not make sense without the Hub since its role is to bridge the gap between a low-level storage infrastructure and potential non-tech-savvy users.
 
-**IMPORTANT**: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the `push`/`fetch` operations must be replaced with `export`/`import` operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.
+**IMPORTANT**: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the `--push`/`--fetch` operations must be replaced with `--export`/`--import` operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.
 
 Doctor
 ------

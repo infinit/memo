@@ -321,7 +321,8 @@ footer nav > ul > li {
 }
 
 #social ul,
-body.doc_get_started section.doc ul.social {
+body.doc_get_started section.doc ul.social,
+body.doc_comparison ul.competitors {
   padding-bottom: 20px; width: 82%; margin-left: 10%; padding-top: 10px;
   li { float: left; font-size: 15px; width: 44%; text-align: left; }
   li:last-child { margin-bottom: 40px; }
@@ -655,7 +656,6 @@ body.home {
     .logos { width: 950px; text-align: center; margin: 0 auto;}
     img { margin:0 20px 25px 20px; float: left; display: inline}
     img:last-child { margin-top: 11px;}
-    a.siliconangle img { vertical-align: bottom;  }
     a:hover img { opacity: 1; filter:none; -webkit-filter: none; }
   }
 
@@ -2290,54 +2290,71 @@ body.doc_comparison {
   section.doc.backblaze img.competitor.big { margin-top: -11px; }
 
   section.doc {
-    img.competitor.big { float: right; max-height: 60px; margin-top: -4px;}
-    .filters {
-      margin: 40px 0 20px 0; color: @infinitgray; text-align: center;
-      font-weight: 300; font-size: 18px; font-family: @helvetica;
-      label { padding-right: 6px;}
+
+    p.description a img {
+      vertical-align: -2px; margin-left: 6px; margin-right: 2px;
     }
 
-    .properties.compared .property.same {
-      opacity: 0.8; .grayScaleOn();
+    table.properties { 
+      margin: 60px 0; 
+
+      tr:nth-child(1) th { padding-bottom: 20px; }
+      th.infinit img { max-height: 43px; width: auto; }
+      img.competitor.big { max-height: 60px; }
     }
-    .properties div:nth-child(2n+1) { clear: both; }
-    .property {
-      width: 46%; margin:35px 2%; float: left; opacity: 1; .transition();
-      min-height: 209px; text-align: center;
-      > img { max-height: 60px;}
-      h2 {
-        margin: 0; font-size: 21px; padding: 10px 20px;
-        font-weight: 300; font-family: @helvetica;
+
+    // .properties.compared .property.same { opacity: 0.8; .grayScaleOn();}
+
+    tr.property {
+      opacity: 1; min-height: 209px; .transition();
+      
+      td { text-align: left; }
+      td.desc { padding: 20px 0; }
+      td.competitor, td.infinit { text-align: center; width: 20%; padding: 0 2%; }
+
+      td img { float: left; max-width: 50px; height: auto; margin-right: 22px; padding-bottom: 55px;}
+      td span { 
+        background: #ebf0f3; padding: 5px 8px; display: inline-block; margin: 4px;
+        border-radius: 3px; font-weight: bold; 
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+
+        &.unknown { background: #f1f1f1; color: #989898}
       }
+
       a.open-popup { outline: none; }
-      div.competitor {
-        span.value {
-          font-weight: bold; background: #FFF088; display: inline-block;
-          padding: 6px 10px; border-radius: 2px;
 
-          &.unknown { font-style: italic; color: #949333; }
-        }
+      h2 {
+        margin: 0; font-size: 14px; font-family: @sf; text-transform: uppercase;
+        margin-bottom: 7px; float: left; 
       }
 
-      div.competitor, div.infinit {
-        span.platforms {
-          font-style: italic; color: @infinitgray; display: block;
-          margin-top: 5px;
-        }
+      a.open-popup {
+        background: @infinitblue; display: inline-block; border-radius: 20px; margin-top: 4px;
+        padding: 0px 5px; font-size: 11px; color: white; margin-left: 6px;  .transition(); 
+        &:hover { background: darken(@infinitblue, 10%); .transition(); }
       }
 
-      div.infinit { color: @infinitred; margin-top: 7px; display: none; }
-      div.infinit img {width: 20px; height: auto; vertical-align: sub;}
-      div.infinit img { margin: 0 2px; width: 16px; height: 15px; }
-      p { font-size: 14px; line-height: 19px; margin-top: 0; padding: 0 20px; }
+      a.help { display: none; }
+
+      td.desc p.note { color: @infinitblack; margin-top: 8px; }
+
+      &.same {
+        td.infinit span, td.competitor span { 
+          background: #f2f7c6; color: #4d5026;
+        }
+        // a.open-popup { background: #a5a5a5; }
+        // img { .grayScaleOn(); opacity: 0.7; }
+      }
+
+      p { font-size: 14px; line-height: 19px; margin-top: 0; margin-left: 60px; padding-right: 5%; }
     }
+
     h3.links { clear: both; margin-top: 50px; }
-    ul.similar_to {
-      list-style-type: none;
-      li { margin: 10px 25px 10px 0; float:left; }
-      img { max-width: 20px; max-height:20px; vertical-align: text-top; padding-right:5px }
+    .similar {
+      a { }
     }
   }
+
   div.popup {
     section.doc { float: none; width: 100%; padding: 0; }
     p.title { margin-top: 0; border-bottom: 1px solid @infinitgray; padding-bottom: 5px;}
