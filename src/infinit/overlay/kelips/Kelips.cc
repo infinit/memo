@@ -10,6 +10,7 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/count_if.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/max_element.hpp>
@@ -801,43 +802,50 @@ namespace infinit
         Time startTime;
       };
 
+      template <typename C>
+      auto
+      uniform_index_distribution(C const& c)
+      {
+        assert(!c.empty());
+        return std::uniform_int_distribution<>(0, c.size() - 1);
+      }
+
+
       template<typename C>
       typename C::iterator
       random_from(C& container, std::default_random_engine& gen)
       {
         if (container.empty())
           return container.end();
-        std::uniform_int_distribution<> random(0, container.size()-1);
-        int v = random(gen);
-        auto it = container.begin();
-        while (v--) ++it;
-        return it;
+        auto random = uniform_index_distribution(container);
+        return std::next(container.begin(), random(gen));
       }
 
-      /* Pick one item at random that matches filter.
-       * Fallback to unfiltered pick if no element matches.
-       */
+      /// Pick one item at random that matches filter.
+      /// Fallback to unfiltered pick if no element matches.
       template<typename C, typename F>
       typename C::iterator
       random_from(C& container, F filter, std::default_random_engine& gen)
       {
-        if (container.empty())
-          return container.end();
-        int ncandidates = std::count_if(container.begin(), container.end(),
+        int ncandidates = boost::count_if(container,
           [&filter](auto const& v) { return filter(v.second);});
-        if (!ncandidates)
-          return random_from(container, gen);
-        std::uniform_int_distribution<> random(0, ncandidates-1);
-        int v = random(gen);
-        auto it = container.begin();
-        while (!filter(it->second)) ++it;
-        while (v--)
+        if (ncandidates)
         {
-          ++it;
+          auto random = std::uniform_int_distribution<>(0, ncandidates-1);
+          int v = random(gen);
+          auto it = container.begin();
           while (!filter(it->second))
             ++it;
+          while (v--)
+          {
+            ++it;
+            while (!filter(it->second))
+              ++it;
+          }
+          return it;
         }
-        return it;
+        else
+          return random_from(container, gen);
       }
 
       static
@@ -856,7 +864,7 @@ namespace infinit
       pick_n(C const& src, int count, G& generator)
       {
         C res;
-        std::uniform_int_distribution<> random(0, src.size()-1);
+        auto random = uniform_index_distribution(src);
         for (int i=0; i<count; ++i)
         {
           int v;
@@ -876,7 +884,7 @@ namespace infinit
         C res(src);
         for (int i=0; i<count; ++i)
         {
-          std::uniform_int_distribution<> random(0, res.size()-1);
+          auto random = uniform_index_distribution(res);
           int v = random(generator);
           std::swap(res[res.size()-1], res[v]);
           res.pop_back();
