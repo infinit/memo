@@ -366,7 +366,8 @@ namespace infinit
         int _dropped_puts;
         int _dropped_gets;
         int _failed_puts;
-        std::unordered_map<Address, int> _under_duplicated;
+        using Index = std::unordered_map<Address, int>;
+        Index _under_duplicated;
         std::unordered_map<std::string, elle::Buffer> _challenges;
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, Overlay::Member>),

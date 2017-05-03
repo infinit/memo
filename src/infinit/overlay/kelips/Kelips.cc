@@ -950,7 +950,7 @@ namespace infinit
                   for (auto const& f: this->_state.files)
                     res.second.emplace_back(f.second.address, f.second.home_node);
                   // OH THE UGLY HACK, we need a place to store our own address
-                  res.second.push_back(std::make_pair(Address::null, _self));
+                  res.second.emplace_back(Address::null, _self);
                   return res;
                 });
               rpcs.add(
@@ -958,20 +958,19 @@ namespace infinit
                 [this] ()
                 {
                   SerState2 res;
-                  std::unordered_map<Address, int> index;
                   res.first.emplace_back(this->_self, to_endpoints(_local_endpoints));
-                  index[_self] = 0;
+                  auto index = Index{{_self, 0}};
                   for (auto const& contacts: this->_state.contacts)
                     for (auto const& c: contacts)
                     {
-                      index[c.second.address] = res.first.size();
+                      assert(index.emplace(c.second.address, res.first.size()).second);
                       res.first.emplace_back(c.second.address,
                                              to_endpoints(c.second.endpoints));
                     }
-                  std::multimap<Address, Address> ofiles; // ordered fileId -> owner
+                  auto ofiles = std::multimap<Address, Address>{}; // ordered fileId -> owner
                   for (auto const& f: this->_state.files)
                     ofiles.emplace(f.second.address, f.second.home_node);
-                  Address prev = Address::null;
+                  auto prev = Address::null;
                   for (auto const& f: ofiles)
                   {
                     auto faddr = f.first;
@@ -990,7 +989,7 @@ namespace infinit
                     }
                     else
                       idx = it->second;
-                    res.second.push_back(std::make_pair(daddr, idx));
+                    res.second.emplace_back(daddr, idx);
                     prev = faddr;
                   }
                   return res;
@@ -999,7 +998,7 @@ namespace infinit
           this->_port = l->server_endpoint().port();
           {
             using Filter = elle::network::Interface::Filter;
-            auto filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
+            auto const filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
             for (auto const& itf: elle::network::Interface::get_map(filter))
             {
               auto add = [this](auto const& addrs){
@@ -1095,10 +1094,10 @@ namespace infinit
             for (auto const& c: state.first)
               if (!c.second.empty())
                 res.first.insert(c);
-            Address prev = Address::null;
+            auto prev = Address::null;
             for (auto const& f: state.second)
             {
-              Address next = prev;
+              auto next = prev;
               ELLE_ASSERT(f.first.size() <= 32);
               memcpy(
                 const_cast<unsigned char*>(next.value() + 32 - f.first.size()),
@@ -1296,7 +1295,8 @@ namespace infinit
         auto it = _keys.find(a);
         if (it != _keys.end())
           return std::make_pair(&it->second.first, it->second.second);
-        return std::make_pair(nullptr, false);
+        else
+          return std::make_pair(nullptr, false);
       }
 
       void
@@ -1403,7 +1403,7 @@ namespace infinit
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
         auto& sock = this->doughnut()->dock().utp_server().socket();
-        static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
+        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC_SEND", false);
         if (async)
         {
           auto sbuf = std::make_shared<elle::Buffer>(std::move(b));
@@ -1865,12 +1865,12 @@ namespace infinit
       std::unordered_multimap<Address, std::pair<Time, Address>>
       Node::pickFiles()
       {
+        using Res = std::unordered_multimap<Address, std::pair<Time, Address>>;
         static elle::Bench bencher("kelips.pickFiles", 10_sec);
         elle::Bench::BenchScope bench_scope(bencher);
         static elle::Bench bench_new_candidates("kelips.newCandidates", 10_sec);
         static elle::Bench bench_old_candidates("kelips.oldCandidates", 10_sec);
         auto current_time = now();
-        std::unordered_multimap<Address, std::pair<Time, Address>> res;
         int max_new = _config.gossip.files / 2;
         int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
         ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
@@ -1891,6 +1891,7 @@ namespace infinit
         }
         bench_new_candidates.add(new_candidates);
         bench_old_candidates.add(old_candidates);
+        auto res = Res{};
         if (new_candidates  >= max_new * 2)
         {
           // pick max_new indexes in 0..new_candidates
@@ -1931,8 +1932,8 @@ namespace infinit
           for (auto const& f: _state.files)
           {
             if (f.second.gossip_count < _config.gossip.new_threshold)
-            new_files.push_back(std::make_pair(f.first,
-              std::make_pair(f.second.last_seen, f.second.home_node)));
+            new_files.emplace_back(f.first,
+              std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (signed(new_files.size()) > max_new)
           {
@@ -1988,7 +1989,7 @@ namespace infinit
             if (f.second.home_node == _self
               && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
               && !has(res, f.first, f.second.home_node))
-              old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
+              old_files.emplace_back(f.first, std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (signed(old_files.size()) > max_old)
           {
@@ -2011,7 +2012,7 @@ namespace infinit
           for (auto const& f: _state.files)
           {
             if (!has(res, f.first, f.second.home_node))
-              available.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
+              available.emplace_back(f.first, std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (available.size() > unsigned(n))
           {
@@ -3610,7 +3611,7 @@ namespace infinit
               // Change
               ELLE_TRACE("moving misplaced entry for %x to %s", address,
                 target == &_state.observers ? "observers" : "storage nodes");
-              target->insert(std::make_pair(address, std::move(it->second)));
+              target->emplace(address, std::move(it->second));
               ntarget->erase(address);
             }
             else
@@ -3623,7 +3624,7 @@ namespace infinit
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto nl = NodeLocation(address, endpoints);
-        auto inserted = target->insert(std::make_pair(address, std::move(c)));
+        auto inserted = target->emplace(address, std::move(c));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
           this->on_discovery()(nl, observer);
