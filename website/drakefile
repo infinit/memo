@@ -451,6 +451,8 @@ def configure(
     'resources/images/logos/convergeio@2x.png',
     'resources/images/logos/leofs.png',
     'resources/images/logos/leofs@2x.png',
+    'resources/images/logos/wikipedia.png',
+    'resources/images/logos/wikipedia@2x.png',
   )
 
   resources_icons = drake.nodes(
@@ -668,8 +670,8 @@ def configure(
     'resources/images/icons/pricing@2x.png',
     'resources/images/icons/consistency.png',
     'resources/images/icons/consistency@2x.png',
-    'resources/images/icons/open source.png',
-    'resources/images/icons/open source@2x.png',
+    'resources/images/icons/open-source.png',
+    'resources/images/icons/open-source@2x.png',
   )
 
   resources = resources + resources_icons + resources_logos

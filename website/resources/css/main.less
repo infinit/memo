@@ -2208,6 +2208,10 @@ body.doc_comparison {
 
   section.doc {
 
+    p.description a img {
+      vertical-align: -2px; margin-left: 6px; margin-right: 2px;
+    }
+
     table.properties { 
       margin: 60px 0; 
 
@@ -2230,13 +2234,15 @@ body.doc_comparison {
         background: #ebf0f3; padding: 5px 8px; display: inline-block; margin: 4px;
         border-radius: 3px; font-weight: bold; 
         -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+
+        &.unknown { background: #f1f1f1; color: #989898}
       }
 
       a.open-popup { outline: none; }
 
       h2 {
         margin: 0; font-size: 14px; font-family: @sf; text-transform: uppercase;
-        margin-bottom: 7px; float: left;
+        margin-bottom: 7px; float: left; 
       }
 
       a.open-popup {
@@ -2251,7 +2257,7 @@ body.doc_comparison {
 
       &.same {
         td.infinit span, td.competitor span { 
-          background: #f2f7c6; 
+          background: #f2f7c6; color: #4d5026;
         }
         // a.open-popup { background: #a5a5a5; }
         // img { .grayScaleOn(); opacity: 0.7; }
