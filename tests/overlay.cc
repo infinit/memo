@@ -662,9 +662,9 @@ ELLE_TEST_SCHEDULED(chain_connect,
 ELLE_TEST_SCHEDULED(
   key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::storage::Memory::Blocks blocks;
+  auto blocks = infinit::storage::Memory::Blocks{};
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto const id_a = special_id(1);
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
     ::version = config.version,
@@ -673,27 +673,36 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::make_unique<infinit::storage::Memory>(blocks));
-  int port = dht_a->dht->local()->server_endpoints().begin()->port();
-  DHT dht_b(
+  auto const port_a = dht_a->dht->local()->server_endpoints().begin()->port();
+  auto dht_b = DHT(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     ::storage = nullptr,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp);
-  discover(dht_b, *dht_a, anonymous, false, true);
-  auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
-  auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
-  acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
-    true, true);
-  acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
-    true, true);
-  dht_a->dht->seal_and_insert(*block, tcr());
-  auto b2 = dht_b.dht->fetch(block->address());
+
+  ELLE_LOG("discover")
+    discover(dht_b, *dht_a, anonymous, false, true);
+
+  // The address of a block stored by a.
+  auto addr = Address{};
+  ELLE_LOG("store block in a (%f)", dht_a)
+  {
+    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+    addr = block->address();
+    auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
+    acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
+                        true, true);
+    dht_a->dht->seal_and_insert(*block, tcr());
+  }
+
+  ELLE_LOG("changing block in b (%f)", dht_b);
+  auto b2 = dht_b.dht->fetch(addr);
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
   dht_b.dht->seal_and_update(*b2, tcr());
   // brutal restart of a
-  ELLE_LOG("disconnect A");
+  ELLE_LOG("disconnect A (%f)", dht_a);
   dht_a->dht->local()->utp_server()->socket()->close();
   ELLE_LOG("recreate A");
   auto dht_aa = std::make_unique<DHT>(
@@ -704,7 +713,7 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::make_unique<infinit::storage::Memory>(blocks),
-    ::port = port);
+    ::port = port_a);
   // rebind local somewhere else or we get EBADF from local_endpoint
   dht_a->dht->local()->utp_server()->socket()->bind(
     boost::asio::ip::udp::endpoint(

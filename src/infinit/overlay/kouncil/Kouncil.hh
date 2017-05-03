@@ -159,6 +159,8 @@ namespace infinit
       private:
         void
         _broadcast();
+        /// Events about blocks: (block, inserted or removed).
+        /// If true, inserted, if false removed.
         ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
                        new_entries);
         ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, broadcast_thread);
