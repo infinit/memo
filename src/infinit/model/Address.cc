@@ -12,6 +12,11 @@ namespace infinit
 {
   namespace model
   {
+    namespace flags
+    {
+      static const uint8_t block_kind = 1;
+    }
+
     Address::Address()
       : _value()
       , _mutable_block(true)
