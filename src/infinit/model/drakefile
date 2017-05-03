@@ -36,6 +36,7 @@ sources = drake.nodes(
   'doughnut/Cache.hh',
   'doughnut/Consensus.cc',
   'doughnut/Consensus.hh',
+  'doughnut/Consensus.hxx',
   'doughnut/Dock.cc',
   'doughnut/Dock.hh',
   'doughnut/Doughnut.cc',

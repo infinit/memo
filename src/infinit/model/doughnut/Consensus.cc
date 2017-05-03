@@ -375,6 +375,11 @@ namespace infinit
                         "%f(%x)", elle::type_info(*this), (void*)(this));
         }
 
+        StackedConsensus::StackedConsensus(std::unique_ptr<Consensus> backend)
+          : Consensus(backend->doughnut())
+          , _backend(std::move(backend))
+        {}
+
         /*--------------.
         | Configuration |
         `--------------*/
