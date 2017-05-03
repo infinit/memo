@@ -124,6 +124,18 @@ namespace infinit
           print(std::ostream&) const override;
         };
 
+        class StackedConsensus
+          : public Consensus
+        {
+        public:
+          StackedConsensus(std::unique_ptr<Consensus> backend);
+          template<typename C>
+          static
+          C*
+          find(Consensus* top);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend, protected);
+        };
+
         /*--------------.
         | Configuration |
         `--------------*/
@@ -159,3 +171,5 @@ namespace infinit
     }
   }
 }
+
+# include <infinit/model/doughnut/Consensus.hxx>

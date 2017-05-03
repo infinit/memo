@@ -175,9 +175,13 @@ namespace infinit
     };
 
     class Node;
-    void unchecked_remove(model::Model& model,
-                          model::Address address);
-
+    void
+    unchecked_remove(model::Model& model,
+                     model::Address address);
+    void
+    unchecked_remove_chb(model::Model& model,
+                         model::Address chb,
+                         model::Address owner);
     std::unique_ptr<model::blocks::Block>
     fetch_or_die(model::Model& model,
                  model::Address address,
@@ -241,7 +245,8 @@ namespace infinit
       std::shared_ptr<elle::reactor::filesystem::Path>
       path(std::string const& path) override;
 
-      void unchecked_remove(model::Address address);
+      void
+      unchecked_remove(model::Address address);
       std::unique_ptr<model::blocks::MutableBlock>
       unchecked_fetch(model::Address address);
 

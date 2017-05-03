@@ -27,7 +27,7 @@ namespace infinit
 
         namespace bmi = boost::multi_index;
         class Async
-          : public Consensus
+          : public StackedConsensus
         {
         public:
           Async(std::unique_ptr<Consensus> backend,
@@ -126,7 +126,6 @@ namespace infinit
           _load_op(int id, bool signature = true);
           void
           _load_operations();
-          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           using Operations = bmi::multi_index_container<
             Op,
             bmi::indexed_by<

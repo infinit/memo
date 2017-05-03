@@ -904,6 +904,11 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
+        if (!doughnut->encrypt_options().encrypt_rpc)
+        {
+          _config.encrypt = false;
+          _config.accept_plain = true;
+        }
         bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
         bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
           && doughnut->version() >= elle::Version(0, 7, 0);
@@ -3465,7 +3470,7 @@ namespace infinit
           if (c.first == _self)
             continue;
           int g = group_of(c.first);
-          Contacts& target = _state.contacts[g];
+          Contacts& target = _state.contacts.at(g);
           auto it = target.find(c.first);
           if (it == target.end())
           {

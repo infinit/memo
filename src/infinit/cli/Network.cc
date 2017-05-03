@@ -71,7 +71,10 @@ namespace infinit
                cli::encrypt = boost::none,
                // Generic options
                cli::protocol = boost::none,
-               cli::tcp_heartbeat = boost::none)
+               cli::tcp_heartbeat = boost::none,
+               cli::disable_encrypt_at_rest = false,
+               cli::disable_encrypt_rpc = false,
+               cli::disable_signature = false)
       , delete_(*this,
                 "Delete a network locally",
                 cli::name,
@@ -382,7 +385,10 @@ namespace infinit
       boost::optional<std::string> kelips_contact_timeout,
       boost::optional<std::string> encrypt,
       boost::optional<std::string> protocol,
-      boost::optional<std::chrono::milliseconds> tcp_heartbeat)
+      boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+      bool disable_encrypt_at_rest,
+      bool disable_encrypt_rpc,
+      bool disable_signature)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
@@ -409,6 +415,10 @@ namespace infinit
                                                     replication_factor,
                                                     eviction_delay);
       auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
+      infinit::model::doughnut::EncryptOptions encrypt_options(
+        !disable_encrypt_at_rest,
+        !disable_encrypt_rpc,
+        !disable_signature);
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
@@ -427,7 +437,8 @@ namespace infinit
           infinit::version(),
           admin_keys,
           parse_peers(peer),
-          tcp_heartbeat);
+          tcp_heartbeat,
+          encrypt_options);
       {
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
@@ -558,7 +569,9 @@ namespace infinit
                 d->port,
                 desc.version,
                 desc.admin_keys,
-                desc.peers),
+                desc.peers,
+                desc.tcp_heartbeat,
+                desc.encrypt_options),
               desc.description);
             // Update linked network for user.
             ifnt.network_save(u, updated_network, true);
@@ -771,7 +784,8 @@ namespace infinit
           desc.version,
           desc.admin_keys,
           desc.peers,
-          desc.tcp_heartbeat),
+          desc.tcp_heartbeat,
+          desc.encrypt_options),
         desc.description);
       if (output_name)
         ifnt.save(*cli.get_output(output_name), network, false);

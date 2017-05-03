@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
 #include <boost/optional.hpp>
 
 #include <elle/das/Symbol.hh>

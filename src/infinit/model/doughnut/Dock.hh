@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/global_fun.hpp>
 #include <boost/multi_index_container.hpp>

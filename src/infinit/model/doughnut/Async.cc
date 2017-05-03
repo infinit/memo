@@ -68,8 +68,7 @@ namespace infinit
         Async::Async(std::unique_ptr<Consensus> backend,
                      bfs::path journal_dir,
                      int max_size)
-          : Consensus(backend->doughnut())
-          , _backend(std::move(backend))
+          : StackedConsensus(std::move(backend))
           , _operations()
           , _queue()
           , _next_index(1)

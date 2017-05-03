@@ -219,6 +219,7 @@ namespace infinit
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
         , _admin_keys(std::move(init.admin_keys))
+        , _encrypt_options(std::move(init.encrypt_options))
         , _consensus(init.consensus_builder(*this))
         , _local(
           init.storage
@@ -701,7 +702,8 @@ namespace infinit
         elle::Version version,
         AdminKeys admin_keys,
         std::vector<Endpoints> peers,
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat_)
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat_,
+        EncryptOptions encrypt_options)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -714,6 +716,7 @@ namespace infinit
         , admin_keys(std::move(admin_keys))
         , peers(std::move(peers))
         , tcp_heartbeat(tcp_heartbeat_)
+        , encrypt_options(std::move(encrypt_options))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -745,6 +748,13 @@ namespace infinit
         {
         }
         s.serialize("tcp-heartbeat", this->tcp_heartbeat);
+        try
+        {
+          s.serialize("encrypt_options", this->encrypt_options);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       void
@@ -767,6 +777,13 @@ namespace infinit
         catch (elle::serialization::Error const&)
         {}
         s.serialize("tcp-heartbeat", this->tcp_heartbeat);
+        try
+        {
+          s.serialize("encrypt_options", this->encrypt_options);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -846,7 +863,8 @@ namespace infinit
           std::move(rdv_host),
           std::move(monitoring_socket_path),
           this->overlay->rpc_protocol,
-          doughnut::tcp_heartbeat = this->tcp_heartbeat);
+          doughnut::tcp_heartbeat = this->tcp_heartbeat,
+          doughnut::encrypt_options = this->encrypt_options);
       }
 
       std::string

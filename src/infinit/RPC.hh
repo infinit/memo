@@ -330,7 +330,7 @@ namespace infinit
     _serve(elle::protocol::ChanneledStream& channels)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
-      static auto nthreads = elle::os::getenv("INFINIT_RPC_SERVE_THREADS", 1);
+      auto nthreads = elle::os::getenv("INFINIT_RPC_SERVE_THREADS", 1);
       elle::reactor::Semaphore sem(nthreads? nthreads+1 : 1000000000);
       elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
       {

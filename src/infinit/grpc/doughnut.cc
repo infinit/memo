@@ -256,7 +256,7 @@ namespace infinit
         (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
       ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
         (dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockAddressRequest , ::NamedBlockAddressResponse , true>
+      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse , true>
         (dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
         (dht.remove, dht, "/Doughnut/remove");

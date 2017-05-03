@@ -347,6 +347,8 @@ namespace infinit
                   res.emplace(boost::asio::ip::address::from_string(addr),
                               ep.port());
           }
+          if (res.empty())
+            elle::err("local not listening on any endpoint");
           return res;
         }
       }
@@ -354,8 +356,7 @@ namespace infinit
       void
       Local::_require_auth(RPCServer& rpcs, bool write_op)
       {
-        static bool disable = getenv("INFINIT_RPC_DISABLE_CRYPTO");
-        if (disable)
+        if (!this->doughnut().encrypt_options().encrypt_rpc)
           return;
         if (!rpcs._key)
           elle::err("Authentication required");
@@ -483,7 +484,8 @@ namespace infinit
               enc_key,
               elle::cryptography::Cipher::aes256,
               elle::cryptography::Mode::cbc);
-            rpcs._key.emplace(std::move(password));
+            if (this->doughnut().encrypt_options().encrypt_rpc)
+              rpcs._key.emplace(std::move(password));
             rpcs._ready(&rpcs);
             return true;
           });
@@ -496,6 +498,8 @@ namespace infinit
         rpcs.add(
           "resolve_all_keys",
           [this]() { return this->_resolve_all_keys(); });
+        if (!this->doughnut().encrypt_options().encrypt_rpc)
+          rpcs._ready(&rpcs);
       }
 
       void

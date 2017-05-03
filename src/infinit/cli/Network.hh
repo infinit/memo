@@ -71,7 +71,10 @@ namespace infinit
                  decltype(cli::encrypt = boost::optional<std::string>()),
                  decltype(cli::protocol = boost::optional<std::string>()),
                  decltype(cli::tcp_heartbeat =
-                          boost::optional<std::chrono::milliseconds>())),
+                          boost::optional<std::chrono::milliseconds>()),
+                 decltype(cli::disable_encrypt_at_rest = false),
+                 decltype(cli::disable_encrypt_rpc = false),
+                 decltype(cli::disable_signature = false)),
            decltype(modes::mode_create)>
       create;
       void
@@ -102,8 +105,10 @@ namespace infinit
         boost::optional<std::string> encrypt = boost::none,
         // Generic options
         boost::optional<std::string> protocol = boost::none,
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none);
-
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none,
+        bool disable_encrypt_at_rest = false,
+        bool disable_encrypt_rpc = false,
+        bool disable_signature = false);
 
       /*---------------.
       | Mode: delete.  |

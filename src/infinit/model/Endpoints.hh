@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
 #include <boost/filesystem.hpp>
 #include <boost/operators.hpp>
 
