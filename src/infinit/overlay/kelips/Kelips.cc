@@ -1123,13 +1123,11 @@ namespace infinit
       {
         auto lock = this->_in_use.lock();
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
-        elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
-        static bool async = getenv("INFINIT_KELIPS_ASYNC");
-        if (async)
-          new elle::reactor::Thread("process",
-                              [=] { this->process(buf, source);}, true);
-        else
-          process(buf, source);
+        auto buf = elle::Buffer(nbuf.contents()+8, nbuf.size()-8);
+        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC", false);
+        elle::reactor::run(async,
+                           "process",
+                           [=] { this->process(buf, source);});
       }
 
       void
