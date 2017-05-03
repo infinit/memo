@@ -852,11 +852,8 @@ namespace infinit
       bool
       contact_without_timeouts(Contact const& c)
       {
-        static bool disable = elle::os::inenv("INFINIT_KELIPS_NO_SNUB");
-        if (disable)
-          return true;
-        else
-          return c.ping_timeouts == 0;
+        static bool disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
+        return disable || c.ping_timeouts == 0;
       }
 
       template<typename C, typename G>
@@ -929,8 +926,8 @@ namespace infinit
           _config.encrypt = false;
           _config.accept_plain = true;
         }
-        bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+        bool v4 = !elle::os::getenv("INFINIT_NO_IPV4", false);
+        bool v6 = !elle::os::getenv("INFINIT_NO_IPV6", false)
           && doughnut->version() >= elle::Version(0, 7, 0);
         this->_self = Address(this->doughnut()->id());
         if (!local)
