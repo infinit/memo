@@ -353,6 +353,11 @@ namespace infinit
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 
+          typedef
+            std::unordered_map<Address, int>
+            Transfers;
+          ELLE_ATTRIBUTE(Transfers, transfers);
+
         /*-----.
         | Stat |
         `-----*/

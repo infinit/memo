@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <utility>
+#include <random>
 
 #include <elle/bench.hh>
 #include <elle/memory.hh>
@@ -1627,11 +1628,22 @@ namespace infinit
               }
               else
               {
-                std::unique_ptr<blocks::Block> res;
+                static bool balance = !elle::os::inenv("INFINIT_DISABLE_BALANCED_TRANSFERS");
+                if (balance)
+                {
+                  static std::default_random_engine gen;
+                  std::shuffle(peers.begin(), peers.end(), gen);
+                  std::stable_sort(peers.begin(), peers.end(), [this] (auto& p1, auto& p2) ->bool {
+                    return this->_transfers[p1->id()] < this->_transfers[p2->id()];
+                  });
+                }
+                ELLE_DUMP("%s: will try peers in that order: %s", this, peers);
                 for (auto const& peer: peers)
                 {
                   try
                   {
+                    this->_transfers[peer->id()]++;
+                    elle::SafeFinally at_end([&] { this->_transfers[peer->id()]--;});
                     if (auto member = static_cast<PaxosPeer&>(*peer).member().lock())
                       return member->fetch(address, local_version);
                     else
