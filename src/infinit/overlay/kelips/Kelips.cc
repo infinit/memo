@@ -521,30 +521,25 @@ namespace infinit
           NodeLocations locs;
           std::unordered_map<Address, int> loc_indexes;
           for (auto const& r: results)
-          {
             for (auto const& loc: r)
-            {
-              auto it = loc_indexes.find(loc.id());
-              if (it == loc_indexes.end())
+              if (!elle::contains(loc_indexes, loc.id()))
               {
                 locs.push_back(loc);
                 loc_indexes.emplace(loc.id(), locs.size() - 1);
               }
-            }
-          }
           // index results (int list)
-          std::map<std::vector<int>, int> res_indexes;
-          std::vector<std::vector<int>> output;
+          auto res_indexes = std::map<std::vector<int>, int>{};
+          auto output = std::vector<std::vector<int>>{};
           for (auto const& r: results)
           {
-            std::vector<int> o;
-            for (auto const& loc: r)
-            {
-              auto it = loc_indexes.find(loc.id());
-              ELLE_ASSERT(it != loc_indexes.end());
-              o.push_back(it->second);
-            }
-            std::sort(o.begin(), o.end());
+            auto o = elle::make_vector(r,
+                [&](auto const& loc)
+                {
+                  auto it = loc_indexes.find(loc.id());
+                  ELLE_ASSERT(it != loc_indexes.end());
+                  return it->second;
+                });
+            boost::sort(o);
             auto it = res_indexes.find(o);
             if (it == res_indexes.end())
             {
@@ -552,9 +547,7 @@ namespace infinit
               res_indexes.emplace(o, output.size()-1);
             }
             else
-            {
-              output.push_back({it->second * (-1) -1 }); //careful, 0 == -0
-            }
+              output.push_back({-1 * it->second - 1}); // Careful, 0 == -0.
           }
           s.serialize("result_endpoints", locs);
           s.serialize("result_indexes", output);
@@ -634,7 +627,6 @@ namespace infinit
           {
             serialize(input);
           }
-
 
           void
           serialize(elle::serialization::Serializer& s) override
