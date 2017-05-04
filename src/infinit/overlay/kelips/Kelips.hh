@@ -378,6 +378,7 @@ namespace infinit
         std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
         elle::reactor::MultiLockBarrier _in_use;
+        bool _terminating;
       };
     }
   }

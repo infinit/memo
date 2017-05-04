@@ -920,6 +920,7 @@ namespace infinit
         , _dropped_puts(0)
         , _dropped_gets(0)
         , _failed_puts(0)
+        , _terminating(false)
       {
         if (!doughnut->encrypt_options().encrypt_rpc)
         {
@@ -1052,6 +1053,7 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_terminating = true;
         this->doughnut()->dock().utp_server().socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
@@ -1075,10 +1077,12 @@ namespace infinit
             elle::reactor::Waiter waiter = elle::reactor::waiter(conn->on_connection());
             for (int i=0; i< 50; ++i)
             {
-              if (elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
+              if (this->_terminating || elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
                 break;
             }
           }
+          if (this->_terminating)
+            elle::err("terminating");
           if (!conn->connected() && !conn->disconnected())
             throw elle::Error("connect timeout");
           ELLE_DEBUG("linking remote");
@@ -2231,6 +2235,7 @@ namespace infinit
             new elle::reactor::Thread(
               elle::sprintf("rbootstrap(%f->%f)", this->id(), p->sender),
               [this, peer] {
+                auto lock = this->_in_use.lock();
                 try
                 {
                   SerState state = get_serstate(peer);
