@@ -118,7 +118,7 @@
     "description": "GlusterFS is a scale-out network-attached storage file system. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
     "properties": {
       "logic": ["file"],
-      "interface": ["FUSE"],
+      "interface": ["fuse"],
       "model": ["decentralized"],
       "environment": ["controlled"],
       "redundancy": ["replication"],
@@ -211,7 +211,7 @@
     "name": "IPFS",
     "description": "The InterPlanetary File System (IPFS) is a content-addressable peer-to-peer hypermedia distribution protocol. In some ways, IPFS is similar to the Web, but IPFS could be seen as a single BitTorrent swarm, exchanging objects within one Git repository. Note however that IPFS does not focus on providing high-level file system functionalities such as access control, POSIX compliance etc.",
     "properties": {
-      "logic": [],
+      "logic": ["file"],
       "interface": ["api"],
       "model": ["decentralized"],
       "environment": ["controlled", "uncontrolled"],
@@ -351,6 +351,8 @@
       "scalability": ["homogeneous"],
       "pricing": ["pay as you go"],
       "open-source": ["yes"]
+    },
+    "links": {
     }
   },
   "tahoe-lafs": {
