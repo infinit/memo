@@ -187,7 +187,8 @@ namespace infinit
        this->_peers.emplace(local);
        auto local_endpoints = local->server_endpoints();
        ELLE_DEBUG("local endpoints: %s", local_endpoints);
-       this->_infos.emplace(local->id(), local_endpoints, Clock::now());
+       this->_infos.emplace(local->id(), local_endpoints, Clock::now(),
+                            LamportAge(), this->storing());
        for (auto const& key: local->storage()->list())
          this->_address_book.emplace(this->id(), key);
        ELLE_DEBUG("loaded %s entries from storage",
@@ -466,6 +467,14 @@ namespace infinit
             it, [] (StaleEndpoint& e) { e.clear(); });
         else
           this->_stale_endpoints.emplace(peer->connection()->location());
+        // The peer can be missing from `_infos` for external discoveries.
+        if (auto info = elle::find(this->_infos, peer->id()))
+          this->_infos.modify(
+            info,
+            [this] (PeerInfo& pi)
+            {
+              pi.storing(true);
+            });
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
         ELLE_DUMP("%f: signaling connection to %f",
@@ -478,14 +487,15 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
-        // The peer will be missing from `_infos` if the error occurs
-        // during the first advertise.
+        // The peer can be missing from `_infos` if the error occurs during the
+        // first advertise.
         if (auto info = elle::find(this->_infos, id))
           this->_infos.modify(
             info,
             [this] (PeerInfo& pi)
             {
               pi.disappearance().start();
+              pi.storing(boost::none);
             });
         this->_peers.erase(id);
         this->_address_book.erase(id);
@@ -582,11 +592,13 @@ namespace infinit
       {
         return [this, address, n](MemberGenerator::yielder const& yield)
           {
-            ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers",
-                             n, this->_peers.size());
             // Select only nodes that are ready to store.
-            auto const range = elle::as_range(this->_infos.get<1>().equal_range(true));
-            auto const indexes = pick_n(this->_gen, boost::size(range), n);
+
+            auto const range = elle::as_range(this->_infos.get<1>().equal_range(
+                                                boost::optional<bool>(true)));
+            auto size = boost::size(range);
+            ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
+            auto const indexes = pick_n(this->_gen, size, n);
             auto it = range.begin();
             auto prev = 0;
             for (auto r: indexes)
@@ -786,13 +798,12 @@ namespace infinit
               r.make_rpc<std::pair<PeerInfos, Configuration> (PeerInfos const&)>
               ("kouncil_advertise");
             auto res = advertise(send_peers ? this->_infos : PeerInfos());
-            if (!res.second.storing)
-              this->_infos.modify(
-                ELLE_ENFORCE(elle::find(this->_infos, r.id())),
-                [&] (auto& p) { p.storing(false); });
             ELLE_TRACE("fetched %s peers", res.first.size());
             ELLE_DUMP("peers: %s", res.first);
             this->_discover(res.first);
+            this->_infos.modify(
+              ELLE_ENFORCE(elle::find(this->_infos, r.id())),
+              [&] (auto& p) { p.storing(res.second.storing); });
           }
         }
         catch (elle::reactor::network::Error const& e)
@@ -821,19 +832,21 @@ namespace infinit
       Kouncil::PeerInfo::PeerInfo(Address id,
                                   Endpoints endpoints,
                                   int64_t stamp,
-                                  LamportAge d)
+                                  LamportAge d,
+                                  boost::optional<bool> storing)
         : _id(id)
         , _endpoints(std::move(endpoints))
         , _stamp(stamp)
         , _disappearance(d)
-        , _storing(true)
+        , _storing(storing)
       {}
 
       Kouncil::PeerInfo::PeerInfo(Address id,
                                   Endpoints endpoints,
                                   Time t,
-                                  LamportAge d)
-        : PeerInfo{id, endpoints, to_milliseconds(t), d}
+                                  LamportAge d,
+                                  boost::optional<bool> storing)
+        : PeerInfo{id, endpoints, to_milliseconds(t), d, storing}
       {}
 
       Kouncil::PeerInfo::PeerInfo(NodeLocation const& loc)

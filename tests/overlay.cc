@@ -1856,7 +1856,8 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
         ::keys = keys,
         ::storage = std::make_unique<infinit::storage::Memory>(storage_a),
         ::make_overlay = config.overlay_builder,
-        ::port = port);
+        ::port = port,
+        dht::consensus::rebalance_auto_expand = false);
     };
   auto a = make_a();
   auto b = DHT(
@@ -1864,33 +1865,35 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
     ::id = special_id(11),
     ::keys = keys,
     ::storage = std::make_unique<infinit::storage::Memory>(storage_b),
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    dht::consensus::rebalance_auto_expand = false);
   auto c = DHT(
     ::version = config.version,
     ::id = special_id(12),
     ::keys = keys,
     ::storage = std::make_unique<infinit::storage::Memory>(storage_c),
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    dht::consensus::rebalance_auto_expand = false);
   discover(b, *a, false, false, true, true);
   discover(b, c, false, false, true, true);
   ELLE_LOG("insert first block");
   {
     auto block = b.dht->make_block<MutableBlock>(std::string("before"));
     b.dht->seal_and_insert(*block);
-    BOOST_CHECK(storage_a.size() == 1);
-    BOOST_CHECK(storage_b.size() == 1);
-    BOOST_CHECK(storage_c.size() == 1);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 1);
+    BOOST_TEST(storage_c.size() == 1);
   }
   ELLE_LOG("insert second block");
   {
     a->dht->overlay()->storing(false);
     auto block = b.dht->make_block<MutableBlock>(std::string("after"));
     b.dht->seal_and_insert(*block);
-    BOOST_CHECK(storage_a.size() == 1);
-    BOOST_CHECK(storage_b.size() == 2);
-    BOOST_CHECK(storage_c.size() == 2);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 2);
+    BOOST_TEST(storage_c.size() == 2);
   }
-  ELLE_LOG("restart DHT A")
+  ELLE_LOG("stop DHT A")
   {
     port = a->dht->local()->server_endpoints().begin()->port();
     auto disappeared_b = elle::reactor::waiter(
@@ -1901,6 +1904,17 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
       [&] (Address id, bool) { return id == special_id(10); });
     a.reset();
     elle::reactor::wait({disappeared_b, disappeared_c});
+  }
+  ELLE_LOG("insert third block");
+  {
+    auto block = b.dht->make_block<MutableBlock>(std::string("inbetween"));
+    b.dht->seal_and_insert(*block);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 3);
+    BOOST_TEST(storage_c.size() == 3);
+  }
+  ELLE_LOG("restart DHT A")
+  {
     auto discovered_b = elle::reactor::waiter(
       b.dht->overlay()->on_discovery(),
       [&] (NodeLocation l, bool) { return l.id() == special_id(10); });
@@ -1908,15 +1922,16 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
       c.dht->overlay()->on_discovery(),
       [&] (NodeLocation l, bool) { return l.id() == special_id(10); });
     a = make_a();
+    a->dht->overlay()->storing(false);
     elle::reactor::wait({discovered_b, discovered_c});
   }
-  ELLE_LOG("insert third block")
+  ELLE_LOG("insert fourth block")
   {
     auto block = b.dht->make_block<MutableBlock>(std::string("after_restart"));
     b.dht->seal_and_insert(*block);
-    BOOST_CHECK(storage_a.size() == 1);
-    BOOST_CHECK(storage_b.size() == 3);
-    BOOST_CHECK(storage_c.size() == 3);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 4);
+    BOOST_TEST(storage_c.size() == 4);
   }
 }
 

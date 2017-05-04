@@ -9,6 +9,7 @@
 #include <boost/multi_index_container.hpp>
 
 #include <elle/athena/LamportAge.hh>
+#include <elle/optional.hh>
 #include <elle/multi_index_container.hh>
 #include <elle/unordered_map.hh>
 
@@ -178,9 +179,13 @@ namespace infinit
         {
           PeerInfo(Address id, Endpoints endpoints,
                    int64_t stamp = -1,
-                   LamportAge disappearance = {});
-          PeerInfo(Address id, Endpoints endpoints, Time t,
-                   LamportAge disappearance= {});
+                   LamportAge disappearance = {},
+                   boost::optional<bool> storing = {});
+          PeerInfo(Address id,
+                   Endpoints endpoints,
+                   Time t,
+                   LamportAge disappearance = {},
+                   boost::optional<bool> storing = {});
           explicit PeerInfo(NodeLocation const& loc);
           /// Merge peer information in this.
           ///
@@ -196,9 +201,6 @@ namespace infinit
           location() const;
           void
           print(std::ostream& o) const;
-          /// We lost contact with this peer at @a t.
-          void
-          disappear(Time t = Clock::now());
 
           /// Peer id.
           ELLE_ATTRIBUTE_R(Address, id);
@@ -210,7 +212,7 @@ namespace infinit
           /// LamportAge::null() if all is well.
           ELLE_ATTRIBUTE_RWX(LamportAge, disappearance);
           /// Whether that host accepts new blocks
-          ELLE_ATTRIBUTE_RW(bool, storing);
+          ELLE_ATTRIBUTE_RW(boost::optional<bool>, storing);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
@@ -226,7 +228,9 @@ namespace infinit
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>,
             bmi::hashed_non_unique<
-              bmi::const_mem_fun<PeerInfo, bool, &PeerInfo::storing>>>>;
+              bmi::const_mem_fun<PeerInfo,
+                                 boost::optional<bool> const&,
+                                 &PeerInfo::storing>>>>;
         /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
 
