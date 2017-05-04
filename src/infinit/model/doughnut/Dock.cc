@@ -221,7 +221,7 @@ namespace infinit
             auto c = ELLE_ENFORCE(wc.lock());
             if (c->id() == l.id())
             {
-              ELLE_TRACE("%s: already connecting to %f: %s", l, c);
+              ELLE_TRACE("%s: already connecting to %f", l, c);
               return c;
             }
           }
