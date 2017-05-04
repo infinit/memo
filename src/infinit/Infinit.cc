@@ -310,8 +310,9 @@ namespace infinit
       f, this->_network_descriptor_path(network.name),
       network.name, "network", overwrite);
     save(f, network);
-    this->report_local_action()(existed ? "updated" : "saved", "network",
-                                network.name);
+    this->report_local_action()(
+      existed ? "updated" : "saved", "network descriptor",
+      network.name);
   }
 
   void
@@ -321,7 +322,7 @@ namespace infinit
     bfs::ofstream f;
     bool existed = this->_open_write(f, this->_network_path(network.name, self),
                                      network.name, "network", overwrite);
-    this->report_local_action()(existed ? "updated" : "saved", "network",
+    this->report_local_action()(existed ? "updated linked" : "linked", "network",
                                 network.name);
     save(f, network);
   }
