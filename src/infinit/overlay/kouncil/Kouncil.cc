@@ -6,6 +6,7 @@
 #include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
+#include <elle/random.hh>
 #include <elle/range.hh>
 
 #include <elle/das/tuple.hh>
@@ -525,33 +526,6 @@ namespace infinit
         this->on_eviction()(id);
       }
 
-      template <typename E>
-      std::vector<int>
-      pick_n(E& gen, int size, int count)
-      {
-        auto res = std::vector<int>{};
-        if (count < size)
-        {
-          while (res.size() < static_cast<unsigned int>(count))
-          {
-            auto random = std::uniform_int_distribution<>(0, size - 1 - res.size());
-            int v = random(gen);
-            for (auto r: res)
-              if (v >= r)
-                ++v;
-            res.push_back(v);
-            boost::sort(res);
-          }
-        }
-        else
-        {
-          res.resize(size);
-          boost::iota(res, 0);
-        }
-        ELLE_DEBUG("pick_n(%s, %s)=%s", size, count, res);
-        return res;
-      }
-
       Kouncil::StaleEndpoint&
       Kouncil::_remember_stale(NodeLocation const& peer)
       {
@@ -595,20 +569,13 @@ namespace infinit
           {
             if (this->doughnut()->version() < elle::Version(0, 8, 0))
             {
+              auto const size = static_cast<int>(this->_peers.size());
               ELLE_DEBUG("%s: selecting %s nodes from %s peers",
-                         this, n, this->_peers.size());
-              if (static_cast<unsigned int>(n) >= this->_peers.size())
-                for (auto p: this->_peers)
-                  yield(p);
-              else
-              {
-                std::vector<int> indexes = pick_n(
-                  this->_gen,
-                  static_cast<int>(this->_peers.size()),
-                  n);
-                for (auto r: indexes)
-                  yield(this->peers().get<1>()[r]);
-              }
+                         this, n, size);
+              auto const indexes = elle::pick_n(
+                std::min(n, size), size, this->_gen);
+              for (auto r: indexes)
+                yield(this->peers().get<1>()[r]);
             }
             else
             {
@@ -616,9 +583,9 @@ namespace infinit
               auto const range =
                 elle::as_range(this->_infos.get<1>().equal_range(
                                  boost::optional<bool>(true)));
-              auto size = boost::size(range);
+              auto const size = int(boost::size(range));
               ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
-              auto const indexes = pick_n(this->_gen, size, n);
+              auto const indexes = elle::pick_n(std::min(n, size), size, this->_gen);
               auto it = range.begin();
               auto prev = 0;
               for (auto r: indexes)
