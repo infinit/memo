@@ -1,6 +1,7 @@
 #include <chrono>
 
 #include <boost/range/algorithm/sort.hpp>
+#include <boost/range/algorithm_ext/iota.hpp>
 
 #include <elle/find.hh>
 #include <elle/log.hh>
@@ -514,20 +515,28 @@ namespace infinit
         this->on_eviction()(id);
       }
 
-      template<typename E>
+      template <typename E>
       std::vector<int>
       pick_n(E& gen, int size, int count)
       {
-        std::vector<int> res;
-        while (res.size() < static_cast<unsigned int>(count))
+        auto res = std::vector<int>{};
+        if (count < size)
         {
-          std::uniform_int_distribution<> random(0, size - 1 - res.size());
-          int v = random(gen);
-          for (auto r: res)
-            if (v >= r)
-              ++v;
-          res.push_back(v);
+          while (res.size() < static_cast<unsigned int>(count))
+          {
+            auto random = std::uniform_int_distribution<>(0, size - 1 - res.size());
+            int v = random(gen);
+            for (auto r: res)
+              if (v >= r)
+                ++v;
+            res.push_back(v);
+          }
           boost::sort(res);
+        }
+        else
+        {
+          res.resize(size);
+          boost::iota(res, 0);
         }
         return res;
       }
@@ -575,23 +584,16 @@ namespace infinit
           {
             ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers",
                              n, this->_peers.size());
-            auto count = static_cast<int>(this->_infos.get<1>().count(true));
-            auto range = this->_infos.get<1>().equal_range(true);
-            if (n >= count)
-              for (auto p = range.first; p != range.second; ++p)
-                yield(*ELLE_ENFORCE(elle::find(this->peers(), p->id())));
-            else
+            // Select only nodes that are ready to store.
+            auto const range = elle::as_range(this->_infos.get<1>().equal_range(true));
+            auto const indexes = pick_n(this->_gen, boost::size(range), n);
+            auto it = range.begin();
+            auto prev = 0;
+            for (auto r: indexes)
             {
-              std::vector<int> indexes = pick_n(this->_gen, count, n);
-              auto pos = 0;
-              for (auto r: indexes)
-              {
-                auto range = this->_infos.get<1>().equal_range(true);
-                auto it = range.first;
-                std::advance(it, r - pos);
-                pos = r;
-                yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
-              }
+              std::advance(it, r - prev);
+              prev = r;
+              yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
             }
           };
       }
