@@ -1,7 +1,6 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
 #include <algorithm>
-#include <random>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -21,6 +20,7 @@
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
+#include <elle/random.hh>
 #include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
@@ -239,7 +239,8 @@ namespace infinit
 
       namespace packet
       {
-        static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
+        static auto disable_compression
+          = elle::os::getenv("KELIPS_DISABLE_COMPRESSION", false);
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -802,58 +803,14 @@ namespace infinit
         Time startTime;
       };
 
-      template <typename C>
-      auto
-      uniform_index_distribution(C const& c)
+      namespace
       {
-        assert(!c.empty());
-        return std::uniform_int_distribution<>(0, c.size() - 1);
-      }
-
-
-      template<typename C>
-      typename C::iterator
-      random_from(C& container, std::default_random_engine& gen)
-      {
-        if (container.empty())
-          return container.end();
-        auto random = uniform_index_distribution(container);
-        return std::next(container.begin(), random(gen));
-      }
-
-      /// Pick one item at random that matches filter.
-      /// Fallback to unfiltered pick if no element matches.
-      template<typename C, typename F>
-      typename C::iterator
-      random_from(C& container, F filter, std::default_random_engine& gen)
-      {
-        int ncandidates = boost::count_if(container,
-          [&filter](auto const& v) { return filter(v.second);});
-        if (ncandidates)
+        bool
+        without_timeouts(typename Contacts::value_type const& c)
         {
-          auto random = std::uniform_int_distribution<>(0, ncandidates-1);
-          int v = random(gen);
-          auto it = container.begin();
-          while (!filter(it->second))
-            ++it;
-          while (v--)
-          {
-            ++it;
-            while (!filter(it->second))
-              ++it;
-          }
-          return it;
+          static auto disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
+          return disable || c.second.ping_timeouts == 0;
         }
-        else
-          return random_from(container, gen);
-      }
-
-      static
-      bool
-      contact_without_timeouts(Contact const& c)
-      {
-        static bool disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
-        return disable || c.ping_timeouts == 0;
       }
 
       template<typename C, typename G>
@@ -861,7 +818,7 @@ namespace infinit
       pick_n(C const& src, int count, G& generator)
       {
         C res;
-        auto random = uniform_index_distribution(src);
+        auto random = elle::uniform_index_distribution(src);
         for (int i=0; i<count; ++i)
         {
           int v;
@@ -881,7 +838,7 @@ namespace infinit
         C res(src);
         for (int i=0; i<count; ++i)
         {
-          auto random = uniform_index_distribution(res);
+          auto random = elle::uniform_index_distribution(res);
           int v = random(generator);
           std::swap(res[res.size()-1], res[v]);
           res.pop_back();
@@ -2457,7 +2414,7 @@ namespace infinit
         ELLE_TRACE("%s: route %s", *this, p->ttl);
         p->ttl--;
         p->sender = _self;
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it != _state.contacts[fg].end())
           send(*p, it->second);
       }
@@ -2532,7 +2489,7 @@ namespace infinit
         }
         p->ttl--;
         p->sender = _self;
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it != _state.contacts[fg].end())
           send(*p, it->second);
       }
@@ -2669,9 +2626,9 @@ namespace infinit
           return;
         }
         // Forward the packet to an other node
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it == _state.contacts[fg].end())
-          it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+          it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
         if (it == _state.contacts[_group].end())
         {
           ELLE_ERR("%s: No contact founds", *this);
@@ -2745,9 +2702,9 @@ namespace infinit
           r->startTime = now();
           r->barrier.close();
           // Select target node
-          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+          auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+            it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             ELLE_TRACE("no contact to forward GET to");
@@ -2865,10 +2822,10 @@ namespace infinit
             r->startTime = now();
             r->barrier.close();
             // Select target node
-            auto it = random_from(_state.contacts[fg], contact_without_timeouts,
+            auto it = elle::pick_one(_state.contacts[fg], without_timeouts,
                                   _gen);
             if (it == _state.contacts[fg].end())
-              it = random_from(_state.contacts[_group], contact_without_timeouts,
+              it = elle::pick_one(_state.contacts[_group], without_timeouts,
                                _gen);
             if (it == _state.contacts[_group].end())
             {
@@ -2959,9 +2916,9 @@ namespace infinit
           r->barrier.close();
           elle::Buffer buf = serialize(req, *this->doughnut());
           // Select target node
-          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+          auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+            it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             if (fg != this->_group || this->_observer)
