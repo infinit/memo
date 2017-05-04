@@ -639,129 +639,131 @@ ELLE_TEST_SCHEDULED(create_excl)
     elle::reactor::filesystem::Error);
 }
 
-// ELLE_TEST_SCHEDULED(multiple_writers)
-// {
-//   infinit::storage::Memory::Blocks blocks;
-//   struct stat st;
-//   auto servers = DHTs(1, {},
-//                with_cache = true,
-//                storage = std::make_unique<infinit::storage::Memory>(blocks));
-//   auto client = servers.client(false);
-//   char buffer[1024];
-//   initialize(buffer);
-//   auto b = elle::WeakBuffer(buffer, 1024);
-//   char buffer2[1024];
-//   auto b2 = elle::WeakBuffer(buffer2, 1024);
-//   {
-//     auto h1 = client.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
-//     auto h2 = client.fs->path("/file")->open(O_RDWR, 0644);
-//     h1->write(b, 1024, 0);
-//     auto sz = h2->read(b2, 1024, 0);
-//     BOOST_CHECK_EQUAL(sz, 1024);
-//     BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
-//     h2->write(b, 1024, 512);
-//     sz = h1->read(b2, 1024, 512);
-//     BOOST_CHECK_EQUAL(sz, 1024);
-//     BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
-//   }
-//   bool do_yield = true;
-//   auto seq_write = [&] {
-//       for (int i=0; i<5; ++i)
-//       {
-//         auto h = client.fs->path("/file")->open(O_RDWR, 0644);
-//         for (int o = 0; o < 1024*30; ++o)
-//         {
-//           h->write(b, 1024, o*1024);
-//           if (do_yield)
-//             elle::reactor::yield();
-//         }
-//       }
-//   };
-//   {
-//     do_yield = true;
-//     elle::reactor::Thread t1("writer 1", seq_write);
-//     elle::reactor::Thread t2("writer 2", seq_write);
-//     elle::reactor::Thread t3("writer 3", seq_write);
-//     elle::reactor::Thread t4("writer 4", seq_write);
-//     elle::reactor::wait({t1, t2, t3, t4});
-//     client.fs->path("/file")->stat(&st);
-//     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
-//     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
-//     for (int o = 0; o < 1024*30; ++o)
-//     {
-//       h->read(b2, 1024, o * 1024);
-//       BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
-//     }
-//     BOOST_CHECK_LE(blocks.size(), 50);
-//   }
-//   {
-//     do_yield = true;
-//     elle::reactor::Thread t1("writer 1", seq_write);
-//     for (int i=0; i<1024 * 10; ++i)
-//       elle::reactor::yield();
-//     elle::reactor::Thread t2("writer 2", seq_write);
-//     for (int i=0; i<1024 * 10; ++i)
-//       elle::reactor::yield();
-//     elle::reactor::Thread t3("writer 3", seq_write);
-//     for (int i=0; i<1024 * 10; ++i)
-//       elle::reactor::yield();
-//     elle::reactor::Thread t4("writer 4", seq_write);
-//     elle::reactor::wait({t1, t2, t3, t4});
-//     client.fs->path("/file")->stat(&st);
-//     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
-//     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
-//     for (int o = 0; o < 1024*30; ++o)
-//     {
-//       h->read(b2, 1024, o * 1024);
-//       BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
-//     }
-//     BOOST_CHECK_LE(blocks.size(), 50);
-//   }
-//   {
-//     do_yield = false;
-//     elle::reactor::Thread t1("writer 1", seq_write);
-//     elle::reactor::Thread t2("writer 2", seq_write);
-//     elle::reactor::Thread t3("writer 3", seq_write);
-//     elle::reactor::Thread t4("writer 4", seq_write);
-//     elle::reactor::wait({t1, t2, t3, t4});
-//     client.fs->path("/file")->stat(&st);
-//     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
-//     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
-//     for (int o = 0; o < 1024*30; ++o)
-//     {
-//       h->read(b2, 1024, o * 1024);
-//       BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
-//     }
-//     BOOST_CHECK_LE(blocks.size(), 50);
-//   }
-//   client.fs->path("/file2")->create(O_RDWR|O_CREAT, 0644);
-//   auto random_write = [&] {
-//     for (int i=0; i<100; ++i)
-//     {
-//       auto h = client.fs->path("/file2")->open(O_RDWR, 0644);
-//       auto o = (rand()%30)*1024 * 1024 +  (rand()%1024) * 1024 + (rand()%1024);
-//       h->write(b, 1024, o);
-//       if (do_yield)
-//         elle::reactor::yield();
-//     }
-//   };
-//   {
-//     do_yield = true;
-//     elle::reactor::Thread t1("writer 1", random_write);
-//     elle::reactor::Thread t2("writer 2", random_write);
-//     elle::reactor::Thread t3("writer 3", random_write);
-//     elle::reactor::Thread t4("writer 4", random_write);
-//     elle::reactor::wait({t1, t2, t3, t4});
-//     client.fs->path("/file2")->stat(&st);
-//     ELLE_TRACE("resulting file: %s bytes", st.st_size);
-//     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
-//     for (int o=0; o < st.st_size; o+= 1024)
-//     {
-//       auto len = std::min(off_t(1024), off_t(st.st_size-o));
-//       h->read(elle::WeakBuffer(buffer, len), len, o);
-//     }
-//   }
-// }
+#if 0
+ELLE_TEST_SCHEDULED(multiple_writers)
+{
+  infinit::storage::Memory::Blocks blocks;
+  struct stat st;
+  auto servers = DHTs(1, {},
+               with_cache = true,
+               storage = std::make_unique<infinit::storage::Memory>(blocks));
+  auto client = servers.client(false);
+  char buffer[1024];
+  initialize(buffer);
+  auto b = elle::WeakBuffer(buffer, 1024);
+  char buffer2[1024];
+  auto b2 = elle::WeakBuffer(buffer2, 1024);
+  {
+    auto h1 = client.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
+    auto h2 = client.fs->path("/file")->open(O_RDWR, 0644);
+    h1->write(b, 1024, 0);
+    auto sz = h2->read(b2, 1024, 0);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    h2->write(b, 1024, 512);
+    sz = h1->read(b2, 1024, 512);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+  }
+  bool do_yield = true;
+  auto seq_write = [&] {
+      for (int i=0; i<5; ++i)
+      {
+        auto h = client.fs->path("/file")->open(O_RDWR, 0644);
+        for (int o = 0; o < 1024*30; ++o)
+        {
+          h->write(b, 1024, o*1024);
+          if (do_yield)
+            elle::reactor::yield();
+        }
+      }
+  };
+  {
+    do_yield = true;
+    elle::reactor::Thread t1("writer 1", seq_write);
+    elle::reactor::Thread t2("writer 2", seq_write);
+    elle::reactor::Thread t3("writer 3", seq_write);
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+  {
+    do_yield = true;
+    elle::reactor::Thread t1("writer 1", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      elle::reactor::yield();
+    elle::reactor::Thread t2("writer 2", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      elle::reactor::yield();
+    elle::reactor::Thread t3("writer 3", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      elle::reactor::yield();
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+  {
+    do_yield = false;
+    elle::reactor::Thread t1("writer 1", seq_write);
+    elle::reactor::Thread t2("writer 2", seq_write);
+    elle::reactor::Thread t3("writer 3", seq_write);
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+  client.fs->path("/file2")->create(O_RDWR|O_CREAT, 0644);
+  auto random_write = [&] {
+    for (int i=0; i<100; ++i)
+    {
+      auto h = client.fs->path("/file2")->open(O_RDWR, 0644);
+      auto o = (rand()%30)*1024 * 1024 +  (rand()%1024) * 1024 + (rand()%1024);
+      h->write(b, 1024, o);
+      if (do_yield)
+        elle::reactor::yield();
+    }
+  };
+  {
+    do_yield = true;
+    elle::reactor::Thread t1("writer 1", random_write);
+    elle::reactor::Thread t2("writer 2", random_write);
+    elle::reactor::Thread t3("writer 3", random_write);
+    elle::reactor::Thread t4("writer 4", random_write);
+    elle::reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file2")->stat(&st);
+    ELLE_TRACE("resulting file: %s bytes", st.st_size);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o=0; o < st.st_size; o+= 1024)
+    {
+      auto len = std::min(off_t(1024), off_t(st.st_size-o));
+      h->read(elle::WeakBuffer(buffer, len), len, o);
+    }
+  }
+}
+#endif
 
 ELLE_TEST_SCHEDULED(sparse_file)
 {
