@@ -96,8 +96,8 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::global_fun<
-                Peer const&, Address, &_details::peer_id>>>>;
-
+                Peer const&, Address, &_details::peer_id>>,
+            bmi::random_access<>>>;
         /// Local node.
         using Local = infinit::model::doughnut::Local;
         /// Remote node.

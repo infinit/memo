@@ -593,20 +593,40 @@ namespace infinit
       {
         return [this, address, n](MemberGenerator::yielder const& yield)
           {
-            // Select only nodes that are ready to store.
-
-            auto const range = elle::as_range(this->_infos.get<1>().equal_range(
-                                                boost::optional<bool>(true)));
-            auto size = boost::size(range);
-            ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
-            auto const indexes = pick_n(this->_gen, size, n);
-            auto it = range.begin();
-            auto prev = 0;
-            for (auto r: indexes)
+            if (this->doughnut()->version() < elle::Version(0, 8, 0))
             {
-              std::advance(it, r - prev);
-              prev = r;
-              yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
+              ELLE_DEBUG("%s: selecting %s nodes from %s peers",
+                         this, n, this->_peers.size());
+              if (static_cast<unsigned int>(n) >= this->_peers.size())
+                for (auto p: this->_peers)
+                  yield(p);
+              else
+              {
+                std::vector<int> indexes = pick_n(
+                  this->_gen,
+                  static_cast<int>(this->_peers.size()),
+                  n);
+                for (auto r: indexes)
+                  yield(this->peers().get<1>()[r]);
+              }
+            }
+            else
+            {
+              // Select only nodes that are ready to store.
+              auto const range =
+                elle::as_range(this->_infos.get<1>().equal_range(
+                                 boost::optional<bool>(true)));
+              auto size = boost::size(range);
+              ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
+              auto const indexes = pick_n(this->_gen, size, n);
+              auto it = range.begin();
+              auto prev = 0;
+              for (auto r: indexes)
+              {
+                std::advance(it, r - prev);
+                prev = r;
+                yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
+              }
             }
           };
       }
