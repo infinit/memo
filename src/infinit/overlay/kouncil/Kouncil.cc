@@ -540,14 +540,15 @@ namespace infinit
               if (v >= r)
                 ++v;
             res.push_back(v);
+            boost::sort(res);
           }
-          boost::sort(res);
         }
         else
         {
           res.resize(size);
           boost::iota(res, 0);
         }
+        ELLE_DEBUG("pick_n(%s, %s)=%s", size, count, res);
         return res;
       }
 
