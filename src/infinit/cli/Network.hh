@@ -16,6 +16,7 @@ namespace infinit
       : public Object<Network>
     {
     public:
+      using Self = Network;
       Network(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
@@ -34,7 +35,7 @@ namespace infinit
                                     cli::pull,
                                     cli::push,
                                     cli::run,
-                                    cli::stats,
+                                    cli::stat,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -43,7 +44,7 @@ namespace infinit
       | Mode: create.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::description = boost::optional<std::string>()),
                  decltype(cli::storage = Strings{}),
@@ -114,7 +115,7 @@ namespace infinit
       | Mode: delete.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::pull = false),
                  decltype(cli::purge = false),
@@ -131,7 +132,7 @@ namespace infinit
       | Mode: export.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>())),
            decltype(modes::mode_export)>
@@ -144,7 +145,7 @@ namespace infinit
       | Mode: fetch.  |
       `--------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name = boost::optional<std::string>())),
            decltype(modes::mode_fetch)>
       fetch;
@@ -155,7 +156,7 @@ namespace infinit
       | Mode: import.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::input = boost::optional<std::string>())),
            decltype(modes::mode_import)>
       import;
@@ -168,7 +169,7 @@ namespace infinit
       `----------------*/
 
 #ifndef INFINIT_WINDOWS
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>()),
                  decltype(cli::status = false),
@@ -191,7 +192,7 @@ namespace infinit
       | Mode: link.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::storage = Strings{}),
                  decltype(cli::output = boost::optional<std::string>()),
@@ -209,7 +210,7 @@ namespace infinit
       | Mode: list.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (),
            decltype(modes::mode_list)>
       list;
@@ -221,7 +222,7 @@ namespace infinit
       | Mode: list_services.  |
       `----------------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::peer = Strings()),
                  decltype(cli::async = false),
@@ -276,7 +277,7 @@ namespace infinit
       | Mode: list_storage.  |
       `---------------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>),
            decltype(modes::mode_list_storage)>
       list_storage;
@@ -288,7 +289,7 @@ namespace infinit
       | Mode: pull.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::purge = false)),
            decltype(modes::mode_pull)>
@@ -302,7 +303,7 @@ namespace infinit
       | Mode: push.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>),
            decltype(modes::mode_push)>
       push;
@@ -314,7 +315,7 @@ namespace infinit
       | Mode: run.  |
       `------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::input = boost::optional<std::string>()),
 #ifndef INFINIT_WINDOWS
@@ -391,26 +392,22 @@ namespace infinit
                boost::optional<bool> paxos_rebalancing_inspect = {});
 
 
-      /*--------------.
-      | Mode: stats.  |
-      `--------------*/
+      /*-------------.
+      | Mode: stat.  |
+      `-------------*/
 
-      Mode<Network,
-           void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_stats)>
-      stats;
+      MODE(stat,
+           decltype(cli::name)::Formal<std::string const&>);
       void
-      mode_stats(std::string const& network_name);
+      mode_stat(std::string const& network_name);
 
 
       /*---------------.
       | Mode: unlink.  |
       `---------------*/
 
-      Mode<Network,
-           void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_unlink)>
-      unlink;
+      MODE(unlink,
+          decltype(cli::name)::Formal<std::string const&>);
       void
       mode_unlink(std::string const& network_name);
 
@@ -419,7 +416,7 @@ namespace infinit
       | Mode: update.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::description = boost::optional<std::string>()),
                  decltype(cli::port = boost::optional<int>()),

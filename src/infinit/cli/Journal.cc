@@ -115,9 +115,9 @@ namespace infinit
       elle::serialization::json::serialize(op, std::cout);
     }
 
-    /*--------------.
-    | Mode: stats.  |
-    `--------------*/
+    /*-------------.
+    | Mode: stat.  |
+    `-------------*/
 
     void
     Journal::mode_stat(boost::optional<std::string> const& network_name)

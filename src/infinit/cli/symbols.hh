@@ -232,7 +232,6 @@ namespace infinit
     ELLE_DAS_SYMBOL(signup);
     ELLE_DAS_SYMBOL(silo);
     ELLE_DAS_SYMBOL(start);
-    ELLE_DAS_SYMBOL(stats);
     ELLE_DAS_SYMBOL(status);
     ELLE_DAS_SYMBOL(stop);
     ELLE_DAS_SYMBOL(syscall);
@@ -295,7 +294,6 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_signup);
       ELLE_DAS_SYMBOL(mode_start);
       ELLE_DAS_SYMBOL(mode_stat);
-      ELLE_DAS_SYMBOL(mode_stats);
       ELLE_DAS_SYMBOL(mode_status);
       ELLE_DAS_SYMBOL(mode_stop);
       ELLE_DAS_SYMBOL(mode_system);

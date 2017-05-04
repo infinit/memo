@@ -177,7 +177,7 @@ namespace infinit
 #endif
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none)
-      , stats(*this,
+      , stat(*this,
               "Fetch stats of a network on {hub}",
               cli::name)
       , unlink(*this,
@@ -1387,14 +1387,14 @@ namespace infinit
     }
 
 
-    /*--------------.
-    | Mode: stats.  |
-    `--------------*/
+    /*-------------.
+    | Mode: stat.  |
+    `-------------*/
 
     void
-    Network::mode_stats(std::string const& network_name)
+    Network::mode_stat(std::string const& network_name)
     {
-      ELLE_TRACE_SCOPE("stats");
+      ELLE_TRACE_SCOPE("stat");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
