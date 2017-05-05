@@ -569,13 +569,11 @@ namespace infinit
           {
             if (this->doughnut()->version() < elle::Version(0, 8, 0))
             {
-              auto const size = static_cast<int>(this->_peers.size());
-              ELLE_DEBUG("%s: selecting %s nodes from %s peers",
-                         this, n, size);
-              auto const indexes = elle::pick_n(
-                std::min(n, size), size, this->_gen);
-              for (auto r: indexes)
-                yield(this->peers().get<1>()[r]);
+              auto const& range = this->peers().get<1>();
+              auto const size = int(boost::size(range));
+              ELLE_DEBUG("selecting %s nodes from %s peers", n, size);
+              for (auto i: elle::pick_n(std::min(n, size), range, this->_gen))
+                yield(*i);
             }
             else
             {
@@ -585,15 +583,8 @@ namespace infinit
                                  boost::optional<bool>(true)));
               auto const size = int(boost::size(range));
               ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
-              auto const indexes = elle::pick_n(std::min(n, size), size, this->_gen);
-              auto it = range.begin();
-              auto prev = 0;
-              for (auto r: indexes)
-              {
-                std::advance(it, r - prev);
-                prev = r;
-                yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
-              }
+              for (auto i: elle::pick_n(std::min(n, size), range, this->_gen))
+                yield(*ELLE_ENFORCE(elle::find(this->peers(), i->id())));
             }
           };
       }
