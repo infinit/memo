@@ -811,59 +811,30 @@ namespace infinit
           static auto disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
           return disable || c.second.ping_timeouts == 0;
         }
-      }
 
-      template<typename C, typename G>
-      C
-      pick_n(C const& src, int count, G& generator)
-      {
-        C res;
-        auto random = elle::uniform_index_distribution(src);
-        for (int i=0; i<count; ++i)
+        /// A container of count random elements of src.
+        template <typename C, typename G>
+        C
+        pick_n(C const& src, int count, G& generator)
         {
-          int v;
-          do {
-            v = random(generator);
+          return elle::make_vector(elle::pick_n(count, src, generator),
+                                   [](auto i) { return *i; });
+        }
+
+        /// A container of elements of src where `count` of them were removed.
+        template <typename C, typename G>
+        C
+        remove_n(C res, int count, G& generator)
+        {
+          for (int i=0; i<count; ++i)
+          {
+            auto random = elle::uniform_index_distribution(res);
+            int v = random(generator);
+            std::swap(res[res.size()-1], res[v]);
+            res.pop_back();
           }
-          while (any_of_equal(res, src[v]));
-          res.push_back(src[v]);
+          return res;
         }
-        return res;
-      }
-
-      template<typename C, typename G>
-      C
-      remove_n(C const& src, int count, G& generator)
-      {
-        C res(src);
-        for (int i=0; i<count; ++i)
-        {
-          auto random = elle::uniform_index_distribution(res);
-          int v = random(generator);
-          std::swap(res[res.size()-1], res[v]);
-          res.pop_back();
-        }
-        return res;
-      }
-
-      template<typename Gen>
-      auto
-      random_indexes(int num, int size, Gen& gen)
-      {
-        // FIXME: inefficient.  See Fisher-Yates.
-        assert(num <= size);
-        auto random = std::uniform_int_distribution<>(0, size-1);
-        auto res = std::vector<int>{};
-        for (int i=0; i<num; ++i)
-        {
-          int v = random(gen);
-          if (any_of_equal(res, v))
-            --i;
-          else
-            res.push_back(v);
-        }
-        boost::sort(res);
-        return res;
       }
 
       Node::Node(Configuration const& config,
