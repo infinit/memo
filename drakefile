@@ -284,7 +284,8 @@ def configure(
     grpc_lib = drake.copy(grpc.grpc_lib, libdir, strip_prefix = True)
     extra_libs.append(grpc_lib)
     if not windows:
-      protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True)
+      protobuf_include = grpc.grpc.protobuf_include
+      protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True, builder = PatchAndInstall)
       extra_libs.append(protobuf_lib)
   else:
     infinit_sources += grpc.grpc.sources
@@ -301,12 +302,12 @@ def configure(
                                cxx_toolkit = cxx_toolkit,
                                in_cxx_config = cxx_config,
                                protoc = grpc.grpc.protoc,
-                               protobuf_include = grpc.grpc.protobuf_include,
-                               protobuf_lib = grpc.grpc.protobuf_lib)
+                               protobuf_include = protobuf_include,
+                               protobuf_lib = protobuf_lib)
     for p in prometheus.prometheus_include_path:
       cxx_config.add_system_include_path(p)
       cxx_config_infinit.add_system_include_path(p)
-    prometheus_lib = drake.copy(prometheus.prometheus_lib, 'lib',
+    prometheus_lib = drake.copy(prometheus.prometheus_lib, libdir,
                                 strip_prefix = True)
     extra_libs.append(prometheus_lib)
     drake.node('src/infinit/model/prometheus.hh')\
@@ -368,7 +369,7 @@ def configure(
   if enable_prometheus:
     for p in prometheus.prometheus_include_path:
       cli_cxx_config.add_system_include_path(p)
-  cli_cxx_config.add_system_include_path(grpc.grpc.protobuf_include)
+  cli_cxx_config.add_system_include_path(protobuf_include)
 
   cli_cxx_config.lib_path_runtime('../lib')
   if not windows:
@@ -1127,7 +1128,7 @@ def configure(
   cxx_config_bench += elle.das.config
   cxx_config_bench.lib_path_runtime('../lib')
   cxx_config_bench.add_local_include_path('tests')
-  cxx_config_bench.add_system_include_path(grpc.grpc.protobuf_include)
+  cxx_config_bench.add_system_include_path(protobuf_include)
   bench_nodes = drake.nodes(
     'tests/DHT.hh',
   )
