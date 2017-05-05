@@ -17,6 +17,7 @@
 
 #include <elle/algorithm.hh>
 #include <elle/bench.hh>
+#include <elle/find.hh>
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
@@ -2248,26 +2249,30 @@ namespace infinit
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
         int fg = group_of(p->fileAddress);
-        auto its = _state.files.equal_range(p->fileAddress);
-        // Shuffle the match list
-        auto iterators = std::vector<decltype(its.first)>{};
-        for (auto it = its.first; it != its.second; ++it)
-          iterators.push_back(it);
-        std::shuffle(iterators.begin(), iterators.end(), elle::random_engine());
-        for (auto iti = iterators.begin(); iti != iterators.end(); ++iti)
+        auto const iterators = [&]
+          {
+            auto its = _state.files.equal_range(p->fileAddress);
+            auto res = std::vector<decltype(its.first)>{};
+            for (auto it = its.first; it != its.second; ++it)
+              res.push_back(it);
+            // Shuffle the match list
+            std::shuffle(res.begin(), res.end(), elle::random_engine());
+            return res;
+          }();
+        for (auto it: iterators)
         {
           ++nhit;
-          auto it = *iti;
+          auto& file = *it;
           // Check if this one is already in results
           if (any_of(p->result,
                      [&](NodeLocation const& r) {
-                       return r.id() == it->second.home_node;
+                       return r.id() == file.second.home_node;
                      }))
             continue;
           // find the corresponding endpoints
           auto endpoints = Endpoints{};
           bool found = false;
-          if (it->second.home_node == _self)
+          if (file.second.home_node == _self)
           {
             ELLE_DEBUG("%s: found self", *this);
             if (_local_endpoints.empty())
@@ -2278,30 +2283,26 @@ namespace infinit
                 this->_port);
             }
             else
-            {
               endpoints = to_endpoints(_local_endpoints);
-            }
+            found = true;
+          }
+          else if (auto contact_it
+                     = elle::find(_state.contacts[fg], file.second.home_node))
+          {
+            endpoints = to_endpoints(contact_it->second.endpoints);
+            ELLE_DEBUG("%s: found other at %f:%s",
+                       *this, file.second.home_node, endpoints);
             found = true;
           }
           else
+            ELLE_TRACE("%s: have file but not node", *this);
+          if (found)
           {
-            auto contact_it = _state.contacts[fg].find(it->second.home_node);
-            if (contact_it != _state.contacts[fg].end())
-            {
-              endpoints = to_endpoints(contact_it->second.endpoints);
-              ELLE_DEBUG("%s: found other at %f:%s",
-                         *this, it->second.home_node, endpoints);
-              found = true;
-            }
-            else
-              ELLE_TRACE("%s: have file but not node", *this);
+            auto res = NodeLocation{file.second.home_node, endpoints};
+            p->result.push_back(res);
+            if (yield)
+              (*yield)(res);
           }
-          if (!found)
-            continue;
-          NodeLocation res(it->second.home_node, endpoints);
-          p->result.push_back(res);
-          if (yield)
-            (*yield)(res);
         }
         nlocalhit.add(nhit);
       }
