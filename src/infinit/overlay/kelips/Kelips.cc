@@ -828,8 +828,7 @@ namespace infinit
         {
           for (int i=0; i<count; ++i)
           {
-            auto random = elle::uniform_index_distribution(res);
-            int v = random(generator);
+            int v = elle::pick_one(res.size(), generator);
             std::swap(res[res.size()-1], res[v]);
             res.pop_back();
           }
