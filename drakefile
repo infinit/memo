@@ -278,6 +278,7 @@ def configure(
   ## ------ ##
   grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config,
                        PatchAndInstall = PatchAndInstall)
+  protobuf_include = grpc.grpc.protobuf_include
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
@@ -285,7 +286,6 @@ def configure(
     grpc_lib = drake.copy(grpc.grpc_lib, libdir, strip_prefix = True)
     extra_libs.append(grpc_lib)
     if not windows:
-      protobuf_include = grpc.grpc.protobuf_include
       protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True, builder = PatchAndInstall)
       extra_libs.append(protobuf_lib)
   else:
