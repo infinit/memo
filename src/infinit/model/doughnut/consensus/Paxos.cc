@@ -1633,7 +1633,7 @@ namespace infinit
                 {
                   static std::default_random_engine gen;
                   std::shuffle(peers.begin(), peers.end(), gen);
-                  std::stable_sort(peers.begin(), peers.end(), [this] (auto& p1, auto& p2) ->bool {
+                  std::sort(peers.begin(), peers.end(), [this] (auto& p1, auto& p2) ->bool {
                     return this->_transfers[p1->id()] < this->_transfers[p2->id()];
                   });
                 }
