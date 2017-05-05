@@ -1,15 +1,15 @@
 #include <arpa/inet.h>
 
-#include <boost/random.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <elle/cryptography/hash.hh>
+#include <elle/random.hh>
 #include <elle/reactor/filesystem.hh>
+#include <elle/system/Process.hh>
 
 #include <infinit/model/steg/Steg.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/Block.hh>
-#include <elle/cryptography/hash.hh>
-#include <elle/system/Process.hh>
 
 extern "C"
 {
@@ -46,11 +46,10 @@ public:
 };
 
 
-Steg::Steg(boost::filesystem::path const& storage, std::string const& pass)
+Steg::Steg(bfs::path const& storage, std::string const& pass)
   : _storage_path(storage)
   , _passphrase(pass)
 {
-  _rng.seed(static_cast<unsigned int>(std::time(0)));
   // populate file list
   for (auto const& p: bfs::recursive_directory_iterator(_storage_path))
     if (p.extension() == ".jpg" || p.extension() == ".JPG")
@@ -68,17 +67,14 @@ Steg::_pick() const
 {
   if (_free_blocks.empty())
     throw std::bad_alloc();
-  auto random =boost::random::uniform_int_distribution<>(0, _free_blocks.size());
-  int v = random(_rng);
-  boost::filesystem::path p = _free_blocks[v];
-  _free_blocks[v] =  _free_blocks[_free_blocks.size() - 1];
+  auto v = elle::pick_one(_free_blocks.size());
+  bfs::path p = _free_blocks[v];
+  _free_blocks[v] = _free_blocks[_free_blocks.size() - 1];
   _free_blocks.pop_back();
   auto const hash = elle::cryptography::hash::sha256(p.string());
   auto const res = Address(hash.contents());
-  _cache.insert(std::make_pair(res, p));
-
+  _cache.emplace(res, p);
   _used_blocks.push_back(res);
-
   return res;
 }
 
@@ -118,7 +114,7 @@ Steg::_store(blocks::Block& block)
 void
 Steg::__store(blocks::Block& block)
 {
-  if (block.data().size() == 0)
+  if (block.data().empty())
     return;
   elle::Buffer b;
   b.append("steg", 4);
