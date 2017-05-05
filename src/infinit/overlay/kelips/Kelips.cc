@@ -1741,26 +1741,25 @@ namespace infinit
       std::unordered_map<Address, std::vector<TimedEndpoint>>
       Node::pickContacts()
       {
-        std::unordered_map<Address, std::vector<TimedEndpoint>> res;
+        auto res = std::unordered_map<Address, std::vector<TimedEndpoint>>{};
         // start with our own group
         unsigned int max_new = _config.gossip.contacts_group / 2;
         unsigned int max_old = _config.gossip.contacts_group / 2;
         // insert new contacts
-        std::vector<Address> new_files;
+        auto new_files = std::vector<Address>{};
         for (auto const& f: _state.contacts[_group])
-        {
           if (f.second.gossip_count < _config.gossip.new_threshold)
             new_files.push_back(f.first);
-        }
         filterAndInsert(new_files, max_new, _group, res);
         new_files.clear();
         // insert old contacts, for which we got a refresh but did not gossip about
+        auto const timeout = std::chrono::milliseconds(_config.gossip.old_threshold_ms);
         for (auto const& f: _state.contacts[_group])
         {
           auto last_seen = endpoints_max(f.second.endpoints);
           if (f.second.last_gossip < last_seen
-            && now() - last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
-            && res.find(f.first) == res.end())
+              && now() - last_seen > timeout
+              && res.find(f.first) == res.end())
             new_files.push_back(f.first);
         }
         filterAndInsert(new_files, max_old, _group, res);
@@ -1804,9 +1803,9 @@ namespace infinit
           {
             auto last_seen = endpoints_max(f.second.endpoints);
             if (f.second.last_gossip < last_seen
-              && now() - last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
-              && res.find(f.first) == res.end())
-                new_contacts.push_back(&f.second);
+                && now() - last_seen > timeout
+                && res.find(f.first) == res.end())
+              new_contacts.push_back(&f.second);
           }
         }
         filterAndInsert2(new_contacts, max_old, res, _gen);
@@ -1852,19 +1851,18 @@ namespace infinit
         int max_new = _config.gossip.files / 2;
         int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
         ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
+        auto const timeout = std::chrono::milliseconds(_config.gossip.old_threshold_ms);
         // update self file last seen, this will avoid us some ifs at other places
         int new_candidates = 0;
         int old_candidates = 0;
         for (auto& f: _state.files)
         {
           if (f.second.home_node == _self)
-          {
             f.second.last_seen = current_time;
-          }
           if (f.second.gossip_count < _config.gossip.new_threshold)
             new_candidates++;
           if (f.second.home_node == _self
-            && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms)))
+              && current_time - f.second.last_gossip > timeout)
             old_candidates++;
         }
         bench_new_candidates.add(new_candidates);
@@ -1896,7 +1894,7 @@ namespace infinit
         else
         {
           // insert new files
-          std::vector<std::pair<Address, std::pair<Time, Address>>> new_files;
+          auto new_files = std::vector<std::pair<Address, std::pair<Time, Address>>>{};
           for (auto const& f: _state.files)
           {
             if (f.second.gossip_count < _config.gossip.new_threshold)
@@ -1911,9 +1909,7 @@ namespace infinit
               new_files = remove_n(new_files, new_files.size() - max_new, _gen);
           }
           for (auto const& nf: new_files)
-          {
             res.insert(nf);
-          }
         }
         if (old_candidates >= max_old * 2)
         {
@@ -1926,7 +1922,7 @@ namespace infinit
             if (ipos >= signed(indexes.size()))
               break;
             if (f.second.home_node == _self
-              && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms)))
+                && current_time - f.second.last_gossip > timeout)
             {
               if (idx == indexes[ipos])
               {
@@ -1941,14 +1937,12 @@ namespace infinit
         else
         {
           // insert old files, only our own for which we can update the last_seen value
-          std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
+          auto old_files = std::vector<std::pair<Address, std::pair<Time, Address>>>{};
           for (auto& f: _state.files)
-          {
             if (f.second.home_node == _self
-              && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
-              && !has(res, f.first, f.second.home_node))
+                && (current_time - f.second.last_gossip > timeout)
+                && !has(res, f.first, f.second.home_node))
               old_files.emplace_back(f.first, std::make_pair(f.second.last_seen, f.second.home_node));
-          }
           if (signed(old_files.size()) > max_old)
           {
             if (max_old < signed(old_files.size()) - max_old)
