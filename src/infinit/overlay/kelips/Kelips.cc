@@ -1873,7 +1873,7 @@ namespace infinit
         if (new_candidates  >= max_new * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          auto indexes = random_indexes(max_new, new_candidates, _gen);
+          auto indexes = elle::pick_n(max_new, new_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
@@ -1918,7 +1918,7 @@ namespace infinit
         if (old_candidates >= max_old * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          auto indexes = random_indexes(max_old, old_candidates, _gen);
+          auto indexes = elle::pick_n(max_old, old_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
