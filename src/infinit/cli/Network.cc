@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <infinit/cli/Network.hh>
 
 #include <boost/algorithm/string/trim.hpp>
@@ -47,7 +49,7 @@ namespace infinit
                "Create a network",
                cli::name,
                cli::description = boost::none,
-               cli::storage = Strings{},
+               cli::silo = Strings{},
                cli::port = boost::none,
                cli::replication_factor = 1,
                cli::eviction_delay = boost::none,
@@ -104,7 +106,7 @@ namespace infinit
       , link(*this,
              "Link this device to a network",
              cli::name,
-             cli::storage = Strings{},
+             cli::silo = Strings{},
              cli::output = boost::none,
              cli::node_id = boost::none)
       , list(*this, "List networks")
@@ -132,9 +134,9 @@ namespace infinit
                       cli::no_local_endpoints = false,
                       cli::no_public_endpoints = false,
                       cli::advertise_host = Strings())
-      , list_storage(*this,
-                     "List all storage contributed by this device to a network",
-                     cli::name)
+      , list_silos(*this,
+                   "List all silos contributed by this device to a network",
+                   cli::name)
       , pull(*this,
              "Remove a network from {hub}",
              cli::name,
@@ -284,17 +286,17 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::storage::StorageConfig>
-      make_storage_config(infinit::Infinit& ifnt,
-                          Strings const& storage)
+      make_silo_config(infinit::Infinit& ifnt,
+                       Strings const& silos)
       {
         auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
-        if (storage.empty())
+        if (silos.empty())
           return {};
         else
         {
           auto backends
-            = elle::make_vector(storage,
-                                [&](auto const& s) { return ifnt.storage_get(s); });
+            = elle::make_vector(silos,
+                                [&](auto const& s) { return ifnt.silo_get(s); });
           if (backends.size() == 1)
             return std::move(backends[0]);
           else
@@ -362,7 +364,7 @@ namespace infinit
     Network::mode_create(
       std::string const& network_name,
       boost::optional<std::string> const& description,
-      Strings const& storage_names,
+      Strings const& silos_names,
       boost::optional<int> port,
       int replication_factor,
       boost::optional<std::string> const& eviction_delay,
@@ -409,7 +411,7 @@ namespace infinit
         }();
       if (protocol)
         overlay_config->rpc_protocol = protocol_get(protocol);
-      auto storage = make_storage_config(ifnt, storage_names);
+      auto silo = make_silo_config(ifnt, silos_names);
       auto consensus_config = make_consensus_config(paxos,
                                                     no_consensus,
                                                     replication_factor,
@@ -424,7 +426,7 @@ namespace infinit
           infinit::model::Address::random(0),
           std::move(consensus_config),
           std::move(overlay_config),
-          std::move(storage),
+          std::move(silo),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
@@ -560,6 +562,7 @@ namespace infinit
                 d->id,
                 std::move(desc.consensus),
                 std::move(desc.overlay),
+                // XXX[Storage]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
                 std::make_shared<elle::cryptography::rsa::PublicKey>(
@@ -720,7 +723,7 @@ namespace infinit
 
     void
     Network::mode_link(std::string const& network_name,
-                       Strings const& storage_names,
+                       Strings const& silos_names,
                        boost::optional<std::string> const& output_name,
                        boost::optional<std::string> const& node_id)
     {
@@ -735,7 +738,7 @@ namespace infinit
           elle::err("%s is already linked with %s", network.name, owner.name);
       }
 
-      auto storage = make_storage_config(ifnt, storage_names);
+      auto silo = make_silo_config(ifnt, silos_names);
       auto desc = ifnt.network_descriptor_get(network_name, owner);
       auto const passport = [&] () -> infinit::Infinit::Passport
         {
@@ -756,7 +759,7 @@ namespace infinit
         }();
       if (!passport.verify(passport.certifier() ? *passport.certifier() : desc.owner))
         elle::err("passport signature is invalid");
-      if (storage && !passport.allow_storage())
+      if (silo && !passport.allow_storage())
         elle::err("passport does not allow storage");
       auto const id = [&]
         {
@@ -775,7 +778,7 @@ namespace infinit
           id,
           std::move(desc.consensus),
           std::move(desc.overlay),
-          std::move(storage),
+          std::move(silo),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(passport),
@@ -1085,19 +1088,20 @@ namespace infinit
     }
 
 
-    /*---------------------.
-    | Mode: list_storage.  |
-    `---------------------*/
+    /*-------------------.
+    | Mode: list_silos.  |
+    `-------------------*/
 
     void
-    Network::mode_list_storage(std::string const& network_name)
+    Network::mode_list_silos(std::string const& network_name)
     {
-      ELLE_TRACE_SCOPE("list_storage");
+      ELLE_TRACE_SCOPE("list_silos");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
       auto network = ifnt.network_get(network_name, owner, true);
+      // XXX[Storage]: Network::modem::storage
       if (network.model->storage)
       {
         if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
