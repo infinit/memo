@@ -523,6 +523,7 @@ ELLE_TEST_SCHEDULED(filesystem)
       infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, ep, &listening_port);
     });
   elle::reactor::wait(b);
+  ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
   elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
       elle::sprintf("127.0.0.1:%s", listening_port),
@@ -534,7 +535,9 @@ ELLE_TEST_SCHEDULED(filesystem)
     path.set_path("/");
     ::DirectoryContent dc;
     grpc::ClientContext context;
+    ELLE_DEBUG("invoking ListDir...");
     stub->ListDir(&context, path, &dc);
+    ELLE_DEBUG("...ListDir returned");
     BOOST_CHECK_EQUAL(dc.status().code(), 0);
     BOOST_CHECK_EQUAL(dc.content_size(), 2);
   }
@@ -690,6 +693,7 @@ ELLE_TEST_SCHEDULED(doughnut)
       infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep, &listening_port);
     });
   elle::reactor::wait(b);
+  ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
   auto& sched = elle::reactor::scheduler();
   elle::reactor::background([&] {
     auto chan = grpc::CreateChannel(
@@ -1020,6 +1024,11 @@ ELLE_TEST_SUITE()
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(1000));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
+#ifndef INFINIT_WINDOWS
+  // Test runs fine on native windows, but sometimes get stuck on wine
+  // between the return of the grpc service callback and the return of
+  // the client function call (both running in system threads).
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
+#endif
   atexit(google::protobuf::ShutdownProtobufLibrary);
 }
