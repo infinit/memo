@@ -243,8 +243,9 @@ namespace infinit
         {
           static const auto root = elle::system::self_path().parent_path();
           auto args = std::vector<std::string>{
-            (root / "infinit-volume").string(),
-            "--fetch",
+            (root / "infinit").string(),
+            "volume",
+            "fetch",
             "--network",
             net.name,
             "--service",
@@ -411,8 +412,9 @@ namespace infinit
         m.options.push = true;
       static const auto root = elle::system::self_path().parent_path();
       auto args = std::vector<std::string>{
-        (root / "infinit-volume").string(),
-        "--run",
+        (root / "infinit").string(),
+        "volume",
+        "run",
         volume.name,
       };
       if (!m.options.as && !this->default_user().empty())
@@ -458,7 +460,7 @@ namespace infinit
         {
           if (kill(pid, 0))
           {
-            ELLE_WARN("infinit-volume for \"%s\" not running", name);
+            ELLE_WARN("infinit volume for \"%s\" not running", name);
             break;
           }
           if (is_mounted(mountpoint.get()))
@@ -680,8 +682,9 @@ namespace infinit
         {
           static const auto root = elle::system::self_path().parent_path();
           auto args = std::vector<std::string>{
-            (root / "infinit-volume").string(),
-            "--create",
+            (root / "infinit").string(),
+            "volume",
+            "create",
             name,
             "--network",
             network.name,
