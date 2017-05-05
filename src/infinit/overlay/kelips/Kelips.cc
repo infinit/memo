@@ -2075,36 +2075,34 @@ namespace infinit
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto& c: p->contacts)
-        {
-          if (c.first == _self)
-            continue;
-          auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
-          endpoints_cleanup(c.second, now() - contact_timeout);
-          if (c.second.empty())
+          if (c.first != _self)
           {
-            ELLE_DEBUG("%s: dropping contact entry %f with only obsolete endpoints",
-                       *this, c.first);
-            continue;
-          }
-          int g = group_of(c.first);
-          auto& target = _state.contacts[g];
-          auto it = target.find(c.first);
-          if (it == target.end())
-          {
-            ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
-            if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
+            auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+            endpoints_cleanup(c.second, now() - contact_timeout);
+            if (c.second.empty())
             {
-              target[c.first] = Contact{{}, c.second, c.first,
-                                        Duration(), Time(), 0, {}, {}, true};
-              this->on_discovery()(NodeLocation(c.first, to_endpoints(c.second)),
-                                   false);
+              ELLE_DEBUG("%s: dropping contact entry %f with only obsolete endpoints",
+                         *this, c.first);
+              continue;
             }
+            int g = group_of(c.first);
+            auto& target = _state.contacts[g];
+            auto it = target.find(c.first);
+            if (it == target.end())
+            {
+              ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
+              if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
+              {
+                target[c.first] = Contact{{}, c.second, c.first,
+                                          Duration(), Time(), 0, {}, {}, true};
+                this->on_discovery()(NodeLocation(c.first, to_endpoints(c.second)),
+                                     false);
+              }
+            }
+            else
+              endpoints_update(it->second.endpoints, c.second);
           }
-          else
-            endpoints_update(it->second.endpoints, c.second);
-        }
         if (g == _group)
-        {
           for (auto const& f: p->files)
           {
             auto its = _state.files.equal_range(f.first);
@@ -2129,7 +2127,6 @@ namespace infinit
               it->second.last_seen = std::max(it->second.last_seen, f.second.first);
             }
           }
-        }
       }
 
       void
@@ -2506,13 +2503,13 @@ namespace infinit
         // Accept the put locally if we know no other node
         bool quota_check = true;
         if (local()
-          && local()->storage()
-          && local()->storage()->capacity())
+            && local()->storage()
+            && local()->storage()->capacity())
           quota_check = local()->storage()->capacity() > local()->storage()->usage() + 1024*1024 * 2;
         if (quota_check
-          &&  fg == _group
-          &&  ((p->insert_ttl == 0 && !_local_endpoints.empty())
-              || _state.contacts[_group].empty()))
+            && fg == _group
+            && (p->insert_ttl == 0 && !_local_endpoints.empty()
+                || _state.contacts[_group].empty()))
         {
           if (!in_peerlocation(p->result, _self)
             && !in_peerlocation(p->insert_result, _self))
@@ -2533,9 +2530,7 @@ namespace infinit
               _promised_files.push_back(p->fileAddress);
             }
             else
-            {
               ELLE_ASSERT(!"Should have been handled by addLocalResults");
-            }
           }
           else
             ELLE_DEBUG("%s: not inserting %x: already inserted", *this, p->fileAddress);
@@ -2612,8 +2607,7 @@ namespace infinit
       {
         BENCH("kelipsMGet");
         ELLE_TRACE_SCOPE("%s: mget %s", *this, files);
-        std::vector<std::set<Address>> result_sets;
-        result_sets.resize(files.size());
+        auto result_sets = std::vector<std::set<Address>>(files.size());
         packet::MultiGetFileRequest r;
         r.sender = _self;
         r.request_id = ++ _next_id;
@@ -2629,12 +2623,11 @@ namespace infinit
           addLocalResults(&r, &yield, result_sets);
           bool done = true;
           for (unsigned int i=0; i<files.size(); ++i)
-          {
             if (result_sets[i].size() < unsigned(n))
             {
-              done = false; break;
+              done = false;
+              break;
             }
-          }
           if (done)
             return;
         }
@@ -2680,12 +2673,11 @@ namespace infinit
             }
             bool done = true;
             for (unsigned i=0; i<files.size(); ++i)
-            {
               if (result_sets[i].size() < unsigned(n))
               {
-                done = false; break;
+                done = false;
+                break;
               }
-            }
             if (done)
               break;
           }
