@@ -1052,12 +1052,15 @@ def configure(
     ('grpc', []),
     ('kelips', []),
     ('overlay', []),
-    ('prometheus', []),
     ('rpc', []),
     ('storage', [aws_lib]),
   ]
+  if enable_prometheus:
+    tests_names.append(
+      ('prometheus', []),
+    )
   # The tests that do not use Boost.Test.
-  non_boost_tests = ['backward-compatibility', 'prometheus']
+  non_boost_tests = ['backward-compatibility']
   if not windows:
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
