@@ -13,6 +13,8 @@ basic prometheus monitoring.
 - Add a software TCP heartbeat to detect and drop TCP connection stale
   at the OS level.
 - Enable nodes to advertise they won't store any more block for now.
+- The option `--peer` now attempts to connect to all the machines
+  matching the address.
 
 ### Changed
 
@@ -23,12 +25,15 @@ basic prometheus monitoring.
 - Guarantee only one connection is opened to any peer.
 - Change silo creation CLI to make the silo type a subcommand instead
   of an option: `infinit silo create TYPE OPTIONS`.
+- Changed CLI options `--stats` into `--stat` for consistency.
 
 ### Fixed
 
-- Fix several memory error on shutdown.
+- Fix several memory errors on shutdown.
 - In Kouncil, advertise removed blocks to other nodes.
-
+- Repair legacy binaries for backward compatibility
+  (e.g., `infinit-volume` instead of the current `infinit volume`).
+- Error messages from the CLI are more consistent.
 
 ## [0.7.3] - 2017-02-15
 
