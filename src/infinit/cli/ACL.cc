@@ -756,10 +756,10 @@ namespace infinit
       // Validate arguments.
       auto mode = mode_get(mode_name);
       auto omode = mode_get(others_mode_name);
+      auto combined = collate_users(users, boost::none, boost::none, groups);
       {
         if (paths.empty())
           throw elle::das::cli::MissingOption("path");
-        auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
           elle::err<CLIError>("must specify user when setting mode");
@@ -788,7 +788,7 @@ namespace infinit
       bool multi = paths.size() > 1 || recursive;
       for (auto const& path: paths)
       {
-        set_action(path, this->cli().infinit(), users, mode, omode,
+        set_action(path, this->cli().infinit(), combined, mode, omode,
                    inherit, disinherit, verbose, fallback, fetch, multi);
         if (traverse)
         {
@@ -796,7 +796,7 @@ namespace infinit
           while (!path_is_root(working_path.string(), fallback))
           {
             working_path = working_path.parent_path();
-            set_action(working_path.string(), this->cli().infinit(), users,
+            set_action(working_path.string(), this->cli().infinit(), combined,
                        "setr", "", false, false,
                        verbose, fallback, fetch, multi);
           }
@@ -804,7 +804,7 @@ namespace infinit
         if (recursive)
         {
           recursive_action(
-            set_action, path, this->cli().infinit(), users, mode, omode,
+            set_action, path, this->cli().infinit(), combined, mode, omode,
             inherit, disinherit, verbose, fallback, fetch, multi);
         }
       }
