@@ -2,6 +2,9 @@
 
 ## [0.8.0]
 
+Kouncil improvements and completion, GRPC interface for the KV store,
+basic prometheus monitoring.
+
 ### Added
 
 - GRPC interface to the key-value store using the `--grpc` option.
