@@ -15,6 +15,10 @@ basic prometheus monitoring.
 - Enable nodes to advertise they won't store any more block for now.
 - The option `--peer` now attempts to connect to all the machines
   matching the address.
+- Some cryptographic features can be disabled at network creation time:
+  filesystem at-rest encryption (--disable-encrypt-at-rest), RPC encryption
+  (--disable-encrypt-rpc), and signature computation/validation
+  (--disable-signature).
 
 ### Changed
 
@@ -26,6 +30,12 @@ basic prometheus monitoring.
 - Change silo creation CLI to make the silo type a subcommand instead
   of an option: `infinit silo create TYPE OPTIONS`.
 - Changed CLI options `--stats` into `--stat` for consistency.
+- The RPC server can now optionally serve RPCs in parallel. Enable by
+  setting the value of INFINIT_RPC_SERVE_THREADS to 0 for unlimited, or
+  N for a limit of N parallel tasks.
+- Reading CHB (immutable blocks) now balances the reads between the available
+  servers based on number of transfers running.
+- In the filesystem, removing big files is now much faster than before.
 
 ### Fixed
 
@@ -33,7 +43,18 @@ basic prometheus monitoring.
 - In Kouncil, advertise removed blocks to other nodes.
 - Repair legacy binaries for backward compatibility
   (e.g., `infinit-volume` instead of the current `infinit volume`).
+- In Kouncil, passing multiple --peer to the command line now works as expected.
+- In Kouncil, fix a bug that caused `infinit network` to abort when the
+  initialization RPC failed.
 - Error messages from the CLI are more consistent.
+- In Kelips, clients (nodes not providing storage) are now properly notified
+  of new peers and peer endpoint changes.
+- In Cache, fix handling of `--cache-ram-size=0` volume option: do not cache
+  any mutable block.
+- In the filesystem, disable directory prefetching tasks if `--cache`
+  is disabled.
+- In the CLI, `--protocol` option is now properly handled by
+  `infinit network create`
 
 ## [0.7.3] - 2017-02-15
 
