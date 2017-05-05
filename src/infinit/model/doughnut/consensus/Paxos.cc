@@ -1629,7 +1629,7 @@ namespace infinit
               else
               {
                 static bool balance = !elle::os::inenv("INFINIT_DISABLE_BALANCED_TRANSFERS");
-                if (balance)
+                if (balance && peers.size() > 1)
                 {
                   static std::default_random_engine gen;
                   std::shuffle(peers.begin(), peers.end(), gen);
