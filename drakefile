@@ -276,7 +276,8 @@ def configure(
   ## ------ ##
   ## grpc.  ##
   ## ------ ##
-  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
+  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config,
+                       PatchAndInstall = PatchAndInstall)
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
@@ -308,6 +309,7 @@ def configure(
       cxx_config.add_system_include_path(p)
       cxx_config_infinit.add_system_include_path(p)
     prometheus_lib = drake.copy(prometheus.prometheus_lib, libdir,
+                                builder = PatchAndInstall,
                                 strip_prefix = True)
     extra_libs.append(prometheus_lib)
     drake.node('src/infinit/model/prometheus.hh')\
