@@ -21,8 +21,11 @@ basic prometheus monitoring.
 - In Kouncil, preserve endpoints and try reconnecting for a certain
   time after a peer disappear.
 - Guarantee only one connection is opened to any peer.
+- Prefer `--silo` over `--storage` everywhere relevant, e.g.
+  `infinit network create --silo SILO --name NAME`.
 - Change silo creation CLI to make the silo type a subcommand instead
   of an option: `infinit silo create TYPE OPTIONS`.
+
 
 ### Fixed
 
