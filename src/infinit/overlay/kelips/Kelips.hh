@@ -348,7 +348,6 @@ namespace infinit
         elle::reactor::Thread::unique_ptr
           _emitter_thread, _pinger_thread,
           _rereplicator_thread;
-        std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;
         /// Addresses for which we accepted a put.
