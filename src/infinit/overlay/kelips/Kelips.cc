@@ -1961,8 +1961,7 @@ namespace infinit
       void
       Node::gossipEmitter()
       {
-        std::uniform_int_distribution<> random(0, _config.gossip.interval_ms);
-        int v = random(elle::random_engine());
+        int v = elle::pick_one(_config.gossip.interval_ms);
         elle::reactor::sleep(boost::posix_time::milliseconds(v));
         packet::Gossip p;
         p.sender = _self;
@@ -2172,51 +2171,36 @@ namespace infinit
         }
         packet::Gossip res;
         res.sender = _self;
-        int group_count = _state.contacts[g].size();
+        int const group_count = _state.contacts[g].size();
         // Special case to avoid the randomized fetcher running for ever
         if (group_count <= _config.gossip.bootstrap_group_target + 5)
-        {
           for (auto const& e: _state.contacts[g])
             res.contacts.emplace(e.first, e.second.endpoints);
-        }
         else
-        {
-          auto random = std::uniform_int_distribution<>(0, group_count-1);
           for (int i=0; i< _config.gossip.bootstrap_group_target; ++i)
           {
-            int v = random(elle::random_engine());
-            auto it = _state.contacts[g].begin();
-            while(v--) ++it;
+            auto it = elle::pick_one(_state.contacts[g]);
             if (res.contacts.find(it->first) != res.contacts.end())
               --i;
             else
               res.contacts[it->first] = it->second.endpoints;
-          }
         }
         // Same thing for other groups
         int other_count = 0;
         for (auto const& e: _state.contacts)
-        {
           if (&e != &_state.contacts[g])
             other_count += e.size();
-        }
         if (other_count <= _config.gossip.bootstrap_other_target + 5)
-        {
           for (unsigned int i=0; i< _state.contacts.size(); ++i)
           {
-            if (i == (unsigned)g)
-              continue;
-            else
+            if (i != (unsigned)g)
               for (auto const& e: _state.contacts[i])
                 res.contacts.emplace(e.first, e.second.endpoints);
           }
-        }
         else
-        {
-          auto random = std::uniform_int_distribution<>(0, _config.k-2);
           for (int i=0; i< _config.gossip.bootstrap_other_target; ++i)
           {
-            int group = random(elle::random_engine());
+            int group = elle::pick_one(_config.k-1);
             if (group == g)
               group = _config.k-1;
             if (_state.contacts[group].empty())
@@ -2224,16 +2208,13 @@ namespace infinit
               --i;
               continue;
             }
-            auto random2 = std::uniform_int_distribution<>(0, _state.contacts[group].size()-1);
-            int v = random2(elle::random_engine());
-            auto it = _state.contacts[group].begin();
-            while(v--) ++it;
+            auto it = elle::pick_one(_state.contacts[group]);
             if (res.contacts.find(it->first) != res.contacts.end())
               --i;
             else
               res.contacts[it->first] = it->second.endpoints;
           }
-        }
+
         send(res, p->endpoint, p->sender);
       }
 
@@ -2269,10 +2250,10 @@ namespace infinit
         int fg = group_of(p->fileAddress);
         auto its = _state.files.equal_range(p->fileAddress);
         // Shuffle the match list
-        std::vector<decltype(its.first)> iterators;
+        auto iterators = std::vector<decltype(its.first)>{};
         for (auto it = its.first; it != its.second; ++it)
           iterators.push_back(it);
-        boost::shuffle(iterators, elle::random_engine());
+        std::shuffle(iterators.begin(), iterators.end(), elle::random_engine());
         for (auto iti = iterators.begin(); iti != iterators.end(); ++iti)
         {
           ++nhit;
@@ -2978,7 +2959,7 @@ namespace infinit
         // roll
         while (res.size() < unsigned(count))
         {
-          std::uniform_real_distribution<double> distribution(0.0, proba_sum);
+          auto distribution = std::uniform_real_distribution<double>(0.0, proba_sum);
           double target = distribution(elle::random_engine());
           double sum = 0;
           auto it = candidates.begin();
@@ -3035,8 +3016,7 @@ namespace infinit
       void
       Node::pinger()
       {
-        auto random = std::uniform_int_distribution<>(0, _config.ping_interval_ms);
-        int v = random(elle::random_engine());
+        int v = elle::pick_one(_config.ping_interval_ms);
         elle::reactor::sleep(boost::posix_time::milliseconds(v));
         int counter = 0;
         while (true)
@@ -3050,20 +3030,15 @@ namespace infinit
 
           // pick a target
           Contact* target;
-          int group;
           while (true)
           {
-            auto random = std::uniform_int_distribution<>(0, _config.k-1);
-            group = random(elle::random_engine());
+            auto group = elle::pick_one(_config.k);
             if (_state.contacts[group].empty())
             {
               elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
               continue;
             }
-            auto random2 = std::uniform_int_distribution<>(0, _state.contacts[group].size()-1);
-            int v = random2(elle::random_engine());
-            auto it = _state.contacts[group].begin();
-            while(v--) ++it;
+            auto it = elle::pick_one(_state.contacts[group]);
             auto tit = _ping_time.find(it->second.address);
             if (tit != _ping_time.end())
             {
