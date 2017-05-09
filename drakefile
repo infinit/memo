@@ -1126,6 +1126,7 @@ def configure(
   cxx_config_bench += elle.das.config
   cxx_config_bench.lib_path_runtime('../lib')
   cxx_config_bench.add_local_include_path('tests')
+  cxx_config_bench += grpc.grpc.cxx_config
   bench_nodes = drake.nodes(
     'tests/DHT.hh',
   )
