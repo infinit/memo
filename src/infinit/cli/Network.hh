@@ -31,7 +31,7 @@ namespace infinit
                                     cli::list,
                                     cli::unlink,
                                     cli::list_services,
-                                    cli::list_storage,
+                                    cli::list_silos,
                                     cli::pull,
                                     cli::push,
                                     cli::run,
@@ -47,7 +47,7 @@ namespace infinit
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::description = boost::optional<std::string>()),
-                 decltype(cli::storage = Strings{}),
+                 decltype(cli::silo = Strings{}),
                  decltype(cli::port = boost::optional<int>()),
                  decltype(cli::replication_factor = 1),
                  decltype(cli::eviction_delay = boost::optional<std::string>()),
@@ -82,7 +82,7 @@ namespace infinit
       mode_create(
         std::string const& network_name,
         boost::optional<std::string> const& description = {},
-        Strings const& storage = {},
+        Strings const& silo = {},
         boost::optional<int> port = boost::none,
         int replication_factor = 1,
         boost::optional<std::string> const& eviction_delay = boost::none,
@@ -194,14 +194,14 @@ namespace infinit
 
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
-                 decltype(cli::storage = Strings{}),
+                 decltype(cli::silo = Strings{}),
                  decltype(cli::output = boost::optional<std::string>()),
                  decltype(cli::node_id = boost::optional<std::string>())),
            decltype(modes::mode_link)>
       link;
       void
       mode_link(std::string const& network_name,
-                Strings const& storage_names = {},
+                Strings const& silos_names = {},
                 boost::optional<std::string> const& output_name = {},
                 boost::optional<std::string> const& node_id = {});
 
@@ -273,16 +273,16 @@ namespace infinit
                          Strings advertise_host = {});
 
 
-      /*---------------------.
-      | Mode: list_storage.  |
-      `---------------------*/
+      /*------------------.
+      | Mode: list_silos. |
+      `------------------*/
 
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_list_storage)>
-      list_storage;
+           decltype(modes::mode_list_silos)>
+      list_silos;
       void
-      mode_list_storage(std::string const& network_name);
+      mode_list_silos(std::string const& network_name);
 
 
       /*-------------.

@@ -125,7 +125,7 @@ namespace infinit
                    decltype(cli::capacity = boost::optional<std::string>()),
                    decltype(cli::output = boost::optional<std::string>()),
                    decltype(cli::endpoint = std::string()),
-                   decltype(cli::storage_class = boost::optional<std::string>()),
+                   decltype(cli::silo_class = boost::optional<std::string>()),
                    decltype(cli::path = boost::optional<std::string>())),
              decltype(modes::mode_s3)>
         s3;
@@ -138,7 +138,7 @@ namespace infinit
                 boost::optional<std::string> capacity = {},
                 boost::optional<std::string> output = {},
                 std::string const& endpoint = std::string(),
-                boost::optional<std::string> const& storage_class = {},
+                boost::optional<std::string> const& silo_class = {},
                 boost::optional<std::string> path = {});
 
         );

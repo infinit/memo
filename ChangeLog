@@ -27,6 +27,8 @@ basic prometheus monitoring.
 - In Kouncil, preserve endpoints and try reconnecting for a certain
   time after a peer disappear.
 - Guarantee only one connection is opened to any peer.
+- Prefer `--silo` over `--storage` everywhere relevant, e.g.
+  `infinit network create --silo SILO --name NAME`.
 - Change silo creation CLI to make the silo type a subcommand instead
   of an option: `infinit silo create TYPE OPTIONS`.
 - Changed CLI options `--stats` into `--stat` for consistency.
@@ -36,6 +38,7 @@ basic prometheus monitoring.
 - Reading CHB (immutable blocks) now balances the reads between the available
   servers based on number of transfers running.
 - In the filesystem, removing big files is now much faster than before.
+
 
 ### Fixed
 

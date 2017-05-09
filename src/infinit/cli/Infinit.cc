@@ -13,6 +13,7 @@
 # include <crash_reporting/CrashReporter.hh>
 #endif
 
+#include <boost/range/algorithm/transform.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -313,8 +314,19 @@ namespace infinit
           ELLE_WARN("%s is deprecated, please run: infinit %s",
                     prog, boost::algorithm::join(args, " "));
         }
+        if (args[0] == "network" && args[1] == "list-storage")
+          args[1] = "list-silos";
+        boost::transform(args, args.begin(),
+                         [] (std::string const& entry) -> std::string
+                         {
+                           if (entry == "--storage")
+                             return "--silo";
+                           else if (entry == "--storage-class")
+                             return "--silo-class";
+                           return entry;
+                         });
         auto infinit = infinit::Infinit{};
-        auto cli = Infinit(infinit);
+        auto&& cli = Infinit(infinit);
         if (args.empty() || elle::das::cli::is_option(args[0], options))
           elle::das::cli::call(cli, args, options);
         else if (!run_command(cli, args))

@@ -85,8 +85,8 @@ class Infinit(TemporaryDirectory):
     return '%s/.local/state/infinit/filesystem' % self.dir
 
   @property
-  def storages_path(self):
-    return '%s/storages' % self.data_home
+  def silos_path(self):
+    return '%s/silos' % self.data_home
 
   @property
   def networks_path(self):

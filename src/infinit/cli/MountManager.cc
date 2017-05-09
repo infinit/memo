@@ -108,26 +108,26 @@ namespace infinit
         elle::err("Failed to acquire passport.");
       ELLE_TRACE("Passport found for user %s", user->name);
 
-      auto storage_config = [&] () -> std::unique_ptr<infinit::storage::StorageConfig> {
-        auto storagedesc = optional(options, "storage");
-        if (storagedesc && storagedesc->empty())
+      auto silo_config = [&] () -> std::unique_ptr<infinit::storage::StorageConfig> {
+        auto silodesc = optional(options, "silo");
+        if (silodesc && silodesc->empty())
         {
-          auto storagename = boost::replace_all_copy(name + "_storage", "/", "_");
-          ELLE_LOG("Creating local storage %s", storagename);
-          auto path = infinit::xdg_data_home() / "blocks" / storagename;
+          auto siloname = boost::replace_all_copy(name + "_silo", "/", "_");
+          ELLE_LOG("Creating local silo %s", siloname);
+          auto path = infinit::xdg_data_home() / "blocks" / siloname;
           return
             std::make_unique<infinit::storage::FilesystemStorageConfig>(
-              storagename, path.string(), boost::none, boost::none);
+              siloname, path.string(), boost::none, boost::none);
         }
-        else if (storagedesc)
+        else if (silodesc)
         {
           try
           {
-            return ifnt.storage_get(*storagedesc);
+            return ifnt.silo_get(*silodesc);
           }
           catch (infinit::MissingLocalResource const&)
           {
-            elle::err("storage specification for new storage not implemented");
+            elle::err("silo specification for new silo not implemented");
           }
         }
         else
@@ -140,7 +140,7 @@ namespace infinit
           infinit::model::Address::random(0), // FIXME
           std::move(desc.consensus),
           std::move(desc.overlay),
-          std::move(storage_config),
+          std::move(silo_config),
           user->keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(*passport),
@@ -526,34 +526,35 @@ namespace infinit
                                  elle::json::Object const& options)
     {
       bool updated = false;
-      if (auto storagedesc = optional(options, "storage"))
+      if (auto silodesc = optional(options, "silo"))
       {
         updated = true;
-        std::unique_ptr<infinit::storage::StorageConfig> storage_config;
-        if (storagedesc->empty())
+        std::unique_ptr<infinit::storage::StorageConfig> silo_config;
+        if (silodesc->empty())
         {
-          auto storagename = boost::replace_all_copy(network.name + "_storage",
+          auto siloname = boost::replace_all_copy(network.name + "_silo",
                                                      "/", "_");
-          ELLE_LOG("Creating local storage %s", storagename);
-          auto path = infinit::xdg_data_home() / "blocks" / storagename;
-          storage_config = std::make_unique<infinit::storage::FilesystemStorageConfig>(
-            storagename, path.string(), boost::none, boost::none);
+          ELLE_LOG("Creating local silo %s", siloname);
+          auto path = infinit::xdg_data_home() / "blocks" / siloname;
+          silo_config = std::make_unique<infinit::storage::FilesystemStorageConfig>(
+            siloname, path.string(), boost::none, boost::none);
         }
         else
         {
           try
           {
-            storage_config = _ifnt.storage_get(*storagedesc);
+            silo_config = _ifnt.silo_get(*silodesc);
           }
           catch (infinit::MissingLocalResource const&)
           {
-            elle::err("Storage specification for new storage not implemented");
+            elle::err("Silo specification for new silo not implemented");
           }
         }
-        network.model->storage = std::move(storage_config);
+        network.model->storage = std::move(silo_config);
       }
-      else if (optional(options, "no-storage"))
+      else if (optional(options, "no-silo"))
       {
+        // XXX[Storage]: Network::model::storage
         network.model->storage.reset();
         updated = true;
       }

@@ -36,7 +36,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(cache_ram_invalidation, 0, "RAM block cache invalidation time in seconds (default: 15s)", false);
     ELLE_DAS_CLI_SYMBOL(cache_ram_size, 0, "maximum RAM block cache size in bytes (default: 64MB)", false);
     ELLE_DAS_CLI_SYMBOL(cache_ram_ttl, 0, "RAM block cache time-to-live in seconds (default: 5min)", false);
-    ELLE_DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
+    ELLE_DAS_CLI_SYMBOL(capacity, 'c', "limit silo capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
     ELLE_DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     ELLE_DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
     ELLE_DAS_CLI_SYMBOL(create, 'c', "create the {object}", false);
@@ -84,6 +84,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
+    // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
     ELLE_DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
@@ -172,8 +173,8 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
     ELLE_DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     ELLE_DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
-    ELLE_DAS_CLI_SYMBOL(storage, 'S', "storage to contribute (optional, data striped over multiple)", false);
-    ELLE_DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    ELLE_DAS_CLI_SYMBOL(silo, 'S', "silo to contribute (optional, data striped over multiple)", false);
+    ELLE_DAS_CLI_SYMBOL(silo_class, '\0', "silo class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
     ELLE_DAS_CLI_SYMBOL(tcp_heartbeat, '\0', "tcp heartbeat period and timeout", false);
     ELLE_DAS_CLI_SYMBOL(tcp_port, 't', "port to perform tcp tests on", false);
     ELLE_DAS_CLI_SYMBOL(traverse, 't', "set read permission on parent directories", false);
@@ -219,7 +220,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(link);
     ELLE_DAS_SYMBOL(list);
     ELLE_DAS_SYMBOL(list_services);
-    ELLE_DAS_SYMBOL(list_storage);
+    ELLE_DAS_SYMBOL(list_silos);
     ELLE_DAS_SYMBOL(login);
     ELLE_DAS_SYMBOL(manage_volumes);
     ELLE_DAS_SYMBOL(networking);
@@ -230,7 +231,6 @@ namespace infinit
     ELLE_DAS_SYMBOL(set);
     ELLE_DAS_SYMBOL(setxattr);
     ELLE_DAS_SYMBOL(signup);
-    ELLE_DAS_SYMBOL(silo);
     ELLE_DAS_SYMBOL(start);
     ELLE_DAS_SYMBOL(status);
     ELLE_DAS_SYMBOL(stop);
@@ -276,7 +276,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_link);
       ELLE_DAS_SYMBOL(mode_list);
       ELLE_DAS_SYMBOL(mode_list_services);
-      ELLE_DAS_SYMBOL(mode_list_storage);
+      ELLE_DAS_SYMBOL(mode_list_silos);
       ELLE_DAS_SYMBOL(mode_login);
       ELLE_DAS_SYMBOL(mode_manage_volumes);
       ELLE_DAS_SYMBOL(mode_mount);
