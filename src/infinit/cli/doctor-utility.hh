@@ -2273,7 +2273,20 @@ namespace
       {
         return boost::starts_with(file.parent_path(), dir);
       };
-    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_data_home()))
+    auto do_not_recurse_deeper = [] (bfs::recursive_directory_iterator& it,
+                                     bfs::path const& path)
+    {
+      if (it->path() == path)
+        it.no_push();
+    };
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_data_home());
+         it != bfs::recursive_directory_iterator();
+         ++it)
+    {
+      // Do not explore recursively the following paths.
+      do_not_recurse_deeper(it, infinit::xdg_data_home() / "blocks");
+      do_not_recurse_deeper(it, infinit::xdg_data_home() / "ui");
+      auto p = *it;
       if (is_visible_file(p))
       {
         try
@@ -2297,10 +2310,6 @@ namespace
             load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
           else if (is_parent_of(ifnt._credentials_path(), p.path()))
             load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
-          else if (is_parent_of(infinit::xdg_data_home() / "blocks", p.path()))
-            {}
-          else if (is_parent_of(infinit::xdg_data_home() / "ui", p.path()))
-            {}
           else
             store(leftovers, p.path().string());
         }
@@ -2308,8 +2317,11 @@ namespace
         {
           store(leftovers, p.path().string(), elle::exception_string());
         }
+        elle::reactor::yield();
       }
+    }
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_cache_home()))
+    {
       if (is_visible_file(p))
       {
         try
@@ -2323,15 +2335,20 @@ namespace
           store(leftovers, p.path().string(), elle::exception_string());
         }
       }
-    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_state_home()))
+      elle::reactor::yield();
+    }
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_state_home());
+         it != bfs::recursive_directory_iterator();
+         ++it)
+    {
+      do_not_recurse_deeper(it, infinit::xdg_state_home() / "cache");
+      auto p = *it;
       if (is_visible_file(p))
       {
         try
         {
-          // XXX: Factor.
-          if (is_parent_of(infinit::xdg_state_home() / "cache", p.path())
-              || p.path() == infinit::xdg_state_home() / "critical.log")
-            {}
+          if (p.path() == infinit::xdg_state_home() / "critical.log")
+          {}
           else if (p.path().filename() == "root_block")
           {
             // The root block path is:
@@ -2360,6 +2377,8 @@ namespace
           store(leftovers, p.path().string(), elle::exception_string());
         }
       }
+      elle::reactor::yield();
+    }
   }
 
   void

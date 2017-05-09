@@ -46,6 +46,7 @@ void run(int num_servers = 30)
   }
 }
 
+// FIXME: we should not use our main with Boost.Test.
 int main(int argc, const char* argv[])
 {
   int num_servers = 1 < argc ? std::stoi(argv[1]) : 5;

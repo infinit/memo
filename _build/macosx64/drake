@@ -36,4 +36,5 @@ with drake.Drake('../..') as d:
     python3 = python3,
     cxx_toolkit = tk,
     cxx_config = cfg,
+    prefix = '_install',
   )

@@ -674,7 +674,7 @@ namespace infinit
           });
         _server->register_route("/VolumeDriver.Remove", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            elle::err("use infinit-volume --delete to delete volumes");
+            elle::err("use infinit volume delete to delete volumes");
             // auto lock = this->_user.enter(this->_mutex);
             // // Reverse the Create process.
             // auto stream = elle::IOStream(data.istreambuf());

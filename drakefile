@@ -276,7 +276,9 @@ def configure(
   ## ------ ##
   ## grpc.  ##
   ## ------ ##
-  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
+  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config,
+                       PatchAndInstall = PatchAndInstall)
+  protobuf_include = grpc.grpc.protobuf_include
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
@@ -284,7 +286,7 @@ def configure(
     grpc_lib = drake.copy(grpc.grpc_lib, libdir, strip_prefix = True)
     extra_libs.append(grpc_lib)
     if not windows:
-      protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True)
+      protobuf_lib = drake.copy(grpc.grpc.protobuf_lib, libdir, strip_prefix = True, builder = PatchAndInstall)
       extra_libs.append(protobuf_lib)
   else:
     infinit_sources += grpc.grpc.sources
@@ -301,12 +303,13 @@ def configure(
                                cxx_toolkit = cxx_toolkit,
                                in_cxx_config = cxx_config,
                                protoc = grpc.grpc.protoc,
-                               protobuf_include = grpc.grpc.protobuf_include,
-                               protobuf_lib = grpc.grpc.protobuf_lib)
+                               protobuf_include = protobuf_include,
+                               protobuf_lib = protobuf_lib)
     for p in prometheus.prometheus_include_path:
       cxx_config.add_system_include_path(p)
       cxx_config_infinit.add_system_include_path(p)
-    prometheus_lib = drake.copy(prometheus.prometheus_lib, 'lib',
+    prometheus_lib = drake.copy(prometheus.prometheus_lib, libdir,
+                                builder = PatchAndInstall,
                                 strip_prefix = True)
     extra_libs.append(prometheus_lib)
     drake.node('src/infinit/model/prometheus.hh')\
@@ -368,7 +371,7 @@ def configure(
   if enable_prometheus:
     for p in prometheus.prometheus_include_path:
       cli_cxx_config.add_system_include_path(p)
-  cli_cxx_config.add_system_include_path(grpc.grpc.protobuf_include)
+  cli_cxx_config.add_system_include_path(protobuf_include)
 
   cli_cxx_config.lib_path_runtime('../lib')
   if not windows:
@@ -1052,12 +1055,15 @@ def configure(
     ('grpc', []),
     ('kelips', []),
     ('overlay', []),
-    ('prometheus', []),
     ('rpc', []),
     ('storage', [aws_lib]),
   ]
+  if enable_prometheus:
+    tests_names.append(
+      ('prometheus', []),
+    )
   # The tests that do not use Boost.Test.
-  non_boost_tests = ['backward-compatibility', 'prometheus']
+  non_boost_tests = ['backward-compatibility']
   if not windows:
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
@@ -1124,7 +1130,7 @@ def configure(
   cxx_config_bench += elle.das.config
   cxx_config_bench.lib_path_runtime('../lib')
   cxx_config_bench.add_local_include_path('tests')
-  cxx_config_bench.add_system_include_path(grpc.grpc.protobuf_include)
+  cxx_config_bench.add_system_include_path(protobuf_include)
   bench_nodes = drake.nodes(
     'tests/DHT.hh',
   )
