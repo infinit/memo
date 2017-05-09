@@ -118,7 +118,6 @@ class GRPCPyGen(GRPCGen):
 def configure(
     cxx_toolkit,
     cxx_config,
-    PatchAndInstall,
     git = None,
 ):
   global doughnut_proto, grpc_lib, grpc, sources
@@ -127,7 +126,6 @@ def configure(
     'grpc',
     cxx_toolkit,
     cxx_config,
-    PatchAndInstall = PatchAndInstall,
     cmake_vars = {
       # We don't care about the (copious) warnings on macOS.
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',
@@ -151,7 +149,11 @@ def configure(
   )
   sources = srcs
   # make a convenience grpc lib with all libgrpc stuff
-  grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
+  protobuf_lib = drake.copy(
+    grpc.protobuf_lib, '.', strip_prefix = True)
+  grpc_lib = drake.cxx.DynLib(
+    'grpc', [protobuf_lib] + grpc.sources,
+    cxx_toolkit, grpc.cxx_config_lib)
 
   ## -------------------- ##
   ## Docker python client ##
