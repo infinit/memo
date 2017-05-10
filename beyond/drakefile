@@ -45,7 +45,6 @@ def configure(
     git,
     bottle,
     sendwithus,
-    PatchAndInstall,
     prefix = drake.Path('/usr'),
     dropbox_app_key = 'ldsi5nojwpfqcqg',
     dropbox_app_secret = 'gwca0vz648u0y6r',
@@ -225,7 +224,7 @@ def configure(
   install = drake.Rule('install')
   install << install_nodes(
     where = prefix,
-    how = functools.partial(drake.copy, builder = PatchAndInstall))
+    how = functools.partial(drake.copy, builder = drake.cxx.PatchAndInstall))
 
   ## ------ ##
   ## Debian ##
