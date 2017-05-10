@@ -923,13 +923,15 @@ namespace infinit
 #endif
         );
         hook_stats_signals(*dht);
+        elle::reactor::Thread::unique_ptr grpc_thread;
         if (grpc)
         {
           auto const eps = model::Endpoints{*grpc};
           auto const ep = *eps.begin();
-          new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
+          grpc_thread.reset(new elle::reactor::Thread("grpc",
+            [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
-          });
+          }));
         }
 #if INFINIT_ENABLE_PROMETHEUS
         if (prometheus)
