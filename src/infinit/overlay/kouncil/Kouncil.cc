@@ -467,7 +467,7 @@ namespace infinit
           // Stop reconnection/eviction timers.
           this->_stale_endpoints.modify(
             it, [] (StaleEndpoint& e) { e.clear(); });
-        else
+        else if (not this->_cleaning)
           this->_stale_endpoints.emplace(peer->connection()->location());
         // The peer can be missing from `_infos` for external discoveries.
         if (auto info = elle::find(this->_infos, peer->id()))
