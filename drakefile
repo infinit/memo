@@ -58,6 +58,9 @@ def configure(
   if python3 is not None:
     python = python3
 
+  PatchAndInstall = drake.cxx.PatchAndInstall
+  PatchAndInstall.toolkit = cxx_toolkit
+
   global rule_build, rule_check, rule_install, rule_symbols, rule_tests
   rule_build = drake.Rule('build')
   rule_check = drake.Rule('check')
@@ -528,7 +531,7 @@ def configure(
   def install_nodes(where):
     where = drake.Path(where)
     yield from drake.copy(installed_binaries, where, None,
-                          builder = drake.cxx.PatchAndInstall,
+                          builder = PatchAndInstall,
                           follow_symlinks = False)
     yield from drake.copy(
       [license_file], where / 'share/infinit/filesystem/licenses')
@@ -778,6 +781,7 @@ def configure(
         prefix = prefix,
         git = git,
         bottle = bottle,
+        PatchAndInstall = PatchAndInstall,
         description_regex = description_regex,
         email_regex = email_regex,
         name_regex = name_regex,
@@ -917,6 +921,7 @@ def configure(
         git = git,
         bottle = bottle,
         sendwithus = sendwithus,
+        PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
       )
 

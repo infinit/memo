@@ -20,6 +20,7 @@ def configure(
     git,
     bottle,
     sendwithus,
+    PatchAndInstall,
     doughnut_proto,
     prefix = drake.Path('/usr'),
 ):
@@ -684,7 +685,7 @@ def configure(
   install = drake.Rule('install')
   install << copy_sources(
     where = prefix,
-    how = functools.partial(drake.copy, builder = drake.cxx.PatchAndInstall))
+    how = functools.partial(drake.copy, builder = PatchAndInstall))
   install << copy_templates(where = prefix, how = drake.install)
 
   ## ------ ##
