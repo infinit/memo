@@ -123,7 +123,7 @@ namespace infinit
         /// @arg eviction_delay   A time out, in seconds.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                std::chrono::seconds eviction_delay = std::chrono::seconds{12000});
+                boost::optional<std::chrono::seconds> eviction_delay);
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:

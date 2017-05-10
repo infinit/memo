@@ -65,7 +65,7 @@ namespace infinit
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
 
-        ELLE_ATTRIBUTE_RW(std::chrono::seconds, eviction_delay)
+        ELLE_ATTRIBUTE_RW(boost::optional<std::chrono::seconds>, eviction_delay)
       };
     }
   }
