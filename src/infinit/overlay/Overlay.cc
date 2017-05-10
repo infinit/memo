@@ -65,6 +65,7 @@ namespace infinit
     void
     Overlay::cleanup()
     {
+      ELLE_TRACE_SCOPE("%s: cleanup", this);
       this->_cleanup();
     }
 
