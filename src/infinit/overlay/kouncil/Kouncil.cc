@@ -86,13 +86,14 @@ namespace infinit
 
       Kouncil::Kouncil(model::doughnut::Doughnut* dht,
                        std::shared_ptr<Local> local,
-                       std::chrono::seconds eviction_delay)
+                       boost::optional<std::chrono::seconds> eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
         , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               [this] { this->_broadcast(); }))
-        , _eviction_delay(eviction_delay)
+        , _eviction_delay(
+          eviction_delay ? *eviction_delay : std::chrono::seconds{200 * 60})
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);

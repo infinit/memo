@@ -39,17 +39,7 @@ namespace infinit
       Configuration::serialize(elle::serialization::Serializer& s)
       {
         Super::serialize(s);
-        // `eviction_delay` has not always been serialized.
-        if (s.in())
-          try
-          {
-            s.serialize("eviction_delay", _eviction_delay);
-          }
-          catch (elle::serialization::MissingKey const&)
-          {
-          }
-        else
-          s.serialize("eviction_delay", _eviction_delay);
+        s.serialize("eviction_delay", _eviction_delay);
       }
 
       namespace
@@ -67,7 +57,8 @@ namespace infinit
       Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* doughnut)
       {
-        return std::make_unique<Kouncil>(doughnut, std::move(local),
+        return std::make_unique<Kouncil>(doughnut,
+                                         std::move(local),
                                          this->_eviction_delay);
       }
     }
