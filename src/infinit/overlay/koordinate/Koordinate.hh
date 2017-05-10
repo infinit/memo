@@ -49,6 +49,10 @@ namespace infinit
         ~Koordinate() override;
         /// The underlying overlays.
         ELLE_ATTRIBUTE(Backends, backends);
+      protected:
+        virtual
+        void
+        _cleanup();
       private:
         /// Check invariants.
         void
