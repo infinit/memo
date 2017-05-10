@@ -120,10 +120,10 @@ namespace infinit
         ///
         /// @arg dht              The owning Doughnut.
         /// @arg local            The local server, null if pure client.
-        /// @arg eviction_delay   A time out, in seconds.
+        /// @arg eviction_delay   A time out, in seconds. Default: 20mn.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                boost::optional<std::chrono::seconds> eviction_delay);
+                boost::optional<std::chrono::seconds> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
