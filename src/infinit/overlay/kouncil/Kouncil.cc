@@ -72,6 +72,8 @@ namespace infinit
         return lhs.node() == rhs.node() && lhs.block() == rhs.block();
       }
 
+// This is unused, but could prove useful while debugging.
+#if 0
       static
       std::ostream&
       operator <<(std::ostream& os, Kouncil::Entry const& e)
@@ -79,6 +81,7 @@ namespace infinit
         return elle::fprintf(os, is_fixed(os) ? "%f @ %f" : "%s @ %s",
                              e.block(), e.node());
       }
+#endif
 
       /*-------------.
       | Construction |
