@@ -28,6 +28,13 @@ namespace infinit
       {}
 
       void
+      Koordinate::_cleanup()
+      {
+        for (auto& backend: this->_backends)
+          backend->cleanup();
+      }
+
+      void
       Koordinate::_validate() const
       {
         if (this->_backends.empty())
