@@ -93,7 +93,7 @@ namespace infinit
                               elle::sprintf("%s: broadcast", this),
                               [this] { this->_broadcast(); }))
         , _eviction_delay(
-          eviction_delay ? *eviction_delay : std::chrono::seconds{200 * 60})
+          eviction_delay.value_or(std::chrono::seconds{200 * 60}))
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
