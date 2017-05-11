@@ -75,6 +75,16 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("tcp heartbeat: %s", tcp_heartbeat);
+        static bool utp_guard =
+          std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        if (!utp_guard && protocol.with_utp())
+        {
+          ELLE_WARN(
+            "not using UTP as specified in network configuration. "
+            "UTP has been temporarily deprecated. "
+            "Force with INFINIT_UTP=1");
+          this->_protocol = Protocol::tcp;
+        }
         if (this->_local_utp_server)
         {
           bool v6 = ipv6_enabled

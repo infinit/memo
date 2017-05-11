@@ -964,7 +964,9 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     auto obj = res.result.get();
     BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
     BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
-    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    // UTP was temporarily deprecated.
+    // BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    BOOST_TEST(boost::any_cast<std::string>(obj["protocol"]) == "tcp");
     BOOST_CHECK_EQUAL(
       boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
     auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
