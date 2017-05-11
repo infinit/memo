@@ -206,6 +206,23 @@ namespace infinit
           }
       }
 
+      static
+      Protocol
+      deprecate_utp(Protocol const& p)
+      {
+        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        if (!utp_guard && p == Protocol::all)
+        {
+          ELLE_WARN(
+            "Not using UTP although network configuration selects 'all' "
+            "protocols. UTP has been temporarily deprecated. Force with "
+            "INFINIT_UTP=1.");
+          return Protocol::tcp;
+        }
+        else
+          return p;
+      }
+
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
         , _connect_timeout(
@@ -215,7 +232,7 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
-        , _protocol(init.protocol)
+        , _protocol(deprecate_utp(init.protocol))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -246,15 +263,6 @@ namespace infinit
         , _pool([this] { return std::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
-        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
-        if (!utp_guard && this->_protocol == Protocol::all)
-        {
-          ELLE_WARN(
-            "Not using UTP although network configuration selects 'all' "
-            "protocols. UTP has been temporarily deprecated. Force with "
-            "INFINIT_UTP=1.");
-          this->_protocol = Protocol::tcp;
-        }
         if (this->_local)
         {
           this->_local->initialize();
