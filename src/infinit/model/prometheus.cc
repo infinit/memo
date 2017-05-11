@@ -5,6 +5,7 @@
 
 # include <elle/log.hh>
 # include <elle/os/environ.hh>
+# include <elle/printf.hh>
 
 # include <prometheus/exposer.h>
 # include <prometheus/registry.h>
@@ -52,12 +53,12 @@ namespace infinit
         {
           if (_exposer)
           {
-            ELLE_LOG("exposer: rebind: %s", addr);
+            ELLE_LOG("%s: listen on %s", this, addr);
             _exposer->rebind(addr);
           }
           else
           {
-            ELLE_LOG("exposer: create: %s", addr);
+            ELLE_LOG("%s: listen on %s", this, addr);
             _exposer = std::make_unique<::prometheus::Exposer>(addr);
           }
         }

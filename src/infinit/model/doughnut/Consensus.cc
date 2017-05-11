@@ -330,17 +330,16 @@ namespace infinit
         `--------*/
 
         std::unique_ptr<Local>
-        Consensus::make_local(boost::optional<int> port,
-                              boost::optional<boost::asio::ip::address> listen_address,
-                              std::unique_ptr<storage::Storage> storage,
-                              Protocol p)
+        Consensus::make_local(
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> storage)
         {
           return std::make_unique<Local>(this->doughnut(),
                                          this->doughnut().id(),
                                          std::move(storage),
                                          port.value_or(0),
-                                         listen_address,
-                                         p);
+                                         listen_address);
         }
 
         /*-----------.

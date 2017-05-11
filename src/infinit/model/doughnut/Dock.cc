@@ -65,7 +65,6 @@ namespace infinit
                  boost::optional<std::string> rdv_host,
                  boost::optional<std::chrono::milliseconds> tcp_heartbeat)
         : _doughnut(doughnut)
-        , _protocol(protocol)
         , _tcp_heartbeat(tcp_heartbeat)
         , _local_utp_server(
           doughnut.local() ? nullptr : new elle::reactor::network::UTPServer)
@@ -75,15 +74,6 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("tcp heartbeat: %s", tcp_heartbeat);
-        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
-        if (!utp_guard && protocol == Protocol::all)
-        {
-          ELLE_WARN(
-            "not using UTP as specified in network configuration which selected 'all' protocols. "
-            "UTP should be enabled on its own only when needed. "
-            "Force with INFINIT_UTP=1");
-          this->_protocol = Protocol::tcp;
-        }
         if (this->_local_utp_server)
         {
           bool v6 = ipv6_enabled
@@ -116,7 +106,6 @@ namespace infinit
 
       Dock::Dock(Dock&& source)
         : _doughnut(source._doughnut)
-        , _protocol(source._protocol)
         , _local_utp_server(std::move(source._local_utp_server))
         , _utp_server(source._utp_server)
       {}
@@ -370,7 +359,7 @@ namespace infinit
                 };
               elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
               {
-                if (this->_dock.protocol().with_tcp())
+                if (this->_dock.doughnut().protocol().with_tcp())
                   for (auto const& e: this->_location.endpoints())
                   {
                     ELLE_TRACE("trying to connect to %s", e);
@@ -396,7 +385,7 @@ namespace infinit
                           scope.terminate_now();
                         }));
                   }
-                if (this->_dock.protocol().with_utp())
+                if (this->_dock.doughnut().protocol().with_utp())
                   scope.run_background(
                     elle::sprintf("%s: utp://%s",
                                   this, this->_location.endpoints()),

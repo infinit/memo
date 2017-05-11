@@ -42,7 +42,6 @@ namespace infinit
         void
         cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
-        ELLE_ATTRIBUTE_R(Protocol, protocol);
         ELLE_ATTRIBUTE_R(boost::optional<std::chrono::milliseconds>,
                          tcp_heartbeat);
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
