@@ -58,9 +58,6 @@ def configure(
   if python3 is not None:
     python = python3
 
-  PatchAndInstall = drake.cxx.PatchAndInstall
-  PatchAndInstall.toolkit = cxx_toolkit
-
   global rule_build, rule_check, rule_install, rule_symbols, rule_tests
   rule_build = drake.Rule('build')
   rule_check = drake.Rule('check')
@@ -135,6 +132,9 @@ def configure(
 
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
+
+  PatchAndInstall = drake.cxx.PatchAndInstall
+  PatchAndInstall.toolkit = cxx_toolkit
 
   ## --------------- ##
   ## Infinit library ##
