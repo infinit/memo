@@ -1358,8 +1358,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::storage::Storage> storage,
-      dht::Protocol p) override
+      std::unique_ptr<infinit::storage::Storage> storage) override
     {
       return std::make_unique<Local>(
         *this,
