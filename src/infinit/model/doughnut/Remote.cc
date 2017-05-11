@@ -148,6 +148,7 @@ namespace infinit
       void
       Remote::reconnect()
       {
+        this->_connected.close();
         this->_connection->disconnect();
         if (this->_connection->connected())
           this->_disconnected_exception =
