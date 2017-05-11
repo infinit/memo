@@ -3,6 +3,7 @@
 
 # include <boost/exception/diagnostic_information.hpp>
 
+# include <elle/Error.hh>
 # include <elle/log.hh>
 # include <elle/os/environ.hh>
 # include <elle/printf.hh>
@@ -51,29 +52,28 @@ namespace infinit
       if (addr != "no" && addr != "0")
         try
         {
-          if (_exposer)
+          if (this->_exposer)
           {
             ELLE_LOG("%s: listen on %s", this, addr);
-            _exposer->rebind(addr);
+            this->_exposer->rebind(addr);
           }
           else
           {
             ELLE_LOG("%s: listen on %s", this, addr);
-            _exposer = std::make_unique<::prometheus::Exposer>(addr);
+            this->_exposer = std::make_unique<::prometheus::Exposer>(addr);
           }
         }
-        catch (std::exception const& e)
+        catch (elle::Error const&)
         {
-          ELLE_LOG("exposer: creation failed,"
-                   " metrics will not be exposed: %s", e);
-          _exposer.reset();
+          ELLE_WARN("%s: creation failed, metrics will not be exposed: %s",
+                    this, elle::exception_string());
+          this->_exposer.reset();
         }
-        catch (...)
+        catch (std::runtime_error const&)
         {
-          ELLE_LOG("exposer: creation failed with unknown"
-                   " exception type: %s",
-                   boost::current_exception_diagnostic_information());
-          _exposer.reset();
+          ELLE_WARN("%s: creation failed, metrics will not be exposed: %s",
+                    this, elle::exception_string());
+          this->_exposer.reset();
         }
     }
 
