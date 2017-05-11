@@ -133,8 +133,6 @@ def configure(
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
 
-  PatchAndInstall = drake.cxx.PatchAndInstall
-  PatchAndInstall.toolkit = cxx_toolkit
 
   ## --------------- ##
   ## Infinit library ##
@@ -527,6 +525,9 @@ def configure(
   ## ------- ##
   ## Install ##
   ## ------- ##
+
+  PatchAndInstall = \
+    lambda *a, **kw: drake.cxx.PatchAndInstall(cxx_toolkit, *a, **kw)
 
   def install_nodes(where):
     where = drake.Path(where)
