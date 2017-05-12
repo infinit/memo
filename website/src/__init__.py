@@ -391,12 +391,8 @@ class Website(bottle.Bottle):
         return {}
 
   @route('/legal', name = 'legal')
-  @view('pages/legal.html')
   def root(self):
-    return {
-      'title': 'Legal Terms',
-      'description': 'All the legal terms related to the use of the Infinit products and services.',
-    }
+    redirect("https://www.docker.com/docker-terms-service")
 
   @route('/slack', name = 'slack', method = 'POST')
   def root(self):
