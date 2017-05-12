@@ -97,31 +97,21 @@ def configure(
   # Where we install libraries.
   libdir = 'bin' if windows else 'lib'
 
-  if not windows:
-    dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, libdir,
-                             strip_prefix = True)
-    cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, libdir,
-                                  strip_prefix = True)
-    protocol_lib = drake.copy(elle.protocol.lib_dynamic, libdir,
-                              strip_prefix = True)
-    reactor_lib = drake.copy(elle.reactor.lib_dynamic, libdir,
-                             strip_prefix = True)
-    aws_lib = drake.copy(elle.aws.library, libdir,
-                         strip_prefix = True)
-    elle_lib = drake.copy(elle.elle.lib_dynamic, libdir,
-                          strip_prefix = True)
-    dokan_lib = None
-    athena_lib = drake.copy(elle.athena.lib_dynamic, libdir,
-                            strip_prefix = True)
-  else:
-    dropbox_lib = elle.dropbox.lib_static
-    cryptography_lib = elle.cryptography.lib_static
-    protocol_lib = elle.protocol.lib_static
-    reactor_lib = elle.reactor.lib_static
-    aws_lib = elle.aws.library
-    elle_lib = elle.elle.lib_static
-    dokan_lib = elle.reactor.dokan_lib
-    athena_lib = elle.athena.lib_static
+  def import_lib(lib):
+    if windows:
+      return lib.lib_static
+    else:
+      return drake.copy(lib.lib_dynamic, libdir, strip_prefix = True)
+
+  athena_lib       = import_lib(elle.athena)
+  aws_lib          = import_lib(elle.aws)
+  cryptography_lib = import_lib(elle.cryptography)
+  dropbox_lib      = import_lib(elle.dropbox)
+  elle_lib         = import_lib(elle.elle)
+  protocol_lib     = import_lib(elle.protocol)
+  reactor_lib      = import_lib(elle.reactor)
+
+  dokan_lib = elle.reactor.dokan_lib if windows else None
 
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
