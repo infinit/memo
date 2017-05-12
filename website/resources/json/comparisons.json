@@ -263,6 +263,25 @@
       "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(file_system)"
     }
   },
+  "minio": {
+    "name": "minio",
+    "description": "Minio enables applications to easily build their own scalable cloud storage infrastructure.",
+    "properties": {
+      "logic": ["object"],
+      "interface": ["amazon s3"],
+      "model": ["distributed"],
+      "environment": [],
+      "redundancy": ["replication", "erasure codes"],
+      "fault-tolerance": ["standard"],
+      "security": ["in transit"],
+      "scalability": ["homogeneous"],
+      "pricing": ["free"],
+      "open-source": ["yes"]
+    },
+    "links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(file_system)"
+    }
+  },
   "moosefs": {
     "name": "MooseFS",
     "description": "MooseFS is a distributed file system developed by Core Technology. MooseFS aims to be fault-tolerant, highly available, highly performing, scalable general-purpose network distributed file system for data centers.",

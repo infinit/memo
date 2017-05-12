@@ -463,6 +463,8 @@ def configure(
     'resources/images/logos/leofs@2x.png',
     'resources/images/logos/wikipedia.png',
     'resources/images/logos/wikipedia@2x.png',
+    'resources/images/logos/minio.png',
+    'resources/images/logos/minio@2x.png',
   )
 
   resources_icons = drake.nodes(
