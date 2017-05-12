@@ -49,6 +49,8 @@ def check_dir(dir):
       check_deps(path)
 
 check_dir(os.path.join(os.environ['BUILD_DIR'], 'bin'))
-check_dir(os.path.join(os.environ['BUILD_DIR'], 'lib'))
+# On Windows, there's no lib/ directory.
+if os.path.exists('lib'):
+  check_dir(os.path.join(os.environ['BUILD_DIR'], 'lib'))
 
 # exit(1 if nfail else 0)
