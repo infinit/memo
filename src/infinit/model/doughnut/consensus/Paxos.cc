@@ -5,8 +5,10 @@
 #include <random>
 
 #include <elle/bench.hh>
+#include <elle/find.hh>
 #include <elle/memory.hh>
 #include <elle/multi_index_container.hh>
+#include <elle/range.hh>
 #include <elle/serialization/json/Error.hh>
 
 #include <elle/cryptography/rsa/PublicKey.hh>
@@ -562,13 +564,15 @@ namespace infinit
         void
         Paxos::LocalPeer::_cache(Address address, bool immutable, Quorum quorum)
         {
-          this->_quorums.erase(address);
-          // FIXME: FRACKING BUG RIGHT HERE
-          for (auto const& node: quorum)
-            this->_node_blocks[node].erase(address);
+          if (auto repartition = elle::find(this->_quorums, address))
+          {
+            for (auto const& n: repartition->quorum)
+              this->_node_blocks.erase(NodeBlock(n, address));
+            this->_quorums.erase(repartition);
+          }
           this->_quorums.emplace(address, immutable, quorum);
-          for (auto const& node: quorum)
-            this->_node_blocks[node].insert(address);
+          for (auto const& n: quorum)
+            this->_node_blocks.emplace(n, address);
         }
 
         void
@@ -621,74 +625,78 @@ namespace infinit
         void
         Paxos::LocalPeer::_disappeared_evict(model::Address lost_id)
         {
-          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
-          auto blocks = this->_node_blocks.find(lost_id);
-          if (blocks != this->_node_blocks.end())
-            for (auto address: blocks->second)
+          ELLE_LOG_COMPONENT(
+            "infinit.model.doughnut.consensus.Paxos.rebalance");
+          auto blocks = elle::make_vector(
+            elle::as_range(
+              this->_node_blocks.get<by_node>().equal_range(lost_id)),
+            [] (NodeBlock const& nb) { return nb.block; });
+          for (auto address: blocks)
+          {
+            ELLE_TRACE_SCOPE("%s: evict %f from %f quorum",
+                             this, lost_id, address);
+            auto block = this->_load(address);
+            if (block.paxos)
             {
-              ELLE_TRACE_SCOPE("%s: evict %f from %f quorum",
+              auto& decision = *block.paxos;
+              auto q = decision.paxos.current_quorum();
+              while (true)
+              {
+                try
+                {
+                  Paxos::PaxosClient client(
+                    this->doughnut().id(),
+                    lookup_nodes(this->_paxos.doughnut(), q, address));
+                  if (q.erase(lost_id))
+                  {
+                    client.choose(decision.paxos.current_version() + 1, q);
+                    ELLE_TRACE("%s: evicted %f from %f quorum",
                                this, lost_id, address);
-              auto block = this->_load(address);
-              if (block.paxos)
-              {
-                auto& decision = *block.paxos;
-                auto q = decision.paxos.current_quorum();
-                while (true)
-                {
-                  try
-                  {
-                    Paxos::PaxosClient client(
-                      this->doughnut().id(),
-                      lookup_nodes(this->_paxos.doughnut(), q, address));
-                    if (q.erase(lost_id))
+                    if (signed(q.size()) < this->_factor)
                     {
-                      client.choose(decision.paxos.current_version() + 1, q);
-                      ELLE_TRACE("%s: evicted %f from %f quorum",
-                                 this, lost_id, address);
-                      if (signed(q.size()) < this->_factor)
-                      {
-                        ELLE_DUMP("schedule %f for rebalancing after eviction",
-                                  address);
-                        this->_rebalancable.emplace(address, false);
-                      }
+                      ELLE_DUMP("schedule %f for rebalancing after eviction",
+                                address);
+                      this->_rebalancable.emplace(address, false);
                     }
-                    break;
                   }
-                  catch (Paxos::PaxosServer::WrongQuorum const& e)
-                  {
-                    q = e.expected();
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("%s: eviction of %s failed: %s", this, address, e);
-                    break;
-                  }
+                  break;
                 }
-              }
-              else
-              {
-                auto const addr = block.block->address();
-                auto it = this->_quorums.find(addr);
-                ELLE_ASSERT(it != this->_quorums.end());
-                auto q = it->quorum;
-                if (q.erase(lost_id))
+                catch (Paxos::PaxosServer::WrongQuorum const& e)
                 {
-                  this->_cache(addr, true, q);
-                  if (signed(q.size()) < this->_factor)
-                  {
-                    ELLE_DUMP("schedule %f for rebalancing after eviction",
-                              addr);
-                    this->_rebalancable.emplace(block.block->address(), false);
-                  }
+                  q = e.expected();
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: eviction of %s failed: %s", this, address, e);
+                  break;
                 }
               }
             }
+            else
+            {
+              auto const addr = block.block->address();
+              auto it = this->_quorums.find(addr);
+              ELLE_ASSERT(it != this->_quorums.end());
+              auto q = it->quorum;
+              if (q.erase(lost_id))
+              {
+                this->_cache(addr, true, q);
+                if (signed(q.size()) < this->_factor)
+                {
+                  ELLE_DUMP("schedule %f for rebalancing after eviction",
+                            addr);
+                  this->_rebalancable.emplace(block.block->address(), false);
+                }
+              }
+            }
+          }
         }
 
         void
         Paxos::LocalPeer::_rebalance()
         {
-          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
+          ELLE_LOG_COMPONENT(
+            "infinit.model.doughnut.consensus.Paxos.rebalance");
           auto propagate = [this] (PaxosServer& paxos,
                                    Address a,
                                    PaxosServer::Quorum q)
@@ -735,7 +743,7 @@ namespace infinit
                       this->_quorums.find(address),
                       [&] (BlockRepartition& r) {r.quorum = q;});
                     for (auto const& node: q)
-                      this->_node_blocks[node].insert(address);
+                      this->_node_blocks.emplace(node, address);
                     propagate(it->second.paxos, address, q);
                   }
                 }
@@ -778,7 +786,7 @@ namespace infinit
                                 this->_quorums.find(address),
                                 [&] (BlockRepartition& r)
                                 {r.quorum.insert(peer);});
-                              this->_node_blocks[peer].insert(address);
+                              this->_node_blocks.emplace(peer, address);
                               rebalanced = true;
                             }
                             catch (elle::Error const& e)
@@ -843,7 +851,7 @@ namespace infinit
                       this->_quorums.find(target.address),
                       [&] (BlockRepartition& r)
                       {r.quorum.insert(peer->id());});
-                    this->_node_blocks[peer->id()].insert(target.address);
+                    this->_node_blocks.emplace(peer->id(), target.address);
                     ELLE_TRACE("successfully duplicated %f to %f",
                                target.address, address);
                     this->_rebalanced(target.address);
@@ -1309,6 +1317,7 @@ namespace infinit
           {
             throw MissingBlock(k.key());
           }
+          this->_node_blocks.get<by_block>().erase(address);
           this->on_remove()(address);
           this->_addresses.erase(address);
         }

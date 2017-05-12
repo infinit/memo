@@ -5,8 +5,10 @@
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
-#include <elle/unordered_map.hh>
 #include <elle/Error.hh>
+#include <elle/unordered_map.hh>
+
+#include <elle/das/tuple.hh>
 
 #include <elle/athena/paxos/Client.hh>
 
@@ -24,11 +26,14 @@ namespace infinit
       {
         namespace bmi = boost::multi_index;
 
+        ELLE_DAS_SYMBOL(address);
+        ELLE_DAS_SYMBOL(block);
         ELLE_DAS_SYMBOL(doughnut);
         ELLE_DAS_SYMBOL(replication_factor);
         ELLE_DAS_SYMBOL(lenient_fetch);
         ELLE_DAS_SYMBOL(rebalance_auto_expand);
         ELLE_DAS_SYMBOL(rebalance_inspect);
+        ELLE_DAS_SYMBOL(node);
         ELLE_DAS_SYMBOL(node_timeout);
 
         struct BlockOrPaxos;
@@ -339,12 +344,40 @@ namespace infinit
                     int,
                     &BlockRepartition::replication_factor> >
                 >>;
-
             /// Blocks quorum
             ELLE_ATTRIBUTE_R(Quorums, quorums);
             /// Nodes blocks
-            using NodeBlocks = std::unordered_map<
-              Address, std::unordered_set<Address>>;
+            using NodeBlock = elle::das::tuple<Symbol_node::Formal<Address>,
+                                               Symbol_block::Formal<Address>>;
+            static
+            Address
+            node(NodeBlock const& b)
+            {
+              return b.node;
+            }
+            static
+            Address
+            block(NodeBlock const& b)
+            {
+              return b.block;
+            }
+            struct by_node {};
+            struct by_block {};
+            using NodeBlocks = bmi::multi_index_container<
+              NodeBlock,
+              bmi::indexed_by<
+                bmi::hashed_unique<
+                  bmi::identity<NodeBlock>>,
+                bmi::hashed_non_unique<
+                  bmi::tag<by_node>,
+                  bmi::global_fun<NodeBlock const&,
+                                  Address,
+                                  &node>>,
+                bmi::hashed_non_unique<
+                  bmi::tag<by_block>,
+                  bmi::global_fun<NodeBlock const&,
+                                  Address,
+                                  &block>>>>;
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
             ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
             using NodeTimeouts =
