@@ -86,7 +86,7 @@ namespace infinit
             {
               if (!this->_connection->connected())
               {
-                ELLE_TRACE("%s: disconnected with exception",
+                ELLE_TRACE("%s: disconnected with exception %s",
                            this, elle::exception_string(
                              this->_connection->disconnected_exception()));
                 this->_connected.raise(
@@ -148,12 +148,19 @@ namespace infinit
       void
       Remote::reconnect()
       {
-        this->_connected.close();
+        ELLE_TRACE("%s: reconnect, connected=%s", this, !!this->_connected);
+        // It is possible for the whole code below the next line to do
+        // absolutely nothing synchronously. In that case we still need to
+        // reset the _connected exception to avoid busy-looping in safe_perform.
+        this->_connected.clear_exception();
         this->_connection->disconnect();
         if (this->_connection->connected())
           this->_disconnected_exception =
             this->_connection->disconnected_exception();
         this->_connecting_since = std::chrono::system_clock::now();
+        // If the dock decides to create a different Dock::Connection
+        // because this->_connection is definitely broken, it will be
+        // injected into this remote (tracked in dock's _peer_cache).
         this->_doughnut.dock().connect(this->_connection->location());
       }
 
