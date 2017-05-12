@@ -837,6 +837,7 @@ def configure(
               'passport-sign-delegate',
               'passport_cli',
               # 'rebalancing',
+              'sanity',
               'single-user-two-devices-shared-storage',
               'storage_cli',
               'user_cli',
@@ -844,7 +845,7 @@ def configure(
             ]))
       doctor_configuration_test = functional_test(
         'doctor/configuration',
-        env= {
+        env = {
           'INFINIT_HOME_ROOT': str(
             drake.path_source('tests/functional/doctor/homes')
           )
