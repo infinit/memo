@@ -111,6 +111,8 @@ def configure(
   protocol_lib     = import_lib(elle.protocol)
   reactor_lib      = import_lib(elle.reactor)
 
+  # macOS's libc++.
+  cxx_lib = elle.reactor.cxx_lib
   dokan_lib = elle.reactor.dokan_lib if windows else None
 
   cxx_toolkit = elle.cxx_toolkit
@@ -224,7 +226,8 @@ def configure(
   grpc = drake.include(
     'src/infinit/grpc',
     cxx_toolkit = cxx_toolkit,
-    cxx_config = cxx_config)
+    cxx_config = cxx_config,
+    cxx_lib = cxx_lib)
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
