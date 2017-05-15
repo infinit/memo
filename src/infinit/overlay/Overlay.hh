@@ -210,12 +210,33 @@ namespace infinit
 #if INFINIT_ENABLE_PROMETHEUS
       /// Gauge on the number of accessible blocks.
       ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_mutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        underreplicated_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        overreplicated_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        underreplicated_mutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, under_quorum_mutable_blocks_gauge);
 #endif
 
     protected:
+      /// Information about reachable blocks
+      struct ReachableBlocks
+      {
+        /// Total number of blocks we know about
+        int total_blocks;
+        int mutable_blocks;
+        int immutable_blocks;
+        int underreplicated_immutable_blocks;
+        int overreplicated_immutable_blocks;
+        int underreplicated_mutable_blocks;
+        int under_quorum_mutable_blocks;
+      };
       /// Overlay-dependant computation of how many blocks are reachable.
       virtual
-      int
+      ReachableBlocks
       _compute_reachable_blocks() const;
       /// Request for reachable_blocks to be updated.
       /// Call from overlay when something changes.
@@ -223,7 +244,7 @@ namespace infinit
       _update_reachable_blocks();
       ELLE_ATTRIBUTE(elle::reactor::Barrier, reachable_blocks_barrier);
       ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, reachable_blocks_thread);
-      ELLE_ATTRIBUTE_R(int, reachable_blocks);
+      ELLE_ATTRIBUTE_R(ReachableBlocks, reachable_blocks);
       void
       _reachable_blocks_loop();
     /*----------.

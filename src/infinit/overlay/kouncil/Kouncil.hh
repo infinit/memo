@@ -330,7 +330,7 @@ namespace infinit
         stats() const override;
 
       protected:
-        int
+        ReachableBlocks
         _compute_reachable_blocks() const override;
       public:
         elle::json::Json

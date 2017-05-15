@@ -816,13 +816,43 @@ namespace infinit
         this->_update_reachable_blocks();
       }
 
-      int
+      Overlay::ReachableBlocks
       Kouncil::_compute_reachable_blocks() const
       {
-        std::unordered_set<Address> ids;
+        std::unordered_map<Address, int> ids_mutable, ids_immutable;
         for (auto const& entry: this->_address_book.get<2>())
-          ids.insert(entry.block());
-        return ids.size();
+        {
+          if (entry.block().mutable_block())
+            ids_mutable[entry.block()] += 1;
+          else
+            ids_immutable[entry.block()] += 1;
+        }
+        Overlay::ReachableBlocks res {0,0,0,0,0,0,0};
+        res.total_blocks = ids_mutable.size() + ids_immutable.size();
+        res.mutable_blocks = ids_mutable.size();
+        res.immutable_blocks = ids_immutable.size();
+        int rf = 1;
+        if (auto* pax = dynamic_cast<model::doughnut::consensus::Paxos*>(
+          doughnut()->consensus().get()))
+        {
+          rf = pax->factor();
+        }
+        int quorum = rf/2 + 1;
+        for (auto const& idcount: ids_immutable)
+        {
+          if (idcount.second > rf)
+            res.overreplicated_immutable_blocks++;
+          else if (idcount.second < rf)
+            res.underreplicated_immutable_blocks++;
+        }
+        for (auto const& idcount: ids_mutable)
+        {
+          if (idcount.second < rf)
+            res.underreplicated_mutable_blocks++;
+          if (idcount.second < quorum)
+            res.under_quorum_mutable_blocks++;
+        }
+        return res;
       }
 
 
