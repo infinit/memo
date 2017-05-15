@@ -190,6 +190,7 @@ namespace infinit
         int
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
+        ELLE_ATTRIBUTE_R(Protocol, protocol);
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
@@ -211,7 +212,6 @@ namespace infinit
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, terminating);
-        ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);

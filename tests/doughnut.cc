@@ -964,7 +964,9 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     auto obj = res.result.get();
     BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
     BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
-    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    // UTP was temporarily deprecated.
+    // BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    BOOST_TEST(boost::any_cast<std::string>(obj["protocol"]) == "tcp");
     BOOST_CHECK_EQUAL(
       boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
     auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
@@ -1356,8 +1358,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::storage::Storage> storage,
-      dht::Protocol p) override
+      std::unique_ptr<infinit::storage::Storage> storage) override
     {
       return std::make_unique<Local>(
         *this,
@@ -1595,6 +1596,34 @@ namespace rebalancing
       dht_a.overlay->disconnect_all();
     ELLE_LOG("read block")
       BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
+  }
+
+  ELLE_TEST_SCHEDULED(evict_removed_blocks, (bool, immutable))
+  {
+    auto dht_a = DHT(make_consensus = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %f", dht_a.dht->id());
+    auto dht_b = DHT(make_consensus = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("second DHT: %f", dht_b.dht->id());
+    auto ba = make_block(dht_a, immutable, "evict_faulty");
+    auto bb = make_block(dht_a, immutable, "evict_faulty");
+    auto bc = make_block(dht_a, immutable, "evict_faulty");
+    ELLE_LOG("write blocks");
+    {
+      dht_a.dht->seal_and_insert(*ba);
+      dht_a.dht->seal_and_insert(*bb);
+      dht_a.dht->seal_and_insert(*bc);
+    }
+    ELLE_LOG("remove block")
+      dht_a.dht->remove(bb->address());
+    ELLE_LOG("disconnect second dht")
+    {
+      dht_b.overlay->disconnect_all();
+      local_a.evict()();
+    }
   }
 }
 
@@ -1883,6 +1912,12 @@ ELLE_TEST_SUITE()
       auto evict_faulty_OKB = [] () { evict_faulty(false); };
       rebalancing->add(BOOST_TEST_CASE(evict_faulty_CHB), 0, valgrind(3));
       rebalancing->add(BOOST_TEST_CASE(evict_faulty_OKB), 0, valgrind(3));
+    }
+    {
+      auto evict_removed_blocks_CHB = [] () { evict_removed_blocks(true); };
+      auto evict_removed_blocks_OKB = [] () { evict_removed_blocks(false); };
+      rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_CHB), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_OKB), 0, valgrind(3));
     }
   }
 }

@@ -435,7 +435,8 @@ ELLE_TEST_SCHEDULED(
                    ::version = config.version,
                    ::keys = keys,
                    ::make_overlay = config.overlay_builder,
-                   ::paxos = false);
+                   ::paxos = false,
+                   ::protocol = infinit::model::doughnut::Protocol::utp);
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints().begin()->port()) <<
     [&] (UTPInstrument& instrument)
     {
@@ -444,7 +445,8 @@ ELLE_TEST_SCHEDULED(
                        ::keys = keys,
                        ::make_overlay = config.overlay_builder,
                        ::paxos = false,
-                       ::storage = nullptr);
+                       ::storage = nullptr,
+                       ::protocol = infinit::model::doughnut::Protocol::utp);
       auto loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
                               {instrument.endpoint()}};
       ELLE_LOG("connect DHTs")

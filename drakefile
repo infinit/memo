@@ -58,9 +58,6 @@ def configure(
   if python3 is not None:
     python = python3
 
-  PatchAndInstall = drake.cxx.PatchAndInstall
-  PatchAndInstall.toolkit = cxx_toolkit
-
   global rule_build, rule_check, rule_install, rule_symbols, rule_tests
   rule_build = drake.Rule('build')
   rule_check = drake.Rule('check')
@@ -100,31 +97,23 @@ def configure(
   # Where we install libraries.
   libdir = 'bin' if windows else 'lib'
 
-  if not windows:
-    dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, libdir,
-                             strip_prefix = True)
-    cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, libdir,
-                                  strip_prefix = True)
-    protocol_lib = drake.copy(elle.protocol.lib_dynamic, libdir,
-                              strip_prefix = True)
-    reactor_lib = drake.copy(elle.reactor.lib_dynamic, libdir,
-                             strip_prefix = True)
-    aws_lib = drake.copy(elle.aws.library, libdir,
-                         strip_prefix = True)
-    elle_lib = drake.copy(elle.elle.lib_dynamic, libdir,
-                          strip_prefix = True)
-    dokan_lib = None
-    athena_lib = drake.copy(elle.athena.lib_dynamic, libdir,
-                            strip_prefix = True)
-  else:
-    dropbox_lib = elle.dropbox.lib_static
-    cryptography_lib = elle.cryptography.lib_static
-    protocol_lib = elle.protocol.lib_static
-    reactor_lib = elle.reactor.lib_static
-    aws_lib = elle.aws.library
-    elle_lib = elle.elle.lib_static
-    dokan_lib = elle.reactor.dokan_lib
-    athena_lib = elle.athena.lib_static
+  def import_lib(lib):
+    if windows:
+      return lib.lib_static
+    else:
+      return drake.copy(lib.lib_dynamic, libdir, strip_prefix = True)
+
+  athena_lib       = import_lib(elle.athena)
+  aws_lib          = import_lib(elle.aws)
+  cryptography_lib = import_lib(elle.cryptography)
+  dropbox_lib      = import_lib(elle.dropbox)
+  elle_lib         = import_lib(elle.elle)
+  protocol_lib     = import_lib(elle.protocol)
+  reactor_lib      = import_lib(elle.reactor)
+
+  # macOS's libc++.
+  cxx_lib = elle.reactor.cxx_lib
+  dokan_lib = elle.reactor.dokan_lib if windows else None
 
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
@@ -135,6 +124,7 @@ def configure(
 
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
+
 
   ## --------------- ##
   ## Infinit library ##
@@ -231,10 +221,13 @@ def configure(
   ## grpc.  ##
   ## ------ ##
 
+  PatchAndInstall = drake.cxx.PatchAndInstall
+
   grpc = drake.include(
     'src/infinit/grpc',
     cxx_toolkit = cxx_toolkit,
-    cxx_config = cxx_config)
+    cxx_config = cxx_config,
+    cxx_lib = cxx_lib)
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
@@ -836,6 +829,7 @@ def configure(
               'passport-sign-delegate',
               'passport_cli',
               # 'rebalancing',
+              'sanity',
               'single-user-two-devices-shared-storage',
               'storage_cli',
               'user_cli',
@@ -843,7 +837,7 @@ def configure(
             ]))
       doctor_configuration_test = functional_test(
         'doctor/configuration',
-        env= {
+        env = {
           'INFINIT_HOME_ROOT': str(
             drake.path_source('tests/functional/doctor/homes')
           )

@@ -51,7 +51,7 @@ namespace infinit
       {
       public:
         BindException(const std::string& s)
-        : std::runtime_error(s)
+          : std::runtime_error(s)
         {}
       };
 
@@ -59,17 +59,17 @@ namespace infinit
                    Address id,
                    std::unique_ptr<storage::Storage> storage,
                    int port,
-                   boost::optional<boost::asio::ip::address> listen_address,
-                   Protocol p)
+                   boost::optional<boost::asio::ip::address> listen_address)
         : Super(dht, std::move(id))
         , _storage(std::move(storage))
       {
+        auto p = dht.protocol();
         std::unique_ptr<elle::reactor::network::TCPServer> old_server;
         int num_run = 0;
         while (true)
         {
           if (++num_run > 3)
-            // we are looping on the same ports, try one at random instead
+            // We are looping on the same ports, try one at random instead.
             port = 1025 + (rand()%(65536 - 1025));
           try
           {
@@ -89,7 +89,8 @@ namespace infinit
               ELLE_LOG("%s: listen on tcp://%s",
                        this, this->_server->local_endpoint());
             }
-            // Always enable UTP server
+            // Always enable UTP server, to ensure we get an UDP socket on the
+            // same port as TCP. Kelips uses it.
             {
               this->_utp_server =
                 std::make_unique<elle::reactor::network::UTPServer>();
@@ -108,11 +109,15 @@ namespace infinit
                 else
                   throw; // port was specified in args, no retry
               }
-              this->_utp_server_thread = std::make_unique<elle::reactor::Thread>(
-                elle::sprintf("%s UTP", *this),
-                [this] { this->_serve_utp(); });
-              ELLE_LOG("%s: listen on utp://%s",
-                       this, this->_utp_server->local_endpoint());
+              if (p.with_utp())
+              {
+                this->_utp_server_thread =
+                  std::make_unique<elle::reactor::Thread>(
+                    elle::sprintf("%s UTP", *this),
+                    [this] { this->_serve_utp(); });
+                ELLE_LOG("%s: listen on utp://%s",
+                         this, this->_utp_server->local_endpoint());
+              }
             }
             break;
           }

@@ -206,6 +206,23 @@ namespace infinit
           }
       }
 
+      static
+      Protocol
+      deprecate_utp(Protocol const& p)
+      {
+        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        if (!utp_guard && p == Protocol::all)
+        {
+          ELLE_WARN(
+            "Not using UTP although network configuration selects 'all' "
+            "protocols. UTP has been temporarily deprecated. Force with "
+            "INFINIT_UTP=1.");
+          return Protocol::tcp;
+        }
+        else
+          return p;
+      }
+
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
         , _connect_timeout(
@@ -215,6 +232,7 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
+        , _protocol(deprecate_utp(init.protocol))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -226,8 +244,7 @@ namespace infinit
           ? this->_consensus->make_local(
             init.port,
             init.listen_address,
-            std::move(init.storage),
-            init.protocol)
+            std::move(init.storage))
           : nullptr)
         , _dock(*this,
                 init.protocol,
@@ -522,13 +539,6 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
-      }
-
-
-      Protocol const&
-      Doughnut::protocol() const
-      {
-        return this->_dock.protocol();
       }
 
       /*------------------.
