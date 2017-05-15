@@ -224,6 +224,10 @@ namespace infinit
         elle::json::Object
         stats() const override;
 
+      protected:
+        ReachableBlocks
+        _compute_reachable_blocks() const override;
+
       private:
         using Local = infinit::model::doughnut::Local;
         using Overlay = infinit::overlay::Overlay;

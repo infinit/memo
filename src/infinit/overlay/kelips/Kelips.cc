@@ -2103,6 +2103,8 @@ namespace infinit
               endpoints_update(it->second.endpoints, c.second);
           }
         if (g == _group)
+        {
+          bool changed = false;
           for (auto const& f: p->files)
           {
             auto its = _state.files.equal_range(f.first);
@@ -2110,6 +2112,7 @@ namespace infinit
                 return i.second.home_node == f.second.second;});
             if (it == its.second)
             {
+              changed = true;
               _state.files.emplace(f.first,
                                    File{f.first, f.second.second, f.second.first, Time(), 0});
               ELLE_DUMP("%s: registering %f live since %s (%s)", *this,
@@ -2127,6 +2130,9 @@ namespace infinit
               it->second.last_seen = std::max(it->second.last_seen, f.second.first);
             }
           }
+          if (changed)
+            this->_update_reachable_blocks();
+        }
       }
 
       void
@@ -2792,7 +2798,10 @@ namespace infinit
                       return f.second.home_node == e.id();
                     });
                   if (it_r == its.second)
-                  _state.files.emplace(file, File{file, e.id(), now(), Time(), 0});
+                  {
+                    _state.files.emplace(file, File{file, e.id(), now(), Time(), 0});
+                    this->_update_reachable_blocks();
+                  }
                 }
                 if (result_set.insert(e.id()).second)
                   yield(e);
@@ -3091,6 +3100,8 @@ namespace infinit
           else
             ++it;
         }
+        if (cleared)
+          this->_update_reachable_blocks();
         bench.add(cleared);
         auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
         int idx = 0;
@@ -3190,8 +3201,11 @@ namespace infinit
                     [&](Files::value_type const& f) {
                       return f.second.home_node == _self;
                     }))
+        {
           _state.files.emplace(block.address(),
                                File{block.address(), _self, now(), Time(), 0});
+          this->_update_reachable_blocks();
+        }
         auto itp = boost::range::find(_promised_files, block.address());
         if (itp != _promised_files.end())
         {
@@ -3209,6 +3223,7 @@ namespace infinit
           if (it->second.home_node == _self)
           {
             _state.files.erase(it);
+            this->_update_reachable_blocks();
             break;
           }
         }
@@ -3338,6 +3353,7 @@ namespace infinit
             File{k, _self, now(), now(), _config.gossip.new_threshold + 1});
           //ELLE_DUMP("%s: reloaded %x", *this, k);
         }
+        this->_update_reachable_blocks();
       }
 
       void
@@ -3406,6 +3422,7 @@ namespace infinit
                                    File{f.first, f.second, now(), now(),
                                        this->_config.gossip.new_threshold + 1});
           }
+        this->_update_reachable_blocks();
       }
 
       void
@@ -3840,6 +3857,45 @@ namespace infinit
               }
             },
         };
+      }
+
+      Overlay::ReachableBlocks
+      Node::_compute_reachable_blocks() const
+      {
+        std::unordered_map<Address, int> ids_mutable, ids_immutable;
+        for (auto const& entry: this->_state.files)
+        {
+          if (entry.second.address.mutable_block())
+            ids_mutable[entry.second.address] += 1;
+          else
+            ids_immutable[entry.second.address] += 1;
+        }
+        Overlay::ReachableBlocks res {0,0,0,0,0,0,0};
+        res.total_blocks = ids_mutable.size() + ids_immutable.size();
+        res.mutable_blocks = ids_mutable.size();
+        res.immutable_blocks = ids_immutable.size();
+        int rf = 1;
+        if (auto* pax = dynamic_cast<model::doughnut::consensus::Paxos*>(
+          doughnut()->consensus().get()))
+        {
+          rf = pax->factor();
+        }
+        int quorum = rf/2 + 1;
+        for (auto const& idcount: ids_immutable)
+        {
+          if (idcount.second > rf)
+            res.overreplicated_immutable_blocks++;
+          else if (idcount.second < rf)
+            res.underreplicated_immutable_blocks++;
+        }
+        for (auto const& idcount: ids_mutable)
+        {
+          if (idcount.second < rf)
+            res.underreplicated_mutable_blocks++;
+          if (idcount.second < quorum)
+            res.under_quorum_mutable_blocks++;
+        }
+        return res;
       }
 
       std::ostream&
