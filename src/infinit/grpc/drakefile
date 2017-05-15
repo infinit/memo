@@ -118,7 +118,7 @@ class GRPCPyGen(GRPCGen):
 def configure(
     cxx_toolkit,
     cxx_config,
-    cxx_lib,
+    cxx_lib, # macOS's libc++, or None.
     git = None,
 ):
   global doughnut_proto, grpc_lib, grpc, sources
