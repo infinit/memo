@@ -36,6 +36,32 @@ namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 using infinit::model::Endpoints;
 
+namespace
+{
+  template <typename Fun>
+  auto insist(Fun fun, int attempts = 10)
+  {
+    for (int i=0; i<attempts; ++i)
+    {
+      try
+      {
+        ELLE_LOG("insist: attempt %s", i);
+        return fun();
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_LOG("%s", e);
+      }
+      catch (...)
+      {
+        ELLE_WARN("%s", elle::exception_string());
+        throw;
+      }
+      elle::reactor::sleep(1_sec);
+    }
+    elle::unreachable();
+  }
+}
 
 struct BEndpoints
 {
@@ -804,28 +830,6 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
   }
 }
 
-void insist(std::function<void()> op, int max_retry_secs)
-{
-  for (int i=0; i<max_retry_secs; ++i)
-  {
-    try
-    {
-      op();
-      return;
-    }
-    catch (elle::Error const& e)
-    {
-      ELLE_LOG("%s", e);
-    }
-    catch (...)
-    {
-      ELLE_WARN("%s", elle::exception_string());
-      throw;
-    }
-    elle::reactor::sleep(1_sec);
-  }
-}
-
 ELLE_TEST_SCHEDULED(beyond_observer_1)
 {
   Beyond beyond;
@@ -846,8 +850,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
-  insist([&] { readfile(*fs, "file");}, 10);
-  BOOST_CHECK_NO_THROW(readfile(*fs, "file"));
+  BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
 
   // remove then add
   beyond.pull(*nodes[0].first);
@@ -858,8 +861,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
-  insist([&] { readfile(*fs, "file");}, 10);
-  BOOST_CHECK_NO_THROW(readfile(*fs, "file"));
+  BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
 }
 
 
@@ -882,8 +884,8 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   BOOST_CHECK_THROW(writefile(*fs, "file", "bar"), std::exception);
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[0].first);
-  insist([&] { writefile(*fs, "file", "bar");}, 10);
-  BOOST_CHECK_EQUAL(readfile(*fs, "file"), "bar");
+  insist([&] { writefile(*fs, "file", "bar");});
+  BOOST_TEST(readfile(*fs, "file") == "bar");
 }
 
 ELLE_TEST_SCHEDULED(beyond_storage)
@@ -895,21 +897,27 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
   auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
+  auto files = std::vector<std::string>{};
   for (int i=0; i<20; ++i)
-    writefile(*fs, "file" + std::to_string(i), "foo");
-  for (int i=0; i<20; ++i)
-    BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
-
+    files.emplace_back("file" + std::to_string(i));
+  for (auto const& f : files)
+    writefile(*fs, f, "foo");
+  for (auto const& f : files)
+  {
+    ELLE_LOG("file %s", f);
+    BOOST_TEST(readfile(*fs, f) == "foo");
+  }
   nodes[0].first.reset();
   nodes[0].second.reset();
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[0].first);
-  // If the nodes see each other they will route request to one other,
-  // otherwise requests will fail (we set a low query_get_retries)
-  for (int i=0; i<20; ++i)
+  // If the nodes see each other they will route requests to one
+  // another, otherwise requests will fail (we set a low
+  // query_get_retries)
+  for (auto const& f : files)
   {
-    insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
-    BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
+    ELLE_LOG("file %s", f);
+    BOOST_TEST(insist([&]{ return readfile(*fs, f); }) == "foo");
   }
 
   // same operation, but push the other one on beyond
@@ -921,10 +929,10 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   nodes[0].second.reset();
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[1].first);
-  for (int i=0; i<20; ++i)
+  for (auto const& f : files)
   {
-    insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
-    BOOST_CHECK_NO_THROW(readfile(*fs, "file" + std::to_string(i)));
+    ELLE_LOG("file %s", f);
+    BOOST_CHECK_NO_THROW(insist([&]{readfile(*fs, f);}));
   }
 }
 
