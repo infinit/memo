@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+# This is definitely not a functional test.  We should introduce some
+# tests/sanity directory, and move this tests there (as
+# tests/sanity/lib-dependencies for instance).
+#
+# But it's handy to put it here in a first step, as it reduces the
+# amount of drakefilery to write.  It must be run when everything is
+# built.
+#
+# And of course, it would be better to run it on the install tree.
+
 import json
 import os
 import re
@@ -21,13 +31,22 @@ def deps_darwin(path):
   return res
 
 # The valid dependencies for a darwin lib/executable.
+#
+# osxfuse: We don't try to ship and install it, because anyway it
+# installs some kernel module that requires priviledges.  Chris
+# reports that even Brew does not try to install it and asks for the
+# user to install the genuine package.
 darwin_deps = [
+  r'.*libosxfuse\.2\.dylib',
   r'/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation',
   r'/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices',
   r'/System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration',
   r'/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation',
+  r'/System/Library/Frameworks/Kerberos.framework/Versions/A/Kerberos',
   r'/usr/lib/libSystem\.B\.dylib',
   r'/usr/lib/libiconv\.2\.dylib',
+  r'/usr/lib/libobjc\.A\.dylib',
+  r'/usr/lib/libresolv\.9\.dylib',
   r'@rpath/[^/]*\.dylib',
 ]
 darwin_re = re.compile('|'.join(darwin_deps))
@@ -53,4 +72,4 @@ check_dir(os.path.join(os.environ['BUILD_DIR'], 'bin'))
 if os.path.exists('lib'):
   check_dir(os.path.join(os.environ['BUILD_DIR'], 'lib'))
 
-# exit(1 if nfail else 0)
+exit(1 if nfail else 0)
