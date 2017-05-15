@@ -108,6 +108,8 @@ namespace infinit
                      int version);
           Paxos::PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
+          void
+          _resign() override;
 
         private:
           PaxosClient::Peers

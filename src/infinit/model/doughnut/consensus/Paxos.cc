@@ -1852,6 +1852,35 @@ namespace infinit
         }
 
         void
+        Paxos::_resign()
+        {
+          ELLE_LOG_COMPONENT(
+            "infinit.model.doughnut.consensus.Paxos.rebalance");
+          auto local = this->doughnut().local();
+          if (!local)
+            return;
+          auto paxos = std::static_pointer_cast<LocalPeer>(local);
+          auto blocks =
+            elle::make_vector(
+              elle::as_range(
+                paxos->node_blocks().get<LocalPeer::by_node>()
+                .equal_range(this->doughnut().id())));
+          for (auto nb: blocks)
+          {
+            auto address = nb.block;
+            ELLE_TRACE_SCOPE("rebalance %f out", address);
+            auto quorum =
+              ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
+            ELLE_ENFORCE_EQ(quorum.erase(this->doughnut().id()), 1u);
+            ELLE_DEBUG("new quorum: %f", quorum);
+            auto client = this->_client(address);
+            auto latest = this->_latest(client, address);
+            if (!this->_rebalance(client, address, quorum, latest.second))
+              ELLE_WARN("%f: unable to rebalance %f", this, address);
+          }
+        }
+
+        void
         Paxos::_remove(Address address, blocks::RemoveSignature rs)
         {
           this->remove_many(address, std::move(rs), this->_factor);
