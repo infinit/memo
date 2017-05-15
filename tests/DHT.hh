@@ -292,7 +292,8 @@ public:
         elle::defaulted(std::chrono::milliseconds(5000)),
       dht::soft_fail_timeout =
         elle::defaulted(std::chrono::milliseconds(20000)),
-      dht::soft_fail_running = elle::defaulted(false)
+      dht::soft_fail_running = elle::defaulted(false),
+      dht::resign_on_shutdown = false
       ).call([this] (bool paxos,
                      elle::cryptography::rsa::KeyPair keys,
                      boost::optional<elle::cryptography::rsa::KeyPair> owner,
@@ -310,7 +311,8 @@ public:
                      boost::optional<int> port,
                      elle::Defaulted<std::chrono::milliseconds> connect_timeout,
                      elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
-                     elle::Defaulted<bool> soft_fail_running)
+                     elle::Defaulted<bool> soft_fail_running,
+                     bool resign_on_shutdown)
              {
                this->init(paxos,
                           keys,
@@ -329,8 +331,8 @@ public:
                           port,
                           connect_timeout,
                           soft_fail_timeout,
-                          soft_fail_running
-                 );
+                          soft_fail_running,
+                          resign_on_shutdown);
               }, std::forward<Args>(args)...);
   }
 
@@ -381,8 +383,8 @@ private:
        boost::optional<int> port,
        elle::Defaulted<std::chrono::milliseconds> connect_timeout,
        elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
-       elle::Defaulted<bool> soft_fail_running
-    )
+       elle::Defaulted<bool> soft_fail_running,
+       bool resign_on_shutdown)
   {
     auto keys =
       std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -431,7 +433,8 @@ private:
         dht::protocol = p,
         dht::connect_timeout = connect_timeout,
         dht::soft_fail_timeout = soft_fail_timeout,
-        dht::soft_fail_running = soft_fail_running);
+        dht::soft_fail_running = soft_fail_running,
+        dht::resign_on_shutdown = resign_on_shutdown);
     else
       this->dht = std::make_shared<dht::Doughnut>(
         dht::name = user_name,
@@ -447,7 +450,8 @@ private:
         dht::protocol = p,
         dht::connect_timeout = connect_timeout,
         dht::soft_fail_timeout = soft_fail_timeout,
-        dht::soft_fail_running = soft_fail_running);
+        dht::soft_fail_running = soft_fail_running,
+        dht::resign_on_shutdown = resign_on_shutdown);
   }
 };
 

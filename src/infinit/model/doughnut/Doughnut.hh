@@ -75,6 +75,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(port);
       ELLE_DAS_SYMBOL(protocol);
       ELLE_DAS_SYMBOL(rdv_host);
+      ELLE_DAS_SYMBOL(resign_on_shutdown);
       ELLE_DAS_SYMBOL(soft_fail_running);
       ELLE_DAS_SYMBOL(soft_fail_timeout);
       ELLE_DAS_SYMBOL(storage);
@@ -161,7 +162,8 @@ namespace infinit
               std::declval<elle::Defaulted<bool>>(),
             doughnut::tcp_heartbeat =
               std::declval<boost::optional<std::chrono::milliseconds>>(),
-            doughnut::encrypt_options = EncryptOptions()));
+            doughnut::encrypt_options = EncryptOptions(),
+            doughnut::resign_on_shutdown = bool()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
@@ -191,6 +193,7 @@ namespace infinit
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
+        ELLE_ATTRIBUTE_RW(bool, resign_on_shutdown);
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);

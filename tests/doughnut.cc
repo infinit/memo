@@ -1625,6 +1625,51 @@ namespace rebalancing
       local_a.evict()();
     }
   }
+
+  ELLE_TEST_SCHEDULED(resign)
+  {
+    auto dht_a = DHT(id = special_id(10),
+                     make_consensus = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    auto dht_b = std::make_unique<DHT>(
+      id = special_id(11),
+      make_consensus = instrument(3),
+      dht::resign_on_shutdown = true,
+      dht::consensus::rebalance_auto_expand = false);
+    dht_b->overlay->connect(*dht_a.overlay);
+    auto dht_c = std::make_unique<DHT>(
+      id = special_id(12),
+      make_consensus = instrument(3),
+      dht::resign_on_shutdown = true,
+      dht::consensus::rebalance_auto_expand = false);
+    dht_c->overlay->connect(*dht_a.overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto ba = dht_a.dht->make_block<blocks::MutableBlock>(
+      std::string("resignation1"));
+    auto bb = dht_a.dht->make_block<blocks::MutableBlock>(
+      std::string("resignation2"));
+    auto bc = dht_a.dht->make_block<blocks::MutableBlock>(
+      std::string("resignation3"));
+    ELLE_LOG("write blocks");
+    {
+      dht_a.dht->seal_and_insert(*ba);
+      dht_a.dht->seal_and_insert(*bb);
+      dht_a.dht->seal_and_insert(*bc);
+    }
+    ELLE_LOG("disconnect third dht")
+      dht_c.reset();
+    ELLE_LOG("disconnect second dht")
+      dht_b.reset();
+    ELLE_LOG("update blocks");
+    {
+      ba->data(std::string("resignation1'"));
+      bb->data(std::string("resignation2'"));
+      bc->data(std::string("resignation3'"));
+      dht_a.dht->seal_and_insert(*ba);
+      dht_a.dht->seal_and_insert(*bb);
+      dht_a.dht->seal_and_insert(*bc);
+    }
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -1919,5 +1964,6 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_CHB), 0, valgrind(3));
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_OKB), 0, valgrind(3));
     }
+    rebalancing->add(BOOST_TEST_CASE(resign), 0, valgrind(3));
   }
 }

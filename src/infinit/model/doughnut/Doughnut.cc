@@ -233,6 +233,7 @@ namespace infinit
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
         , _protocol(deprecate_utp(init.protocol))
+        , _resign_on_shutdown(init.resign_on_shutdown)
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -358,6 +359,12 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
         this->_terminating.open();
+        if (this->_resign_on_shutdown)
+        {
+          ELLE_TRACE_SCOPE("resign");
+          this->overlay()->storing(false);
+          this->consensus()->resign();
+        }
         if (this->_user_init)
         {
           if (!elle::reactor::wait(*this->_user_init, 5_sec))
