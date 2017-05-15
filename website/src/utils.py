@@ -52,7 +52,7 @@ def view(name):
       url = url,
       os = detect_os,
       version = version,
-      tarball_version = tarball_version,
+      tarball_version = tarball_version
     )(f)
   return res
 

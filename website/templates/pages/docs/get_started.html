@@ -29,61 +29,22 @@
     </ul>
   </nav>
 
-  <%
-    if "mac" in request.path:
-      osname = "mac"
-    elif "linux" in request.path:
-      osname = "linux"
-    elif "windows" in request.path:
-      osname = "windows"
-    elif os() == "Macintosh":
-      osname = "mac"
-    elif os() == "Windows":
-      osname = "windows"
-    else:
-      osname = "linux"
+  <section class="doc">
 
-    if osname != "windows":
-      cat_command = "cat"
-      demo_home = "$PWD/share/infinit/filesystem/test/home/"
-      demo_mountpoint = "~/mnt-demo"
-      demo_mountpoint_abs = "~/mnt-demo"
-      dir = "/"
-      dir_end = "/"
-      env_home = "$HOME"
-      env_infinit_home = "$INFINIT_HOME"
-      env_infinit_data_home = "$INFINIT_DATA_HOME"
-      env_infinit_state_home = "$INFINIT_STATE_HOME"
-      env_pwd = "$PWD"
-      exe = ""
-      guide_mountpoint = "~/mnt-alice-volume"
-      guide_mountpoint_abs = "~/mnt-alice-volume"
-      guide_storage_dir = "/var/storage/infinit/"
-      ls_command = "ls"
-      temp_dir = "/tmp/infinit-demo/"
-      term = "$>"
-    else:
-      cat_command = "type"
-      demo_home = "%CD%\\share\\infinit\\filesystem\\test\\home"
-      demo_mountpoint = "z:"
-      demo_mountpoint_abs = "z:\\"
-      dir = "\\"
-      dir_end = ""
-      env_home = "%HOMEPATH%"
-      env_infinit_home = "%INFINIT_HOME%"
-      env_infinit_data_home = "%INFINIT_DATA_HOME%"
-      env_infinit_state_home = "%INFINIT_STATE_HOME%"
-      env_pwd = "%CD%"
-      exe = ".exe"
-      guide_mountpoint = "z:"
-      guide_mountpoint_abs = "z:\\"
-      guide_storage_dir = "C:\\storage\\infinit"
-      ls_command = "dir"
-      temp_dir = "%TEMP%\\infinit-demo"
-      term = ">"
-  %>
-
-  <section id="get_started" class="doc ${osname}">
+    <%
+      if "mac" in request.path:
+        osname = "mac"
+      elif "linux" in request.path:
+        osname = "linux"
+      elif "windows" in request.path:
+        osname = "windows"
+      elif os() == "Macintosh":
+        osname = "mac"
+      elif os() == "Windows":
+        osname = "windows"
+      else:
+        osname = "linux"
+    %>
 
     <h1>Get Started</h1>
 
@@ -386,7 +347,7 @@ Created storage "local".</code></pre>
 
     <p>The <em>infinit network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit network create --as alice --storage local --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/network-create.sh' />
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
@@ -397,7 +358,7 @@ Remotely saved network "alice/my-network".
 
     <p>The last step on this device consists of creating a logical volume to store and access files through a file system interface. Volumes can be manipulated through the <em>infinit volume</em> binary as shown next:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume create --as alice --network my-network --name my-volume --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-create.sh' />
 Locally created volume "alice/my-volume".
 Remotely saved volume "alice/my-volume".
 </code></pre>
@@ -409,7 +370,7 @@ Remotely saved volume "alice/my-volume".
     <p>For now, only configuration files have been created. Nothing has been run. Let’s start the server and access the volume by mounting it through FUSE, as easily as any other filesystem:</p>
 
     <div data-platform="mac windows debian centos alpine arm">
-      <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --cache --publish
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-mount.sh' />
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -420,7 +381,7 @@ Running volume "alice/my-volume".
     </div>
 
     <div data-platform="docker">
-      <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --cache --publish &
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-mount.sh' /> &
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -432,8 +393,8 @@ Running volume "alice/my-volume".
 
     <p>That’s it! You can now create, list and access files from the mount point <code>${guide_mountpoint_abs}</code>. Try creating a file right now:
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} echo "everything is" > ${guide_mountpoint}${dir}awesome.txt
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/echo.sh' />
+<%include file='scripts/get-started/alice/device_A/cat.sh' />
 everything is</code></pre>
 
     <h3 id="access-from-another-machine">Access from another machine</h3>
@@ -454,7 +415,7 @@ everything is</code></pre>
 
     <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit device transmit --user --as alice
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/transmit.sh' />
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -462,7 +423,7 @@ User identity on the Hub for: 297 seconds
 
     <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit device receive --user --name alice
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/receive.sh' />
 Passphrase: ********
 Received user identity for "alice".
 </code></pre>
@@ -471,21 +432,21 @@ Received user identity for "alice".
 
     <p>The next steps consist of fetching the resources that you previously pushed on the Hub: network and volume.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network fetch --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/network-fetch.sh' />
 Fetched network "alice/my-network".
-${term} infinit volume fetch --as alice --name my-volume
+<%include file='scripts/get-started/alice/device_B/volume-fetch.sh' />
 Fetched volume "alice/my-volume".
 </code></pre>
 
     <p>Let’s link this device to the <code>my-network</code> network you created on device A for this new device to be authorized to connect.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network link --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/network-link.sh' />
 Linked device to network "alice/my-network".
     </code></pre>
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit volume mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --cache --publish &
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/volume-mount.sh' />
 Fetch endpoints for "alice/my-network".
 Running network "alice/my-network".
 Running volume "alice/my-volume".
@@ -494,9 +455,9 @@ Running volume "alice/my-volume".
 
     <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} ${ls_command} ${guide_mountpoint}${dir}
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/ls.sh' />
 awesome.txt
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+<%include file='scripts/get-started/alice/device_B/cat.sh' />
 everything is
 </code></pre>
 
@@ -510,7 +471,7 @@ everything is
 
     <p data-platform="mac windows debian centos alpine arm">First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user signup --name bob --fullname "Bob"
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/signup.sh' />
 Generating RSA keypair.
 Remotely saved user "bob".
 </code></pre>
@@ -519,34 +480,34 @@ Remotely saved user "bob".
 
     <p>Back to device A and Alice to generate a passport for Bob. Note that in order to reference another user by its name, for generating a passport for instance, you first need to retrieve his/her user public identity from the Hub (or otherwise).</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user fetch --as alice --name bob
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/fetch-bob.sh' />
 Fetched user "bob".
-${term} infinit passport create --as alice --network my-network --user bob --push
+${term} <%include file='scripts/get-started/alice/device_A/passport-create-bob.sh' />
 Locally created passport "alice/my-network: bob".
 Remotely saved passport "alice/my-network: bob".
 </code></pre>
 
     <p>Now that a passport has been issued, Bob can very easily retrieve it from the Hub in order to join Alice's storage network. For this, Bob must fetch Alice's public user identity, Alice's <code>alice/my-network</code> network descriptor along with the freshly issued passport:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user fetch --as bob --name alice
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/fetch-alice.sh' />
 Fetched user "alice".
-${term} infinit network fetch --as bob --name alice/my-network
+<%include file='scripts/get-started/bob/device_C/network-fetch.sh' />
 Fetched network "alice/my-network".
-${term} infinit passport fetch --as bob --network alice/my-network
+<%include file='scripts/get-started/bob/device_C/passport-fetch.sh' />
 Fetched passport for "alice/my-network".
 </code></pre>
 
     <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit network link --as bob --name alice/my-network
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/network-link.sh' />
 Linked device to network "alice/my-network".
 </code></pre>
 
     <p>Once his device linked to the network, Bob can now mount Alice's volume. Note that the volume descriptor <code>alice/my-volume</code> must first be retrieved from the Hub in order for it to be mounted:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit volume fetch --as bob --name alice/my-volume
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/volume-fetch.sh' />
 Fetched volume "alice/my-volume".
-${term} infinit volume mount --as bob --name alice/my-volume --mountpoint ${guide_mountpoint} --cache --publish &
+${term} <%include file='scripts/get-started/bob/device_C/volume-mount.sh' />
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -555,7 +516,7 @@ Running volume "alice/my-volume".
 
     <p>Bob can now try to access the mounted volume as shown below:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} ${ls_command} ${guide_mountpoint}
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/ls-failed.sh' />
 % if osname == "windows":
 Access is denied.
 % else:
@@ -567,16 +528,16 @@ ${ls_command}: ${guide_mountpoint}: Permission denied
 
     <p>This lack of permission can be verified on Alice's device A, through the <em>infinit acl</em> binary which can be used for access control purposes:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl list --path ${guide_mountpoint_abs}
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/list-permissions-before.sh' />
 ${guide_mountpoint_abs}:
         alice: rw (owner)
 </code></pre>
 
     <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl set --mode r --user bob --path ${guide_mountpoint_abs}
-${term} infinit acl set --mode r --user bob --path ${guide_mountpoint}${dir}awesome.txt
-${term} infinit acl list --path ${guide_mountpoint_abs} --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/set-directory-permissions.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/set-permissions.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/list-permissions-after.sh' />
 ${guide_mountpoint_abs}:
   inherit: no
         alice: rw (owner)
@@ -591,13 +552,13 @@ ${guide_mountpoint}${dir}awesome.txt:
 
     <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit acl list --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/list-permissions.sh' />
 ${guide_mountpoint}${dir}awesome.txt:
         alice: rw (owner)
         bob: r
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+${term} <%include file='scripts/get-started/bob/device_C/cat.sh' />
 everything is
-${term} echo "or not" > ${guide_mountpoint}${dir}awesome.txt
+${term} <%include file='scripts/get-started/bob/device_C/echo-failed.sh' />
 % if osname == "windows":
 Access is denied.
 % else:
@@ -619,7 +580,7 @@ zsh: permission denied: ${guide_mountpoint}${dir}awesome.txt
 
     <p>The <em>infinit doctor</em> binary is provided to automatically analyze your environment and detect common issues for you to quickly understand why Infinit may not be behaving as expected. Issues may range from incorrect permissions on some files/directories, to a router blocking UDP packets and more. The easiest way to run <em>infinit doctor</em> is to use the <code>--all</code> so as to analyze the operarting system, environment variables, networking capabilities, configuration files etc.</p>
 
-    <pre><code>$> infinit doctor all
+    <pre><code>${term} <%include file='scripts/get-started/doctor.sh' />
 CONFIGURATION INTEGRITY:
 [OK] Storage resources
 [OK] Networks

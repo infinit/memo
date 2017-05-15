@@ -508,6 +508,13 @@ def configure(
     'resources/images/logos/github@2x.png',
   )
 
+  resources += drake.nodes(
+    'resources/json/comparisons.json',
+    'resources/json/opensource.json',
+    'resources/json/platform/linux.json',
+    'resources/json/platform/windows.json',
+  )
+
   resources_icons = drake.nodes(
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
@@ -734,6 +741,44 @@ def configure(
   )
 
   resources = resources + resources_icons + resources_logos
+  get_started = {}
+  get_started['scripts'] = drake.nodes(
+    'resources/scripts/get-started/doctor.sh',
+    'resources/scripts/get-started/bob/device_C/echo-failed.sh',
+    'resources/scripts/get-started/bob/device_C/volume-',
+    'resources/scripts/get-started/bob/device_C/cat.sh',
+    'resources/scripts/get-started/bob/device_C/network-fetch.sh',
+    'resources/scripts/get-started/bob/device_C/volume-mount.sh',
+    'resources/scripts/get-started/bob/device_C/list-permissions.sh',
+    'resources/scripts/get-started/bob/device_C/passport-fetch.sh',
+    'resources/scripts/get-started/bob/device_C/fetch-alice.sh',
+    'resources/scripts/get-started/bob/device_C/volume-fetch.sh',
+    'resources/scripts/get-started/bob/device_C/ls-failed.sh',
+    'resources/scripts/get-started/bob/device_C/network-link.sh',
+    'resources/scripts/get-started/bob/device_C/signup.sh',
+    'resources/scripts/get-started/alice/device_A/cat.sh',
+    'resources/scripts/get-started/alice/device_A/set-permissions.sh',
+    'resources/scripts/get-started/alice/device_A/volume-mount.sh',
+    'resources/scripts/get-started/alice/device_A/silo-create.sh',
+    'resources/scripts/get-started/alice/device_A/volume-mount.sh',
+    'resources/scripts/get-started/alice/device_A/list-permissions-before.sh',
+    'resources/scripts/get-started/alice/device_A/volume-create.sh',
+    'resources/scripts/get-started/alice/device_A/transmit.sh',
+    'resources/scripts/get-started/alice/device_A/fetch-bob.sh',
+    'resources/scripts/get-started/alice/device_A/set-directory-permissions.sh',
+    'resources/scripts/get-started/alice/device_A/network-create.sh',
+    'resources/scripts/get-started/alice/device_A/echo.sh',
+    'resources/scripts/get-started/alice/device_A/passport-create-bob.sh',
+    'resources/scripts/get-started/alice/device_A/signup.sh',
+    'resources/scripts/get-started/alice/device_A/list-permissions-after.sh',
+    'resources/scripts/get-started/alice/device_B/cat.sh',
+    'resources/scripts/get-started/alice/device_B/network-fetch.sh',
+    'resources/scripts/get-started/alice/device_B/ls.sh',
+    'resources/scripts/get-started/alice/device_B/volume-mount.sh',
+    'resources/scripts/get-started/alice/device_B/volume-fetch.sh',
+    'resources/scripts/get-started/alice/device_B/network-link.sh',
+    'resources/scripts/get-started/alice/device_B/receive.sh',
+  )
 
   if python is not None:
     python_version = python.version
@@ -757,6 +802,8 @@ def configure(
     where = drake.Path(where)
     yield from how(templates, where / 'share/infinit/website')
     yield from how(resources, where / 'share/infinit/website')
+    yield from how(get_started['scripts'], where / 'share/infinit/website/templates/pages/docs',
+                   strip_prefix = 'resources')
     yield drake.copy(doughnut_proto, where / 'share/infinit/website/resources/scripts/kv',
                               strip_prefix = True)
     yield drake.copy(doughnut_json, where / 'share/infinit/website/resources/scripts/kv',

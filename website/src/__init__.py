@@ -11,7 +11,8 @@ from infinit.website.utils import \
   resources_path, \
   route, \
   static_file, \
-  view
+  view, \
+  detect_os
 
 def error(code, reason = ''):
   bottle.response.status = code
@@ -30,6 +31,13 @@ class Website(bottle.Bottle):
     error_page.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.sh')
+    self.platforms = {}
+    with open(resources_path() + '/json/platform/windows.json',
+              encoding = 'utf-8') as json_file:
+      self.platforms['windows'] = json.load(json_file)
+    with open(resources_path() + '/json/platform/linux.json',
+              encoding = 'utf-8') as json_file:
+      self.platforms['linux'] = json.load(json_file)
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
@@ -151,6 +159,7 @@ class Website(bottle.Bottle):
     return {
       'title': 'Get Started',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
+      **self.platforms[detect_os() == "Windows" and 'windows' or 'linux']
     }
 
   @route('/get-started/mac', name = 'doc_get_started_mac')

@@ -1,0 +1,20 @@
+{
+  "cat_command": "type",
+  "demo_home": "%CD%\\share\\infinit\\filesystem\\test\\home",
+  "demo_mountpoint": "z:",
+  "demo_mountpoint_abs": "z:\\",
+  "dir": "\\",
+  "dir_end": "",
+  "env_home": "%HOMEPATH%",
+  "env_infinit_home": "%INFINIT_HOME%",
+  "env_infinit_data_home": "%INFINIT_DATA_HOME%",
+  "env_infinit_state_home": "%INFINIT_STATE_HOME%",
+  "env_pwd": "%CD%",
+  "exe": ".exe",
+  "guide_mountpoint": "z:",
+  "guide_mountpoint_abs": "z:\\",
+  "guide_storage_dir": "C:\\storage\\infinit",
+  "ls_command": "dir",
+  "temp_dir": "%TEMP%\\infinit-demo",
+  "term": ">"
+}

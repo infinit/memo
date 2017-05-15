@@ -1,0 +1,1 @@
+echo "everything is" > awesome.txt
