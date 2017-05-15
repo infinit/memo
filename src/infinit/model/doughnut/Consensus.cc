@@ -166,7 +166,7 @@ namespace infinit
         void
         Consensus::resign()
         {
-          ELLE_TRACE_SCOPE("%s: resign");
+          ELLE_TRACE_SCOPE("%s: resign", this);
           this->_resign();
         }
 
