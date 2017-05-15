@@ -141,6 +141,7 @@ namespace infinit
                       }
                     ELLE_TRACE("%s: added/removed %s entries from %f",
                                this, entries.size(), r.id());
+                    this->_update_reachable_blocks();
                   });
               else
                 r.rpc_server().add(
@@ -151,6 +152,7 @@ namespace infinit
                       this->_address_book.emplace(r.id(), addr);
                     ELLE_TRACE("%s: added %s entries from %f",
                                this, entries.size(), r.id());
+                    this->_update_reachable_blocks();
                   });
               if (this->doughnut()->version() >= elle::Version(0, 8, 0))
               {
@@ -196,6 +198,7 @@ namespace infinit
                             LamportAge(), this->storing());
        for (auto const& key: local->storage()->list())
          this->_address_book.emplace(this->id(), key);
+       this->_update_reachable_blocks();
        ELLE_DEBUG("loaded %s entries from storage",
                   this->_address_book.size());
        this->_connections.emplace_back(local->on_store().connect(
@@ -204,6 +207,7 @@ namespace infinit
            ELLE_DEBUG("%s: register new block %f", this, b.address());
            this->_address_book.emplace(this->id(), b.address());
            this->_new_entries.emplace(b.address(), true);
+           this->_update_reachable_blocks();
          }));
        this->_connections.emplace_back(local->on_remove().connect(
          [this] (model::blocks::Block const& b)
@@ -212,6 +216,7 @@ namespace infinit
            auto entry = Entry(this->id(), b.address());
            ELLE_ENFORCE_EQ(this->_address_book.get<2>().erase(entry), 1u);
            this->_new_entries.emplace(b.address(), false);
+           this->_update_reachable_blocks();
          }));
        // Add server-side kouncil RPCs.
        this->_connections.emplace_back(local->on_connect().connect(
@@ -504,6 +509,7 @@ namespace infinit
             });
         this->_peers.erase(id);
         this->_address_book.erase(id);
+        this->_update_reachable_blocks();
         peer.reset();
         if (!this->_cleaning)
         {
@@ -526,6 +532,7 @@ namespace infinit
         assert(!this->_discovered(id));
         this->_infos.erase(id);
         this->_address_book.erase(id);
+        this->_update_reachable_blocks();
         this->_stale_endpoints.erase(id);
         this->on_eviction()(id);
       }
@@ -806,7 +813,18 @@ namespace infinit
         for (auto const& b: entries)
           this->_address_book.emplace(r.id(), b);
         ELLE_DEBUG("added %s entries from %f", entries.size(), r);
+        this->_update_reachable_blocks();
       }
+
+      int
+      Kouncil::_compute_reachable_blocks() const
+      {
+        std::unordered_set<Address> ids;
+        for (auto const& entry: this->_address_book.get<2>())
+          ids.insert(entry.block());
+        return ids.size();
+      }
+
 
       /*---------.
       | PeerInfo |

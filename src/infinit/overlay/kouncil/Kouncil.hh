@@ -329,6 +329,9 @@ namespace infinit
         elle::json::Object
         stats() const override;
 
+      protected:
+        int
+        _compute_reachable_blocks() const override;
       public:
         elle::json::Json
         query(std::string const& k,

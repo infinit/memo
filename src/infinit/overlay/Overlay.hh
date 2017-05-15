@@ -7,12 +7,15 @@
 #include <elle/log.hh>
 
 #include <elle/reactor/network/tcp-socket.hh>
+#include <elle/reactor/Barrier.hh>
 #include <elle/reactor/Generator.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/serialization.hh>
 
 namespace prometheus
@@ -204,6 +207,25 @@ namespace infinit
       elle::json::Object
       stats() const = 0;
 
+#if INFINIT_ENABLE_PROMETHEUS
+      /// Gauge on the number of accessible blocks.
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_blocks_gauge);
+#endif
+
+    protected:
+      /// Overlay-dependant computation of how many blocks are reachable.
+      virtual
+      int
+      _compute_reachable_blocks() const;
+      /// Request for reachable_blocks to be updated.
+      /// Call from overlay when something changes.
+      void
+      _update_reachable_blocks();
+      ELLE_ATTRIBUTE(elle::reactor::Barrier, reachable_blocks_barrier);
+      ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, reachable_blocks_thread);
+      ELLE_ATTRIBUTE_R(int, reachable_blocks);
+      void
+      _reachable_blocks_loop();
     /*----------.
     | Printable |
     `----------*/

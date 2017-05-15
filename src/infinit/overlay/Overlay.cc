@@ -12,6 +12,27 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
+namespace
+{
+#if INFINIT_ENABLE_PROMETHEUS
+  /// A gauge to track the number of reachable blocks.
+  ///
+  /// May return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_reachable_blocks_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    /// The family of counters used to count the number of
+    /// connected members for this DHT.
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_reachable_blocks",
+          "How many blocks are reachable by this peer");
+    return infinit::prometheus::instance()
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+  }
+#endif
+}
+
 namespace infinit
 {
   namespace overlay
@@ -25,8 +46,13 @@ namespace infinit
       : _doughnut(dht)
       , _local(local)
       , _storing(true)
+      , _reachable_blocks_thread(new elle::reactor::Thread("reachable", [&] {
+        this->_reachable_blocks_loop();
+      }))
+      , _reachable_blocks(0)
     {
 #if INFINIT_ENABLE_PROMETHEUS
+      this->_reachable_blocks_gauge = make_reachable_blocks_gauge(*dht);
       if (auto* g = _doughnut->member_gauge().get())
       {
         ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
@@ -66,6 +92,7 @@ namespace infinit
     Overlay::cleanup()
     {
       ELLE_TRACE_SCOPE("%s: cleanup", this);
+      this->_reachable_blocks_thread->terminate_now();
       this->_cleanup();
     }
 
@@ -171,6 +198,36 @@ namespace infinit
             for (auto res: this->_lookup(a, n, false))
               yield(std::make_pair(a, res));
         };
+    }
+
+    void
+    Overlay::_update_reachable_blocks()
+    {
+      this->_reachable_blocks_barrier.open();
+    }
+
+    void
+    Overlay::_reachable_blocks_loop()
+    {
+      while (true)
+      {
+        elle::reactor::wait(this->_reachable_blocks_barrier);
+        this->_reachable_blocks_barrier.close();
+        this->_reachable_blocks = this->_compute_reachable_blocks();
+#if INFINIT_ENABLE_PROMETHEUS
+        if (this->_reachable_blocks_gauge.get())
+          this->_reachable_blocks_gauge.get()->Set(this->_reachable_blocks);
+#endif
+        elle::reactor::sleep(10_sec);
+      }
+    }
+
+    int
+    Overlay::_compute_reachable_blocks() const
+    {
+      // We need to provide a default inmplementation in Overlay to avoid
+      // pure virtual method call at destruction time.
+      return 0;
     }
 
     Configuration::Configuration(elle::serialization::SerializerIn& input)
