@@ -59,6 +59,7 @@ namespace infinit
       : _doughnut(dht)
       , _local(local)
       , _storing(true)
+      , _reachable_max_update_period(10_sec)
       , _reachable_blocks_thread(new elle::reactor::Thread("reachable", [&] {
         this->_reachable_blocks_loop();
       }))
@@ -258,6 +259,7 @@ namespace infinit
         elle::reactor::wait(this->_reachable_blocks_barrier);
         this->_reachable_blocks_barrier.close();
         this->_reachable_blocks = this->_compute_reachable_blocks();
+        this->_reachable_blocks_updated.signal();
 #if INFINIT_ENABLE_PROMETHEUS
         if (this->_reachable_blocks_gauge.get())
           this->_reachable_blocks_gauge.get()->Set(
@@ -281,7 +283,7 @@ namespace infinit
           this->_under_quorum_mutable_blocks_gauge.get()->Set(
             this->_reachable_blocks.under_quorum_mutable_blocks);
 #endif
-        elle::reactor::sleep(10_sec);
+        elle::reactor::sleep(this->_reachable_max_update_period);
       }
     }
 

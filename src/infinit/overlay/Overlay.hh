@@ -225,7 +225,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(prometheus::GaugePtr, under_quorum_mutable_blocks_gauge);
 #endif
 
-    protected:
+    public:
       /// Information about reachable blocks
       struct ReachableBlocks
       {
@@ -238,6 +238,8 @@ namespace infinit
         int underreplicated_mutable_blocks;
         int under_quorum_mutable_blocks;
       };
+
+    protected:
       /// Overlay-dependant computation of how many blocks are reachable.
       virtual
       ReachableBlocks
@@ -246,9 +248,11 @@ namespace infinit
       /// Call from overlay when something changes.
       void
       _update_reachable_blocks();
+      ELLE_ATTRIBUTE_RW(elle::Duration, reachable_max_update_period);
       ELLE_ATTRIBUTE(elle::reactor::Barrier, reachable_blocks_barrier);
       ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, reachable_blocks_thread);
       ELLE_ATTRIBUTE_R(ReachableBlocks, reachable_blocks);
+      ELLE_ATTRIBUTE_RX(elle::reactor::Signal, reachable_blocks_updated);
       void
       _reachable_blocks_loop();
     /*----------.
