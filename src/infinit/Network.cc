@@ -217,6 +217,7 @@ namespace infinit
                boost::optional<elle::Version> version,
                boost::optional<int> port,
                boost::optional<boost::asio::ip::address> listen,
+               boost::optional<bool> resign_on_shutdown,
                bool enable_monitoring)
   {
     ELLE_LOG("client version: %s", infinit::version_describe());
@@ -240,7 +241,8 @@ namespace infinit
       std::move(version),
       std::move(port),
       std::move(listen),
-      std::move(rdv_host)
+      std::move(rdv_host),
+      std::move(resign_on_shutdown)
 #ifndef INFINIT_WINDOWS
       , enable_monitoring ? this->monitoring_socket_path(user)
       : boost::optional<bfs::path>()

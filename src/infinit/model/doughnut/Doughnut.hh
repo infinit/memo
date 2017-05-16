@@ -353,6 +353,7 @@ namespace infinit
           boost::optional<int> port = {},
           boost::optional<boost::asio::ip::address> listen_address = {},
           boost::optional<std::string> rdv_host = {},
+          boost::optional<bool> resign_on_shutdown = {},
           boost::optional<boost::filesystem::path> monitoring_socket_path = {});
       };
 

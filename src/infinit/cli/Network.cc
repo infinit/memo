@@ -178,7 +178,8 @@ namespace infinit
             cli::prometheus = boost::none,
 #endif
             cli::paxos_rebalancing_auto_expand = boost::none,
-            cli::paxos_rebalancing_inspect = boost::none)
+            cli::paxos_rebalancing_inspect = boost::none,
+            cli::resign_on_shutdown = boost::none)
       , stat(*this,
               "Fetch stats of a network on {hub}",
               cli::name)
@@ -888,6 +889,7 @@ namespace infinit
 #endif
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
+                  boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
         auto& ifnt = cli.infinit();
@@ -917,7 +919,7 @@ namespace infinit
           false,
           cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
           async, cache_disk_size, cli.compatibility_version(), port,
-          listen_address
+          listen_address, resign_on_shutdown
 #ifndef INFINIT_WINDOWS
           , monitoring
 #endif
@@ -1059,6 +1061,7 @@ namespace infinit
 #endif
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
+         {}, // resign_on_shutdown
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,
@@ -1219,7 +1222,8 @@ namespace infinit
                       boost::optional<std::string> prometheus,
 #endif
                       boost::optional<bool> paxos_rebalancing_auto_expand,
-                      boost::optional<bool> paxos_rebalancing_inspect)
+                      boost::optional<bool> paxos_rebalancing_inspect,
+                      boost::optional<bool> resign_on_shutdown)
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
@@ -1256,6 +1260,7 @@ namespace infinit
 #endif
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
+         resign_on_shutdown,
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,

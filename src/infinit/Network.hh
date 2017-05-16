@@ -90,6 +90,7 @@ namespace infinit
         boost::optional<elle::Version> version = {},
         boost::optional<int> port = {},
         boost::optional<boost::asio::ip::address> listen = {},
+        boost::optional<bool> resign_on_shutdown = {},
         bool enable_monitoring = true);
 
     void

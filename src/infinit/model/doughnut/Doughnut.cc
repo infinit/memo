@@ -824,6 +824,7 @@ namespace infinit
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
         boost::optional<std::string> rdv_host,
+        boost::optional<bool> resign_on_shutdown,
         boost::optional<bfs::path> monitoring_socket_path)
       {
         auto make_consensus =
@@ -881,7 +882,8 @@ namespace infinit
           std::move(monitoring_socket_path),
           this->overlay->rpc_protocol,
           doughnut::tcp_heartbeat = this->tcp_heartbeat,
-          doughnut::encrypt_options = this->encrypt_options);
+          doughnut::encrypt_options = this->encrypt_options,
+          doughnut::resign_on_shutdown = resign_on_shutdown.value_or(false));
       }
 
       std::string

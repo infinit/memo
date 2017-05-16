@@ -164,6 +164,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(remove_group, '\0', "remove group from group", false);
     ELLE_DAS_CLI_SYMBOL(remove_user, '\0', "remove user from group", false);
     ELLE_DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)", false);
+    ELLE_DAS_CLI_SYMBOL(resign_on_shutdown, '\0', "rebalance blocks out when shutting down", false);
     ELLE_DAS_CLI_SYMBOL(restart, 0, "restart {object}", false);
     ELLE_DAS_CLI_SYMBOL(root_permissions, 0, "volume root permissions to give (optional: r, w, rw)", false);
     ELLE_DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
