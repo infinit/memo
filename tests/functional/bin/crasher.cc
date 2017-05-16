@@ -7,30 +7,32 @@
 
 namespace po = boost::program_options;
 
-static
-std::string
-option_str(po::variables_map const& vm, std::string const& name)
+namespace
 {
-  if (!vm.count(name))
+  std::string
+  option_str(po::variables_map const& vm, std::string const& name)
   {
-    std::cerr << "require option: " << name << std::endl;
-    abort();
+    if (vm.count(name))
+      return vm[name].as<std::string>();
+    else
+    {
+      std::cerr << "require option: " << name << std::endl;
+      abort();
+    }
   }
-  return vm[name].as<std::string>();
-}
 
-static
-void
-do_crash()
-{
-  int* p = NULL;
-  *p = 1;
+  void
+  do_crash()
+  {
+    int* p = nullptr;
+    *p = 1;
+  }
 }
 
 int
 main(int argc, char** argv)
 {
-  po::options_description desc("Crasher options");
+  auto desc = po::options_description("Crasher options");
   desc.add_options()
     ("crash", "Crash!")
     ("dumps", po::value<std::string>(), "Crash dump location")
@@ -47,9 +49,9 @@ main(int argc, char** argv)
     return 1;
   }
   bool crash = vm.count("crash");
-  std::string dumps = option_str(vm, "dumps");
-  std::string server = option_str(vm, "server");
-  std::string version =
+  auto const dumps = option_str(vm, "dumps");
+  auto const server = option_str(vm, "server");
+  auto const version =
     vm.count("version") ? option_str(vm, "version") : "test_version";
   auto crash_reporter =
     std::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
@@ -64,5 +66,4 @@ main(int argc, char** argv)
       crash_reporter->upload_existing();
     });
   sched.run();
-  return 0;
 }
