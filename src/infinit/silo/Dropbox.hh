@@ -3,7 +3,7 @@
 #include <elle/service/dropbox/Dropbox.hh>
 
 #include <infinit/silo/Key.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {

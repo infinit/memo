@@ -15,7 +15,7 @@
 #include <infinit/model/blocks/fwd.hh>
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/serialization.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {

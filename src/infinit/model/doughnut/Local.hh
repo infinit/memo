@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Peer.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {

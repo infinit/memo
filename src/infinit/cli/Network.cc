@@ -26,7 +26,7 @@
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 #include <infinit/silo/Strip.hh>
 
 #ifndef INFINIT_WINDOWS

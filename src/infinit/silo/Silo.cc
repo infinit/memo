@@ -1,4 +1,4 @@
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 #include <boost/algorithm/string/case_conv.hpp>
 

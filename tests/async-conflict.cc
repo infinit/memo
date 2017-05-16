@@ -12,7 +12,7 @@
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/silo/Filesystem.hh>
 #include <infinit/silo/Memory.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 #include <sys/types.h>
 #include <sys/stat.h>

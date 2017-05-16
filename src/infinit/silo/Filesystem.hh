@@ -3,7 +3,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include <infinit/silo/Key.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {

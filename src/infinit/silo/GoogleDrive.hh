@@ -4,7 +4,7 @@
 
 #include <elle/Error.hh>
 
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 #include <infinit/silo/Key.hh>
 #include <infinit/silo/GoogleAPI.hh>
 

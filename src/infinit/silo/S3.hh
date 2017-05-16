@@ -2,7 +2,7 @@
 
 #include <elle/service/aws/S3.hh>
 
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {

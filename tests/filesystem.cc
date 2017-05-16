@@ -45,7 +45,7 @@
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/silo/Filesystem.hh>
 #include <infinit/silo/Memory.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 #include <infinit/utility.hh>
 
 #include "DHT.hh"

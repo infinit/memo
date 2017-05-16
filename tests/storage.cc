@@ -7,7 +7,7 @@
 #include <infinit/silo/Memory.hh>
 #include <infinit/silo/MissingKey.hh>
 #include <infinit/silo/S3.hh>
-#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 ELLE_LOG_COMPONENT("tests.storage");
 
