@@ -845,7 +845,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
 
     // ACB
-    /*
+#if 0
     ::Block acb;
     { // make
       grpc::ClientContext context;
@@ -927,10 +927,10 @@ ELLE_TEST_SCHEDULED(doughnut)
         BOOST_CHECK_EQUAL(abs.block().data(), "merow");
       }
     }
-    */
+#endif
 
     // acls
-    /*
+#if 0
     ::KeyOrStatus kohs;
     {
       grpc::ClientContext context;
@@ -956,16 +956,17 @@ ELLE_TEST_SCHEDULED(doughnut)
         auto block = ac.dht.dht->fetch(infinit::model::Address((uint8_t*)abs.block().address().data()));
         BOOST_CHECK_EQUAL(block->data(), "merow");
     });
-    */
+#endif
     // username
-    /*
+#if 0
     {
       grpc::ClientContext context;
       ::BytesOrStatus bos;
       stub->UserName(&context, kohs.key(), &bos);
       BOOST_CHECK(bos.has_bytes());
       BOOST_CHECK_EQUAL(bos.bytes().data(), "alice");
-    }*/
+    }
+#endif
 
     // NB
     ::Block nb;
@@ -1022,7 +1023,8 @@ ELLE_TEST_SUITE()
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
-  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(1000));
+  // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
+  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
 #ifndef INFINIT_WINDOWS
   // Test runs fine on native windows, but sometimes get stuck on wine

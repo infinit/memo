@@ -1,7 +1,7 @@
 #include <elle/test.hh>
 
-#include <elle/protocol/Serializer.hh>
 #include <elle/protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
 
 #include <infinit/RPC.hh>
 
@@ -37,6 +37,9 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
 
 ELLE_TEST_SUITE()
 {
+  // It takes 10sec _with_ Valgrind on a laptop in Docker, otherwise
+  // less than a second.
+  auto timeout = valgrind(5, 5);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(unknown_rpc));
+  suite.add(BOOST_TEST_CASE(unknown_rpc), 0, timeout);
 }
