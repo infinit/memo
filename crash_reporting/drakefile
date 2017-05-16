@@ -1,6 +1,7 @@
 import drake
 import drake.cxx
 import drake.debian
+import os
 
 lib_dynamic = None
 lib_static = None
@@ -65,14 +66,12 @@ class SymbolsPackager(drake.debian.Packager):
       name = line.split(' ')[4].strip()
       res = '%s/opt/infinit/lib/debug/symbols/%s/%s' % (self.path, name, uid)
       # Make directories if they don't exist.
-      import os
       os.makedirs(res, exist_ok = True)
     assert res is not None
     return res
 
   def execute(self):
     # Clean existing symbols
-    import os
     import shutil
     dest = '%s/opt' % self.path
     if os.path.exists(dest):
@@ -145,11 +144,9 @@ def configure(cxx_toolkit = None,
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',
     )
-    import os
     breakpad_include = (drake.Path(os.getcwd()) / drake.path_source('src')).canonize()
     breakpad_configure_args += [
-      'CFLAGS=-I%s' % breakpad_include,
-      'CXXFLAGS=-I%s' % breakpad_include,
+      'CPPFLAGS=-I%s' % breakpad_include,
     ]
     dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
   elif cxx_toolkit.os is drake.os.macos:
@@ -233,7 +230,7 @@ def configure(cxx_toolkit = None,
     dump_syms_sources = \
       drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, dump_syms_sources)))
     dump_syms_cxx_config = drake.cxx.Config(cxx_config)
-    dump_syms_cxx_config.flag('-DHAVE_MACH_O_NLIST_H')
+    dump_syms_cxx_config.define('HAVE_MACH_O_NLIST_H')
     dump_syms_cxx_config.framework_add('CoreFoundation')
     dump_syms_cxx_config.add_local_include_path('breakpad/src')
     dump_syms_exe = drake.cxx.Executable(
@@ -303,3 +300,7 @@ def configure(cxx_toolkit = None,
     library = lib_static
   else:
     library = lib_dynamic
+
+# Local Variables:
+# mode: python
+# End:

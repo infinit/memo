@@ -297,8 +297,7 @@ def configure(
     crash_reporting = drake.include('crash_reporting',
                                     cxx_toolkit = cxx_toolkit,
                                     cxx_config = cxx_config)
-    crash_reporter_lib = drake.copy(crash_reporting.library, libdir,
-                                    strip_prefix = True)
+    crash_reporter_lib = import_lib(crash_reporting)
 
   ## -------- ##
   ## Binaries ##
