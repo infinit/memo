@@ -34,7 +34,7 @@ namespace infinit
 {
   namespace silo
   {
-    Latency::Latency(std::unique_ptr<Storage> backend,
+    Latency::Latency(std::unique_ptr<Silo> backend,
                      elle::reactor::DurationOpt latency_get,
                      elle::reactor::DurationOpt latency_set,
                      elle::reactor::DurationOpt latency_erase
@@ -79,10 +79,10 @@ namespace infinit
       return _backend->list();
     }
 
-    static std::unique_ptr<infinit::silo::Storage>
+    static std::unique_ptr<infinit::silo::Silo>
     make(std::vector<std::string> const& args)
     {
-      std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
+      std::unique_ptr<Silo> backend = instantiate(args[0], args[1]);
       elle::reactor::Duration latency_get, latency_set, latency_erase;
       if (args.size() > 2)
         latency_get = boost::posix_time::milliseconds(std::stoi(args[2]));
@@ -94,24 +94,24 @@ namespace infinit
         latency_get, latency_set, latency_erase);
     }
 
-    struct LatencyStorageConfig:
-    public StorageConfig
+    struct LatencySiloConfig:
+    public SiloConfig
     {
     public:
       elle::reactor::DurationOpt latency_get;
       elle::reactor::DurationOpt latency_set;
       elle::reactor::DurationOpt latency_erase;
-      std::shared_ptr<StorageConfig> storage;
+      std::shared_ptr<SiloConfig> storage;
 
-      LatencyStorageConfig(std::string name,
+      LatencySiloConfig(std::string name,
                            boost::optional<int64_t> capacity,
                            boost::optional<std::string> description)
-        : StorageConfig(
+        : SiloConfig(
             std::move(name), std::move(capacity), std::move(description))
       {}
 
-      LatencyStorageConfig(elle::serialization::SerializerIn& s)
-        : StorageConfig(s)
+      LatencySiloConfig(elle::serialization::SerializerIn& s)
+        : SiloConfig(s)
       {
         this->serialize(s);
       }
@@ -119,14 +119,14 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
-        StorageConfig::serialize(s);
+        SiloConfig::serialize(s);
         s.serialize("backend", this->storage);
         s.serialize("latency_get", this->latency_get);
         s.serialize("latency_set", this->latency_set);
         s.serialize("latency_erase", this->latency_erase);
       }
 
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override
       {
         return std::make_unique<infinit::silo::Latency>(
@@ -134,11 +134,11 @@ namespace infinit
       }
     };
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<LatencyStorageConfig>
-    _register_LatencyStorageConfig("latency");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<LatencySiloConfig>
+    _register_LatencySiloConfig("latency");
   }
 }
 
 
-FACTORY_REGISTER(infinit::silo::Storage, "latency", &infinit::silo::make);
+FACTORY_REGISTER(infinit::silo::Silo, "latency", &infinit::silo::make);

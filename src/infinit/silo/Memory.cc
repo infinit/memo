@@ -10,7 +10,7 @@ ELLE_LOG_COMPONENT("infinit.storage.Memory");
 
 namespace
 {
-  // As an int, since that's the type of Storage::_usage.
+  // As an int, since that's the type of Silo::_usage.
   template <typename Map>
   int mapped_size(Map const& map)
   {
@@ -138,13 +138,13 @@ namespace infinit
     }
 
     void
-    MemoryStorageConfig::serialize(elle::serialization::Serializer& s)
+    MemorySiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    MemoryStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    MemorySiloConfig::make()
     {
       return std::make_unique<infinit::silo::Memory>();
     }
@@ -154,14 +154,14 @@ namespace infinit
 namespace
 {
   const auto reg
-    = elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
-    Register<infinit::silo::MemoryStorageConfig>("memory");
+    = elle::serialization::Hierarchy<infinit::silo::SiloConfig>::
+    Register<infinit::silo::MemorySiloConfig>("memory");
 
-  std::unique_ptr<infinit::silo::Storage>
+  std::unique_ptr<infinit::silo::Silo>
   make(std::vector<std::string> const& args)
   {
     return std::make_unique<infinit::silo::Memory>();
   }
 
-  FACTORY_REGISTER(infinit::silo::Storage, "memory", make);
+  FACTORY_REGISTER(infinit::silo::Silo, "memory", make);
 }

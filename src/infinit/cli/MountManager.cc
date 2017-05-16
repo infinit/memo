@@ -108,7 +108,7 @@ namespace infinit
         elle::err("Failed to acquire passport.");
       ELLE_TRACE("Passport found for user %s", user->name);
 
-      auto silo_config = [&] () -> std::unique_ptr<infinit::silo::StorageConfig> {
+      auto silo_config = [&] () -> std::unique_ptr<infinit::silo::SiloConfig> {
         auto silodesc = optional(options, "silo");
         if (silodesc && silodesc->empty())
         {
@@ -116,7 +116,7 @@ namespace infinit
           ELLE_LOG("Creating local silo %s", siloname);
           auto path = infinit::xdg_data_home() / "blocks" / siloname;
           return
-            std::make_unique<infinit::silo::FilesystemStorageConfig>(
+            std::make_unique<infinit::silo::FilesystemSiloConfig>(
               siloname, path.string(), boost::none, boost::none);
         }
         else if (silodesc)
@@ -529,14 +529,14 @@ namespace infinit
       if (auto silodesc = optional(options, "silo"))
       {
         updated = true;
-        std::unique_ptr<infinit::silo::StorageConfig> silo_config;
+        std::unique_ptr<infinit::silo::SiloConfig> silo_config;
         if (silodesc->empty())
         {
           auto siloname = boost::replace_all_copy(network.name + "_silo",
                                                      "/", "_");
           ELLE_LOG("Creating local silo %s", siloname);
           auto path = infinit::xdg_data_home() / "blocks" / siloname;
-          silo_config = std::make_unique<infinit::silo::FilesystemStorageConfig>(
+          silo_config = std::make_unique<infinit::silo::FilesystemSiloConfig>(
             siloname, path.string(), boost::none, boost::none);
         }
         else
@@ -554,7 +554,7 @@ namespace infinit
       }
       else if (optional(options, "no-silo"))
       {
-        // XXX[Storage]: Network::model::storage
+        // XXX[Silo]: Network::model::storage
         network.model->storage.reset();
         updated = true;
       }
@@ -613,7 +613,7 @@ namespace infinit
           infinit::model::Address::random(0), // FIXME
           std::move(consensus_config),
           std::move(kelips),
-          std::unique_ptr<infinit::silo::StorageConfig>(),
+          std::unique_ptr<infinit::silo::SiloConfig>(),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           infinit::model::doughnut::Passport(

@@ -17,7 +17,7 @@ namespace infinit
     namespace paranoid
     {
       Paranoid::Paranoid(elle::cryptography::rsa::KeyPair keys,
-                         std::unique_ptr<silo::Storage> storage,
+                         std::unique_ptr<silo::Silo> storage,
                          elle::Version version)
         : Model(std::move(version))
         , _keys(std::move(keys))

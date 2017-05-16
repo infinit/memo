@@ -572,7 +572,7 @@ namespace infinit
     if (clear)
     {
       if (auto fs_silo =
-          dynamic_cast<infinit::silo::FilesystemStorageConfig*>(silo.get()))
+          dynamic_cast<infinit::silo::FilesystemSiloConfig*>(silo.get()))
         this->_delete_all(fs_silo->path, "silo content", name);
       else
         elle::err("only filesystem silos can be cleared");

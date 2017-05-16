@@ -28,7 +28,7 @@ static
 void
 faith()
 {
-  std::unique_ptr<infinit::silo::Storage> storage
+  std::unique_ptr<infinit::silo::Silo> storage
     = std::make_unique<infinit::silo::Memory>();
   infinit::model::faith::Faith faith(std::move(storage));
 

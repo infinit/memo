@@ -1124,7 +1124,7 @@ namespace infinit
           elle::err("Failed to acquire passport.");
         ELLE_TRACE("Passport found for user %s", user->name);
 
-        auto silo_config = [&] () -> std::unique_ptr<infinit::silo::StorageConfig> {
+        auto silo_config = [&] () -> std::unique_ptr<infinit::silo::SiloConfig> {
           auto silodesc = optional(options, "silo");
           if (silodesc && silodesc->empty())
           {
@@ -1132,7 +1132,7 @@ namespace infinit
             ELLE_LOG("Creating local silo %s", siloname);
             auto path = infinit::xdg_data_home() / "blocks" / siloname;
             return
-              std::make_unique<infinit::silo::FilesystemStorageConfig>(
+              std::make_unique<infinit::silo::FilesystemSiloConfig>(
                 siloname, path.string(), boost::none, boost::none);
           }
           else if (silodesc)

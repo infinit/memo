@@ -36,7 +36,7 @@ namespace infinit
       public:
         Local(Doughnut& dht,
               Address id,
-              std::unique_ptr<silo::Storage> storage,
+              std::unique_ptr<silo::Silo> storage,
               int port = 0,
               boost::optional<boost::asio::ip::address> listen_address = {});
         ~Local() override;
@@ -47,7 +47,7 @@ namespace infinit
         virtual
         void
         initialize();
-        ELLE_ATTRIBUTE_R(std::unique_ptr<silo::Storage>, storage);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<silo::Silo>, storage);
         ELLE_attribute_r(elle::Version, version);
       protected:
         void

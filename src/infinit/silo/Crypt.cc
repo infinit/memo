@@ -10,7 +10,7 @@ namespace infinit
   {
     namespace
     {
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make(std::vector<std::string> const& args)
       {
         auto backend = instantiate(args[0], args[1]);
@@ -20,7 +20,7 @@ namespace infinit
       }
     }
 
-    Crypt::Crypt(std::unique_ptr<Storage> backend,
+    Crypt::Crypt(std::unique_ptr<Silo> backend,
                  std::string const& password,
                  bool salt)
       : _backend(std::move(backend))
@@ -60,31 +60,31 @@ namespace infinit
       return this->_backend->list();
     }
 
-    CryptStorageConfig::CryptStorageConfig(
+    CryptSiloConfig::CryptSiloConfig(
       std::string name,
       boost::optional<int64_t> capacity,
       boost::optional<std::string> description)
       : Super(name, std::move(capacity), std::move(description))
     {}
 
-    CryptStorageConfig::CryptStorageConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+    CryptSiloConfig::CryptSiloConfig(elle::serialization::SerializerIn& s)
+      : SiloConfig(s)
       , password(s.deserialize<std::string>("password"))
       , salt(s.deserialize<bool>("salt"))
-      , storage(s.deserialize<std::shared_ptr<StorageConfig>>("backend"))
+      , storage(s.deserialize<std::shared_ptr<SiloConfig>>("backend"))
     {}
 
     void
-    CryptStorageConfig::serialize(elle::serialization::Serializer& s)
+    CryptSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("password", this->password);
       s.serialize("salt", this->salt);
       s.serialize("backend", this->storage);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    CryptStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    CryptSiloConfig::make()
     {
       return std::make_unique<infinit::silo::Crypt>(
         storage->make(), password, salt);
@@ -95,8 +95,8 @@ namespace infinit
 namespace
 {
   auto const reg
-  = elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
-      Register<infinit::silo::CryptStorageConfig>("crypt");
+  = elle::serialization::Hierarchy<infinit::silo::SiloConfig>::
+      Register<infinit::silo::CryptSiloConfig>("crypt");
 
-  FACTORY_REGISTER(infinit::silo::Storage, "crypt", &infinit::silo::make);
+  FACTORY_REGISTER(infinit::silo::Silo, "crypt", &infinit::silo::make);
 }

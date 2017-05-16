@@ -710,7 +710,7 @@ namespace infinit
         Address id_,
         std::unique_ptr<consensus::Configuration> consensus_,
         std::unique_ptr<overlay::Configuration> overlay_,
-        std::unique_ptr<silo::StorageConfig> storage,
+        std::unique_ptr<silo::SiloConfig> storage,
         elle::cryptography::rsa::KeyPair keys_,
         std::shared_ptr<elle::cryptography::rsa::PublicKey> owner_,
         Passport passport_,
@@ -862,7 +862,7 @@ namespace infinit
                 "invalid network configuration, missing field \"overlay\"");
             return this->overlay->make(std::move(local), &dht);
           };
-        std::unique_ptr<silo::Storage> storage;
+        std::unique_ptr<silo::Silo> storage;
         if (this->storage)
           storage = this->storage->make();
         return std::make_unique<infinit::model::doughnut::Doughnut>(

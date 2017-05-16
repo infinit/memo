@@ -10,7 +10,7 @@ namespace infinit
 {
   namespace silo
   {
-    class SFTP: public Storage
+    class SFTP: public Silo
     {
     public:
       SFTP(std::string const& host, std::string const& path);
@@ -38,20 +38,20 @@ namespace infinit
       mutable int _req;
     };
 
-    struct SFTPStorageConfig
-      : public StorageConfig
+    struct SFTPSiloConfig
+      : public SiloConfig
     {
-      SFTPStorageConfig(std::string const& name,
+      SFTPSiloConfig(std::string const& name,
                         std::string const& host,
                         std::string const& path,
                         boost::optional<int64_t> capacity,
                         boost::optional<std::string> description);
-      SFTPStorageConfig(elle::serialization::SerializerIn& in);
+      SFTPSiloConfig(elle::serialization::SerializerIn& in);
 
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
 
       std::string host;

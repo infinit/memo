@@ -6,10 +6,10 @@ namespace infinit
 {
   namespace silo
   {
-    class Mirror: public Storage
+    class Mirror: public Silo
     {
     public:
-      Mirror(std::vector<std::unique_ptr<Storage>> backend, bool balance_reads,
+      Mirror(std::vector<std::unique_ptr<Silo>> backend, bool balance_reads,
              bool parallel = true);
       std::string
       type() const override { return "mirror"; }
@@ -25,7 +25,7 @@ namespace infinit
       _list() override;
 
       ELLE_ATTRIBUTE(bool, balance_reads);
-      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
+      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Silo>>, backend);
       ELLE_ATTRIBUTE(unsigned int, read_counter);
       ELLE_ATTRIBUTE(bool, parallel);
     };

@@ -22,7 +22,7 @@ namespace infinit
   {
     namespace faith
     {
-      Faith::Faith(std::unique_ptr<silo::Storage> storage,
+      Faith::Faith(std::unique_ptr<silo::Silo> storage,
                    boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _storage(std::move(storage))

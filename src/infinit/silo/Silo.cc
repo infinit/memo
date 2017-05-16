@@ -11,7 +11,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-ELLE_LOG_COMPONENT("infinit.storage.Storage");
+ELLE_LOG_COMPONENT("infinit.storage.Silo");
 
 namespace
 {
@@ -47,7 +47,7 @@ namespace infinit
       }
     }
 
-    Storage::Storage(boost::optional<int64_t> capacity)
+    Silo::Silo(boost::optional<int64_t> capacity)
       : _capacity(std::move(capacity))
       , _usage(0) // recovered in the child ctor.
       , _base_usage(0)
@@ -62,11 +62,11 @@ namespace infinit
       // these ctors notify themselves.
     }
 
-    Storage::~Storage()
+    Silo::~Silo()
     {}
 
     void
-    Storage::_notify_metrics()
+    Silo::_notify_metrics()
     {
       try
       {
@@ -79,7 +79,7 @@ namespace infinit
     }
 
     elle::Buffer
-    Storage::get(Key key) const
+    Silo::get(Key key) const
     {
       ELLE_TRACE_SCOPE("%s: get %x", this, key);
       // FIXME: use _size_cache to check block existance?
@@ -87,7 +87,7 @@ namespace infinit
     }
 
     int
-    Storage::set(Key key, elle::Buffer const& value, bool insert, bool update)
+    Silo::set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_ASSERT(insert || update);
       ELLE_TRACE_SCOPE("%s: %s at %x", this,
@@ -113,7 +113,7 @@ namespace infinit
     }
 
     int
-    Storage::erase(Key key)
+    Silo::erase(Key key)
     {
       ELLE_TRACE_SCOPE("%s: erase %x", this, key);
       int delta = this->_erase(key);
@@ -125,27 +125,27 @@ namespace infinit
     }
 
     std::vector<Key>
-    Storage::list()
+    Silo::list()
     {
       ELLE_TRACE_SCOPE("%s: list", this);
       return this->_list();
     }
 
     BlockStatus
-    Storage::status(Key k)
+    Silo::status(Key k)
     {
       ELLE_TRACE_SCOPE("%s: status %x", this, k);
       return this->_status(k);
     }
 
     BlockStatus
-    Storage::_status(Key k)
+    Silo::_status(Key k)
     {
       return BlockStatus::unknown;
     }
 
     void
-    Storage::register_notifier(std::function<void ()> f)
+    Silo::register_notifier(std::function<void ()> f)
     {
       this->_on_storage_size_change.connect(f);
     }
@@ -165,39 +165,39 @@ namespace infinit
       }
     }
 
-    std::unique_ptr<Storage>
+    std::unique_ptr<Silo>
     instantiate(std::string const& name, std::string const& args)
     {
       ELLE_TRACE_SCOPE("Processing backend %s '%s'", name, args);
-      return elle::Factory<Storage>::instantiate(name, split_arguments(args));
+      return elle::Factory<Silo>::instantiate(name, split_arguments(args));
     }
 
-    /*---------------.
-    | Storage Config |
-    `---------------*/
+    /*--------------.
+    | Silo Config.  |
+    `--------------*/
 
-    StorageConfig::StorageConfig(std::string name,
+    SiloConfig::SiloConfig(std::string name,
                                  boost::optional<int64_t> capacity,
                                  boost::optional<std::string> description)
-      : descriptor::TemplatedBaseDescriptor<StorageConfig>(
+      : descriptor::TemplatedBaseDescriptor<SiloConfig>(
           std::move(name), std::move(description))
       , capacity(std::move(capacity))
     {}
 
-    StorageConfig::StorageConfig(elle::serialization::SerializerIn& s)
-      : descriptor::TemplatedBaseDescriptor<StorageConfig>(s)
+    SiloConfig::SiloConfig(elle::serialization::SerializerIn& s)
+      : descriptor::TemplatedBaseDescriptor<SiloConfig>(s)
       , capacity(s.deserialize<boost::optional<int64_t>>("capacity"))
     {}
 
     void
-    StorageConfig::serialize(elle::serialization::Serializer& s)
+    SiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      descriptor::TemplatedBaseDescriptor<StorageConfig>::serialize(s);
+      descriptor::TemplatedBaseDescriptor<SiloConfig>::serialize(s);
       s.serialize("capacity", this->capacity);
     }
 
     std::string
-    StorageConfig::name_regex()
+    SiloConfig::name_regex()
     {
       return "^[-a-zA-Z0-9._]{0,127}$";
     }

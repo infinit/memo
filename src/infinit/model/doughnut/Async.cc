@@ -182,7 +182,7 @@ namespace infinit
         Async::make_local(
           boost::optional<int> port,
           boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<silo::Storage> storage)
+          std::unique_ptr<silo::Silo> storage)
         {
           return this->_backend->make_local(
             port, std::move(listen_address), std::move(storage));

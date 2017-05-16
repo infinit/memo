@@ -333,7 +333,7 @@ namespace infinit
         Consensus::make_local(
           boost::optional<int> port,
           boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<silo::Storage> storage)
+          std::unique_ptr<silo::Silo> storage)
         {
           return std::make_unique<Local>(this->doughnut(),
                                          this->doughnut().id(),

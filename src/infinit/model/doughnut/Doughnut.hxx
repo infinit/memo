@@ -56,7 +56,7 @@ namespace infinit
                    OverlayBuilder,
                    boost::optional<int>,
                    boost::optional<boost::asio::ip::address>,
-                   std::unique_ptr<silo::Storage>,
+                   std::unique_ptr<silo::Silo>,
                    boost::optional<std::string>,
                    boost::optional<elle::Version>,
                    AdminKeys,

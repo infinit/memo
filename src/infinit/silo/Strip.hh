@@ -12,10 +12,10 @@ namespace infinit
     /// @warning The same list must be passed each time, in the same
     /// order.
     class Strip
-      : public Storage
+      : public Silo
     {
     public:
-      Strip(std::vector<std::unique_ptr<Storage>> backend);
+      Strip(std::vector<std::unique_ptr<Silo>> backend);
       std::string
       type() const override { return "strip"; }
 
@@ -28,25 +28,25 @@ namespace infinit
       _erase(Key k) override;
       std::vector<Key>
       _list() override;
-      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
+      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Silo>>, backend);
       /// The storage holding k.
-      Storage& _storage_of(Key k) const;
+      Silo& _storage_of(Key k) const;
     };
 
-    struct StripStorageConfig
-      : public StorageConfig
+    struct StripSiloConfig
+      : public SiloConfig
     {
     public:
-      using Storages = std::vector<std::unique_ptr<StorageConfig>>;
-      StripStorageConfig(Storages storages,
+      using Silos = std::vector<std::unique_ptr<SiloConfig>>;
+      StripSiloConfig(Silos storages,
                          boost::optional<int64_t> capacity = {},
                          boost::optional<std::string> description = {});
-      StripStorageConfig(elle::serialization::SerializerIn& input);
+      StripSiloConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
-      Storages storage;
+      Silos storage;
     };
   }
 }

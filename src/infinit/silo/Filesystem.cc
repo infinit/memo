@@ -24,7 +24,7 @@ namespace infinit
 
     Filesystem::Filesystem(bfs::path root,
                            boost::optional<int64_t> capacity)
-      : Storage(std::move(capacity))
+      : Silo(std::move(capacity))
       , _root(std::move(root))
     {
       bfs::create_directories(this->_root);
@@ -138,38 +138,38 @@ namespace infinit
       return dir / elle::sprintf("%x", key);
     }
 
-    FilesystemStorageConfig::FilesystemStorageConfig(
+    FilesystemSiloConfig::FilesystemSiloConfig(
         std::string name,
         std::string path,
         boost::optional<int64_t> capacity,
         boost::optional<std::string> description)
-      : StorageConfig(
+      : SiloConfig(
           std::move(name), std::move(capacity), std::move(description))
       , path(std::move(path))
     {}
 
-    FilesystemStorageConfig::FilesystemStorageConfig(
+    FilesystemSiloConfig::FilesystemSiloConfig(
       elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+      : SiloConfig(s)
       , path(s.deserialize<std::string>("path"))
     {}
 
     void
-    FilesystemStorageConfig::serialize(elle::serialization::Serializer& s)
+    FilesystemSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("path", this->path);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    FilesystemStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    FilesystemSiloConfig::make()
     {
       return std::make_unique<infinit::silo::Filesystem>(this->path,
                                                              this->capacity);
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<FilesystemStorageConfig>
-    _register_FilesystemStorageConfig("filesystem");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<FilesystemSiloConfig>
+    _register_FilesystemSiloConfig("filesystem");
   }
 }

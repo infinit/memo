@@ -103,26 +103,26 @@ namespace infinit
       return res;
     }
 
-    AdbStorageConfig::AdbStorageConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+    AdbSiloConfig::AdbSiloConfig(elle::serialization::SerializerIn& s)
+      : SiloConfig(s)
       , root(s.deserialize<std::string>("root"))
     {}
 
     void
-    AdbStorageConfig::serialize(elle::serialization::Serializer& s)
+    AdbSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("root", this->root);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    AdbStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    AdbSiloConfig::make()
     {
       return std::make_unique<infinit::silo::Adb>(root);
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<AdbStorageConfig>
-    _register_AdbStorageConfig("adb");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<AdbSiloConfig>
+    _register_AdbSiloConfig("adb");
   }
 }

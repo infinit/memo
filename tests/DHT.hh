@@ -298,7 +298,7 @@ public:
                      elle::cryptography::rsa::KeyPair keys,
                      boost::optional<elle::cryptography::rsa::KeyPair> owner,
                      infinit::model::Address id,
-                     std::unique_ptr<infinit::silo::Storage> storage,
+                     std::unique_ptr<infinit::silo::Silo> storage,
                      boost::optional<elle::Version> version,
                      make_overlay_t make_overlay,
                      make_consensus_t make_consensus,
@@ -370,7 +370,7 @@ private:
        elle::cryptography::rsa::KeyPair keys_,
        elle::cryptography::rsa::KeyPair owner,
        infinit::model::Address id,
-       std::unique_ptr<infinit::silo::Storage> storage,
+       std::unique_ptr<infinit::silo::Silo> storage,
        boost::optional<elle::Version> version,
        make_consensus_t make_consensus,
        make_overlay_t make_overlay,
@@ -469,7 +469,7 @@ protected:
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
-             std::unique_ptr<infinit::silo::Storage> storage) override
+             std::unique_ptr<infinit::silo::Silo> storage) override
   {
     return _backend->make_local(port, listen, std::move(storage));
   }

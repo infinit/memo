@@ -8,7 +8,7 @@ namespace infinit
   namespace silo
   {
     class Adb
-      : public Storage
+      : public Silo
     {
     public:
       Adb(std::string const& root);
@@ -27,22 +27,22 @@ namespace infinit
       ELLE_ATTRIBUTE(std::string, root);
     };
 
-    struct AdbStorageConfig
-      : public StorageConfig
+    struct AdbSiloConfig
+      : public SiloConfig
     {
-      AdbStorageConfig(std::string name,
+      AdbSiloConfig(std::string name,
                        boost::optional<int64_t> capacity,
                        boost::optional<std::string> description);
-      AdbStorageConfig(elle::serialization::SerializerIn& input);
+      AdbSiloConfig(elle::serialization::SerializerIn& input);
 
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
 
       std::string root;
-      std::shared_ptr<StorageConfig> storage;
+      std::shared_ptr<SiloConfig> storage;
     };
   }
 }

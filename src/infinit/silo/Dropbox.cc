@@ -137,35 +137,35 @@ namespace infinit
       }
     }
 
-    DropboxStorageConfig::DropboxStorageConfig(
+    DropboxSiloConfig::DropboxSiloConfig(
       std::string name,
       std::string token,
       boost::optional<std::string> root,
       boost::optional<int64_t> capacity,
       boost::optional<std::string> description)
-      : StorageConfig(
+      : SiloConfig(
           std::move(name), std::move(capacity), std::move(description))
       , token(std::move(token))
       , root(std::move(root))
     {}
 
-    DropboxStorageConfig::DropboxStorageConfig(
+    DropboxSiloConfig::DropboxSiloConfig(
       elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+      : SiloConfig(s)
       , token(s.deserialize<std::string>("token"))
       , root(s.deserialize<std::string>("root"))
     {}
 
     void
-    DropboxStorageConfig::serialize(elle::serialization::Serializer& s)
+    DropboxSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("token", this->token);
       s.serialize("root", this->root);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    DropboxStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    DropboxSiloConfig::make()
     {
       if (this->root)
         return std::make_unique<infinit::silo::Dropbox>(
@@ -174,7 +174,7 @@ namespace infinit
         return std::make_unique<infinit::silo::Dropbox>(this->token);
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<DropboxStorageConfig> _register_DropboxStorageConfig("dropbox");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<DropboxSiloConfig> _register_DropboxSiloConfig("dropbox");
   }
 }

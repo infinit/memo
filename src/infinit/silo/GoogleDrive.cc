@@ -399,42 +399,42 @@ namespace infinit
     }
 
     /*
-     *  GoogleDriveStorageConfig
+     *  GoogleDriveSiloConfig
      */
 
-    GoogleDriveStorageConfig::GoogleDriveStorageConfig(
+    GoogleDriveSiloConfig::GoogleDriveSiloConfig(
         std::string name,
         boost::optional<std::string> root,
         std::string refresh_token,
         std::string user_name,
         boost::optional<int64_t> capacity,
         boost::optional<std::string> description)
-      : StorageConfig(
+      : SiloConfig(
           std::move(name), std::move(capacity), std::move(description))
       , root{std::move(root)}
       , refresh_token{std::move(refresh_token)}
       , user_name{std::move(user_name)}
     {}
 
-    GoogleDriveStorageConfig::GoogleDriveStorageConfig(
+    GoogleDriveSiloConfig::GoogleDriveSiloConfig(
         elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+      : SiloConfig(s)
       , root(s.deserialize<std::string>("root"))
       , refresh_token(s.deserialize<std::string>("refresh_token"))
       , user_name(s.deserialize<std::string>("user_name"))
     {}
 
     void
-    GoogleDriveStorageConfig::serialize(elle::serialization::Serializer& s)
+    GoogleDriveSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("root", this->root);
       s.serialize("refresh_token", this->refresh_token);
       s.serialize("user_name", this->user_name);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    GoogleDriveStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    GoogleDriveSiloConfig::make()
     {
       if (this->root)
         return std::make_unique<infinit::silo::GoogleDrive>(
@@ -444,8 +444,8 @@ namespace infinit
             this->refresh_token, this->user_name);
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<GoogleDriveStorageConfig> _register_GoogleDriveStorageConfig(
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<GoogleDriveSiloConfig> _register_GoogleDriveSiloConfig(
       "google");
   }
 }

@@ -9,7 +9,7 @@ namespace infinit
   namespace silo
   {
     class S3
-      : public Storage
+      : public Silo
     {
     public:
       S3(std::unique_ptr<elle::service::aws::S3> storage,
@@ -33,24 +33,24 @@ namespace infinit
       ELLE_ATTRIBUTE_R(elle::service::aws::S3::StorageClass, storage_class);
     };
 
-    struct S3StorageConfig
-      : public StorageConfig
+    struct S3SiloConfig
+      : public SiloConfig
     {
     public:
-      using Super = StorageConfig;
+      using Super = SiloConfig;
       using StorageClass = elle::service::aws::S3::StorageClass;
 
     public:
-      S3StorageConfig(std::string name,
+      S3SiloConfig(std::string name,
                       elle::service::aws::Credentials credentials,
                       StorageClass storage_class,
                       boost::optional<int64_t> capacity,
                       boost::optional<std::string> description);
-      S3StorageConfig(elle::serialization::SerializerIn& input);
+      S3SiloConfig(elle::serialization::SerializerIn& input);
 
       void
       serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
 
       elle::service::aws::Credentials credentials;

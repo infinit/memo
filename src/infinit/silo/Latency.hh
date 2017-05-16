@@ -10,10 +10,10 @@ namespace infinit
 {
   namespace silo
   {
-    class Latency: public Storage
+    class Latency: public Silo
     {
     public:
-      Latency(std::unique_ptr<Storage> backend,
+      Latency(std::unique_ptr<Silo> backend,
               elle::reactor::DurationOpt latency_get,
               elle::reactor::DurationOpt latency_set,
               elle::reactor::DurationOpt latency_erase);
@@ -31,7 +31,7 @@ namespace infinit
       _list() override;
 
     private:
-      std::unique_ptr<Storage> _backend;
+      std::unique_ptr<Silo> _backend;
       elle::reactor::DurationOpt _latency_get;
       elle::reactor::DurationOpt _latency_set;
       elle::reactor::DurationOpt _latency_erase;

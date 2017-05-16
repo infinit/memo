@@ -9,10 +9,10 @@ namespace infinit
   namespace silo
   {
     class Crypt
-      : public Storage
+      : public Silo
     {
     public:
-      Crypt(std::unique_ptr<Storage> backend,
+      Crypt(std::unique_ptr<Silo> backend,
             std::string const& password,
             // Mix address and password to get a different key per block.
             bool salt = true);
@@ -35,29 +35,29 @@ namespace infinit
       _secret_key(Key const& k) const;
 
     private:
-      std::unique_ptr<Storage> _backend;
+      std::unique_ptr<Silo> _backend;
       std::string _password;
       bool _salt;
     };
 
-    struct CryptStorageConfig
-      : public StorageConfig
+    struct CryptSiloConfig
+      : public SiloConfig
     {
-      using Super = StorageConfig;
-      CryptStorageConfig(std::string name,
+      using Super = SiloConfig;
+      CryptSiloConfig(std::string name,
                          boost::optional<int64_t> capacity,
                          boost::optional<std::string> description);
-      CryptStorageConfig(elle::serialization::SerializerIn& in);
+      CryptSiloConfig(elle::serialization::SerializerIn& in);
 
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
 
       std::string password;
       bool salt;
-      std::shared_ptr<StorageConfig> storage;
+      std::shared_ptr<SiloConfig> storage;
     };
   }
 }

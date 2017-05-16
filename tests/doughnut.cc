@@ -109,9 +109,9 @@ public:
         infinit::model::Address id_a,
         infinit::model::Address id_b,
         infinit::model::Address id_c,
-        std::unique_ptr<Storage> storage_a,
-        std::unique_ptr<Storage> storage_b,
-        std::unique_ptr<Storage> storage_c,
+        std::unique_ptr<Silo> storage_a,
+        std::unique_ptr<Silo> storage_b,
+        std::unique_ptr<Silo> storage_c,
         boost::optional<elle::Version> version_a,
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
@@ -161,9 +161,9 @@ private:
        infinit::model::Address id_a,
        infinit::model::Address id_b,
        infinit::model::Address id_c,
-       std::unique_ptr<Storage> storage_a,
-       std::unique_ptr<Storage> storage_b,
-       std::unique_ptr<Storage> storage_c,
+       std::unique_ptr<Silo> storage_a,
+       std::unique_ptr<Silo> storage_b,
+       std::unique_ptr<Silo> storage_c,
        boost::optional<elle::Version> version_a,
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
@@ -659,7 +659,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 }
 
 void
-noop(Storage*)
+noop(Silo*)
 {}
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
@@ -1358,7 +1358,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::silo::Storage> storage) override
+      std::unique_ptr<infinit::silo::Silo> storage) override
     {
       return std::make_unique<Local>(
         *this,

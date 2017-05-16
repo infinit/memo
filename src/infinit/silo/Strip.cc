@@ -13,7 +13,7 @@ namespace infinit
 {
   namespace silo
   {
-    Strip::Strip(std::vector<std::unique_ptr<Storage>> backend)
+    Strip::Strip(std::vector<std::unique_ptr<Silo>> backend)
       : _backend(std::move(backend))
     {
       // This assumes that the metrics are already correct in the
@@ -56,7 +56,7 @@ namespace infinit
       }
     }
 
-    Storage&
+    Silo&
     Strip::_storage_of(Key k) const
     {
       return *_backend[sum(k) % _backend.size()];
@@ -72,51 +72,51 @@ namespace infinit
     }
 
     static
-    std::unique_ptr<Storage>
+    std::unique_ptr<Silo>
     make(std::vector<std::string> const& args)
     {
-      auto backends = std::vector<std::unique_ptr<Storage>>{};
+      auto backends = std::vector<std::unique_ptr<Silo>>{};
       for (unsigned int i = 0; i < args.size(); i += 2)
         backends.emplace_back(instantiate(args[i], args[i+1]));
       return std::make_unique<Strip>(std::move(backends));
     }
 
 
-    StripStorageConfig::StripStorageConfig(
-      Storages storages,
+    StripSiloConfig::StripSiloConfig(
+      Silos storages,
       boost::optional<int64_t> capacity,
       boost::optional<std::string> description)
-      : StorageConfig(
+      : SiloConfig(
           "multi-storage", std::move(capacity), std::move(description))
       , storage(std::move(storages))
     {}
 
-    StripStorageConfig::StripStorageConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
-      , storage(s.deserialize<Storages>("backend"))
+    StripSiloConfig::StripSiloConfig(elle::serialization::SerializerIn& s)
+      : SiloConfig(s)
+      , storage(s.deserialize<Silos>("backend"))
     {}
 
     void
-    StripStorageConfig::serialize(elle::serialization::Serializer& s)
+    StripSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("backend", this->storage);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    StripStorageConfig::StripStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    StripSiloConfig::StripSiloConfig::make()
     {
-      std::vector<std::unique_ptr<infinit::silo::Storage>> s;
+      std::vector<std::unique_ptr<infinit::silo::Silo>> s;
       for(auto const& c: storage)
         s.push_back(c->make());
       return std::make_unique<infinit::silo::Strip>(
         std::move(s));
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<StripStorageConfig>
-    _register_StripStorageConfig("strip");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<StripSiloConfig>
+    _register_StripSiloConfig("strip");
   }
 }
 
-FACTORY_REGISTER(infinit::silo::Storage, "strip", &infinit::silo::make);
+FACTORY_REGISTER(infinit::silo::Silo, "strip", &infinit::silo::make);

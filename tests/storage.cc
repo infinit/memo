@@ -13,7 +13,7 @@ ELLE_LOG_COMPONENT("tests.storage");
 
 static
 void
-tests(infinit::silo::Storage& storage)
+tests(infinit::silo::Silo& storage)
 {
   infinit::silo::Key::Value v1 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -44,7 +44,7 @@ tests(infinit::silo::Storage& storage)
 
 static
 void
-tests_capacity(infinit::silo::Storage& storage, int64_t capacity)
+tests_capacity(infinit::silo::Silo& storage, int64_t capacity)
 {
   infinit::silo::Key::Value v1 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -130,7 +130,7 @@ s3_storage_class_backward(bool reduced)
   std::stringstream ss(reduced ? zero_five_four_s3_storage_reduced
                                : zero_five_four_s3_storage_default);
   using elle::serialization::json::deserialize;
-  auto config = deserialize<infinit::silo::S3StorageConfig>(ss, false);
+  auto config = deserialize<infinit::silo::S3SiloConfig>(ss, false);
   BOOST_CHECK_EQUAL(
     static_cast<int>(config.storage_class),
     static_cast<int>(reduced ? elle::service::aws::S3::StorageClass::ReducedRedundancy

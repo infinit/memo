@@ -37,12 +37,12 @@ namespace infinit
     bool
     to_bool(std::string const& s);
 
-    class Storage
+    class Silo
     {
     public:
-      Storage(boost::optional<int64_t> capacity = {});
+      Silo(boost::optional<int64_t> capacity = {});
       virtual
-      ~Storage();
+      ~Silo();
       /// Get the data associated to key @a k.
       ///
       /// @param k Key of the looked-up data.
@@ -129,7 +129,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::atomic<int64_t>, block_count, protected);
     };
 
-    std::unique_ptr<Storage>
+    std::unique_ptr<Silo>
     instantiate(std::string const& name,
                 std::string const& args);
 
@@ -149,22 +149,22 @@ namespace infinit
       return is_block(p.path().filename().string());
     }
 
-    struct StorageConfig
-      : public descriptor::TemplatedBaseDescriptor<StorageConfig>
-      , public elle::serialization::VirtuallySerializable<StorageConfig, false>
+    struct SiloConfig
+      : public descriptor::TemplatedBaseDescriptor<SiloConfig>
+      , public elle::serialization::VirtuallySerializable<SiloConfig, false>
     {
-      StorageConfig() = default;
-      StorageConfig(std::string name,
+      SiloConfig() = default;
+      SiloConfig(std::string name,
                     boost::optional<int64_t> capacity,
                     boost::optional<std::string> description);
-      StorageConfig(elle::serialization::SerializerIn& input);
+      SiloConfig(elle::serialization::SerializerIn& input);
 
       void
       serialize(elle::serialization::Serializer& s) override;
       using serialization_tag = infinit::serialization_tag;
       static constexpr char const* virtually_serializable_key = "type";
       virtual
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() = 0;
 
       boost::optional<int64_t> capacity;

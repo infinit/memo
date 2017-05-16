@@ -10,7 +10,7 @@ namespace infinit
   namespace silo
   {
     class Filesystem
-      : public Storage
+      : public Silo
     {
     public:
       Filesystem(boost::filesystem::path root,
@@ -34,17 +34,17 @@ namespace infinit
       _path(Key const& key) const;
     };
 
-    struct FilesystemStorageConfig
-      : public StorageConfig
+    struct FilesystemSiloConfig
+      : public SiloConfig
     {
-      FilesystemStorageConfig(std::string name,
+      FilesystemSiloConfig(std::string name,
                               std::string path,
                               boost::optional<int64_t> capacity,
                               boost::optional<std::string> description);
-      FilesystemStorageConfig(elle::serialization::SerializerIn& input);
+      FilesystemSiloConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
       std::string path;
     };

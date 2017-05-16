@@ -36,7 +36,7 @@ make(bfs::path where,
      int cache_size,
      elle::cryptography::rsa::KeyPair& kp)
 {
-  std::unique_ptr<infinit::silo::Storage> s;
+  std::unique_ptr<infinit::silo::Silo> s;
   bfs::create_directories(where / "store");
   bfs::create_directories(where / "async");
   s.reset(new infinit::silo::Filesystem(where / "store"));

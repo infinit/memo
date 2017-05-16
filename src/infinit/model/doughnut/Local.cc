@@ -57,7 +57,7 @@ namespace infinit
 
       Local::Local(Doughnut& dht,
                    Address id,
-                   std::unique_ptr<silo::Storage> storage,
+                   std::unique_ptr<silo::Silo> storage,
                    int port,
                    boost::optional<boost::asio::ip::address> listen_address)
         : Super(dht, std::move(id))

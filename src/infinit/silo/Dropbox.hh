@@ -10,7 +10,7 @@ namespace infinit
   namespace silo
   {
     class Dropbox
-      : public Storage
+      : public Silo
     {
     public:
       Dropbox(std::string token);
@@ -39,18 +39,18 @@ namespace infinit
       _path(Key key) const;
     };
 
-    struct DropboxStorageConfig
-      : public StorageConfig
+    struct DropboxSiloConfig
+      : public SiloConfig
     {
-      DropboxStorageConfig(std::string name,
+      DropboxSiloConfig(std::string name,
                            std::string token,
                            boost::optional<std::string> root,
                            boost::optional<int64_t> capacity,
                            boost::optional<std::string> description);
-      DropboxStorageConfig(elle::serialization::SerializerIn& input);
+      DropboxSiloConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
 
       std::string token;

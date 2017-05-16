@@ -298,9 +298,9 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<ModelConfig, false>
     {
       static constexpr char const* virtually_serializable_key = "type";
-      std::unique_ptr<infinit::silo::StorageConfig> storage;
+      std::unique_ptr<infinit::silo::SiloConfig> storage;
       elle::Version version;
-      ModelConfig(std::unique_ptr<infinit::silo::StorageConfig> storage,
+      ModelConfig(std::unique_ptr<infinit::silo::SiloConfig> storage,
                   elle::Version version);
       ModelConfig(elle::serialization::SerializerIn& s);
       void

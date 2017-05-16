@@ -81,13 +81,13 @@ ELLE_LOG_COMPONENT("infinit.fs.sftp");
   elle::Bench::BenchScope bs(bench)
 
 static
-std::unique_ptr<infinit::silo::Storage>
+std::unique_ptr<infinit::silo::Silo>
 make(std::vector<std::string> const& args)
 {
   return std::make_unique<infinit::silo::SFTP>(args[0], args[1]);
 }
 
-FACTORY_REGISTER(infinit::silo::Storage, "sftp", &make);
+FACTORY_REGISTER(infinit::silo::Silo, "sftp", &make);
 namespace infinit
 {
   namespace silo
@@ -626,41 +626,41 @@ namespace infinit
       return res;
     }
 
-    SFTPStorageConfig::
-      SFTPStorageConfig(std::string const& name,
+    SFTPSiloConfig::
+      SFTPSiloConfig(std::string const& name,
                         std::string const& host,
                         std::string const& path,
                         boost::optional<int64_t> capacity,
                         boost::optional<std::string> description)
-      : StorageConfig(
+      : SiloConfig(
           std::move(name), std::move(capacity), std::move(description))
       , host(host)
       , path(path)
     {}
 
-    SFTPStorageConfig::SFTPStorageConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+    SFTPSiloConfig::SFTPSiloConfig(elle::serialization::SerializerIn& s)
+      : SiloConfig(s)
       , host(s.deserialize<std::string>("host"))
       , path(s.deserialize<std::string>("path"))
     {}
 
     void
-    SFTPStorageConfig::serialize(elle::serialization::Serializer& s)
+    SFTPSiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("host", this->host);
       s.serialize("path", this->path);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    SFTPStorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    SFTPSiloConfig::make()
     {
       return std::make_unique<infinit::silo::SFTP>(host, path);
     }
 
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<SFTPStorageConfig>
-    _register_SFTPStorageConfig("sftp");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<SFTPSiloConfig>
+    _register_SFTPSiloConfig("sftp");
   }
 }

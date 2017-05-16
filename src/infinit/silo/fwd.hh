@@ -10,6 +10,6 @@ namespace infinit
     class Collision;
     class Memory;
     class MissingKey;
-    class Storage;
+    class Silo;
   }
 }

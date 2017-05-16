@@ -13,7 +13,8 @@ namespace infinit
 {
   namespace silo
   {
-    Mirror::Mirror(std::vector<std::unique_ptr<Storage>> backend, bool balance_reads, bool parallel)
+    Mirror::Mirror(std::vector<std::unique_ptr<Silo>> backend,
+                   bool balance_reads, bool parallel)
       : _balance_reads(balance_reads)
       , _backend(std::move(backend))
       , _read_counter(0)
@@ -32,25 +33,20 @@ namespace infinit
     Mirror::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       if (_parallel)
-      {
         elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
         {
           for (auto& e: _backend)
           {
-            Storage* ptr = e.get();
-            s.run_background("mirror set", [&,ptr] { ptr->set(k, value, insert, update);});
+            Silo* ptr = e.get();
+            s.run_background("mirror set", [&,ptr] {
+                ptr->set(k, value, insert, update);
+              });
           }
           s.wait();
         };
-      }
       else
-      {
         for (auto& e: _backend)
-        {
           e->set(k, value, insert, update);
-        }
-      }
-
       return 0;
     }
 
@@ -63,7 +59,7 @@ namespace infinit
         {
           for (auto& e: _backend)
           {
-            Storage* ptr = e.get();
+            Silo* ptr = e.get();
             s.run_background("mirror erase", [&,ptr] { ptr->erase(k);});
           }
           s.wait();
@@ -88,12 +84,12 @@ namespace infinit
 
     namespace
     {
-      std::unique_ptr<Storage>
+      std::unique_ptr<Silo>
       make(std::vector<std::string> const& args)
       {
         bool balance_reads = to_bool(args[0]);
         bool parallel = to_bool(args[1]);
-        auto backends = std::vector<std::unique_ptr<Storage>>{};
+        auto backends = std::vector<std::unique_ptr<Silo>>{};
         // FIXME: we don't check that i+1 is ok.
         for (int i = 2; i < signed(args.size()); i += 2)
           backends.emplace_back(instantiate(args[i], args[i+1]));
@@ -101,22 +97,22 @@ namespace infinit
       }
     }
 
-    struct MirrorStorageConfig
-      : public StorageConfig
+    struct MirrorSiloConfig
+      : public SiloConfig
     {
       bool parallel;
       bool balance;
-      std::vector<std::unique_ptr<StorageConfig>> storage;
+      std::vector<std::unique_ptr<SiloConfig>> storage;
 
-      MirrorStorageConfig(std::string name,
+      MirrorSiloConfig(std::string name,
                           boost::optional<int64_t> capacity,
                           boost::optional<std::string> description)
-        : StorageConfig(
+        : SiloConfig(
             std::move(name), std::move(capacity), std::move(description))
       {}
 
-      MirrorStorageConfig(elle::serialization::SerializerIn& s)
-        : StorageConfig(s)
+      MirrorSiloConfig(elle::serialization::SerializerIn& s)
+        : SiloConfig(s)
       {
         this->serialize(s);
       }
@@ -124,17 +120,17 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
-        StorageConfig::serialize(s);
+        SiloConfig::serialize(s);
         s.serialize("parallel", this->parallel);
         s.serialize("balance", this->balance);
         s.serialize("backend", this->storage);
       }
 
       virtual
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override
       {
-        std::vector<std::unique_ptr<infinit::silo::Storage>> s;
+        std::vector<std::unique_ptr<infinit::silo::Silo>> s;
         for(auto const& c: storage)
         {
           ELLE_ASSERT(!!c);
@@ -145,10 +141,10 @@ namespace infinit
       }
     };
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<MirrorStorageConfig>
-    _register_MirrorStorageConfig("mirror");
+    static const elle::serialization::Hierarchy<SiloConfig>::
+    Register<MirrorSiloConfig>
+    _register_MirrorSiloConfig("mirror");
   }
 }
 
-FACTORY_REGISTER(infinit::silo::Storage, "mirror", &infinit::silo::make);
+FACTORY_REGISTER(infinit::silo::Silo, "mirror", &infinit::silo::make);

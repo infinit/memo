@@ -16,7 +16,7 @@ namespace infinit
   namespace silo
   {
     class GCS
-      : public Storage, public GoogleAPI
+      : public Silo, public GoogleAPI
     {
     public:
       GCS(std::string const& name,
@@ -50,7 +50,7 @@ namespace infinit
       _url(Key key) const;
     };
 
-    struct GCSConfig: public StorageConfig
+    struct GCSConfig: public SiloConfig
     {
       GCSConfig(std::string const& name,
                 std::string const& bucket,
@@ -61,7 +61,7 @@ namespace infinit
                 boost::optional<std::string> description);
       GCSConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::silo::Storage> make() override;
+      std::unique_ptr<infinit::silo::Silo> make() override;
       std::string bucket;
       std::string root;
       std::string refresh_token;

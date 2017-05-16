@@ -150,7 +150,7 @@ namespace infinit
                          std::string const& refresh_token,
                          boost::optional<int64_t> capacity,
                          boost::optional<std::string> description)
-      : StorageConfig(name, std::move(capacity), std::move(description))
+      : SiloConfig(name, std::move(capacity), std::move(description))
       , bucket(bucket)
       , root(root)
       , refresh_token(refresh_token)
@@ -158,7 +158,7 @@ namespace infinit
     {}
 
     GCSConfig::GCSConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+      : SiloConfig(s)
       , bucket(s.deserialize<std::string>("bucket"))
       , root(s.deserialize<std::string>("root"))
       , refresh_token(s.deserialize<std::string>("refresh_token"))
@@ -168,21 +168,21 @@ namespace infinit
     void
     GCSConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("bucket", this->bucket);
       s.serialize("root", this->root);
       s.serialize("refresh_token", this->refresh_token);
       s.serialize("user_name", this->user_name);
     }
 
-    std::unique_ptr<infinit::silo::Storage>
+    std::unique_ptr<infinit::silo::Silo>
     GCSConfig::make()
     {
       return std::make_unique<infinit::silo::GCS>(
         this->user_name, this->bucket, this->root, this->refresh_token);
     }
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
+    static const elle::serialization::Hierarchy<SiloConfig>::
     Register<GCSConfig> _register_GCSConfig("gcs");
   }
 }

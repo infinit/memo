@@ -286,11 +286,11 @@ namespace infinit
         return res;
       }
 
-      std::unique_ptr<infinit::silo::StorageConfig>
+      std::unique_ptr<infinit::silo::SiloConfig>
       make_silo_config(infinit::Infinit& ifnt,
                        Strings const& silos)
       {
-        auto res = std::unique_ptr<infinit::silo::StorageConfig>{};
+        auto res = std::unique_ptr<infinit::silo::SiloConfig>{};
         if (silos.empty())
           return {};
         else
@@ -301,7 +301,7 @@ namespace infinit
           if (backends.size() == 1)
             return std::move(backends[0]);
           else
-            return std::make_unique<infinit::silo::StripStorageConfig>
+            return std::make_unique<infinit::silo::StripSiloConfig>
               (std::move(backends));
         }
       }
@@ -558,7 +558,7 @@ namespace infinit
                 d->id,
                 std::move(desc.consensus),
                 std::move(desc.overlay),
-                // XXX[Storage]: dnut::Configuration::storage ?
+                // XXX[Silo]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
                 std::make_shared<elle::cryptography::rsa::PublicKey>(
@@ -1101,10 +1101,10 @@ namespace infinit
       auto owner = cli.as_user();
 
       auto network = ifnt.network_get(network_name, owner, true);
-      // XXX[Storage]: Network::modem::storage
+      // XXX[Silo]: Network::modem::storage
       if (network.model->storage)
       {
-        if (auto strip = dynamic_cast<infinit::silo::StripStorageConfig*>(
+        if (auto strip = dynamic_cast<infinit::silo::StripSiloConfig*>(
             network.model->storage.get()))
           for (auto const& s: strip->storage)
             std::cout << s->name << "\n";

@@ -9,7 +9,7 @@ namespace infinit
   {
     /// In-memory storage.
     class Memory
-      : public Storage
+      : public Silo
     {
     public:
       using Blocks = std::unordered_map<Key, elle::Buffer>;
@@ -46,15 +46,15 @@ namespace infinit
                      blocks);
     };
 
-    struct MemoryStorageConfig
-      : public StorageConfig
+    struct MemorySiloConfig
+      : public SiloConfig
     {
-      using Super = StorageConfig;
+      using Super = SiloConfig;
       using Super::Super;
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::silo::Storage>
+      std::unique_ptr<infinit::silo::Silo>
       make() override;
     };
   }

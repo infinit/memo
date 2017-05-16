@@ -26,7 +26,7 @@ namespace infinit
     S3::S3(std::unique_ptr<elle::service::aws::S3> storage,
            elle::service::aws::S3::StorageClass storage_class,
            boost::optional<int64_t> capacity)
-      : Storage(std::move(capacity))
+      : Silo(std::move(capacity))
       , _storage(std::move(storage))
       , _storage_class(storage_class)
     {}
@@ -45,7 +45,6 @@ namespace infinit
       catch (elle::service::aws::AWSException const& e)
       {
         if (e.inner_exception())
-        {
           try
           {
             std::rethrow_exception(e.inner_exception());
@@ -55,11 +54,8 @@ namespace infinit
             ELLE_TRACE("unable to GET block: %s", e);
             throw MissingKey(key);
           }
-        }
         else
-        {
           throw e;
-        }
       }
     }
 
@@ -87,7 +83,6 @@ namespace infinit
       catch (elle::service::aws::AWSException const& e)
       {
         if (e.inner_exception())
-        {
           try
           {
             std::rethrow_exception(e.inner_exception());
@@ -97,11 +92,8 @@ namespace infinit
             ELLE_WARN("unable to DELETE block: %s", e);
             throw MissingKey(key);
           }
-        }
         else
-        {
           throw e;
-        }
       }
       return 0;
     }
@@ -126,7 +118,7 @@ namespace infinit
       return res;
     }
 
-    S3StorageConfig::S3StorageConfig(std::string name,
+    S3SiloConfig::S3SiloConfig(std::string name,
                                      elle::service::aws::Credentials credentials,
                                      elle::service::aws::S3::StorageClass storage_class,
                                      boost::optional<int64_t> capacity,
@@ -137,16 +129,16 @@ namespace infinit
       , storage_class(storage_class)
     {}
 
-    S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& s)
+    S3SiloConfig::S3SiloConfig(elle::serialization::SerializerIn& s)
       : Super(s)
     {
       this->serialize(s);
     }
 
     void
-    S3StorageConfig::serialize(elle::serialization::Serializer& s)
+    S3SiloConfig::serialize(elle::serialization::Serializer& s)
     {
-      StorageConfig::serialize(s);
+      SiloConfig::serialize(s);
       s.serialize("aws_credentials", this->credentials);
       if (s.out())
       {
@@ -192,8 +184,8 @@ namespace infinit
       }
     }
 
-    std::unique_ptr<infinit::silo::Storage>
-    S3StorageConfig::make()
+    std::unique_ptr<infinit::silo::Silo>
+    S3SiloConfig::make()
     {
       auto s3 = std::make_unique<elle::service::aws::S3>(credentials);
       return std::make_unique<infinit::silo::S3>(std::move(s3),
@@ -206,6 +198,6 @@ namespace infinit
 namespace
 {
   auto const res =
-    elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
-    Register<infinit::silo::S3StorageConfig>("s3");
+    elle::serialization::Hierarchy<infinit::silo::SiloConfig>::
+    Register<infinit::silo::S3SiloConfig>("s3");
 }
