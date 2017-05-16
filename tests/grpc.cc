@@ -13,7 +13,7 @@
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 #include <infinit/filesystem/filesystem.hh>
 

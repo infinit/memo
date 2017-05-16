@@ -18,7 +18,7 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.test");
 

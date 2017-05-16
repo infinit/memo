@@ -15,7 +15,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/overlay/Overlay.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Storage.hh>
 
 namespace std
 {

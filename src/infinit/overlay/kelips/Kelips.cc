@@ -42,7 +42,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/reactor/Thread.hh>
 
-#include <infinit/storage/Filesystem.hh>
+#include <infinit/silo/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Passport.hh>

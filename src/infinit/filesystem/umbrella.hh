@@ -9,7 +9,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/storage/InsufficientSpace.hh>
+#include <infinit/silo/InsufficientSpace.hh>
 
 namespace infinit
 {

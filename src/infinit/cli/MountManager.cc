@@ -23,7 +23,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/storage/Filesystem.hh>
+#include <infinit/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("cli.MountManager");
 

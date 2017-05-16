@@ -39,7 +39,7 @@
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/MonitoringServer.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 

@@ -26,8 +26,8 @@
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
-#include <infinit/storage/Storage.hh>
-#include <infinit/storage/Strip.hh>
+#include <infinit/silo/Storage.hh>
+#include <infinit/silo/Strip.hh>
 
 #ifndef INFINIT_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>

@@ -28,7 +28,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos");
 

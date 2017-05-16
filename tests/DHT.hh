@@ -9,7 +9,7 @@
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/storage/Memory.hh>
+#include <infinit/silo/Memory.hh>
 
 namespace dht = infinit::model::doughnut;
 namespace blocks = infinit::model::blocks;

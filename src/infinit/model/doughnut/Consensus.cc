@@ -2,7 +2,7 @@
 
 #include <elle/os/environ.hh>
 
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 #include <infinit/model/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>

@@ -2,12 +2,12 @@
 #include <elle/serialization/json.hh>
 #include <elle/test.hh>
 
-#include <infinit/storage/Collision.hh>
-#include <infinit/storage/Filesystem.hh>
-#include <infinit/storage/Memory.hh>
-#include <infinit/storage/MissingKey.hh>
-#include <infinit/storage/S3.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Collision.hh>
+#include <infinit/silo/Filesystem.hh>
+#include <infinit/silo/Memory.hh>
+#include <infinit/silo/MissingKey.hh>
+#include <infinit/silo/S3.hh>
+#include <infinit/silo/Storage.hh>
 
 ELLE_LOG_COMPONENT("tests.storage");
 

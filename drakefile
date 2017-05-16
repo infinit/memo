@@ -193,7 +193,7 @@ def configure(
   infinit_sources += drake.include('src/infinit/model').sources
   infinit_sources += drake.include('src/infinit/overlay').sources
   infinit_sources += drake.include(
-    'src/infinit/storage',
+    'src/infinit/silo',
     entreprise_edition = entreprise_edition).sources
   infinit_utility_config = drake.cxx.Config(cxx_config_infinit)
   infinit_utility_config.define('BEYOND_HOST', stringify(beyond_host))
@@ -207,8 +207,8 @@ def configure(
       infinit_utility_config))
   if not windows:
     infinit_sources += drake.nodes(
-      'src/infinit/storage/sftp.cc',
-      'src/infinit/storage/sftp.hh',
+      'src/infinit/silo/sftp.cc',
+      'src/infinit/silo/sftp.hh',
     )
   outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
   jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')

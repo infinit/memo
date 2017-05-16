@@ -1,7 +1,7 @@
 #include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
 
-#include <infinit/storage/Filesystem.hh>
+#include <infinit/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("infinit");
 

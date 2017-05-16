@@ -32,7 +32,7 @@
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/Stonehenge.hh>
-#include <infinit/storage/Memory.hh>
+#include <infinit/silo/Memory.hh>
 
 #include "DHT.hh"
 

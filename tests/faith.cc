@@ -5,7 +5,7 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/faith/Faith.hh>
-#include <infinit/storage/Memory.hh>
+#include <infinit/silo/Memory.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.test");
 

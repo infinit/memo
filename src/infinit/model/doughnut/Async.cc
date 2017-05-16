@@ -16,7 +16,7 @@
 #include <elle/reactor/exception.hh>
 #include <elle/reactor/scheduler.hh>
 
-#include <infinit/storage/Collision.hh>
+#include <infinit/silo/Collision.hh>
 
 #include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>

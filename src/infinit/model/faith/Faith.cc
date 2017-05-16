@@ -10,7 +10,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
 

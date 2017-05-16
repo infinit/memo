@@ -23,7 +23,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/MountManager.hh>
 #include <infinit/cli/utility.hh>
-#include <infinit/storage/Filesystem.hh>
+#include <infinit/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("cli.daemon");
 
