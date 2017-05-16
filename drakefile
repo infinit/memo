@@ -784,18 +784,15 @@ def configure(
         },
       )
       if enable_crash_reporting:
-        crash_test_libs = drake.copy([
+        crash_test_libs = [
             crash_reporter_lib,
             cryptography_lib,
             elle_lib,
             reactor_lib,
-          ] + additional_libs,
-          'tests/functional/lib', True)
-        crash_test_libs += drake.copy([
             elle.boost.program_options_dynamic,
             elle.boost.filesystem_dynamic,
             elle.boost.regex_dynamic,
-          ], 'tests/functional/lib', True)
+          ]
         crash_test_bin = drake.cxx.Executable(
           'tests/functional/bin/crasher', [
             drake.node('tests/functional/bin/crasher.cc')
