@@ -9,7 +9,7 @@ ELLE_LOG_COMPONENT("infinit.storage.Dropbox");
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     namespace bfs = boost::filesystem;
 
@@ -164,14 +164,14 @@ namespace infinit
       s.serialize("root", this->root);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     DropboxStorageConfig::make()
     {
       if (this->root)
-        return std::make_unique<infinit::storage::Dropbox>(
+        return std::make_unique<infinit::silo::Dropbox>(
           this->token, this->root.get());
       else
-        return std::make_unique<infinit::storage::Dropbox>(this->token);
+        return std::make_unique<infinit::silo::Dropbox>(this->token);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

@@ -23,7 +23,7 @@ namespace
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Memory::Memory()
       : _blocks(new Blocks, std::default_delete<Blocks>())
@@ -143,10 +143,10 @@ namespace infinit
       StorageConfig::serialize(s);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     MemoryStorageConfig::make()
     {
-      return std::make_unique<infinit::storage::Memory>();
+      return std::make_unique<infinit::silo::Memory>();
     }
   }
 }
@@ -154,14 +154,14 @@ namespace infinit
 namespace
 {
   const auto reg
-    = elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
-    Register<infinit::storage::MemoryStorageConfig>("memory");
+    = elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
+    Register<infinit::silo::MemoryStorageConfig>("memory");
 
-  std::unique_ptr<infinit::storage::Storage>
+  std::unique_ptr<infinit::silo::Storage>
   make(std::vector<std::string> const& args)
   {
-    return std::make_unique<infinit::storage::Memory>();
+    return std::make_unique<infinit::silo::Memory>();
   }
 
-  FACTORY_REGISTER(infinit::storage::Storage, "memory", make);
+  FACTORY_REGISTER(infinit::silo::Storage, "memory", make);
 }

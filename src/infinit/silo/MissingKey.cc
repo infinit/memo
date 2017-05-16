@@ -4,7 +4,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     MissingKey::MissingKey(Key key)
       : Super(elle::sprintf("missing key: %f", key))

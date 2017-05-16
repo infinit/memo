@@ -4,7 +4,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     namespace
     {

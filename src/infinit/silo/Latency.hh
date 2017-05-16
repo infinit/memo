@@ -8,7 +8,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class Latency: public Storage
     {

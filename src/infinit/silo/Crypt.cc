@@ -6,11 +6,11 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     namespace
     {
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make(std::vector<std::string> const& args)
       {
         auto backend = instantiate(args[0], args[1]);
@@ -83,10 +83,10 @@ namespace infinit
       s.serialize("backend", this->storage);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     CryptStorageConfig::make()
     {
-      return std::make_unique<infinit::storage::Crypt>(
+      return std::make_unique<infinit::silo::Crypt>(
         storage->make(), password, salt);
     }
   }
@@ -95,8 +95,8 @@ namespace infinit
 namespace
 {
   auto const reg
-  = elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
-      Register<infinit::storage::CryptStorageConfig>("crypt");
+  = elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
+      Register<infinit::silo::CryptStorageConfig>("crypt");
 
-  FACTORY_REGISTER(infinit::storage::Storage, "crypt", &infinit::storage::make);
+  FACTORY_REGISTER(infinit::silo::Storage, "crypt", &infinit::silo::make);
 }

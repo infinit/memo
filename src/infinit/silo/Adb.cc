@@ -17,7 +17,7 @@ namespace
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Adb::Adb(std::string const& root)
       :_root(root)
@@ -115,10 +115,10 @@ namespace infinit
       s.serialize("root", this->root);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     AdbStorageConfig::make()
     {
-      return std::make_unique<infinit::storage::Adb>(root);
+      return std::make_unique<infinit::silo::Adb>(root);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

@@ -6,7 +6,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class Crypt
       : public Storage
@@ -52,7 +52,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() override;
 
       std::string password;

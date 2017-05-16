@@ -41,7 +41,7 @@ namespace infinit
         ELLE_TRACE("perm exception %s", e);
         err(EACCES, "%s", e);
       }
-      catch (infinit::storage::InsufficientSpace const& e)
+      catch (infinit::silo::InsufficientSpace const& e)
       {
         ELLE_TRACE("umbrella: %s", e);
         err(ENOSPC);

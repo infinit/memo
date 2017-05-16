@@ -11,7 +11,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Strip::Strip(std::vector<std::unique_ptr<Storage>> backend)
       : _backend(std::move(backend))
@@ -103,13 +103,13 @@ namespace infinit
       s.serialize("backend", this->storage);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     StripStorageConfig::StripStorageConfig::make()
     {
-      std::vector<std::unique_ptr<infinit::storage::Storage>> s;
+      std::vector<std::unique_ptr<infinit::silo::Storage>> s;
       for(auto const& c: storage)
         s.push_back(c->make());
-      return std::make_unique<infinit::storage::Strip>(
+      return std::make_unique<infinit::silo::Strip>(
         std::move(s));
     }
 
@@ -119,4 +119,4 @@ namespace infinit
   }
 }
 
-FACTORY_REGISTER(infinit::storage::Storage, "strip", &infinit::storage::make);
+FACTORY_REGISTER(infinit::silo::Storage, "strip", &infinit::silo::make);

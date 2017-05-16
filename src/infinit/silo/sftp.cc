@@ -81,16 +81,16 @@ ELLE_LOG_COMPONENT("infinit.fs.sftp");
   elle::Bench::BenchScope bs(bench)
 
 static
-std::unique_ptr<infinit::storage::Storage>
+std::unique_ptr<infinit::silo::Storage>
 make(std::vector<std::string> const& args)
 {
-  return std::make_unique<infinit::storage::SFTP>(args[0], args[1]);
+  return std::make_unique<infinit::silo::SFTP>(args[0], args[1]);
 }
 
-FACTORY_REGISTER(infinit::storage::Storage, "sftp", &make);
+FACTORY_REGISTER(infinit::silo::Storage, "sftp", &make);
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class PacketError: public std::runtime_error
     {
@@ -443,7 +443,7 @@ namespace infinit
       }
       catch(PacketError const&)
       {
-        throw infinit::storage::MissingKey(k);
+        throw infinit::silo::MissingKey(k);
       }
       int id = p.readInt();
       ELLE_ASSERT_EQ(id, req);
@@ -652,10 +652,10 @@ namespace infinit
       s.serialize("path", this->path);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     SFTPStorageConfig::make()
     {
-      return std::make_unique<infinit::storage::SFTP>(host, path);
+      return std::make_unique<infinit::silo::SFTP>(host, path);
     }
 
 

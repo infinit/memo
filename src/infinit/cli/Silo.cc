@@ -190,7 +190,7 @@ namespace infinit
     void
     mode_create(Infinit& cli,
                 boost::optional<std::string> output,
-                std::unique_ptr<infinit::storage::StorageConfig> config)
+                std::unique_ptr<infinit::silo::StorageConfig> config)
     {
       if (auto o = cli.get_output(output, false))
       {
@@ -216,7 +216,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        std::make_unique<infinit::storage::DropboxStorageConfig>(
+        std::make_unique<infinit::silo::DropboxStorageConfig>(
           name,
           account->token,
           std::move(root),
@@ -245,7 +245,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        std::make_unique<infinit::storage::FilesystemStorageConfig>(
+        std::make_unique<infinit::silo::FilesystemStorageConfig>(
           name,
           std::move(path.string()),
           convert_capacity(capacity),
@@ -267,7 +267,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        std::make_unique<infinit::storage::GCSConfig>(
+        std::make_unique<infinit::silo::GCSConfig>(
           name,
           bucket,
           root.value_or(elle::print("{}_blocks", name)),
@@ -316,7 +316,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        std::make_unique<infinit::storage::S3StorageConfig>(
+        std::make_unique<infinit::silo::S3StorageConfig>(
           name,
           std::move(aws_credentials),
           silo_class,
@@ -339,7 +339,7 @@ namespace infinit
       mode_create(
         this->cli(),
         output,
-        std::make_unique<infinit::storage::GoogleDriveStorageConfig>(
+        std::make_unique<infinit::silo::GoogleDriveStorageConfig>(
           name,
           std::move(root),
           account->refresh_token,
@@ -364,7 +364,7 @@ namespace infinit
       auto i = this->cli().get_input(input);
       {
         auto silo = elle::serialization::json::deserialize<
-          std::unique_ptr<infinit::storage::StorageConfig>>(*i, false);
+          std::unique_ptr<infinit::silo::StorageConfig>>(*i, false);
         if (silo->name.size() == 0)
           elle::err("silo name is empty");
         // FIXME: no need to pass the name
@@ -412,7 +412,7 @@ namespace infinit
       auto& infinit = this->cli().infinit();
       auto silo = infinit.silo_get(name);
       auto fs_silo =
-        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(silo.get());
+        dynamic_cast<infinit::silo::FilesystemStorageConfig*>(silo.get());
       if (clear && !fs_silo)
         elle::err("only filesystem silos can be cleared");
       if (purge)

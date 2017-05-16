@@ -2116,7 +2116,7 @@ namespace
       }
     }();
 
-    using namespace infinit::storage;
+    using namespace infinit::silo;
     auto networks = parse(ifnt.networks_get(owner));
 
     ELLE_TRACE("verify silos")
@@ -2305,9 +2305,9 @@ namespace
           else if (is_parent_of(ifnt._users_path(), p.path()))
             load<infinit::User>(ifnt, p.path(), "users");
           else if (is_parent_of(ifnt._silos_path(), p.path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "silo");
+            load<std::unique_ptr<infinit::silo::StorageConfig>>(ifnt, p.path(), "silo");
           else if (is_parent_of(deprecated::storages_path(), p.path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
+            load<std::unique_ptr<infinit::silo::StorageConfig>>(ifnt, p.path(), "storage");
           else if (is_parent_of(ifnt._credentials_path(), p.path()))
             load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
           else

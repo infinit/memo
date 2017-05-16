@@ -13,7 +13,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class GCS
       : public Storage, public GoogleAPI
@@ -61,7 +61,7 @@ namespace infinit
                 boost::optional<std::string> description);
       GCSConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::storage::Storage> make() override;
+      std::unique_ptr<infinit::silo::Storage> make() override;
       std::string bucket;
       std::string root;
       std::string refresh_token;

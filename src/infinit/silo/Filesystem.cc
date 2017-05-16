@@ -18,7 +18,7 @@ ELLE_LOG_COMPONENT("infinit.storage.Filesystem");
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     namespace bfs = boost::filesystem;
 
@@ -161,10 +161,10 @@ namespace infinit
       s.serialize("path", this->path);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     FilesystemStorageConfig::make()
     {
-      return std::make_unique<infinit::storage::Filesystem>(this->path,
+      return std::make_unique<infinit::silo::Filesystem>(this->path,
                                                              this->capacity);
     }
 

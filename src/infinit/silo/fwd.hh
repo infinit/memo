@@ -4,7 +4,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     using Key = model::Address;
     class Collision;

@@ -4,7 +4,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     /// Balance blocks on the list of specified backend storages.
     /// This is really sharding actually.
@@ -44,7 +44,7 @@ namespace infinit
       StripStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() override;
       Storages storage;
     };

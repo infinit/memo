@@ -8,7 +8,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class SFTP: public Storage
     {
@@ -51,7 +51,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() override;
 
       std::string host;

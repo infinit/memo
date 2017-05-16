@@ -21,7 +21,7 @@ namespace
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     bool
     to_bool(std::string const& s)

@@ -6,7 +6,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class Collision
       : public elle::Error

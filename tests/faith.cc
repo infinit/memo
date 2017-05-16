@@ -28,8 +28,8 @@ static
 void
 faith()
 {
-  std::unique_ptr<infinit::storage::Storage> storage
-    = std::make_unique<infinit::storage::Memory>();
+  std::unique_ptr<infinit::silo::Storage> storage
+    = std::make_unique<infinit::silo::Memory>();
   infinit::model::faith::Faith faith(std::move(storage));
 
   auto block1 = faith.make_block<infinit::model::blocks::MutableBlock>();

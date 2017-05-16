@@ -36,10 +36,10 @@ make(bfs::path where,
      int cache_size,
      elle::cryptography::rsa::KeyPair& kp)
 {
-  std::unique_ptr<infinit::storage::Storage> s;
+  std::unique_ptr<infinit::silo::Storage> s;
   bfs::create_directories(where / "store");
   bfs::create_directories(where / "async");
-  s.reset(new infinit::storage::Filesystem(where / "store"));
+  s.reset(new infinit::silo::Filesystem(where / "store"));
   infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)

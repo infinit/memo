@@ -16,7 +16,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     class GoogleDrive
       : public Storage, public GoogleAPI
@@ -83,7 +83,7 @@ namespace infinit
                                boost::optional<std::string> description);
       GoogleDriveStorageConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
-      virtual std::unique_ptr<infinit::storage::Storage> make() override;
+      virtual std::unique_ptr<infinit::silo::Storage> make() override;
 
       boost::optional<std::string> root;
       std::string refresh_token;

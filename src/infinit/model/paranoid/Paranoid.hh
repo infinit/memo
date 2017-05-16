@@ -18,7 +18,7 @@ namespace infinit
       {
       public:
         Paranoid(elle::cryptography::rsa::KeyPair keys,
-                 std::unique_ptr<storage::Storage> storage,
+                 std::unique_ptr<silo::Storage> storage,
                  elle::Version version);
         virtual
         ~Paranoid();
@@ -38,7 +38,7 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature) override;
         ELLE_ATTRIBUTE_R(elle::cryptography::rsa::KeyPair, keys);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<silo::Storage>, storage);
       };
     }
   }

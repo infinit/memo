@@ -25,7 +25,7 @@ ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     struct Parent
     {
@@ -61,13 +61,13 @@ namespace infinit
   }
 }
 
-ELLE_DAS_SERIALIZE(infinit::storage::Parent);
-ELLE_DAS_SERIALIZE(infinit::storage::Directory);
-ELLE_DAS_SERIALIZE(infinit::storage::Metadata);
+ELLE_DAS_SERIALIZE(infinit::silo::Parent);
+ELLE_DAS_SERIALIZE(infinit::silo::Directory);
+ELLE_DAS_SERIALIZE(infinit::silo::Metadata);
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
 
     /*
@@ -433,14 +433,14 @@ namespace infinit
       s.serialize("user_name", this->user_name);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     GoogleDriveStorageConfig::make()
     {
       if (this->root)
-        return std::make_unique<infinit::storage::GoogleDrive>(
+        return std::make_unique<infinit::silo::GoogleDrive>(
             this->root.get(), this->refresh_token, this->user_name);
       else
-        return std::make_unique<infinit::storage::GoogleDrive>(
+        return std::make_unique<infinit::silo::GoogleDrive>(
             this->refresh_token, this->user_name);
     }
 

@@ -642,11 +642,11 @@ ELLE_TEST_SCHEDULED(create_excl)
 #if 0
 ELLE_TEST_SCHEDULED(multiple_writers)
 {
-  infinit::storage::Memory::Blocks blocks;
+  infinit::silo::Memory::Blocks blocks;
   struct stat st;
   auto servers = DHTs(1, {},
                with_cache = true,
-               storage = std::make_unique<infinit::storage::Memory>(blocks));
+               storage = std::make_unique<infinit::silo::Memory>(blocks));
   auto client = servers.client(false);
   char buffer[1024];
   initialize(buffer);
@@ -1378,7 +1378,7 @@ ELLE_TEST_SCHEDULED(basic)
 
 ELLE_TEST_SCHEDULED(upgrade_06_07)
 {
-  infinit::storage::Memory::Blocks blocks;
+  infinit::silo::Memory::Blocks blocks;
   auto owner_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key2 = elle::cryptography::rsa::keypair::generate(512);
@@ -1388,7 +1388,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,6,0),
              id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
@@ -1412,7 +1412,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
       = DHTs(1,
              owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);
@@ -1446,7 +1446,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);

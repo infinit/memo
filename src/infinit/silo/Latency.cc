@@ -32,7 +32,7 @@ namespace elle
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Latency::Latency(std::unique_ptr<Storage> backend,
                      elle::reactor::DurationOpt latency_get,
@@ -79,7 +79,7 @@ namespace infinit
       return _backend->list();
     }
 
-    static std::unique_ptr<infinit::storage::Storage>
+    static std::unique_ptr<infinit::silo::Storage>
     make(std::vector<std::string> const& args)
     {
       std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
@@ -126,10 +126,10 @@ namespace infinit
         s.serialize("latency_erase", this->latency_erase);
       }
 
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() override
       {
-        return std::make_unique<infinit::storage::Latency>(
+        return std::make_unique<infinit::silo::Latency>(
           storage->make(), latency_get , latency_set, latency_erase);
       }
     };
@@ -141,4 +141,4 @@ namespace infinit
 }
 
 
-FACTORY_REGISTER(infinit::storage::Storage, "latency", &infinit::storage::make);
+FACTORY_REGISTER(infinit::silo::Storage, "latency", &infinit::silo::make);

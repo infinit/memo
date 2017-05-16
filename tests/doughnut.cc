@@ -40,7 +40,7 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
 namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
-using namespace infinit::storage;
+using namespace infinit::silo;
 
 ELLE_DAS_SYMBOL(keys_a);
 ELLE_DAS_SYMBOL(keys_b);
@@ -1358,7 +1358,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::storage::Storage> storage) override
+      std::unique_ptr<infinit::silo::Storage> storage) override
     {
       return std::make_unique<Local>(
         *this,
@@ -1516,7 +1516,7 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_from_disk, (bool, immutable))
   {
-    infinit::storage::Memory::Blocks storage_a;
+    infinit::silo::Memory::Blocks storage_a;
     infinit::model::Address address;
     auto id_a = infinit::model::Address::random();
     ELLE_LOG("create block with 1 DHT")

@@ -273,7 +273,7 @@ public:
       owner = boost::optional<elle::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
       storage = elle::factory(
-        [] { return std::make_unique<infinit::storage::Memory>(); }),
+        [] { return std::make_unique<infinit::silo::Memory>(); }),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
       make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
@@ -298,7 +298,7 @@ public:
                      elle::cryptography::rsa::KeyPair keys,
                      boost::optional<elle::cryptography::rsa::KeyPair> owner,
                      infinit::model::Address id,
-                     std::unique_ptr<infinit::storage::Storage> storage,
+                     std::unique_ptr<infinit::silo::Storage> storage,
                      boost::optional<elle::Version> version,
                      make_overlay_t make_overlay,
                      make_consensus_t make_consensus,
@@ -370,7 +370,7 @@ private:
        elle::cryptography::rsa::KeyPair keys_,
        elle::cryptography::rsa::KeyPair owner,
        infinit::model::Address id,
-       std::unique_ptr<infinit::storage::Storage> storage,
+       std::unique_ptr<infinit::silo::Storage> storage,
        boost::optional<elle::Version> version,
        make_consensus_t make_consensus,
        make_overlay_t make_overlay,
@@ -469,7 +469,7 @@ protected:
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
-             std::unique_ptr<infinit::storage::Storage> storage) override
+             std::unique_ptr<infinit::silo::Storage> storage) override
   {
     return _backend->make_local(port, listen, std::move(storage));
   }

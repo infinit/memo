@@ -146,7 +146,7 @@ namespace infinit
             doughnut::listen_address =
               std::declval<boost::optional<boost::asio::ip::address>>(),
             doughnut::storage =
-              std::declval<std::unique_ptr<storage::Storage>>(),
+              std::declval<std::unique_ptr<silo::Storage>>(),
             doughnut::name = std::declval<boost::optional<std::string>>(),
             doughnut::version = std::declval<boost::optional<elle::Version>>(),
             doughnut::admin_keys = std::declval<AdminKeys>(),
@@ -319,7 +319,7 @@ namespace infinit
           Address id,
           std::unique_ptr<consensus::Configuration> consensus,
           std::unique_ptr<overlay::Configuration> overlay,
-          std::unique_ptr<storage::StorageConfig> storage,
+          std::unique_ptr<silo::StorageConfig> storage,
           elle::cryptography::rsa::KeyPair keys,
           std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
           Passport passport,

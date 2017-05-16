@@ -185,9 +185,9 @@ run_nodes(bfs::path where,
   config.query_get_retries = 2;
   for (int n=0; n<count; ++n)
   {
-    std::unique_ptr<infinit::storage::Storage> s;
+    std::unique_ptr<infinit::silo::Storage> s;
     bfs::create_directories(where / "store");
-    s.reset(new infinit::storage::Filesystem(where / ("store" + std::to_string(n))));
+    s.reset(new infinit::silo::Filesystem(where / ("store" + std::to_string(n))));
     auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
     auto consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
@@ -285,7 +285,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     overlay,
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
-    std::unique_ptr<infinit::storage::Storage>());
+    std::unique_ptr<infinit::silo::Storage>());
   auto ops = std::make_unique<ifs::FileSystem>(
     "volume", dn, ifs::allow_root_creation = true);
   auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(

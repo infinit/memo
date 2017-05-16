@@ -286,11 +286,11 @@ namespace infinit
         return res;
       }
 
-      std::unique_ptr<infinit::storage::StorageConfig>
+      std::unique_ptr<infinit::silo::StorageConfig>
       make_silo_config(infinit::Infinit& ifnt,
                        Strings const& silos)
       {
-        auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
+        auto res = std::unique_ptr<infinit::silo::StorageConfig>{};
         if (silos.empty())
           return {};
         else
@@ -301,7 +301,7 @@ namespace infinit
           if (backends.size() == 1)
             return std::move(backends[0]);
           else
-            return std::make_unique<infinit::storage::StripStorageConfig>
+            return std::make_unique<infinit::silo::StripStorageConfig>
               (std::move(backends));
         }
       }
@@ -1104,7 +1104,7 @@ namespace infinit
       // XXX[Storage]: Network::modem::storage
       if (network.model->storage)
       {
-        if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+        if (auto strip = dynamic_cast<infinit::silo::StripStorageConfig*>(
             network.model->storage.get()))
           for (auto const& s: strip->storage)
             std::cout << s->name << "\n";

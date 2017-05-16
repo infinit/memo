@@ -4,7 +4,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Collision::Collision(Key key)
       : Super(elle::sprintf("collision on key: %s", key))

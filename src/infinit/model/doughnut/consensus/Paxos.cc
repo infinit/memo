@@ -159,7 +159,7 @@ namespace infinit
         std::unique_ptr<Local>
         Paxos::make_local(boost::optional<int> port,
                           boost::optional<boost::asio::ip::address> listen_address,
-                          std::unique_ptr<storage::Storage> storage)
+                          std::unique_ptr<silo::Storage> storage)
         {
           return std::make_unique<consensus::Paxos::LocalPeer>(
             *this,
@@ -525,7 +525,7 @@ namespace infinit
             else
               return *res.paxos;
           }
-          catch (storage::MissingKey const& e)
+          catch (silo::MissingKey const& e)
           {
             if (peers)
             {
@@ -974,7 +974,7 @@ namespace infinit
             {
               return this->_load(address);
             }
-            catch (storage::MissingKey const& k)
+            catch (silo::MissingKey const& k)
             {
               throw MissingBlock(k.key());
             }
@@ -1153,7 +1153,7 @@ namespace infinit
                   address, std::move(*data.paxos)).first;
               }
             }
-            catch (storage::MissingKey const& e)
+            catch (silo::MissingKey const& e)
             {
               ELLE_TRACE("missing block %x", address);
               throw MissingBlock(e.key());
@@ -1244,7 +1244,7 @@ namespace infinit
                   throw ValidationFailed(vr.reason());
             }
           }
-          catch (storage::MissingKey const&)
+          catch (silo::MissingKey const&)
           {}
           elle::Buffer data =
             [&]
@@ -1298,7 +1298,7 @@ namespace infinit
                     throw ValidationFailed(valres.reason());
               }
             }
-            catch (storage::MissingKey const& k)
+            catch (silo::MissingKey const& k)
             {
               throw MissingBlock(k.key());
             }
@@ -1313,7 +1313,7 @@ namespace infinit
           {
             this->storage()->erase(address);
           }
-          catch (storage::MissingKey const& k)
+          catch (silo::MissingKey const& k)
           {
             throw MissingBlock(k.key());
           }

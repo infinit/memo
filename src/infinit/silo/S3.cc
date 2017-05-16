@@ -21,7 +21,7 @@ ELLE_LOG_COMPONENT("infinit.storage.S3");
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     S3::S3(std::unique_ptr<elle::service::aws::S3> storage,
            elle::service::aws::S3::StorageClass storage_class,
@@ -192,11 +192,11 @@ namespace infinit
       }
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     S3StorageConfig::make()
     {
       auto s3 = std::make_unique<elle::service::aws::S3>(credentials);
-      return std::make_unique<infinit::storage::S3>(std::move(s3),
+      return std::make_unique<infinit::silo::S3>(std::move(s3),
                                                      this->storage_class,
                                                      this->capacity);
     }
@@ -206,6 +206,6 @@ namespace infinit
 namespace
 {
   auto const res =
-    elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
-    Register<infinit::storage::S3StorageConfig>("s3");
+    elle::serialization::Hierarchy<infinit::silo::StorageConfig>::
+    Register<infinit::silo::S3StorageConfig>("s3");
 }

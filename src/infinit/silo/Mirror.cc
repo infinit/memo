@@ -11,7 +11,7 @@ ELLE_LOG_COMPONENT("infinit.storage.Mirror");
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     Mirror::Mirror(std::vector<std::unique_ptr<Storage>> backend, bool balance_reads, bool parallel)
       : _balance_reads(balance_reads)
@@ -131,16 +131,16 @@ namespace infinit
       }
 
       virtual
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() override
       {
-        std::vector<std::unique_ptr<infinit::storage::Storage>> s;
+        std::vector<std::unique_ptr<infinit::silo::Storage>> s;
         for(auto const& c: storage)
         {
           ELLE_ASSERT(!!c);
           s.push_back(c->make());
         }
-        return std::make_unique<infinit::storage::Mirror>(
+        return std::make_unique<infinit::silo::Mirror>(
           std::move(s), balance, parallel);
       }
     };
@@ -151,4 +151,4 @@ namespace infinit
   }
 }
 
-FACTORY_REGISTER(infinit::storage::Storage, "mirror", &infinit::storage::make);
+FACTORY_REGISTER(infinit::silo::Storage, "mirror", &infinit::silo::make);

@@ -25,7 +25,7 @@ using StatusCode = elle::reactor::http::StatusCode;
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     std::string
     GCS::_url(Key key) const
@@ -175,10 +175,10 @@ namespace infinit
       s.serialize("user_name", this->user_name);
     }
 
-    std::unique_ptr<infinit::storage::Storage>
+    std::unique_ptr<infinit::silo::Storage>
     GCSConfig::make()
     {
-      return std::make_unique<infinit::storage::GCS>(
+      return std::make_unique<infinit::silo::GCS>(
         this->user_name, this->bucket, this->root, this->refresh_token);
     }
 

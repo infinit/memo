@@ -36,7 +36,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   auto root = driver.path("/");
   int const max = elle::os::getenv("ITERATIONS", 100);
   auto& storage =
-    dynamic_cast<infinit::storage::Memory&>(*server_a.dht->local()->storage());
+    dynamic_cast<infinit::silo::Memory&>(*server_a.dht->local()->storage());
   auto resident = boost::optional<double>{};
   for (int i = 0; i < max; ++i)
   {

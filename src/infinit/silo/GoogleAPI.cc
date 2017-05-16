@@ -28,7 +28,7 @@ namespace
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     GoogleAPI::GoogleAPI(std::string name,
                          std::string refresh_token)

@@ -14,7 +14,7 @@ namespace infinit
         : public Model
       {
       public:
-        Faith(std::unique_ptr<storage::Storage> storage,
+        Faith(std::unique_ptr<silo::Storage> storage,
               boost::optional<elle::Version> version = {});
 
       protected:
@@ -29,7 +29,7 @@ namespace infinit
                 std::unique_ptr<ConflictResolver> resolver) override;
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
-        ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<silo::Storage>, storage);
       };
     }
   }

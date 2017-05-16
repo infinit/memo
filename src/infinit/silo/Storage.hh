@@ -20,7 +20,7 @@
 
 namespace infinit
 {
-  namespace storage
+  namespace silo
   {
     namespace bfs = boost::filesystem;
 
@@ -168,7 +168,7 @@ namespace infinit
       using serialization_tag = infinit::serialization_tag;
       static constexpr char const* virtually_serializable_key = "type";
       virtual
-      std::unique_ptr<infinit::storage::Storage>
+      std::unique_ptr<infinit::silo::Storage>
       make() = 0;
 
       boost::optional<int64_t> capacity;
