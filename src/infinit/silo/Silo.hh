@@ -43,43 +43,39 @@ namespace infinit
       Storage(boost::optional<int64_t> capacity = {});
       virtual
       ~Storage();
-      /** Get the data associated to key \a k.
-       *
-       *  \param k Key of the looked-up data.
-       *  \throw MissingKey if the key is absent.
-       */
+      /// Get the data associated to key @a k.
+      ///
+      /// @param k Key of the looked-up data.
+      /// @throw MissingKey if the key is absent.
       elle::Buffer
       get(Key k) const;
-      /** Set the data associated to key \a k.
-       *
-       *  \param k      Key of the set data.
-       *  \param value  Value to associate to \a k.
-       *  \param insert Whether to accept inserting a new key.
-       *  \param update Whether to accept updating an existing key.
-       *  \return The delta in used storage space in bytes.
-       *  \throw Collision if the key is present and not \a update.
-       *  \throw InsufficientSpace if there is not enough space left to store
-       *                           the data.
-       *  \throw MissingKey if the key is absent and not \a insert.
-       */
+      /// Set the data associated to key @a k.
+      ///
+      /// @param k      Key of the set data.
+      /// @param value  Value to associate to @a k.
+      /// @param insert Whether to accept inserting a new key.
+      /// @param update Whether to accept updating an existing key.
+      /// @return The delta in used storage space in bytes.
+      /// @throw Collision if the key is present and not @a update.
+      /// @throw InsufficientSpace if there is not enough space left to store
+      ///                          the data.
+      /// @throw MissingKey if the key is absent and not @a insert.
       // FIXME: why not passing `value` by value?
       int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);
 
-      /** Erase key \a k and associated data.
-       *
-       *  \param k  Key to remove.
-       *  \return   The delta (non positive!) in used storage space in bytes.
-       *  \throw    MissingKey if the key is absent.
-       */
+      /// Erase key @a k and associated data.
+      ///
+      /// @param k  Key to remove.
+      /// @return   The delta (non positive!) in used storage space in bytes.
+      /// @throw    MissingKey if the key is absent.
       int
       erase(Key k);
 
-      /** List of all keys in the storage.
-       *
-       *  \return A list of all keys in the storage.
-       */
+      /// List of all keys in the storage.
+      ///
+      /// @return A list of all keys in the storage.
       std::vector<Key>
       list();
 
