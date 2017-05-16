@@ -105,7 +105,7 @@ namespace infinit
           _rebalance(PaxosClient& client,
                      Address address,
                      PaxosClient::Quorum const& ids,
-                     int version);
+                     PaxosClient::State const& version);
           Paxos::PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
           void
@@ -117,7 +117,7 @@ namespace infinit
                  boost::optional<int> local_version = {});
           PaxosClient
           _client(Address const& addr);
-          std::pair<PaxosServer::Quorum, int>
+          PaxosClient::State
           _latest(PaxosClient& client, Address address);
 
         /*--------.

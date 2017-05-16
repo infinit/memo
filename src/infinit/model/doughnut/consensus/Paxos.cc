@@ -1694,19 +1694,13 @@ namespace infinit
             this->doughnut().id(), this->_peers(address));
         }
 
-        std::pair<Paxos::PaxosServer::Quorum, int>
+        Paxos::PaxosClient::State
         Paxos::_latest(PaxosClient& client, Address address)
         {
-          int version = 0;
           while (true)
             try
             {
-              auto last = client.get_quorum();
-              // FIXME: Couldn't we operate on MutableBlocks directly in Paxos ?
-              if (last.first)
-                version = std::dynamic_pointer_cast<blocks::MutableBlock>(
-                  *last.first)->version();
-              return std::make_pair<>(last.second, version);
+              return client.state();
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
             {
@@ -1750,41 +1744,43 @@ namespace infinit
           ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
           auto latest = this->_latest(client, address);
           // FIXME: handle immutable block errors
-          ELLE_DEBUG("quorum: %f", latest.first);
-          if (signed(latest.first.size()) == this->_factor)
+          ELLE_DEBUG("quorum: %f", latest.quorum);
+          if (signed(latest.quorum.size()) == this->_factor)
           {
             ELLE_TRACE("block is already well balanced (%s replicas)",
                        this->_factor);
             return false;
           }
-          auto new_q = this->_rebalance_extend_quorum(address, latest.first);
-          if (new_q == latest.first)
+          auto new_q = this->_rebalance_extend_quorum(address, latest.quorum);
+          if (new_q == latest.quorum)
           {
             ELLE_TRACE("unable to find any new owner");
             return false;
           }
           ELLE_DEBUG("rebalance block to: %f", new_q)
-            return this->_rebalance(client, address, new_q, latest.second);
+            return this->_rebalance(client, address, new_q, latest);
         }
 
         bool
         Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
         {
-          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
+          ELLE_LOG_COMPONENT(
+            "infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
           auto latest = this->_latest(client, address);
-          return this->_rebalance(client, address, ids, latest.second);
+          return this->_rebalance(client, address, ids, latest);
         }
 
         bool
         Paxos::_rebalance(PaxosClient& client,
                           Address address,
                           PaxosClient::Quorum const& ids,
-                          int version)
+                          PaxosClient::State const& state)
         {
           ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           std::unique_ptr<PaxosClient> replace;
+          int version = state.proposal ? state.proposal->version : -1;
           while (true)
           {
             try
@@ -1875,7 +1871,7 @@ namespace infinit
             ELLE_DEBUG("new quorum: %f", quorum);
             auto client = this->_client(address);
             auto latest = this->_latest(client, address);
-            if (!this->_rebalance(client, address, quorum, latest.second))
+            if (!this->_rebalance(client, address, quorum, latest))
               ELLE_WARN("%f: unable to rebalance %f", this, address);
           }
         }
