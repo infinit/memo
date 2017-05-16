@@ -1,0 +1,11 @@
+# Given a block `block` and a payload `payload`.
+#
+# Set the block new payload.
+block.data_plain = payload
+# Perform the update.
+#
+# Setting the update request `decrypt_data` field to `True` so the `block`
+# field of the update response will be decrypted. This is useful if you need
+# to fix potential conflicts resulting of the update.
+status = stub.Update(doughnut.UpdateRequest(block = block,
+                                            decrypt_data = True))

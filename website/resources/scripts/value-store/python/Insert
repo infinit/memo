@@ -1,0 +1,2 @@
+# Given a block `block`, insert the block.
+stub.Insert(doughnut.InsertRequest(block=block))

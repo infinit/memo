@@ -15,7 +15,7 @@ def type(proto, elem):
 <%inherit file="/base.html"/>
 
 <%block name="content">
-  
+
   <%include file='menu.html'/>
 
    <nav class="side-menu" id="page-menu">
@@ -28,14 +28,6 @@ def type(proto, elem):
         <ul>
           % for method in proto['service']['rpcs']:
             <li class="${method['name']}"><a href="#${method['name']}">${method['name']}</a></li>
-          % endfor
-        </ul>
-      </li>
-      <li class="messages">
-        <a href="#messages">Messages</a>
-        <ul>
-          % for message in proto['messages']:
-            <li class="${message['name']}"><a href="#${message['name']}">${message['name']}</a></li>
           % endfor
         </ul>
       </li>
@@ -52,7 +44,7 @@ def type(proto, elem):
     <p>Find the documentation of all methods used in the key-value store API.</p>
 
     % for method in proto['service']['rpcs']:
-      
+
       <table class="method">
         <tr>
           <th colspan="2">
@@ -72,8 +64,13 @@ def type(proto, elem):
 
       % for doc in ['description', 'related', 'specific']:
         % if method.get('documentation', {}).get(doc):
-          <p>${method['documentation'][doc]}.</p>
+          <p> ${method['documentation'][doc]}.</p>
         % endif
+      % endfor
+
+      <h3 id="Example">Example</h3>
+      % for lang, classes in [('cpp', ['cpp', 'c++']), ('go', ['lang-go']), ('python', ['lang-python'])]:
+        <pre><code class='${" ".join(classes) + " notInFullCode hljs"}'><%include file='../../scripts/value-store/${lang}/${method["name"]}' /></code></pre>
       % endfor
     % endfor
 
@@ -81,7 +78,7 @@ def type(proto, elem):
 
     % for message in proto['messages']:
 
-      
+
       <table class="message">
         <tr>
           <th colspan="4">

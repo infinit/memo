@@ -1,0 +1,27 @@
+// Create an immutable block creation request.
+::MakeImmutableBlockRequest make_block;
+// Set the payload.
+make_block.set_data("some data");
+// Create an empty block.
+::Block block;
+{
+  // Create a context.
+  grpc::ClientContext ctx;
+  // Construct the immutable block and store it in `block`.
+  kv->MakeImmutableBlock(&ctx, make_block, &block);
+}
+// Create a insertion response.
+::InsertResponse status;
+{
+  // Create a context.
+  grpc::ClientContext ctx;
+  // Create an insertion request.
+  ::InsertRequest insert;
+  // Set the block to the insertion request using the setter.
+  //
+  // N.B. `mutable_block` is to access to a mutable version of the attribute
+  // `block`. It's not correlated with MutableBlock or ImmutableBlock.
+  insert.mutable_block()->CopyFrom(block);
+  // Actually insert the block.
+  kv->Insert(&ctx, insert, &status);
+}

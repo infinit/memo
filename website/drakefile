@@ -324,6 +324,39 @@ def configure(
     'resources/js/scripts.min.js',
   )
 
+  value_store = {}
+  value_store['cpp'] = drake.nodes(
+    'resources/scripts/value-store/cpp/MakeNamedBlock',
+    'resources/scripts/value-store/cpp/MakeImmutableBlock',
+    'resources/scripts/value-store/cpp/Update',
+    'resources/scripts/value-store/cpp/Fetch',
+    'resources/scripts/value-store/cpp/Remove',
+    'resources/scripts/value-store/cpp/Insert',
+    'resources/scripts/value-store/cpp/NamedBlockAddress',
+    'resources/scripts/value-store/cpp/MakeMutableBlock'
+  )
+  value_store['python'] = drake.nodes(
+    'resources/scripts/value-store/python/MakeNamedBlock',
+    'resources/scripts/value-store/python/MakeImmutableBlock',
+    'resources/scripts/value-store/python/Update',
+    'resources/scripts/value-store/python/Fetch',
+    'resources/scripts/value-store/python/Remove',
+    'resources/scripts/value-store/python/Insert',
+    'resources/scripts/value-store/python/NamedBlockAddress',
+    'resources/scripts/value-store/python/MakeMutableBlock',
+  )
+  value_store['go'] = drake.nodes(
+    'resources/scripts/value-store/go/MakeNamedBlock',
+    'resources/scripts/value-store/go/MakeImmutableBlock',
+    'resources/scripts/value-store/go/Update',
+    'resources/scripts/value-store/go/Fetch',
+    'resources/scripts/value-store/go/Remove',
+    'resources/scripts/value-store/go/Insert',
+    'resources/scripts/value-store/go/NamedBlockAddress',
+    'resources/scripts/value-store/go/MakeMutableBlock',
+  )
+  resources += chain(*value_store.values())
+
   resources_logos = drake.nodes(
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',

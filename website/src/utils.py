@@ -37,12 +37,15 @@ def detect_os():
     os = os['os']['name']
   return os
 
+def resources_path():
+  return '%s/share/infinit/website/resources' % PREFIX
+
 def view(name):
   def res(f):
     lookup = '%s/share/infinit/website/templates' % PREFIX
     return bottle.mako_view(
       name,
-      template_lookup = [lookup],
+      template_lookup = [lookup, resources_path()],
       request = bottle.request,
       response = bottle.response,
       route = find_route,

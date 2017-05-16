@@ -1,0 +1,4 @@
+// Given a block `block`, insert the block.
+//
+client.Insert(context.Background(),
+              &doughnut.InsertRequest{Block: block})

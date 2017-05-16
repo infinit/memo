@@ -1,0 +1,12 @@
+// Given an address `address`, remove the block at `address`.
+
+// Create a remove request.
+::RemoveRequest remove;
+// Create a remove status.
+::RemoveResponse status;
+// Set the address.
+remove.set_address(address);
+// Create a context.
+grpc::ClientContext ctx;
+// Actually remove the block.
+kv->Remove(&ctx, address, &status);
