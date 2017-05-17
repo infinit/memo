@@ -259,28 +259,29 @@ namespace infinit
               [&peers,&yield,&hit] (elle::reactor::Scope& s)
               {
                 for (auto wp: peers)
-                {
-                  auto p = wp.lock();
-                  if (!p)
-                    ELLE_TRACE("peer was deleted while fetching");
-                  hit = true;
-                  s.run_background(elle::sprintf("connect to %s", *p),
-                  [p,&yield]
+                  if (auto p = wp.lock())
                   {
-                    try
+                    hit = true;
+                    s.run_background(elle::sprintf("connect to %s", *p),
+                    [p,&yield]
                     {
-                      auto remote = std::dynamic_pointer_cast<Remote>(p);
-                      if (remote)
-                        remote->safe_perform("connect", [&] { yield(p);});
-                      else
-                        yield(p);
-                    }
-                    catch (elle::Error const& e)
-                    {
-                      ELLE_TRACE("connect to peer %s failed: %s", p, e.what());
-                    }
-                  });
-                }
+                      try
+                      {
+                        auto remote = std::dynamic_pointer_cast<Remote>(p);
+                        if (remote)
+                          remote->safe_perform("connect", [&] { yield(p);});
+                        else
+                          yield(p);
+                      }
+                      catch (elle::Error const& e)
+                      {
+                        ELLE_TRACE("connect to peer %s failed: %s", p, e.what());
+                      }
+                    });
+                  }
+                  else
+                    ELLE_TRACE("peer was deleted while fetching");
+
                 elle::reactor::wait(s);
               };
           });
@@ -288,23 +289,23 @@ namespace infinit
           // bandwidth
           int attempt = 0;
           for (auto wpeer: connected_peers)
-          {
-            auto peer = wpeer.lock();
-            if (!peer)
+            if (auto peer = wpeer.lock())
+            {
+              ++attempt;
+              try
+              {
+                ELLE_TRACE_SCOPE("fetch from %s", peer);
+                return peer->fetch(address, local_version);
+              }
+              // FIXME: get rid of that
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("attempt fetching %f from %s failed: %s",
+                           address, *peer, e.what());
+              }
+            }
+            else
               ELLE_TRACE("peer was deleted while fetching");
-            ++attempt;
-            try
-            {
-              ELLE_TRACE_SCOPE("fetch from %s", peer);
-              return peer->fetch(address, local_version);
-            }
-            // FIXME: get rid of that
-            catch (elle::Error const& e)
-            {
-              ELLE_TRACE("attempt fetching %f from %s failed: %s",
-                         address, *peer, e.what());
-            }
-          }
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
           ELLE_TRACE("all %s peers failed fetching %f", attempt, address);
