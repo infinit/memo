@@ -143,8 +143,7 @@ namespace infinit
       !Remaining::empty &&
       !std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value,
-      void>
+        std::remove_reference_t<typename Remaining::Head>>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -164,8 +163,7 @@ namespace infinit
       !Remaining::empty &&
       std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value,
-      void>
+        std::remove_reference_t<typename Remaining::Head>>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -182,9 +180,7 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    std::enable_if_t<
-      Remaining::empty && std::is_same<R, void>::value,
-      void>
+    std::enable_if_t<Remaining::empty && std::is_void<R>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -214,9 +210,7 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    std::enable_if_t<
-      Remaining::empty && !std::is_same<R, void>::value,
-      void>
+    std::enable_if_t<Remaining::empty && !std::is_void<R>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -614,7 +608,7 @@ namespace infinit
 
     template <typename Res>
     static
-    std::enable_if_t<std::is_same<Res, void>::value, int>
+    std::enable_if_t<std::is_void<Res>::value, int>
     get_result(elle::serialization::SerializerIn&)
     {
       return 0;
@@ -622,14 +616,14 @@ namespace infinit
 
     template <typename Res>
     static
-    std::enable_if_t<!std::is_same<Res, void>::value, R>
+    std::enable_if_t<!std::is_void<Res>::value, R>
     get_result(elle::serialization::SerializerIn& input)
     {
       return input.deserialize<R>("value");
     }
 
     static
-    std::conditional_t<std::is_same<R, void>::value, int, R>
+    std::conditional_t<std::is_void<R>::value, int, R>
     _call(elle::Version const& version,
           RPC<R (Args...)>& self,
           Args const&... args)
