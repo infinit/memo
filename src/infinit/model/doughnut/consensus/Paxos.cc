@@ -982,7 +982,6 @@ namespace infinit
           if (block.paxos)
           {
             auto& decision = *block.paxos;
-            bool had_value = bool(decision.paxos.current_value());
             try
             {
               decision.paxos.confirm(peers, p);
@@ -1013,7 +1012,6 @@ namespace infinit
               this->_cache(address, false, quorum);
               if (
                 this->_rebalance_auto_expand &&
-                !had_value &&
                 decision.paxos.current_value() &&
                 signed(decision.paxos.current_quorum().size()) < this->_factor)
               {

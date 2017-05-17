@@ -178,7 +178,7 @@ protected:
           {
             if (count == 0)
               return;
-            if (peer->local())
+            if (peer->local() && peer->storing())
             {
               yield(peer->local());
               --count;
