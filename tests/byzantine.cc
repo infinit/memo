@@ -12,7 +12,7 @@ ELLE_LOG_COMPONENT("byzantine")
 ELLE_TEST_SCHEDULED(unknown_rpc)
 {
   ELLE_LOG("creating dht");
-  auto dht = DHT{};
+  auto dht = DHT{::id = special_id(1)};
   {
     ELLE_LOG("connecting");
     auto s = dht.connect_tcp();
@@ -24,7 +24,8 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
   }
 
   ELLE_LOG("creating dht_b");
-  auto dht_b = DHT(keys = dht.dht->keys());
+  auto dht_b = DHT{::id = special_id(2),
+                   ::keys = dht.dht->keys()};
   auto peer = dht_b.dht->dock().make_peer(
     infinit::model::NodeLocation(dht.dht->id(),
                                  dht.dht->local()->server_endpoints())).lock();
