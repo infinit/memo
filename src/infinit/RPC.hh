@@ -569,10 +569,7 @@ namespace infinit
     template <typename Head, typename ... Tail>
     static
     std::enable_if_t<
-      std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_cv_reference_t<Head>>::value,
-      void>
+      elle::serialization::virtually<std::remove_cv_reference_t<Head>>()>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
@@ -587,9 +584,7 @@ namespace infinit
     template <typename Head, typename ... Tail>
     static
     std::enable_if_t<
-      !std::is_base_of<elle::serialization::VirtuallySerializableBase,
-                       std::remove_reference_t<Head>>::value,
-    void>
+      !elle::serialization::virtually<std::remove_reference_t<Head>>()>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
