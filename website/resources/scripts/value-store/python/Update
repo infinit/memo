@@ -7,5 +7,9 @@ block.data_plain = payload
 # Setting the update request `decrypt_data` field to `True` so the `block`
 # field of the update response will be decrypted. This is useful if you need
 # to fix potential conflicts resulting of the update.
-status = stub.Update(doughnut.UpdateRequest(block = block,
-                                            decrypt_data = True))
+response = stub.Update(doughnut.UpdateRequest(block = block,
+                                              decrypt_data = True))
+if response.current:
+  # Solve conflict here, `response.current` contains the current version of
+  # the block in the value-store.
+  pass

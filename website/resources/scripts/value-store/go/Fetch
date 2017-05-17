@@ -1,2 +1,3 @@
 // Fetch a block at the address given by `address`.
-block, _ := client.Fetch(context.Background(), &doughnut.FetchRequest{Address: address})
+res, _ := client.Fetch(context.Background(), &doughnut.FetchRequest{Address: address})
+block := res.Block

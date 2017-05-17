@@ -7,6 +7,10 @@ grpc::ClientContext ctx;
 // Set the address to fetch request.
 fetch.set_address(address);
 // Actually fetch the block.
-kv->Fetch(&ctx, fetch, &res);
+{
+  auto status = kv->Fetch(&ctx, fetch, &res);
+  if (!status.ok())
+    throw std::runtime_error("Unable to fetch block");
+}
 // Retrieve the block.
 auto block = res.block();

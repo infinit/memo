@@ -1,5 +1,6 @@
 import drake
 import drake.cxx
+import drake.go
 import drake.debian
 import drake.markdown
 import sys
@@ -24,7 +25,9 @@ def configure(
     sendwithus,
     PatchAndInstall,
     doughnut_proto,
-    doughnut_json,
+    infinit,
+    grpc,
+    doughnut_json = None,
     prefix = drake.Path('/usr'),
 ):
 
@@ -340,7 +343,8 @@ def configure(
     'resources/scripts/value-store/cpp/Remove',
     'resources/scripts/value-store/cpp/Insert',
     'resources/scripts/value-store/cpp/NamedBlockAddress',
-    'resources/scripts/value-store/cpp/MakeMutableBlock'
+    'resources/scripts/value-store/cpp/MakeMutableBlock',
+    type = drake.cxx.Header
   )
   value_store['python'] = drake.nodes(
     'resources/scripts/value-store/python/MakeNamedBlock',
@@ -361,6 +365,7 @@ def configure(
     'resources/scripts/value-store/go/Insert',
     'resources/scripts/value-store/go/NamedBlockAddress',
     'resources/scripts/value-store/go/MakeMutableBlock',
+    type = drake.go.Source
   )
   resources += chain(*value_store.values())
 
@@ -855,6 +860,121 @@ def configure(
   tests = drake.Rule('tests')
   check = drake.Rule('check')
 
-# Local Variables:
-# mode: python
-# End:
+  # Value-Store gRPC API.
+  class Runner(drake.Runner):
+
+    def __init__(self, src, infinit, sources = list(), **kwargs):
+      super().__init__(src,
+                       sources = list(chain([infinit], sources)),
+                       **kwargs)
+      self.infinit = infinit
+      self.portfile = None
+
+    def execute(self):
+      import tempfile
+      with tempfile.TemporaryDirectory() as infinit_home:
+        env = {
+          'INFINIT_HOME': infinit_home,
+          'INFINIT_USER': 'klaus'
+        }
+        import subprocess
+        subprocess.check_output([str(self.infinit.path()),
+                                 'user', 'create'],
+                                env = env)
+        subprocess.check_output([str(self.infinit.path()),
+                                 'silo', 'create', 'filesystem', 'silo'],
+                                env = env)
+        subprocess.check_output([str(self.infinit.path()),
+                                 'network', 'create', '--silo', 'silo', 'net'],
+                                env = env)
+        port = tempfile.mkstemp()[1]
+        with subprocess.Popen(
+            [str(self.infinit.path()),
+             'network', 'run', 'net', '--grpc', '127.0.0.1:0',
+             '--grpc-port-file', port],
+            env = env) as infinit:
+          self.portfile = port
+          try:
+            return super().execute()
+          finally:
+            infinit.terminate()
+
+    @property
+    def port(self):
+      '''Port is chosen by infinit.
+
+      Because we don't want the random port to be part of the hash, return 0
+      until the port is chosen.
+      '''
+      if self.portfile is None:
+        return '0'
+      import time
+      import os
+      while not os.path.exists(self.portfile):
+        time.sleep(0.2)
+      port = ''
+      while len(port) == 0:
+        time.sleep(0.2)
+        with open(self.portfile, 'r') as f:
+          port = str(f.readline()).strip()
+      return port
+
+    @property
+    def command(self):
+      path = str(self.__exe.path())
+      if not self.__exe.path().absolute():
+        path = './%s' % path
+      return self.__prefix + [path] + ['127.0.0.1:%s' % self.port]
+
+  rule_check = drake.Rule('check')
+  import os, stat
+  with drake.templating.Context(
+      template_dir = ['/home/dimrok/infinit/fs/website'],
+      post_process = lambda n: os.chmod(str(n.path()), stat.S_IRUSR | stat.S_IXUSR)):
+    drake.node('tests/value-store/grpc/api.py.tmpl')
+    drake.node('tests/value-store/grpc/api.cc.tmpl')
+    drake.node('tests/value-store/grpc/api.go.tmpl')
+  # Python.
+  # XXX: Pass the node...
+  doughnut_pb_python = drake.node('../src/infinit/grpc/doughnut_pb2.py')
+  rule_check << Runner(
+    drake.node('tests/value-store/grpc/api.py'),
+    infinit = infinit,
+    env = {
+      'PYTHONPATH': str(doughnut_pb_python.path(absolute = True).dirname())
+    },
+    sources = [doughnut_pb_python] + value_store['python']).targets()
+  # Cpp
+  config = drake.cxx.Config(grpc.cxx_config)
+  config += grpc.grpc.cxx_config
+  config.lib('dl')
+  config.add_local_include_path('../src/infinit/grpc')
+  rule_check << Runner(
+    drake.cxx.Executable(
+      'tests/value-store/grpc/api-cpp',
+      drake.nodes('tests/value-store/grpc/api.cc',) +
+      grpc.gendn.targets() +
+      [grpc.grpc_lib, grpc.grpc.protobuf_lib] + value_store['cpp'],
+      drake.cxx.Toolkit(),
+      config),
+    infinit = infinit).targets()
+  # Go.
+  go_toolkit = drake.go.Toolkit(
+    path = str(drake.path_build(absolute = True) / '.go'))
+  gen = grpc.GRPCGoGen(doughnut_proto,
+                       toolkit = go_toolkit,
+                       protoc = grpc.grpc.protoc)
+  rule_check << Runner(
+    drake.go.Executable(
+      source = drake.go.Source("tests/value-store/grpc/api.go"),
+      toolkit = go_toolkit,
+      config = drake.go.Config(),
+      sources = drake.copy(
+        gen.targets(),
+        drake.Path(go_toolkit.path) / 'src/doughnut',
+        strip_prefix = True) + value_store['go']),
+    infinit = infinit).targets()
+
+  # Local Variables:
+  # mode: python
+  # End:

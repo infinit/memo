@@ -1,0 +1,36 @@
+package main
+
+import (
+  "os"
+  "doughnut"
+  "golang.org/x/net/context"
+  "google.golang.org/grpc"
+  "google.golang.org/grpc/grpclog"
+)
+
+func main() {
+  conn, err := grpc.Dial(os.Args[1], grpc.WithInsecure())
+    if err != nil {
+        grpclog.Fatalf("fail to dial: %v", err)
+    }
+  defer conn.Close()
+  client := doughnut.NewDoughnutClient(conn)
+
+  {
+    <%include file="/resources/scripts/value-store/go/MakeImmutableBlock" />
+  }
+
+  <%include file="/resources/scripts/value-store/go/MakeMutableBlock" />
+
+  address := mblock.Address
+
+  <%include file="/resources/scripts/value-store/go/Fetch" />
+
+  {
+    payload := []byte("new data");
+
+    <%include file="/resources/scripts/value-store/go/Update" />
+
+    <%include file="/resources/scripts/value-store/go/Remove" />
+  }
+}

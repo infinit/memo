@@ -11,16 +11,19 @@
    //
    // N.B. `mutable_` is to access to a mutable version of the attribute
    // `block`. It's not correlated with MutableBlock or ImmutableBlock.
-   kv->MakeMutableBlock(&ctx, empty, insert.mutable_block());
+   auto status = kv->MakeMutableBlock(&ctx, empty, insert.mutable_block());
+   if (!status.ok())
+     throw std::runtime_error("Cannot make mutable block");
    // Set the payload.
-   insert.mutable_block().set_data_plain("some data");
+   insert.mutable_block()->set_data_plain("some data");
 }
-// Insertion.
 {
+  // Create an insertion response.
+  ::InsertResponse insertion;
   // Set a context.
   grpc::ClientContext ctx;
-  // Create an insertion response.
-  ::InsertResponse res;
   // Actually insert the block.
-  kv->Insert(&ctx, insert, &res);
+  auto status = kv->Insert(&ctx, insert, &insertion);
+  if (!status.ok())
+    throw std::runtime_error("Cannot insert block");
 }

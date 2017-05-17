@@ -3,10 +3,12 @@
 // Create a remove request.
 ::RemoveRequest remove;
 // Create a remove status.
-::RemoveResponse status;
+::RemoveResponse removal;
 // Set the address.
 remove.set_address(address);
 // Create a context.
 grpc::ClientContext ctx;
 // Actually remove the block.
-kv->Remove(&ctx, address, &status);
+auto status = kv->Remove(&ctx, remove, &removal);
+if (!status.ok())
+  throw std::runtime_error("Cannot remove block");

@@ -8,10 +8,12 @@ make_block.set_data("some data");
   // Create a context.
   grpc::ClientContext ctx;
   // Construct the immutable block and store it in `block`.
-  kv->MakeImmutableBlock(&ctx, make_block, &block);
+  auto status = kv->MakeImmutableBlock(&ctx, make_block, &block);
+  if (!status.ok())
+    throw std::runtime_error("Cannot make immutable block");
 }
 // Create a insertion response.
-::InsertResponse status;
+::InsertResponse insertion;
 {
   // Create a context.
   grpc::ClientContext ctx;
@@ -23,5 +25,7 @@ make_block.set_data("some data");
   // `block`. It's not correlated with MutableBlock or ImmutableBlock.
   insert.mutable_block()->CopyFrom(block);
   // Actually insert the block.
-  kv->Insert(&ctx, insert, &status);
+  auto status = kv->Insert(&ctx, insert, &insertion);
+  if (!status.ok())
+    throw std::runtime_error("Cannot insert block");
 }

@@ -1,6 +1,8 @@
 // Given a block `block` and a payload `payload`.
 //
-// The block new payload.
+// Create an update response.
+::UpdateResponse response;
+// Set the block new payload.
 block.set_data_plain(payload);
 {
   // Create a context.
@@ -8,11 +10,19 @@ block.set_data_plain(payload);
   // Create an update request.
   ::UpdateRequest update;
   // Set the update request `block` field with the updated version of the block.
-  update.mutable_block()->CopyFrom(mb);
+  update.mutable_block()->CopyFrom(block);
   // Set the update request `decrypt_data` field to `true` so the `block` field
   // of the update response will be decrypted. This is useful if you need to fix
   // potential conflicts resulting of the update.
   update.set_decrypt_data(true);
   // Actually update the block.
-  kv->Update(&ctx, update, &response);
+  auto status = kv->Update(&ctx, update, &response);
+  if (!status.ok())
+    throw std::runtime_error("Unable to update the block");
+  // If there is a conflict.
+  if (response.has_current())
+  {
+    // Solve conflict here, `response.block` contains the current version of
+    // the block in the value-store.
+  }
 }
