@@ -22,7 +22,7 @@ namespace infinit
         // GCC bug, argument packs dont work in lambdas
         auto helper = std::bind(&remote_call_next<F, Args...>,
           this, std::ref(args)...);
-        return _remote->safe_perform<typename RPC<F>::result_type>(
+        return _remote->safe_perform(
           this->name(),
           [&]
           {
@@ -41,10 +41,10 @@ namespace infinit
         });
       }
 
-      template<typename R>
-      R
-      Remote::safe_perform(std::string const& name,
-                           std::function<R()> op)
+      template <typename Op>
+      auto
+      Remote::safe_perform(std::string const& name, Op op)
+        -> decltype(op())
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
         auto const rpc_timeout = this->doughnut().connect_timeout();

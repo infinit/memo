@@ -98,12 +98,13 @@ namespace infinit
       | Networking |
       `-----------*/
       public:
-        template<typename F>
+        template <typename F>
         RemoteRPC<F>
         make_rpc(std::string const& name);
-        template<typename R>
-        R
-        safe_perform(std::string const& name, std::function<R()> op);
+        template <typename Op>
+        auto
+        safe_perform(std::string const& name, Op op)
+          -> decltype(op());
       private:
         ELLE_ATTRIBUTE(Protocol, protocol);
 

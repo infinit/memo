@@ -271,7 +271,7 @@ namespace infinit
                     {
                       auto remote = std::dynamic_pointer_cast<Remote>(p);
                       if (remote)
-                        remote->safe_perform<void>("connect", [&] { yield(p);});
+                        remote->safe_perform("connect", [&] { yield(p);});
                       else
                         yield(p);
                     }
