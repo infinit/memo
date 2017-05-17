@@ -497,36 +497,6 @@ namespace infinit
   class RPC
   {};
 
-  template <typename ... Args>
-  class RPC<void (Args...)>
-    : public BaseRPC
-  {
-  public:
-    RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
-        elle::Version const& version,
-        boost::optional<elle::cryptography::SecretKey> key = {})
-      : BaseRPC(std::move(name), channels, version, std::move(key))
-    {}
-
-    RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
-        elle::Version const& version,
-        elle::Buffer* credentials)
-      : RPC(
-        std::move(name),
-        channels,
-        version,
-        credentials && !credentials->empty() ?
-        boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
-        boost::optional<elle::cryptography::SecretKey>())
-    {}
-
-    void
-    operator ()(Args const& ... args);
-    using result_type = void;
-  };
-
   template <typename R, typename ... Args>
   class RPC<R (Args...)>
     : public BaseRPC
@@ -601,10 +571,12 @@ namespace infinit
 
     template <typename Res>
     static
-    std::enable_if_t<std::is_void<Res>::value, int>
+    std::enable_if_t<std::is_void<Res>::value>
     get_result(elle::serialization::SerializerIn&)
     {
-      return 0;
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_TRACE_SCOPE("get result");
+      ELLE_DUMP("result: void");
     }
 
     template <typename Res>
@@ -612,11 +584,15 @@ namespace infinit
     std::enable_if_t<!std::is_void<Res>::value, R>
     get_result(elle::serialization::SerializerIn& input)
     {
-      return input.deserialize<R>("value");
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_TRACE_SCOPE("get result");
+      auto res = input.deserialize<R>("value");
+      ELLE_DUMP("result: %s", res);
+      return res;
     }
 
     static
-    std::conditional_t<std::is_void<R>::value, int, R>
+    R
     _call(elle::Version const& version,
           RPC<R (Args...)>& self,
           Args const&... args)
@@ -679,18 +655,14 @@ namespace infinit
             response = self.key()->decipher(
               elle::ConstWeakBuffer(response.contents(), response.size()));
         }
-        elle::IOStream ins(response.istreambuf());
-        elle::serialization::binary::SerializerIn input(ins, versions, false);
+        auto ins = elle::IOStream(response.istreambuf());
+        auto input
+          = elle::serialization::binary::SerializerIn(ins, versions, false);
         input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);
         if (success)
-        {
-          ELLE_TRACE_SCOPE("get result");
-          auto res = get_result<R>(input);
-          ELLE_DUMP("result: %s", res);
-          return std::move(res);
-        }
+          return get_result<R>(input);
         else
         {
           ELLE_TRACE_SCOPE("call failed, get exception");
