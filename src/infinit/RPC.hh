@@ -385,19 +385,19 @@ namespace infinit
           ELLE_ERR("decypher request: %s", e.what());
           throw;
         }
-	    }
-	    elle::IOStream ins(request.istreambuf());
-	    auto versions = elle::serialization::get_serialization_versions
-	    <infinit::serialization_tag>(this->_version);
-	    elle::serialization::binary::SerializerIn input(ins, versions, false);
-	    input.set_context(this->_context);
-	    std::string name;
-	    input.serialize("procedure", name);
+      }
+      elle::IOStream ins(request.istreambuf());
+      auto const versions = elle::serialization::get_serialization_versions
+        <infinit::serialization_tag>(this->_version);
+      elle::serialization::binary::SerializerIn input(ins, versions, false);
+      input.set_context(this->_context);
+      std::string name;
+      input.serialize("procedure", name);
       elle::Buffer response;
       {
         auto it = this->_rpcs.find(name);
         elle::IOStream outs(response.ostreambuf());
-        elle::serialization::binary::SerializerOut output(
+        auto output = elle::serialization::binary::SerializerOut(
           outs, versions, false);
         if (it == this->_rpcs.end())
         {
@@ -436,14 +436,14 @@ namespace infinit
                 response = key.encipher(
 	          elle::ConstWeakBuffer(response.contents(),
 	            response.size()));
-	          });
-	        };
-	      }
-	      else
-	      response = _key->encipher(
-	        elle::ConstWeakBuffer(response.contents(), response.size()));
-	    }
-	    channel.write(response);
+              });
+          };
+        }
+        else
+          response = _key->encipher(
+            elle::ConstWeakBuffer(response.contents(), response.size()));
+      }
+      channel.write(response);
     }
 
     template <typename T>
@@ -645,7 +645,7 @@ namespace infinit
 
         ELLE_DEBUG("build request")
         {
-          elle::serialization::binary::SerializerOut output(outs, versions, false);
+          auto output = elle::serialization::binary::SerializerOut(outs, versions, false);
           output.set_context(self._context);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
