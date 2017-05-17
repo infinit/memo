@@ -447,7 +447,25 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %f", bootstrap_addr);
-          auto block = this->_block_store->fetch(bootstrap_addr);
+          // Here we fetch the root bootstrap block in a loop, thus effectively
+          // waiting for connections to storage nodes.
+          // But if a cache consensus is present, it will return the root
+          // bootstrap block from the cache, thus bypassing this implicit wait.
+          // So bypass the cache for this request.
+          std::unique_ptr<infinit::model::blocks::Block> block;
+          if (auto* dht = dynamic_cast<infinit::model::doughnut::Doughnut*>
+            (this->_block_store.get()))
+          {
+            auto* consensus = dht->consensus().get();
+            while (auto* stacked =
+              dynamic_cast<model::doughnut::consensus::StackedConsensus*>(consensus))
+            {
+              consensus = stacked->backend().get();
+            }
+            block = consensus->fetch(bootstrap_addr);
+          }
+          else
+            block = this->_block_store->fetch(bootstrap_addr);
           this->_root_address = Address(
             Address::from_string(block->data().string()).value(),
             model::flags::mutable_block,
