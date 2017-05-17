@@ -140,7 +140,7 @@ def configure(
     'templates/pages/faq.html',
     'templates/pages/home.html',
     'templates/pages/legal.html',
-    'templates/pages/kapsul.html',
+    'templates/pages/memo.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/product.html',
@@ -162,7 +162,7 @@ def configure(
     'templates/pages/docs/best_practices.html',
     'templates/pages/docs/technology.html',
     'templates/pages/docs/docker_volume_plugin.html',
-    'templates/pages/docs/kv.html',
+    'templates/pages/docs/kv_overview.html',
     'templates/pages/docs/kv_api.html',
 
     'templates/pages/docs/get_started.html',
@@ -285,6 +285,10 @@ def configure(
     'resources/images/arrow-schema-docker@2x.png',
     'resources/images/schema-scalability-infinit.png',
     'resources/images/schema-scalability-infinit@2x.png',
+    'resources/images/schema-memo-architecture.png',
+    'resources/images/schema-memo-architecture@2x.png',
+    'resources/images/schema-etcd-architecture.png',
+    'resources/images/schema-etcd-architecture@2x.png',
     'resources/images/share-image.png',
 
     'resources/images/docs/gcs/create-bucket.png',
@@ -498,6 +502,10 @@ def configure(
     'resources/images/logos/wikipedia@2x.png',
     'resources/images/logos/minio.png',
     'resources/images/logos/minio@2x.png',
+    'resources/images/logos/memo.png',
+    'resources/images/logos/memo@2x.png',
+    'resources/images/logos/github.png',
+    'resources/images/logos/github@2x.png',
   )
 
   resources_icons = drake.nodes(
@@ -715,8 +723,14 @@ def configure(
     'resources/images/icons/pricing@2x.png',
     'resources/images/icons/consistency.png',
     'resources/images/icons/consistency@2x.png',
-    'resources/images/icons/open-source.png',
-    'resources/images/icons/open-source@2x.png',
+    'resources/images/icons/content-addressable.png',
+    'resources/images/icons/content-addressable@2x.png',
+    'resources/images/icons/decentralized.png',
+    'resources/images/icons/decentralized@2x.png',
+    'resources/images/icons/policy-based.png',
+    'resources/images/icons/policy-based@2x.png',
+    'resources/images/icons/strongly-consistent.png',
+    'resources/images/icons/strongly-consistent@2x.png',
   )
 
   resources = resources + resources_icons + resources_logos

@@ -70,7 +70,7 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   &.blue:hover { background: @infinitblack;}
 
   &.white {
-    background-color: white; color: #07A0B6 !important;
+    background-color: #f3f3f3; color: #07A0B6 !important;
     box-shadow: 0px 3px 0px 0px #ADD5DA;
   }
   &.white:hover { background: #ECF8FA; }
@@ -211,7 +211,7 @@ pre code {
 }
 
 p.subtitle {
-  font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 32px;
+  font-family: @helvetica; font-size: 22px; line-height: 32px;
   font-weight: 300; text-align: center; margin-top: 10px; letter-spacing: -0.2px;
 }
 
@@ -412,16 +412,16 @@ body.home {
     @-moz-keyframes fadefadeSchema { from { opacity: 0; margin-top: 100px; } to { opacity: 1; margin-top: 40px; } }
     @keyframes fadeSchema { from { opacity: 0; margin-top: 100px; } to { opacity: 1; margin-top: 40px; } }
 
-    .schema-full { display: none; 
+    .schema-full { display: none;
       img { width: 96%; height: auto; margin: 40px 2%;}
-    } 
+    }
 
     .schema {
       margin: 100px auto 40px auto; max-width: 708px; opacity: 0;
       .animation(fadeSchema, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
       .animationFillMode(forwards);
       .animationDuration(0.5s);
-      .animationDelay(0.2s); 
+      .animationDelay(0.2s);
 
       .legend h4,
       .title h4 {
@@ -429,7 +429,7 @@ body.home {
       }
 
       .legend {
-        position: absolute; 
+        position: absolute;
 
         h4 { margin: 0; }
         span, h4 { text-align: right; }
@@ -582,10 +582,10 @@ body.home {
         div.file { .animationDelay(4.5s); }
       }
 
-      .apis { 
+      .apis {
         position: relative; margin-top: 42px; margin-bottom: 100px;
 
-        strong { 
+        strong {
           font-size: 15px; position: absolute; opacity: 0; margin-top: 30px;
           .animation(apisFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
           .animationFillMode(forwards);
@@ -892,14 +892,14 @@ body.download {
   .platform {
     width: 100%; clear: both;  padding-top: 50px;
 
-    div.name { 
-      float: left; text-align: center; max-width: 15%; min-width: 100px; 
+    div.name {
+      float: left; text-align: center; max-width: 15%; min-width: 100px;
       padding-top: 10px;
 
-      h2 { margin-top: 8px; font-size: 15px; text-transform: uppercase; font-family: @sf; } 
+      h2 { margin-top: 8px; font-size: 15px; text-transform: uppercase; font-family: @sf; }
     }
 
-    div.links { 
+    div.links {
       float: left; margin-left: 10px; background: #F8F8F8; padding: 30px 25px;
       width: ~"calc(100% - 190px)"; font-size: 16px; min-height: 120px;
 
@@ -908,13 +908,13 @@ body.download {
       p { margin-top: 0; }
       a { vertical-align: 4px; }
 
-      p a:nth-child(3), a.direct { 
-        font-size: 12px; color: #9A9A9A; vertical-align: 4px; margin-left: 4px; 
+      p a:nth-child(3), a.direct {
+        font-size: 12px; color: #9A9A9A; vertical-align: 4px; margin-left: 4px;
         &:after { opacity: 0;}
       }
 
       a.direct { vertical-align: 34px; margin-left: 7px;  }
-      p:last-child img { margin-right: 2px; } 
+      p:last-child img { margin-right: 2px; }
     }
 
     &.soon {
@@ -940,7 +940,7 @@ body.update {
       a.direct { font-size: 13px; color: #9A9A9A; }
       p img { vertical-align: -4px; margin-right: 4px; }
 
-      hr { width: 70%; margin: 20px auto; height: 1px; border: none; background: #e4e4e4;} 
+      hr { width: 70%; margin: 20px auto; height: 1px; border: none; background: #e4e4e4;}
     }
 
     .platform {
@@ -951,7 +951,7 @@ body.update {
   }
 
   p.legal { padding-top: 0; opacity: 1; }
-} 
+}
 
 
 /*----------------.
@@ -1131,7 +1131,7 @@ section.doc {
 }
 
 body.documentation, body.legal, body.contact, body.solutions,
-body.pricing, body.press { 
+body.pricing, body.press {
 
   section.doc {
     float: left; width: 50%; padding: 0 15% 100px 31%; margin-top: 15px;
@@ -1161,7 +1161,7 @@ body.pricing, body.press {
 
     ul.tier1 { max-width: 180px; }
     ul li a { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-    li.title { 
+    li.title {
       margin-bottom: 20px;
     }
   }
@@ -1211,8 +1211,8 @@ body.pricing, body.press {
       #menu-anchor { height: 1px; width: 100%;}
 
       li > a { font-size: 15px; }
-      li { 
-        position: relative; 
+      li {
+        position: relative;
 
         a {
           font-family: @helvetica; font-weight: 400; outline: none; .transition();
@@ -1224,8 +1224,8 @@ body.pricing, body.press {
         }
       }
 
-      li.title { 
-        font-family: @sf; text-transform: uppercase; font-size: 11px; color: #B8B8B8; 
+      li.title {
+        font-family: @sf; text-transform: uppercase; font-size: 11px; color: #B8B8B8;
       }
 
       > li { padding-top: 3px; padding-bottom: 5px; }
@@ -1366,7 +1366,7 @@ body.doc_get_started {
     .tabs-circle {
       text-align: center; position: relative; overflow: visible; margin: 0 auto; width: 100%;
       min-height: 80px; margin-top: 55px;
-      
+
       nav {
         margin-left: -10px;
 
@@ -1375,7 +1375,7 @@ body.doc_get_started {
           width: 100%;
         }
 
-        li { 
+        li {
           position: relative; z-index: 1; display: block; margin: 0; text-align: center;
           float: left; width: 18%; margin-right: 2%;
         }
@@ -1407,10 +1407,10 @@ body.doc_get_started {
           a { color: @infinitblue; }
         }
 
-        img { 
-          display: block; margin: 0 auto; max-height: 26px; width: auto; 
+        img {
+          display: block; margin: 0 auto; max-height: 26px; width: auto;
           filter: gray; filter: grayscale(1);
-          -webkit-filter: grayscale(1); 
+          -webkit-filter: grayscale(1);
           .transition();
         }
 
@@ -1419,7 +1419,7 @@ body.doc_get_started {
           text-overflow: ellipsis; white-space: nowrap; overflow: visible; color: @infinitgray;
           margin: 0; background-repeat: no-repeat;
 
-          -webkit-transition: color 0.3s cubic-bezier(0.7,0,0.3,1); 
+          -webkit-transition: color 0.3s cubic-bezier(0.7,0,0.3,1);
           transition: color 0.3s cubic-bezier(0.7,0,0.3,1);
 
           span { display: inline-block; margin-top: 5px; }
@@ -1485,12 +1485,12 @@ body.doc_kv_api {
 
       &:after { display: table; content: ''; clear: both; }
 
-      li { 
+      li {
         float: left; margin: 0 15px 0 0;
 
         a {
-          color: @infinitgray; font-family: @sf; text-transform: uppercase; font-size: 13px;  
-          outline: none; 
+          color: @infinitgray; font-family: @sf; text-transform: uppercase; font-size: 13px;
+          outline: none;
         }
 
         a.active { color: @infinitblue; }
@@ -1500,7 +1500,7 @@ body.doc_kv_api {
   }
 
   .popup {
-    max-width: 600px; 
+    max-width: 600px;
     section.doc { float: none; width: 100%; padding: 0; }
   }
 }
@@ -1516,14 +1516,14 @@ body.doc_kv_api {
       tr td { padding: 10px 0; }
       tr:nth-child(2) td { border-bottom: 1px solid #dcdcdc; }
       tr td:first-child { width: 30%; padding-left: 22px; }
-      
-      tr:first-child th { 
+
+      tr:first-child th {
         width: 100%; font-weight: normal; background: #252d3b;
         padding: 16px 23px; border-radius: 3px; border-bottom: 0px;
         border-bottom-left-radius: 0px; border-bottom-right-radius: 0;
 
         h3 { font-size: 1.3em; }
-        h3, p em { color: white; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;} 
+        h3, p em { color: white; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;}
       }
 
       tr td a { font-size: 15px; color: @infinitblue }
@@ -1675,7 +1675,7 @@ body.docker {
       display: block; width: 90%; padding: 70px 5% 55px 5%; margin-top: 20px; clear: both;
       background: #F5F8FA; text-align: center;
 
-      span { 
+      span {
         border: 1px solid #9CB6C7; border-radius: 3px; color: #92A9B8; text-transform: uppercase;
         font-family: @sf; font-size: 14px; padding: 9px 12px; .transition();
         -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
@@ -1693,7 +1693,7 @@ body.docker {
 body.product {
   h1 {
     text-align: center; letter-spacing: -0.2px;
-    font-size: 36px; clear: both;  margin: 50px 5% 20px 5%; 
+    font-size: 36px; clear: both;  margin: 50px 5% 20px 5%;
   }
 
   h2 { font-size: 36px; text-align: center; margin-bottom: 35px; }
@@ -1715,8 +1715,8 @@ body.product {
           width: 960px; margin: 0 auto; text-align: center;
           position: relative; margin-bottom: 60px;
 
-          hr { 
-            height: 3px; background: @infinitblack; border: none; width: 85%; 
+          hr {
+            height: 3px; background: @infinitblack; border: none; width: 85%;
             position: absolute; top: 88px; margin: 0 auto; left: 0; right: 0;
             .transition();
           }
@@ -1736,7 +1736,7 @@ body.product {
             span.block {
               background: #FFF088; border: 2px solid #252D3B; border-radius: 4px;
               width: 12px; height: 12px; display: inline-block; margin-top: 7px;
-              position: absolute; left: 42%; 
+              position: absolute; left: 42%;
             }
 
             div.failure {
@@ -1753,7 +1753,7 @@ body.product {
           #nodeE { left: 80.5%; }
           #nodeF { left: 1%;}
           #nodeG { left: 90%;}
-          
+
           #nodeF, #nodeG { opacity: 0;}
         }
 
@@ -1763,7 +1763,7 @@ body.product {
           #replay { display: none; }
           #replay, #play {
             text-transform: uppercase; font-weight: 600; font-size: 14px;
-            font-family: @sf; color: @infinitblue;  .transition(); 
+            font-family: @sf; color: @infinitblue;  .transition();
             &:hover { color: darken(@infinitblue, 10%); .transition(); }
           }
 
@@ -1916,7 +1916,7 @@ body.product {
       padding-top: 60px; position: relative; overflow-x: hidden;
       &:after { display: table; content: ''; clear: both; }
 
-      hr { 
+      hr {
         width: 20%; float: left;
         margin-bottom: 30px; height: 3px; background: @infinitblack; border: none; display: block;
       }
@@ -1929,8 +1929,8 @@ body.product {
     section.decentralized {
       min-height: 425px; margin: 0 0 0 8%; margin-top: 100px; padding-top: 40px;
 
-      .bg { 
-        .at2x('../images/bg-decentralized.png', 976px, 425px); background-repeat: no-repeat; 
+      .bg {
+        .at2x('../images/bg-decentralized.png', 976px, 425px); background-repeat: no-repeat;
         width: 976px; height: 425px;
         position: absolute; left: 40%;
       }
@@ -1939,7 +1939,7 @@ body.product {
     section.replication {
        min-height: 408px; margin: 0 8% 0 0; padding-top: 100px;
 
-      .bg { 
+      .bg {
         .at2x('../images/bg-replication.png', 896px, 408px);  background-repeat: no-repeat;
         background-repeat: no-repeat; width: 896px; height: 408px;
         position: absolute; right: 40%;
@@ -2062,6 +2062,99 @@ body.product {
 @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
 
 
+body.memo {
+  section.presentation {
+    text-align: center; padding-top: 30px;
+
+    h1 {
+      font-family: @helvetica; font-size: 27px; line-height: 39px; width: 90%; margin: auto;
+      max-width: 430px; font-weight: 300; margin-top: 15px;
+    }
+
+    div.star {
+      display: inline-block;
+      a, span { padding: 7px 8px; }
+      img { height: 18px; width: auto; vertical-align: -5px; margin-right: 4px; }
+    }
+
+    a.button { vertical-align: -7px; margin-top: 28px; margin-left: 15px;}
+  }
+
+  section.features {
+    margin: 80px 3% 0 3%; clear: both;
+
+    div {
+      float: left; width: 21%; margin: 0 2%;
+      h2 { font-family: @sf; font-size: 16px; text-transform: uppercase; }
+      p { font-size: 17px; line-height: 24px; }
+    }
+
+    div:nth-child(1) {
+      margin-top: 58px;
+      img { margin-left: -13px; }
+    }
+
+    div:nth-child(2) {
+      margin-top: 40px;
+      img { margin-left: -20px; }
+    }
+
+    div:nth-child(3) {
+      margin-top: -5px;
+      img { margin-left: -31px; margin-top: 10px; }
+    }
+
+    div:nth-child(4) {
+      margin-top: -15px;
+      img { margin-left: -40px; margin-top: 15px; }
+    }
+  }
+
+  section.architecture {
+    clear: both; padding-top: 80px; text-align: center;
+
+    h2 { font-size: 36px; }
+    p.subtitle { width: 90%; margin: auto; max-width: 530px; }
+
+    .memo, .etcd { width: 38%; float: left;}
+    .memo { margin-left: 10%; margin-right: 2%; }
+    .etcd { margin-left: 2%; margin-right: 10%; }
+
+    .schemas {
+      margin-top: 55px;
+    }
+
+    .comparison {
+      clear: both; padding-top: 65px;
+
+      p { font-size: 18px; max-width: 400px; margin:auto; line-height: 26px; margin-top: 10px;}
+      div {
+        float: left; width: 10%;
+
+        strong {
+          font-family: @sf; text-transform: uppercase; font-size: 15px;
+          display: inline-block; margin-top: 5px;
+        }
+      }
+      .memo, .etcd { width: 33%; }
+      .memo p { font-weight: 600; }
+
+      &.consistency div img { margin-top: 15px;}
+    }
+  }
+
+  section.example {
+    clear: both; text-align: center; padding: 80px 0;
+
+    h2 { font-size: 36px;}
+    p.subtitle { max-width: 430px; margin-left: auto; margin-right: auto; }
+    a.button.white { margin-left: 15px;}
+
+    pre code { text-align: left; width: 90%; margin: auto; max-width: 600px; padding: 15px 20px;}
+  }
+}
+
+
 body.docker {
 
   section.presentation {
@@ -2075,15 +2168,15 @@ body.docker {
     }
 
     img { margin: 50px 0 20px 0;}
-    p.legend { 
-      font-style: italic; font-size: 18px; line-height: 160%; margin: 30px auto 160px auto; 
+    p.legend {
+      font-style: italic; font-size: 18px; line-height: 160%; margin: 30px auto 160px auto;
       color: darken(@infinitgray, 10%); max-width: 600px; padding: 0 3%;
     }
   }
 
   div.projects,
   section.scale {
-    h2 { font-size: 36px; text-align: center; } 
+    h2 { font-size: 36px; text-align: center; }
   }
 
   div.projects {
@@ -2095,7 +2188,7 @@ body.docker {
     h2 {
       margin-top: -24px; margin-bottom: 40px; background: white;
       display: inline-block; position: absolute; top: 0; left: 50%; margin-left: -320px;
-      padding: 0 40px; 
+      padding: 0 40px;
     }
   }
 
@@ -2295,8 +2388,8 @@ body.doc_comparison {
       vertical-align: -2px; margin-left: 6px; margin-right: 2px;
     }
 
-    table.properties { 
-      margin: 60px 0; 
+    table.properties {
+      margin: 60px 0;
 
       tr:nth-child(1) th { padding-bottom: 20px; }
       th.infinit img { max-height: 43px; width: auto; }
@@ -2307,15 +2400,15 @@ body.doc_comparison {
 
     tr.property {
       opacity: 1; min-height: 209px; .transition();
-      
+
       td { text-align: left; }
       td.desc { padding: 20px 0; }
       td.competitor, td.infinit { text-align: center; width: 20%; padding: 0 2%; }
 
       td img { float: left; max-width: 50px; height: auto; margin-right: 22px; padding-bottom: 55px;}
-      td span { 
+      td span {
         background: #ebf0f3; padding: 5px 8px; display: inline-block; margin: 4px;
-        border-radius: 3px; font-weight: bold; 
+        border-radius: 3px; font-weight: bold;
         -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 
         &.unknown { background: #f1f1f1; color: #989898}
@@ -2325,12 +2418,12 @@ body.doc_comparison {
 
       h2 {
         margin: 0; font-size: 14px; font-family: @sf; text-transform: uppercase;
-        margin-bottom: 7px; float: left; 
+        margin-bottom: 7px; float: left;
       }
 
       a.open-popup {
         background: @infinitblue; display: inline-block; border-radius: 20px; margin-top: 4px;
-        padding: 0px 5px; font-size: 11px; color: white; margin-left: 6px;  .transition(); 
+        padding: 0px 5px; font-size: 11px; color: white; margin-left: 6px;  .transition();
         &:hover { background: darken(@infinitblue, 10%); .transition(); }
       }
 
@@ -2339,7 +2432,7 @@ body.doc_comparison {
       td.desc p.note { color: @infinitblack; margin-top: 11px; }
 
       &.same {
-        td.infinit span, td.competitor span { 
+        td.infinit span, td.competitor span {
           background: #f2f7c6; color: #4d5026;
         }
         // a.open-popup { background: #a5a5a5; }
@@ -2476,9 +2569,9 @@ body.pricing {
 
       ul { list-style-type: none;}
       ul:after { display: table; clear: both; content: '';}
-      ul li { 
-        float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%; 
-        font-size: 17px; 
+      ul li {
+        float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%;
+        font-size: 17px;
       }
       ul li:nth-child(2n+1) { clear: both; }
       ul li span { display: block; clear: both; margin-top: 5px; }
@@ -2556,8 +2649,8 @@ body.contact {
 `--------------*/
 
 div.star {
-  margin-top: 5px; margin-left: 8px; 
-  a { 
+  margin-top: 5px; margin-left: 8px;
+  a {
     background: -webkit-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
     background: -o-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
     background: linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
@@ -2566,37 +2659,37 @@ div.star {
 
     &:hover { background: white; }
     svg { vertical-align: -4px; margin-right: 2px; fill: #787878 }
-  }  
-  span {     
-    display: inline-block; margin-left: -4px; background: white; 
-  } 
+  }
+  span {
+    display: inline-block; margin-left: -4px; background: white;
+  }
   a, span {
-    font-size: 11px; font-family: @sf; padding: 5px 8px; 
+    font-size: 11px; font-family: @sf; padding: 5px 8px;
     border: 1px solid #DEDEDE;
   }
 }
 
 body.opensource {
-  
+
   h1, h2 { font-size: 36px; margin: 45px 0 10px 0; }
-  p.subtitle { 
-    font-size: 22px; color: @infinitblack; max-width: 500px; margin: auto; 
+  p.subtitle {
+    font-size: 22px; color: @infinitblack; max-width: 500px; margin: auto;
     padding-bottom: 70px;
   }
 
   section.projects {
-    text-align: center; 
+    text-align: center;
     &:after { content:''; clear: both; display: table;}
-    
+
     .row { clear: both;}
-    
+
     // 3 columns layout
-    .project { 
+    .project {
       position: relative; max-width: 31%; margin: 0 1% 1% 1%; min-height: 329px;
       .tagline { font-size: 15px; line-height: 21px; }
       .description { min-height: 102px; }
       .stage {
-        .stage { width: 78px; margin-left: 10px; } 
+        .stage { width: 78px; margin-left: 10px; }
         progress { width: ~"calc(90% - 88px)"; }
       }
 
@@ -2609,7 +2702,7 @@ body.opensource {
     }
 
     // 2 columns layout
-    .project.pinned { 
+    .project.pinned {
       .pinnedProject;
     }
 
@@ -2622,20 +2715,20 @@ body.opensource {
         .actions p { color: @infinitblack; .transition(); }
       }
 
-      .title, .tagline, .description, .stage, .stats, .date { 
+      .title, .tagline, .description, .stage, .stats, .date {
         padding-left: 25px; padding-right: 25px;
       }
 
       .title {
-        padding-top: 30px; 
+        padding-top: 30px;
         img, h3, .star { float: left; }
         img { margin-right: 3px; max-width: 32px; height: auto;  }
         h3 { font-size: 21px; margin: 5px 10px 15px 0; }
         h3 a { .transition(); }
         h3 a:hover { color: lighten(@infinitblack, 25%); .transition(); }
 
-        .soon { 
-          font-size: 11px; font-family: @sf; padding: 5px 8px; 
+        .soon {
+          font-size: 11px; font-family: @sf; padding: 5px 8px;
           border: 1px solid #DEDEDE;
           color: white; border-radius: 3px; border: none; display: inline-block;
           text-transform: uppercase;  margin-top: 9px; padding: 3px 6px;
@@ -2650,11 +2743,11 @@ body.opensource {
         background: white; padding: 0 0 1px 0;  position: absolute; bottom: 0;
         border-top: 1px solid #DEDEDE; margin-top: 28px; width: 100%;
 
-        .stats { 
+        .stats {
           border-bottom: 1px solid #e2e2e2; padding-top: 17px;
           max-width: 86%; width: 100%; min-height: 29px;
-          
-          > div { 
+
+          > div {
             float: left; margin-right: 20px;  padding-bottom: 12px;
             font-family: @sf; text-transform: uppercase; font-size: 11px;
 
@@ -2666,19 +2759,19 @@ body.opensource {
         .progress {
            padding-top: 15px; padding-bottom: 10px;
 
-          .status { 
+          .status {
             float: left; margin-right: 15px; clear: both; margin-left: 5%;
             strong { font-family: @sf; font-size: 11px; text-transform: uppercase; }
           }
 
-          a { 
+          a {
             color: white; font-size: 10px;  margin-left: 3px; vertical-align: super;
             display: inline-block; padding: 1px 5px; border-radius: 50px; margin-left: 10px;
           }
 
           progress[value] {
-            -webkit-appearance: none; appearance: none; 
-            -moz-appearance: none; border: none; margin-top: 7px; 
+            -webkit-appearance: none; appearance: none;
+            -moz-appearance: none; border: none; margin-top: 7px;
           }
           progress[value]::-webkit-progress-bar {
             background: #E9E9E9; border-radius: 3px; height: 6px;
@@ -2693,10 +2786,10 @@ body.opensource {
         }
 
         .actions {
-          border-bottom: 1px solid #DEDEDE; 
+          border-bottom: 1px solid #DEDEDE;
 
-          p { 
-            line-height: 22px; padding-left: 5%; padding-right: 5%; max-height: 19px; 
+          p {
+            line-height: 22px; padding-left: 5%; padding-right: 5%; max-height: 19px;
             color: #b1b1b1; overflow-y: hidden; .transition();
           }
         }
@@ -2710,39 +2803,39 @@ body.opensource {
 
         .stage .stage strong, .stage ul li { color: @infinitblack; }
 
-        .stage a, 
+        .stage a,
         .title .soon,
-        .stage progress[value]::-webkit-progress-value { 
+        .stage progress[value]::-webkit-progress-value {
           background: @infinitblack;
         }
       }
 
-      &.access {   
+      &.access {
         .stage .status strong, .stage ul li { color: #F8BC24; }
 
-        .stage a, 
+        .stage a,
         .title .soon,
-        .stage progress[value]::-webkit-progress-value { 
+        .stage progress[value]::-webkit-progress-value {
           .openSourceAccessGradient();
         }
       }
-      
+
       &.develop {
         .stage .status strong, .stage ul li { color: #4BA9FF; }
 
-        .stage a, 
+        .stage a,
         .title .soon,
-        .stage progress[value]::-webkit-progress-value { 
+        .stage progress[value]::-webkit-progress-value {
           .openSourceDevelopGradient();
         }
       }
 
-      &.contribute {        
+      &.contribute {
         .stage .status strong, .stage ul li { color: #01BDAE; }
 
-        .stage a, 
+        .stage a,
         .title .soon,
-        .stage progress[value]::-webkit-progress-value { 
+        .stage progress[value]::-webkit-progress-value {
           .openSourceContributeGradient();
         }
       }
@@ -2751,17 +2844,17 @@ body.opensource {
 
   section.methodology {
     text-align: center; padding: 60px 0;
-    
+
     p.subtitle { padding-bottom: 20px; max-width: 70% }
-    p.explain { 
-      max-width: 60%; margin: auto; font-size: 17px; line-height: 24px; 
+    p.explain {
+      max-width: 60%; margin: auto; font-size: 17px; line-height: 24px;
       color: @infinitgray; font-style: italic;
     }
-    
+
     .progress {
-      width: 90%; margin: 60px auto; 
-      
-      .closed, .access, .develop, .contribute { 
+      width: 90%; margin: 60px auto;
+
+      .closed, .access, .develop, .contribute {
         float: left; width: 25%; text-align: left;
         span { height: 12px; display: block; width: 104%; border-radius: 40px; }
         strong, p { float: left; padding-left: 20px;}
@@ -2781,13 +2874,13 @@ body.opensource {
         strong { color: #01BDAE; }
         span { .openSourceContributeGradient(); width: 100%; }
       }
-      .access { 
-        strong { color: #F8BC24; } 
-        span { .openSourceAccessGradient(); } 
+      .access {
+        strong { color: #F8BC24; }
+        span { .openSourceAccessGradient(); }
       }
-        
+
       p { line-height: 23px; font-size: 17px; max-width: 80%; padding-bottom: 80px; }
-      strong { 
+      strong {
         text-transform: uppercase; font-family: @sf; font-size: 15px;
         margin-top: 25px; display: inline-block;
       }
@@ -2796,23 +2889,23 @@ body.opensource {
 
   section.licenses {
     clear: both; text-align: center; padding-top: 20px; background: #F2F2F2;
-    margin-top: 50px; padding-bottom: 100px; 
+    margin-top: 50px; padding-bottom: 100px;
     &:after { content:''; clear: both; display: table;}
-    
+
     p.subtitle { max-width: 75%;}
     .wrapper { max-width: 85%; }
     .libraries {
       .library {
         float: left; background: white; padding: 12px 15px; border-radius: 3px;
         margin-right: 15px; min-width: 100px; margin-bottom: 15px;  text-align: left;
-        display: block; .transition(); 
+        display: block; .transition();
 
-        &:hover { 
+        &:hover {
           box-shadow: 0 0 4px 0 rgba(196,196,196,0.80); color: lighten(@infinitblack, 25%);
-          background: darken(white, 2%); .transition(); 
+          background: darken(white, 2%); .transition();
         }
         strong { font-size: 17px; font-weight: 600; }
-        span { 
+        span {
           display: block; margin-top: 5px; text-transform: uppercase;
           font-family: @sf; color: #9E9E9E; font-size: 11px;
         }

@@ -73,20 +73,20 @@ class Website(bottle.Bottle):
       'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, resilience and more.',
     }
 
+  @route('/project/memo', name = 'memo')
+  @view('pages/memo.html')
+  def root(self):
+    return {
+      'title': 'Memo Key-Value Store',
+      'description': 'Modern key-value store built with replication and security in mind',
+    }
+
   @route('/docker', name = 'docker')
   @view('pages/docker.html')
   def root(self):
     return {
       'title': 'Persistent Storage Solutions for Docker',
       'description': 'Infinit provides persistent storage through several solutions well suited to make your containerized Docker applications stateful.',
-    }
-
-  @route('/project/kapsul', name = 'kapsul')
-  @view('pages/kapsul.html')
-  def root(self):
-    return {
-      'title': 'Decentralized key-value store, with built-in replication and security.',
-      'description': 'Decentralized key-value store, with built-in replication and security. ',
     }
 
   @route('/desktop', name = 'drive')
@@ -307,8 +307,8 @@ class Website(bottle.Bottle):
       'show_comparison': show_comparison,
     }
 
-  @route('/documentation/key-value-store', name = 'doc_kv')
-  @view('pages/docs/kv.html')
+  @route('/documentation/key-value-store', name = 'doc_kv_overview')
+  @view('pages/docs/kv_overview.html')
   def root(self):
     file = resources_path() + '/scripts/kv/doughnut.json'
     with open(file, encoding = 'utf-8') as json_file:
