@@ -144,9 +144,8 @@ namespace infinit
       | Properties |
       `-----------*/
       protected:
-        using Overlay::storing;
         void
-        storing(bool v) override;
+        _store(bool v) override;
 
       /*-------------.
       | Address book |

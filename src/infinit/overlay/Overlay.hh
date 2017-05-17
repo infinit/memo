@@ -83,7 +83,11 @@ namespace infinit
     `-----------*/
     public:
       /// Whether we accept new blocks.
-      ELLE_ATTRIBUTE_RW(bool, storing, virtual);
+      ELLE_ATTRIBUTE_Rw(bool, storing, virtual);
+    protected:
+      virtual
+      void
+      _store(bool value);
 
     /*------.
     | Peers |

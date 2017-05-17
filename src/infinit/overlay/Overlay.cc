@@ -125,6 +125,25 @@ namespace infinit
     Overlay::_cleanup()
     {}
 
+    /*-----------.
+    | Properties |
+    `-----------*/
+
+    void
+    Overlay::storing(bool storing)
+    {
+      if (storing != this->storing())
+      {
+        ELLE_TRACE_SCOPE("%f: {?resume:stop} storing", this, storing);
+        this->_storing = storing;
+        this->_store(storing);
+      }
+    }
+
+    void
+    Overlay::_store(bool storing)
+    {}
+
     /*------.
     | Peers |
     `------*/

@@ -348,15 +348,11 @@ namespace infinit
       `-----------*/
 
       void
-      Kouncil::storing(bool storing)
+      Kouncil::_store(bool storing)
       {
-        if (storing != this->storing())
-        {
-          this->Overlay::storing(storing);
-          // FIXME: don't block if some node fail to respond
-          this->local()->broadcast<void>(
-            "kouncil_configure", Configuration(storing));
-        }
+        // FIXME: don't block if some node fail to respond
+        this->local()->broadcast<void>(
+          "kouncil_configure", Configuration(storing));
       }
 
       /*-------------.
