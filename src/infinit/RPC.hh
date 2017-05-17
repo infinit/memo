@@ -141,16 +141,15 @@ namespace infinit
     template <typename Remaining, typename ... Parsed>
     std::enable_if_t<
       !Remaining::empty &&
-      !std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value>
+      !elle::serialization::virtually<
+        std::remove_reference_t<typename Remaining::Head>>()>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", arg);
       this->_handle<typename Remaining::Tail,
@@ -161,16 +160,15 @@ namespace infinit
     template <typename Remaining, typename ... Parsed>
     std::enable_if_t<
       !Remaining::empty &&
-      std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value>
+      elle::serialization::virtually<
+        std::remove_reference_t<typename Remaining::Head>>()>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", *arg);
