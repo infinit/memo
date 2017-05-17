@@ -14,14 +14,17 @@ genfs = None
 
 class GRPCGen(drake.Builder):
 
-  def __init__(self, proto, protoc, plugin, targets):
+  def __init__(self, proto, protoc, targets, plugin = None):
     self.__proto = proto
     if protoc is None:
       self.__protoc = drake.node(drake.which.which('protoc'))
     self.__protoc = protoc
     self.__plugin = plugin
     self.__output = proto.name().dirname()
-    super().__init__([proto, protoc, plugin], targets)
+    srcs = [proto, protoc]
+    if plugin:
+      srcs.append(plugin)
+    super().__init__(srcs, targets)
 
   @property
   def proto(self):
@@ -50,7 +53,6 @@ class GRPCCxxGen(GRPCGen):
       name.with_extension('grpc.pb.h'),
       name.with_extension('grpc.pb.cc'),
     )
-    srcs = []
     if plugin is None:
       plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
     super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
@@ -94,9 +96,8 @@ class GRPCPyGen(GRPCGen):
       '{}_pb2.py'.format(name),
       '{}_pb2_grpc.py'.format(name),
     )
-    srcs = []
     if plugin is None:
-      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+      plugin = drake.node('/usr/local/bin/grpc_python_plugin')
     super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
 
   def execute(self):

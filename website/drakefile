@@ -928,12 +928,15 @@ def configure(
 
   rule_check = drake.Rule('check')
   import os, stat
-  with drake.templating.Context(
-      template_dir = ['/home/dimrok/infinit/fs/website'],
-      post_process = lambda n: os.chmod(str(n.path()), stat.S_IRUSR | stat.S_IXUSR)):
-    drake.node('tests/value-store/grpc/api.py.tmpl')
-    drake.node('tests/value-store/grpc/api.cc.tmpl')
-    drake.node('tests/value-store/grpc/api.go.tmpl')
+  def render(path, sources):
+    with drake.templating.Context(
+        template_dir = ['/home/dimrok/infinit/fs/website'],
+        sources = sources,
+        post_process = lambda n: os.chmod(str(n.path()), stat.S_IRUSR | stat.S_IXUSR)):
+      drake.node(path)
+  render('tests/value-store/grpc/api.py.tmpl', value_store['python'])
+  render('tests/value-store/grpc/api.cc.tmpl', value_store['cpp'])
+  render('tests/value-store/grpc/api.go.tmpl', value_store['go'])
   # Python.
   # XXX: Pass the node...
   doughnut_pb_python = drake.node('../src/infinit/grpc/doughnut_pb2.py')
@@ -943,7 +946,7 @@ def configure(
     env = {
       'PYTHONPATH': str(doughnut_pb_python.path(absolute = True).dirname())
     },
-    sources = [doughnut_pb_python] + value_store['python']).targets()
+    sources = [doughnut_pb_python]).targets()
   # Cpp
   config = drake.cxx.Config(grpc.cxx_config)
   config += grpc.grpc.cxx_config
@@ -954,7 +957,7 @@ def configure(
       'tests/value-store/grpc/api-cpp',
       drake.nodes('tests/value-store/grpc/api.cc',) +
       grpc.gendn.targets() +
-      [grpc.grpc_lib, grpc.grpc.protobuf_lib] + value_store['cpp'],
+      [grpc.grpc_lib, grpc.grpc.protobuf_lib],
       drake.cxx.Toolkit(),
       config),
     infinit = infinit).targets()
@@ -972,7 +975,7 @@ def configure(
       sources = drake.copy(
         gen.targets(),
         drake.Path(go_toolkit.path) / 'src/doughnut',
-        strip_prefix = True) + value_store['go']),
+        strip_prefix = True)),
     infinit = infinit).targets()
 
   # Local Variables:
