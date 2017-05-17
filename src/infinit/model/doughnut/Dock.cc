@@ -684,51 +684,51 @@ namespace infinit
           ELLE_TRACE("peer is ourself");
           return this->_doughnut.local();
         }
-        {
-          auto it = this->_peer_cache.find(loc.id());
-          if (it != this->_peer_cache.end())
-            return overlay::Overlay::WeakMember::own(ELLE_ENFORCE(it->lock()));
-        }
-        return overlay::Overlay::WeakMember::own(
-          this->make_peer(this->connect(loc)));
+        if (auto it = elle::find(this->_peer_cache, loc.id()))
+          return overlay::Overlay::WeakMember::own(
+               ELLE_ENFORCE(it->lock()));
+        else
+          return overlay::Overlay::WeakMember::own(
+               this->make_peer(this->connect(loc)));
       }
 
       std::shared_ptr<Remote>
       Dock::make_peer(std::shared_ptr<Connection> connection, bool ignored_result)
       {
+        // Already connected?
+        if (auto it = elle::find(this->_peer_cache, connection->id()))
         {
-          auto it = this->_peer_cache.find(connection->id());
-          if (it != this->_peer_cache.end())
+          auto peer = ELLE_ENFORCE(it->lock());
+          auto res = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
+          if (res->connection() == connection)
+            ;
+          // FIXME: This is messy. We could miss that current connection is
+          // broken and not replace it, but we don't want to replace a working
+          // connection with the new one and kill all RPCs.
+          else if (!res->connection()->connected() ||
+                   res->connection()->disconnected())
           {
-            auto peer = ELLE_ENFORCE(it->lock());
-            auto remote = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
-            if (remote->connection() == connection)
-              ;
-            // FIXME: This is messy. We could miss that current connection is
-            // broken and not replace it, but we don't want to replace a working
-            // connection with the new one and kill all RPCs.
-            else if (!remote->connection()->connected() ||
-                     remote->connection()->disconnected())
-            {
-              ELLE_TRACE_SCOPE(
-                "%s: replace broken connection for %s", this, remote);
-              remote->connection(connection);
-            }
-            else
-              ELLE_TRACE("%s: drop duplicate %s", this, connection);
-            return remote;
+            ELLE_TRACE_SCOPE(
+              "%s: replace broken connection for %s", this, res);
+            res->connection(connection);
           }
+          else
+            ELLE_TRACE("%s: drop duplicate %s", this, connection);
+          return res;
         }
         // FIXME: don't always spawn paxos
-        if (ignored_result && this->_on_peer.empty())
-          return std::shared_ptr<Remote>();
-        using RemotePeer = consensus::Paxos::RemotePeer;
-        auto peer = std::make_shared<RemotePeer>(this->_doughnut, connection);
-        auto insertion = this->_peer_cache.emplace(peer);
-        ELLE_ASSERT(insertion.second);
-        peer->_cache_iterator = insertion.first;
-        this->_on_peer(peer);
-        return peer;
+        else if (ignored_result && this->_on_peer.empty())
+          return {};
+        else
+        {
+          using RemotePeer = consensus::Paxos::RemotePeer;
+          auto res = std::make_shared<RemotePeer>(this->_doughnut, connection);
+          auto insertion = this->_peer_cache.emplace(res);
+          ELLE_ASSERT(insertion.second);
+          res->_cache_iterator = insertion.first;
+          this->_on_peer(res);
+          return res;
+        }
       }
     }
   }
