@@ -38,6 +38,7 @@
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/serialization.hh>
 
 #include <infinit/filesystem/Node.hh>
@@ -458,7 +459,7 @@ namespace infinit
           {
             auto* consensus = dht->consensus().get();
             while (auto* stacked =
-              dynamic_cast<model::doughnut::consensus::StackedConsensus*>(consensus))
+              dynamic_cast<model::doughnut::consensus::Cache*>(consensus))
             {
               consensus = stacked->backend().get();
             }
