@@ -54,7 +54,7 @@ x86_64-centos6-gcc4:
     - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 ${SOURCE_DIR}/note-bench-stats ./bench"
-    - git -C "$SOURCE_DIR" push --force git@git.infinit.io:fs refs/notes/bench
+    - git -C "$SOURCE_DIR" push --force git@git.infinit.io:${CI_PROJECT_NAME} refs/notes/bench
     - cd "$SOURCE_DIR"
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
   tags:
@@ -230,7 +230,7 @@ x86_64-osx-clang:
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - mkdir -p "$BUILD_DIR"
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
-    - cd ../fs-build
+    - cd ../${CI_PROJECT_NAME}-build
     - python3 drake -j 4 //build
     - python3 drake -j 4 //check
     - python3 drake -j 4 //beyond/check
