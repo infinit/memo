@@ -40,7 +40,6 @@ namespace infinit
 
     Memory::~Memory()
     {
-      ELLE_LOG(__PRETTY_FUNCTION__);
       _check_invariants();
     }
 
