@@ -234,7 +234,7 @@ x86_64-osx-clang:
     - python3 drake -j 4 //build
     - python3 drake -j 4 //check
     - python3 drake -j 4 //beyond/check
-    - rm -rf "$INSTALL_DIR$" && mkdir -p "$INSTALL_DIR$"
+    - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j 4 //install
     - TARBALL=/tmp/infinit-x86_64-osx-clang3-$DESC.tbz
     - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
