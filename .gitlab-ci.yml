@@ -230,7 +230,7 @@ x86_64-osx-clang:
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - mkdir -p "$BUILD_DIR"
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
-    - cd ../${CI_PROJECT_NAME}-build
+    - cd "$BUILD_DIR"
     - python3 drake -j 4 //build
     - python3 drake -j 4 //check
     - python3 drake -j 4 //beyond/check
