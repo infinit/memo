@@ -163,6 +163,7 @@ private:
       }
       catch (elle::reactor::network::ConnectionClosed const&)
       {
+        ELLE_LOG("_forward: ConnectionClosed, breaking");
         break;
       }
       catch (elle::reactor::network::Error const& e)
@@ -176,7 +177,7 @@ private:
   _serve()
   {
     auto socket = this->server.accept();
-    elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
+    elle::With<elle::reactor::Scope>() << [&] (auto& scope)
     {
       scope.run_background(elle::sprintf("%s forward", this),
                            [this, &socket]
@@ -189,6 +190,7 @@ private:
                              this->_forward(this->socket, *socket);
                            });
       elle::reactor::wait(scope);
+      ELLE_LOG("_serve: done");
     };
   }
 
@@ -1290,6 +1292,7 @@ ELLE_TEST_SCHEDULED(
         ELLE_LOG("check fetching the block");
         BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
       }
+      ELLE_LOG("done");
     };
 }
 

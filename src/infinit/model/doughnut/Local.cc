@@ -609,6 +609,15 @@ namespace infinit
         this->_rpcs.serve(this->_channels);
       }
 
+      void
+      Local::Connection::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%x, %f)",
+                      elle::type_info(*this),
+                      reinterpret_cast<void const*>(this),
+                      this->_local);
+      }
+
       /*----------.
       | Printable |
       `----------*/
