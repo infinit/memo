@@ -280,6 +280,8 @@ namespace infinit
               int chosen;
               PaxosServer paxos;
             };
+            bool
+            rebalance(PaxosClient& client, Address address);
           protected:
             std::unique_ptr<blocks::Block>
             _fetch(Address address,
@@ -311,6 +313,8 @@ namespace infinit
             void
             _disappeared_evict(Address id);
           private:
+            void
+            _propagate(PaxosServer& paxos, Address a, PaxosServer::Quorum q);
             void
             _rebalance();
             ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),

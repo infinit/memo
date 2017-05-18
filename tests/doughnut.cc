@@ -1022,6 +1022,15 @@ namespace rebalancing
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
       paxos_a.rebalance(b1->address());
+    ELLE_LOG("read block on quorum of 2")
+    {
+      b1 = std::dynamic_pointer_cast<blocks::MutableBlock>(
+        dht_a.dht->fetch(b1->address()));
+      BOOST_TEST(b1->data() == elle::Buffer("extend_and_write 1"));
+      ELLE_ERR("VERSION: {}", b1->version());
+      auto bb = dht_b.dht->fetch(b1->address());
+      BOOST_TEST(bb->data() == elle::Buffer("extend_and_write 1"));
+    }
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("extend_and_write 1 bis"));

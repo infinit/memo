@@ -693,27 +693,29 @@ namespace infinit
         }
 
         void
+        Paxos::LocalPeer::_propagate(PaxosServer& paxos,
+                                     Address a,
+                                     PaxosServer::Quorum q)
+        {
+          if (auto value = paxos.current_value())
+            ELLE_DEBUG("propagate block value")
+            {
+              PaxosClient c(
+                this->doughnut().id(),
+                lookup_nodes(this->doughnut(), q, a));
+              // FIXME: do something in case of conflict
+              c.choose(
+                paxos.current_version() + 1,
+                value->value.get<std::shared_ptr<blocks::Block>>());
+            }
+          this->_rebalanced(a);
+        }
+
+        void
         Paxos::LocalPeer::_rebalance()
         {
           ELLE_LOG_COMPONENT(
             "infinit.model.doughnut.consensus.Paxos.rebalance");
-          auto propagate = [this] (PaxosServer& paxos,
-                                   Address a,
-                                   PaxosServer::Quorum q)
-            {
-              if (auto value = paxos.current_value())
-                ELLE_DEBUG("propagate block value")
-                {
-                  PaxosClient c(
-                    this->doughnut().id(),
-                    lookup_nodes(this->doughnut(), q, a));
-                  // FIXME: do something in case of conflict
-                  c.choose(
-                    paxos.current_version() + 1,
-                    value->value.get<std::shared_ptr<blocks::Block>>());
-                }
-              this->_rebalanced(a);
-            };
           while (true)
           {
             auto elt = this->_rebalancable.get();
@@ -732,20 +734,7 @@ namespace infinit
                     address);
                   Paxos::PaxosClient client(
                     this->doughnut().id(), std::move(peers));
-                  if (this->_paxos._rebalance(client, address))
-                  {
-                    auto it = this->_addresses.find(address);
-                    if (it == this->_addresses.end())
-                      // The block was deleted in the meantime.
-                      continue;
-                    auto q = it->second.paxos.current_quorum();
-                    this->_quorums.modify(
-                      this->_quorums.find(address),
-                      [&] (BlockRepartition& r) {r.quorum = q;});
-                    for (auto const& node: q)
-                      this->_node_blocks.emplace(node, address);
-                    propagate(it->second.paxos, address, q);
-                  }
+                  this->rebalance(client, address);
                 }
                 else
                 {
@@ -879,7 +868,7 @@ namespace infinit
                       // FIXME: do something in case of conflict
                       c.choose(paxos.current_version() + 1, quorum);
                     }
-                    propagate(paxos, target.address, quorum);
+                    this->_propagate(paxos, target.address, quorum);
                   }
                 }
                 catch (elle::Error const& e)
@@ -888,6 +877,29 @@ namespace infinit
                 }
             }
           }
+        }
+
+        bool
+        Paxos::LocalPeer::rebalance(PaxosClient& client, Address address)
+        {
+          if (this->_paxos._rebalance(client, address))
+          {
+            if (auto it = elle::find(this->_addresses, address))
+            {
+              auto q = it->second.paxos.current_quorum();
+              this->_quorums.modify(
+                this->_quorums.find(address),
+                [&] (BlockRepartition& r) {r.quorum = q;});
+              for (auto const& node: q)
+                this->_node_blocks.emplace(node, address);
+              this->_propagate(it->second.paxos, address, q);
+            }
+            else
+              ; // The block was deleted in the meantime.
+            return true;
+          }
+          else
+            return false;
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -1613,12 +1625,23 @@ namespace infinit
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
                   this->doughnut().id(), std::move(peers));
-                if (auto res = client.get())
-                  if (*res)
+                auto state = client.state();
+                if (state.value)
+                  if (*state.value)
                   {
-                    // FIXME: steal ownership
+                    ELLE_ASSERT(state.proposal);
+                    // FIXME: steal ownership instead of cloning
                     ELLE_DEBUG("received new block");
-                    return res.get()->clone();
+                    auto res = std::dynamic_pointer_cast<blocks::MutableBlock>(
+                      (*state.value)->clone());
+                    if (state.proposal->version != res->version())
+                    {
+                      auto v = state.proposal->version + 1;
+                      ELLE_DEBUG("bump seal version from {} to {}",
+                                 res->version(), v);
+                      res->seal_version(v);
+                    }
+                    return std::move(res);
                   }
                   else
                   {
@@ -1713,7 +1736,9 @@ namespace infinit
           ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: rebalance %f", *this, address);
           auto client = this->_client(address);
-          return this->_rebalance(client, address);
+          auto local =
+            std::static_pointer_cast<LocalPeer>(this->doughnut().local());
+          return local->rebalance(client, address);
         }
 
         // FIXME: rebalancers will re-lookup the node ids, which sucks

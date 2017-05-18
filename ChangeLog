@@ -1,5 +1,12 @@
 # Change Log
 
+### [0.8.1]
+
+### Changed
+
+- Avoid useless conflicts on blocks that have been rebalanced.
+
+
 ## [0.8.0]
 
 Kouncil improvements and completion, GRPC interface for the KV store,
