@@ -239,17 +239,57 @@ namespace infinit
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
 
+    using Update =
+      std::function<void(std::unique_ptr<infinit::model::blocks::Block>,
+         std::unique_ptr<infinit::model::ConflictResolver>, bool)>;
+
+    Update make_update_wrapper(Update f)
+    {
+      // model's update() function does not handle parallel calls with the same
+      // address, so wrap our call with a per-address mutex
+      using MutexPtr = std::shared_ptr<elle::reactor::Mutex>;
+      using MutexMap = std::unordered_map<infinit::model::Address, MutexPtr>;
+      auto map = std::make_shared<MutexMap>();
+      return [map, f] (std::unique_ptr<infinit::model::blocks::Block> block,
+        std::unique_ptr<infinit::model::ConflictResolver> resolver,
+        bool decrypt_data)
+      {
+        auto addr = block->address();
+        auto it = map->find(addr);
+        std::shared_ptr<elle::reactor::Mutex> mutex;
+        if (it == map->end())
+        {
+          mutex = MutexPtr(new elle::reactor::Mutex(),
+            [map, addr](elle::reactor::Mutex* m) {map->erase(addr); delete m;});
+          (*map)[addr] = mutex;
+        }
+        else
+          mutex = it->second;
+        elle::reactor::Lock lock(*mutex);
+        f(std::move(block), std::move(resolver), decrypt_data);
+      };
+    }
+
     std::unique_ptr<::grpc::Service>
     doughnut_service(model::Model& model)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(model);
+      using UpdateNamed = decltype(dht.update);
+      // We need to store our wrapper somewhere
+      static std::vector<std::shared_ptr<UpdateNamed>> update_wrappers;
       auto ptr = std::make_unique<Service>();
       ptr->AddMethod<::FetchRequest, ::FetchResponse>
         (dht.fetch, dht, "/Doughnut/fetch");
       ptr->AddMethod<::InsertRequest, ::InsertResponse>
         (dht.insert, dht, "/Doughnut/insert");
+      Update update = dht.update.function();
+      update_wrappers.emplace_back(new UpdateNamed(
+        make_update_wrapper(dht.update.function()),
+        infinit::model::block,
+        infinit::model::conflict_resolver = nullptr,
+        infinit::model::decrypt_data = false));
       ptr->AddMethod<::UpdateRequest, ::UpdateResponse>
-        (dht.update, dht, "/Doughnut/update");
+        (*update_wrappers.back(), dht, "/Doughnut/update");
       ptr->AddMethod<::MakeMutableBlockRequest, ::Block, true>
         (dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
       ptr->AddMethod<::MakeImmutableBlockRequest, ::Block, true>

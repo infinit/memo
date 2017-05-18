@@ -660,17 +660,108 @@ ELLE_TEST_SCHEDULED(filesystem)
   });
 }
 
+ELLE_TEST_SCHEDULED(doughnut_parallel)
+{
+  // Test GRPC API with multiple concurrent clients
+  auto make_kouncil = [](infinit::model::doughnut::Doughnut& dht,
+                         std::shared_ptr<infinit::model::doughnut::Local> local)
+  {
+    return std::make_unique<infinit::overlay::kouncil::Kouncil>(&dht, local);
+  };
+  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  std::vector<std::unique_ptr<DHT>> servers;
+  for (int i=0; i<3; ++i)
+    servers.push_back(std::make_unique<DHT>(
+      ::keys = keys,
+      ::id = special_id(i+1),
+      ::make_overlay = make_kouncil,
+      ::paxos = true));
+  for (int i=0; i<3; ++i)
+    for (int j=i+1; j<3; ++j)
+      ::discover(*servers[i], *servers[j], false);
+  auto client = std::make_unique<DHT>(
+      ::keys = keys,
+      ::make_overlay = make_kouncil,
+      ::paxos = true,
+      ::storage = nullptr);
+  discover(*client, *servers[0], false);
+  elle::reactor::sleep(500_ms);
+  infinit::model::Endpoints eps("127.0.0.1", 0);
+  auto ep = *eps.begin();
+  elle::reactor::Barrier b;
+  int listening_port = 0;
+  auto t = std::make_unique<elle::reactor::Thread>("grpc",
+    [&] {
+      b.open();
+      infinit::grpc::serve_grpc(*servers[0]->dht, boost::none, ep, &listening_port);
+    });
+  elle::reactor::wait(b);
+  ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
+  auto mutable_block = client->dht
+    ->make_block<infinit::model::blocks::MutableBlock>(std::string("{}"));
+  client->dht->seal_and_insert(*mutable_block);
+  auto task = [&](int id) {
+    auto chan = grpc::CreateChannel(
+        elle::sprintf("127.0.0.1:%s", listening_port),
+        grpc::InsecureChannelCredentials());
+    ::Block b;
+    auto stub = Doughnut::NewStub(chan);
+    // Fetch mutable_block
+    {
+      grpc::ClientContext context;
+      ::FetchResponse abs;
+      ::FetchRequest addr;
+      addr.set_address(std::string((const char*)mutable_block->address().value(), 32));
+      addr.set_decrypt_data(true);
+      stub->Fetch(&context, addr, &abs);
+      b.CopyFrom(abs.block());
+    }
+    std::unordered_map<std::string, int> payload;
+    payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
+    std::string sid = elle::sprintf("%s", id);
+    // Multiple updates on same block
+    ELLE_LOG("%s update start", id);
+    int conflicts = 0;
+    for (int i=0; i<20; ++i)
+    {
+      while (true)
+      {
+        payload[sid] = i;
+        b.set_data_plain(elle::serialization::json::serialize(payload).string());
+        grpc::ClientContext context;
+        ::UpdateResponse repl;
+        ::UpdateRequest update;
+        update.mutable_block()->CopyFrom(b);
+        update.set_decrypt_data(true);
+        auto res = stub->Update(&context, update, &repl);
+        BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
+        if (repl.has_current())
+        {
+          b.CopyFrom(repl.current());
+          ++conflicts;
+          payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
+          if (i != 0)
+            BOOST_CHECK_EQUAL(payload[sid], i-1);
+        }
+        else
+          break;
+      }
+    }
+    ELLE_LOG("%s update end, %s conflicts", id, conflicts);
+  };
+  elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
+  {
+    for (int i=0; i<5; ++i)
+      s.run_background("task", [&, i] {
+          elle::reactor::background([&, i] { task(i);});
+      });
+    elle::reactor::wait(s);
+  };
+  auto nb = client->dht->fetch(mutable_block->address());
+}
+
 ELLE_TEST_SCHEDULED(doughnut)
 {
-  elle::Error e("haha bronk");
-  try
-  {
-    throw e;
-  }
-  catch (...)
-  {
-    ELLE_LOG("mrouh\n%s", elle::serialization::json::serialize(std::current_exception()));
-  }
   DHTs dhts(3);
   auto client = dhts.client();
   auto alice = elle::cryptography::rsa::keypair::generate(512);
@@ -1025,6 +1116,7 @@ ELLE_TEST_SUITE()
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
   // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
   master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
+  master.add(BOOST_TEST_CASE(doughnut_parallel), 0, valgrind(20));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
 #ifndef INFINIT_WINDOWS
   // Test runs fine on native windows, but sometimes get stuck on wine
