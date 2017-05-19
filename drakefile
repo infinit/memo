@@ -512,6 +512,18 @@ def configure(
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
   rule_build << binaries
 
+  ## ---- ##
+  ## kv.  ##
+  ## ---- ##
+  if cxx_toolkit.os is not windows:
+    kv = drake.include(
+      'src/infinit/kv',
+      go_toolkit = go_toolkit,
+      go_config = go_config,
+      grpc = grpc,
+      infinit_cli = infinit_cli,
+    )
+
   ## -------- ##
   ## Licenses ##
   ## -------- ##

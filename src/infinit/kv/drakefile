@@ -1,0 +1,50 @@
+import drake
+import drake.go
+
+kv_bin = None
+rule_build = None
+rule_check = None
+rule_tests = None
+
+def configure(
+  go_toolkit,
+  go_config,
+  grpc,
+  infinit_cli,
+):
+  global kv_bin, rule_build, rule_check, rule_tests
+
+  rule_build = drake.Rule('build')
+  rule_check = drake.Rule('check')
+  rule_tests = drake.Rule('tests')
+
+  local_config = drake.go.Config(go_config)
+
+  gen_doughnut = grpc.GRPCGoGen(grpc.doughnut_proto, grpc.grpc.protoc,
+                                toolkit = go_toolkit)
+  doughnut_grpc = drake.copy(gen_doughnut.targets(), 'src/doughnut',
+                             strip_prefix = True)
+  gen_kv_service = grpc.GRPCGoGen(drake.node('protobuf/service.proto'),
+                                  grpc.grpc.protoc,
+                                  toolkit = go_toolkit)
+  kv_grpc = drake.copy(gen_kv_service.targets(), 'src/kv/service',
+                       strip_prefix = True)
+  gen_kv_data = grpc.GRPCGoGen(drake.node('protobuf/data.proto'),
+                               grpc.grpc.protoc,
+                               toolkit = go_toolkit)
+  kv_data = drake.copy(gen_kv_data.targets(), 'src/kv/data',
+                       strip_prefix = True)
+  local_config.add_include_path(drake.path_build())
+  sources = drake.nodes(
+    'src/server/server.go',
+  ) + doughnut_grpc + kv_grpc + kv_data
+  source_include = drake.path_source() / drake.Drake.current.prefix
+  local_config.add_include_path(source_include)
+
+  kv_bin = drake.go.Executable(
+    drake.go.Source('src/bin/key-value-store.go'),
+    go_toolkit, local_config,
+    target = 'bin/kv',
+    sources = sources,
+  )
+  rule_build << kv_bin
