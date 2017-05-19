@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package kv.service;
+
+service kv {
+  rpc insert(InsertRequest) returns (InsertResponse) {}
+  rpc update(UpdateRequest) returns (UpdateResponse) {}
+  rpc upsert(UpsertRequest) returns (UpsertResponse) {}
+  rpc get(GetRequest) returns (GetResponse) {}
+  rpc remove(RemoveRequest) returns (RemoveResponse) {}
+  rpc list(ListRequest) returns (ListResponse) {}
+};
+
+message InsertRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message InsertResponse {
+};
+
+message UpdateRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message UpdateResponse {
+};
+
+message UpsertRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message UpsertResponse {
+};
+
+message GetRequest {
+  string key = 1;
+};
+
+message GetResponse {
+  bytes value = 1;
+};
+
+message RemoveRequest {
+  string key = 1;
+};
+
+message RemoveResponse {
+};
+
+message ListRequest {
+  string prefix = 1;
+  string marker = 2;
+  string delimiter = 3;
+  uint64 maxKeys = 4;
+};
+
+message ListItem {
+  string key = 1;
+};
+
+message ListResponse {
+  repeated ListItem items = 1;
+  repeated string prefixes = 2;
+  bool truncated = 3;
+};
