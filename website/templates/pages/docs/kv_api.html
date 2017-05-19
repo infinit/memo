@@ -49,8 +49,12 @@ def type(proto, elem):
         <tr>
           <th colspan="2">
             <h3 id="${method['name']}">${method['name']}</h3>
-            <p><em>${method['documentation']['abstract']}</em></p>
           </th>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <p class="description">${method['documentation']['abstract']}</p>
+          </td>
         </tr>
         <tr>
           <td><strong>returns</strong></td>
@@ -60,25 +64,36 @@ def type(proto, elem):
           <td><strong>arguments</strong></td>
           <td><code>${' '.join(["<a href='#%(arg)s'>%(arg)s</a>" % {"arg": arg} for arg in method['arguments']])}</code></td>
         </tr>
+        <tr>
+          <td colspan="2">
+            % for doc in ['description', 'related', 'specific']:
+              % if method.get('documentation', {}).get(doc):
+                <p>${method['documentation'][doc]}.</p>
+              % endif
+            % endfor
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <!-- <h3 id="Example">Example</h3> -->
+
+            <ul class="switchLanguage">
+              <li><a class="active" data-language="go" href="#">Go</a></li>
+              <li><a data-language="cpp" href="#">C++</a></li>
+              <li><a data-language="python" href="#">Python</a></li>
+            </ul>
+
+            % for lang, classes in [('python', ['lang-python']), ('go', ['lang-go']), ('cpp', ['cpp', 'c++'])]:
+              <pre><code class='${" ".join(classes) + " notInFullCode hljs"}'><%include file='../../scripts/value-store/${lang}/${method["name"]}' /></code></pre>
+            % endfor
+          </td>
+        </tr>
       </table>
-
-      % for doc in ['description', 'related', 'specific']:
-        % if method.get('documentation', {}).get(doc):
-          <p> ${method['documentation'][doc]}.</p>
-        % endif
-      % endfor
-
-      <h3 id="Example">Example</h3>
-      % for lang, classes in [('cpp', ['cpp', 'c++']), ('go', ['lang-go']), ('python', ['lang-python'])]:
-        <pre><code class='${" ".join(classes) + " notInFullCode hljs"}'><%include file='../../scripts/value-store/${lang}/${method["name"]}' /></code></pre>
-      % endfor
     % endfor
 
     <h2 id="messages">Messages</h2>
 
     % for message in proto['messages']:
-
-
       <table class="message">
         <tr>
           <th colspan="4">

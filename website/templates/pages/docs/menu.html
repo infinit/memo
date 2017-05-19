@@ -121,8 +121,8 @@
     % if 'doc_kv' in request.route.name:
       <li class="title kv">KV Store</li>
 
-      <li ${'class="active"' if request.route.name == 'doc_kv' else ''}>
-        <a href="${route('doc_kv')}">Overview</a>
+      <li ${'class="active"' if request.route.name == 'doc_kv_overview' else ''}>
+        <a href="${route('doc_kv_overview')}">Overview</a>
       </li>
 
       <li ${'class="active"' if request.route.name == 'doc_kv_api' else ''}>

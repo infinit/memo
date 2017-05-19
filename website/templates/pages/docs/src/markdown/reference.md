@@ -28,38 +28,32 @@ $> export INFINIT_DATA_HOME="/some/where/"
 
 ### Nomenclature ###
 
-All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most commands have options named `--create`, `--list`, `--fetch`, etc.
+All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most objects have modes named `create`, `list`, `fetch`, etc.
 
-For more information on the options provided by a binary, do not hesitate to rely on the `--help` option. Note that the help is relative to the options already provided.
+For more information on the modes and options provided by a binary, do not hesitate to rely on the `--help` option. Note that the help is relative to the options already provided.
 
 For example, the help for _infinit user_ displays the general options available: export, create, import, list, etc.:
 
 ```
 $> infinit user --help
-Usage: infinit user MODE [OPTIONS...]
-
-Infinit user utility:
+Usage: ./_build/macosx64/bin/infinit user [MODE|--help]
+Infinit user management utility.
 
 Modes:
-  create                     Create a user
-  export                     Export a user so that it may be imported
-                               elsewhere
-  fetch                      Fetch a user from the Hub
-  import                     Import a user
-  pull                       Remove a user from the Hub
-  delete                     Delete a user locally
-  push                       Push a user to the Hub
-  signup                     Create and push a user to the Hub
-  login                      Log the user to the Hub
-  list                       List users
+  create     Create a user
+  delete     Delete local user
+  export     Export local user
+  hash       Get short hash of user's key
+  import     Import local user
+  fetch      Fetch users from https://beyond.infinit.sh
+  list       List local users
+  login      Login user to https://beyond.infinit.sh
+  pull       Pull a user from https://beyond.infinit.sh
+  push       Push a user from https://beyond.infinit.sh
+  signup     Create and push a user to https://beyond.infinit.sh
 
-Miscellaneous:
-  -h [ --help ]                Display the help
-  -s [ --script ]              Silence all extraneous human friendly messages
-  --compatibility-version arg  Force compatibility version
-  -v [ --version ]             Display version
-  --critical-log               Path to critical log file, none to disable
-  -a [ --as ] arg              User to run commands as (default: system user)
+Options:
+  -h, --help                show this help message
 ```
 
 Each mode of each binary has its own help as well. For example the help when invoking the `--create` mode of _infinit user_ shows the options associated with creating a user:
@@ -87,7 +81,7 @@ Options:
       --full                include private key (do not use unless you understand the implications
 ```
 
-Every binary follows the same semantic with the first option representing the mode of operation (a verb): `create`, `pull`, `list`, `delete`, `export`, etc.
+Every command is structured the same way: invoke the `infinit` binary with first the object type (user, volume, etc.) then the action/mode (e.g., `create`, `pull`, `list`, etc.), and then options and arguments (such as `--name`, `--pull` and so forth).
 
 The name/identifier of the object on which you wish to operate can be specified through the `--name` option or simply by providing it outside of any option. As such both commands below are equivalent:
 
@@ -105,7 +99,7 @@ The command-line tools however provide a way to rely on the Hub for certain oper
 
 The use of the Hub can be activated through specific options, mostly `--push`, `--fetch` and `--pull`. The `--push` option pushes an object on the Hub for other users to retrieve it. The `--pull` option does the exact opposite, removing the object from the Hub. Finally, the `--fetch` option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the `$INFINIT_DATA_HOME` directory.
 
-One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying `push` option when invoking the command.
+One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying `--push` option when invoking the command.
 
 Note that some binaries operate in hub mode by default. For instance the _infinit drive_ binary would not make sense without the Hub since its role is to bridge the gap between a low-level storage infrastructure and potential non-tech-savvy users.
 
@@ -297,7 +291,7 @@ Confirm the name of the user you would like to delete: alice
 Locally deleted user "alice".
 ```
 
-To be symmetric with the `push` option of the create mode, the `pull` is provided with the delete mode. This will remove the user both on the Hub and locally.
+To be symmetric with the `--push` option of the create mode, the `delete` mode is provided with a `--pull` option. This will remove the user both on the Hub and locally.
 
 ```
 $> infinit user delete --as alice --name alice --pull
