@@ -48,3 +48,22 @@ def configure(
     sources = sources,
   )
   rule_build << kv_bin
+
+  grpc_test = drake.go.TestExecutable(
+    drake.go.Source('tests/functional/grpc_test.go'),
+    go_toolkit, local_config,
+    target = 'tests/functional/grpc',
+    sources = kv_grpc,
+  )
+  rule_tests << grpc_test
+  rule_tests << [kv_bin, infinit_cli]
+
+  grpc_test_env = {
+    "INFINIT_BIN": str(infinit_cli),
+    "INFINIT_KV_BIN": str(kv_bin),
+  }
+  runner = drake.Runner(exe = grpc_test,
+                        env = grpc_test_env,
+                        sources = [kv_bin, infinit_cli])
+  runner.reporting = drake.Runner.Reporting.on_failure
+  rule_check << runner.status

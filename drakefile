@@ -523,6 +523,8 @@ def configure(
       grpc = grpc,
       infinit_cli = infinit_cli,
     )
+    rule_tests << kv.rule_tests
+    rule_check << kv.rule_check
 
   ## -------- ##
   ## Licenses ##
