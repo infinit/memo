@@ -692,7 +692,7 @@ Note that several volumes can be created on the same network, which is analogous
 The command below creates a volume on a network. You can specify the default mount point for the volume through the `--mountpoint` option even though the following example does not:
 
 ```
-$> infinit volume create --as alice --network cluster --name shared
+$> infinit volume create --as alice --network cluster --name shared --block-size 1024
 Locally created volume "alice/shared".
 ```
 
