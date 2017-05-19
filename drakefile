@@ -53,7 +53,10 @@ def configure(
     beyond: bool = True,
     website: bool = True,
     enable_crash_reporting: bool = True,
-    cxx_toolkit_host = None
+    cxx_toolkit_host = None,
+    go_toolkit = drake.go.Toolkit(
+      path = os.path.realpath(str(drake.path_build('go-dependencies')))),
+    go_config = drake.go.Config()
 ):
   if python3 is not None:
     python = python3
