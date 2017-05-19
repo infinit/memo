@@ -58,7 +58,7 @@ $(document).ready(function() {
       var height = $(window).scrollTop();
       var menu_anchor = $("#menu-anchor").offset().top - 13;
       var footer = $("footer").offset().top;
-      
+
       var menu_height = $(".side-menu ul.tier1").height() + 60; // margin bottom
 
       if (height > menu_anchor) {
@@ -217,7 +217,7 @@ $(document).ready(function() {
 
   function showInstallProcedure(platform) {
 
-    // Reset Debian tabs choice package/tarball 
+    // Reset Debian tabs choice package/tarball
     if (platform !== 'debian') {
       $('.tabs-pane').addClass('active');
     } else {
@@ -276,7 +276,7 @@ $(document).ready(function() {
     if (language === 'cpp') { pre_elements = 'pre code.cpp'; }
 
     $(pre_elements).not('pre code.notInFullCode').each(function(index, obj) {
-      if (index === 0) { 
+      if (index === 0) {
         fullCode = $(this).text();
       } else {
         fullCode += $(this).text() + '\r';
@@ -285,7 +285,7 @@ $(document).ready(function() {
     return fullCode;
   }
 
-  if ($('body').hasClass('doc_kv')) {
+  if ($('body').attr('class').indexOf("doc_kv") >= 0) {
 
     // Display Go snippets by default
     $('code.cpp').parent().not('pre.goal').hide();
@@ -310,15 +310,21 @@ $(document).ready(function() {
 
       e.preventDefault();
     });
+  }
+
+  if ($('body').hasClass('doc_kv_api')) {
+    // si 
+  }
+
+  if ($('body').hasClass('doc_kv_overview')) {
+    // Clone language bar before all the snippets
+    $('code.lang-python').parent().before($('ul.switchLanguage'));
 
     // Merge all snippets of the page
     // While excluding generic ones
     $('pre code.complete.lang-go').text(mergeAllSnippets('go'));
     $('pre code.complete.lang-python').text(mergeAllSnippets('python'));
     $('pre code.complete.cpp').text(mergeAllSnippets('cpp'));
-
-    // Clone language bar before all the snippets
-    $('code.lang-python').parent().before($('ul.switchLanguage'));
 
     $.ajax({
       url : '/scripts/kv/doughnut.proto',
@@ -336,5 +342,4 @@ $(document).ready(function() {
       hljs.highlightBlock(block);
     });
   }
-
 });
