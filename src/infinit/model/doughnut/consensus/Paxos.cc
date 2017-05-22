@@ -948,17 +948,7 @@ namespace infinit
               if (!valres)
                 throw Conflict("peer validation failed", block->clone());
             }
-          auto res = [&] {
-            try
-            {
-              return paxos.accept(std::move(peers), p, value);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_TRACE("%s: paxos accept failed with %s", this, e);
-              throw MissingBlock(address);
-            }
-          }();
+          auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
             BlockOrPaxos data(&decision);
@@ -994,15 +984,7 @@ namespace infinit
           if (block.paxos)
           {
             auto& decision = *block.paxos;
-            try
-            {
-              decision.paxos.confirm(peers, p);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_TRACE("%s: paxos confirm failed with %s", this, e);
-              throw MissingBlock(address);
-            }
+            decision.paxos.confirm(peers, p);
             ELLE_DEBUG("store confirmed paxos")
             {
               BlockOrPaxos data(&decision);
