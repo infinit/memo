@@ -232,12 +232,11 @@ private:
         this->keys_a->public_key(),
         passport_a,
         consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(0, members, std::move(local), d);
-          }),
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(0, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_a),
@@ -260,12 +259,11 @@ private:
         this->keys_a->public_key(),
         passport_b,
         consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(1, members, std::move(local), d);
-          }),
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(1, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
@@ -286,12 +284,11 @@ private:
         this->keys_a->public_key(),
         passport_c,
         consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(2, members, std::move(local), d);
-          }),
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(2, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),

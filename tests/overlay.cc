@@ -1552,7 +1552,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   if (auto kelips = get_kelips(*client))
     kelips->config().query_put_retries = 6;
   // We will shoot some servers.
-  discover(*client, servers[0] ? *servers[0] : *servers[1], false);
+  discover(*client, *servers[0], false);
   for (auto& s: servers)
     hard_wait(*s, n-1, client->dht->id());
   hard_wait(*client, n, client->dht->id());

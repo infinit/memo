@@ -54,7 +54,7 @@ make(bfs::path where,
                where / "async", cache_size);
            return std::move(async);
         };
-  infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
+  auto make_overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
@@ -66,7 +66,7 @@ make(bfs::path where,
     kp.public_key(),
     passport,
     consensus,
-    overlay,
+    make_overlay,
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
     std::move(s));
