@@ -1297,7 +1297,10 @@ ELLE_TEST_SCHEDULED(
         BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), value);
       }
       ELLE_LOG("done");
+      // Don't let A desperately trying to reconnect to B.
+      dht_a.reset();
     };
+  ELLE_LOG("End of test");
 }
 
 ELLE_TEST_SCHEDULED(
