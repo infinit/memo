@@ -1884,8 +1884,10 @@ namespace infinit
                   .equal_range(this->doughnut().id())));
             for (auto nb: blocks)
             {
-              done = false;
               auto address = nb.block;
+              if (!address.mutable_block())
+                continue;
+              done = false;
               ELLE_TRACE_SCOPE("rebalance %f out", address);
               auto quorum =
                 ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
