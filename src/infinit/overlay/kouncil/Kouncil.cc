@@ -839,12 +839,20 @@ namespace infinit
           if (idcount.second > rf)
             res.overreplicated_immutable_blocks++;
           else if (idcount.second < rf)
+          {
             res.underreplicated_immutable_blocks++;
+            if (res.sample_underreplicated.size() < 10)
+              res.sample_underreplicated.push_back(idcount.first);
+          }
         }
         for (auto const& idcount: ids_mutable)
         {
           if (idcount.second < rf)
+          {
             res.underreplicated_mutable_blocks++;
+            if (res.sample_underreplicated.size() < 10)
+              res.sample_underreplicated.push_back(idcount.first);
+          }
           if (idcount.second < quorum)
             res.under_quorum_mutable_blocks++;
         }
