@@ -90,7 +90,7 @@ namespace infinit
                 boost::posix_time::millisec(
                   std::chrono::duration_cast<std::chrono::milliseconds>(
                     rpc_timeout_delay).count());
-              boost::asio::deadline_timer timeout(
+              auto&& timeout = boost::asio::deadline_timer(
                 elle::reactor::scheduler().io_service(), delay);
               if (this->doughnut().soft_fail_running())
                 timeout.async_wait(
@@ -116,12 +116,12 @@ namespace infinit
               give_up = true;
             }
           }
-          catch(elle::reactor::network::Error const& e)
+          catch (elle::reactor::network::Error const& e)
           {
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);
           }
-          catch(elle::protocol::Serializer::EOF const& e)
+          catch (elle::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
           }
