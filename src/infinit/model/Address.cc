@@ -107,10 +107,13 @@ namespace infinit
       if (is_fixed(out))
       {
         out << "0x";
-        out << elle::format::hexadecimal::encode(
-          elle::ConstWeakBuffer(k._value, 4));
-        out << elle::format::hexadecimal::encode(
-          elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
+        auto b = elle::ConstWeakBuffer(k._value, 4);
+        while (b.size() > 1 && b[b.size() - 1] == 0)
+          b.size(b.size() - 1);
+        out << elle::format::hexadecimal::encode(b);
+        if (k._value[Address::flag_byte] != 0)
+          out << elle::format::hexadecimal::encode(
+            elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
       }
       else
         out << elle::ConstWeakBuffer(k._value);
