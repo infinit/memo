@@ -34,12 +34,12 @@ make(bfs::path where,
      infinit::model::Address node_id,
      bool enable_async,
      int cache_size,
-     elle::cryptography::rsa::KeyPair& kp)
+     elle::cryptography::rsa::KeyPair const& kp)
 {
-  std::unique_ptr<infinit::silo::Silo> s;
   bfs::create_directories(where / "store");
   bfs::create_directories(where / "async");
-  s.reset(new infinit::silo::Filesystem(where / "store"));
+  auto s = std::unique_ptr<infinit::silo::Silo>{
+    new infinit::silo::Filesystem(where / "store")};
   infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
@@ -259,76 +259,81 @@ ELLE_TEST_SCHEDULED(async_cache)
 
 ELLE_TEST_SCHEDULED(async_groups)
 {
-  auto node_id = infinit::model::Address::random(0);
-  auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = elle::cryptography::rsa::keypair::generate(1024);
+  auto const node_id = infinit::model::Address::random(0);
+  auto const path = bfs::temp_directory_path() / bfs::unique_path();
+  auto const kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
 
   // Create group
-  auto fs = make(path, node_id, false, 10, kp);
-  auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
-      ->block_store().get());
   {
-    infinit::model::doughnut::Group g(*dn, "test_group");
-    g.create();
-    g.current_public_key();
-    g.group_keys();
+    auto fs = make(path, node_id, false, 10, kp);
+    auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+        ->block_store().get());
+    {
+      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      g.create();
+      g.current_public_key();
+      g.group_keys();
+    }
   }
-  fs.reset();
 
   // stash agroup update
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
-  fs = make(path, node_id, true, 10, kp);
-  auto root = fs->path("/");
-  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
-      ->block_store().get());
   {
-    infinit::model::doughnut::Group g(*dn, "test_group");
-    g.remove_member(elle::serialization::json::serialize(kp.public_key()));
-    g.current_public_key();
-    g.group_keys();
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    auto const fs = make(path, node_id, true, 10, kp);
+    auto const root = fs->path("/");
+    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+        ->block_store().get());
+    {
+      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      g.remove_member(elle::serialization::json::serialize(kp.public_key()));
+      g.current_public_key();
+      g.group_keys();
+    }
+    {
+      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      g.current_public_key();
+      g.group_keys();
+      g.list_members();
+    }
   }
-  {
-    infinit::model::doughnut::Group g(*dn, "test_group");
-    g.current_public_key();
-    g.group_keys();
-    g.list_members();
-  }
-  fs.reset();
 
   // push some group update
-  fs = make(path, node_id, false, 10, kp);
-  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
-      ->block_store().get());
   {
-    infinit::model::doughnut::Group g(*dn, "test_group");
-    g.remove_member(elle::serialization::json::serialize(kp.public_key()));
-    g.current_public_key();
-    g.group_keys();
+    auto const fs = make(path, node_id, false, 10, kp);
+    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+        ->block_store().get());
+    {
+      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      g.remove_member(elle::serialization::json::serialize(kp.public_key()));
+      g.current_public_key();
+      g.group_keys();
+    }
   }
-  fs.reset();
 
   // unstash
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
-  fs = make(path, node_id, true, 10, kp);
-  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
-      ->block_store().get());
-  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   {
-    infinit::model::doughnut::Group g(*dn, "test_group");
-    g.current_public_key();
-    g.group_keys();
+    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    auto const fs = make(path, node_id, true, 10, kp);
+    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+        ->block_store().get());
+    BOOST_TEST(fs->path("/")->getxattr("user.infinit.sync") == "ok");
+    {
+      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      g.current_public_key();
+      g.group_keys();
+    }
+    BOOST_CHECK(true);
   }
-  BOOST_CHECK(true);
 }
 
 infinit::model::doughnut::consensus::Async*
@@ -346,14 +351,14 @@ ELLE_TEST_SCHEDULED(async_squash2)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
 
   // squash creating directories
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
   auto fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
     fs->path(elle::sprintf("/f%s", i))->mkdir(0600);
@@ -368,7 +373,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   fs.reset();
 
   // squash creating files
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
   fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
     writefile(fs, elle::sprintf("file%s", i), "foo");
@@ -383,7 +388,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   fs.reset();
 
   // squash other op barrier
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
   fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
   {
@@ -409,12 +414,12 @@ ELLE_TEST_SCHEDULED(async_squash)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
   auto fs = make(path, node_id, true, 100, kp);
   fs->path("/d1")->mkdir(0600);
   fs->path("/d2")->mkdir(0600);
@@ -440,8 +445,8 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -450,7 +455,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   BOOST_CHECK_EQUAL(root_count(fs), 2);
   fs.reset();
 
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
   fs = make(path, node_id, true, 100, kp);
   fs->path("/d1")->mkdir(0600);
   fs->path("/d2")->mkdir(0600);
