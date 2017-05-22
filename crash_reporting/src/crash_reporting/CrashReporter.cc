@@ -120,10 +120,10 @@ namespace crash_reporting
                                           elle::reactor::http::Method::PUT,
                                           "application/json");
     // The content of `path`, in base 64.
-    auto const dump = [&f]
+    auto const minidump = [&f]
       {
-        auto res = elle::Buffer{};
-        auto stream = elle::IOStream(res.ostreambuf());
+        auto buf = elle::Buffer{};
+        auto stream = elle::IOStream(buf.ostreambuf());
         auto&& base64_stream = elle::format::base64::Stream{stream};
         auto constexpr chunk_size = 16 * 1024;
         char chunk[chunk_size + 1];
@@ -134,11 +134,11 @@ namespace crash_reporting
           base64_stream.write(chunk, chunk_size);
           base64_stream.flush();
         }
-        return res;
+        return buf.string();
       }();
     auto content = elle::json::Object
       {
-        {"dump", dump.string()},
+        {"dump", minidump},
         {"platform", elle::system::platform::os_description()},
         {"version", this->_version},
       };
