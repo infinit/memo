@@ -251,8 +251,14 @@ def assertEq(a, b):
   if a == b:
     print('PASS: {} == {}'.format(a, b), file=sys.stderr)
   else:
-    diff = ''.join(udiff(a.splitlines(1),
-                         b.splitlines(1),
+    def lines(s):
+      s = str(s)
+      if s[:-1] != '\n':
+        s += '\n'
+      return s.splitlines(1)
+
+    diff = ''.join(udiff(lines(a),
+                         lines(b),
                          fromfile='a', tofile='b'))
     raise AssertionError('%r != %r\n%s' % (a, b, diff))
 
