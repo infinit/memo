@@ -53,7 +53,9 @@ def configure(
     beyond: bool = True,
     website: bool = True,
     enable_crash_reporting: bool = True,
-    cxx_toolkit_host = None
+    cxx_toolkit_host = None,
+    go_toolkit = None, # XXX placeholder for Go
+    go_config = None,  # XXX placeholder for Go
 ):
   if python3 is not None:
     python = python3
