@@ -1795,7 +1795,7 @@ ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
   // There is unfortunately no more specific way.
-  elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
+  elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no");
 #ifndef INFINIT_WINDOWS
   signal(SIGCHLD, SIG_IGN);
 #endif

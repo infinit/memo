@@ -163,7 +163,7 @@ ELLE_TEST_SCHEDULED(parallel)
   auto const delay_ms = valgrind(100, 4);
   auto const delay = std::chrono::milliseconds(delay_ms);
   {
-    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "5", 1);
+    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "5");
     Server s(
       [&] (infinit::RPCServer& s)
       {
@@ -190,7 +190,7 @@ ELLE_TEST_SCHEDULED(parallel)
     BOOST_CHECK_LE(duration, delay * 3);
   }
   {
-    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "0", 1);
+    elle::os::setenv("INFINIT_RPC_SERVE_THREADS", "0");
     Server s(
       [&] (infinit::RPCServer& s)
       {

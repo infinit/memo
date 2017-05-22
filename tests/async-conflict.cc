@@ -110,8 +110,8 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -141,7 +141,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("basic journal")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     fs.reset();
     fs = make(path, node_id, true, 10, kp);
     handle = fs->path("/")->child("foo2")->create(O_RDWR, 0666 | S_IFREG);
@@ -172,7 +172,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict dir")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "file", "foo");
@@ -191,7 +191,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict dir 2")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
@@ -210,7 +210,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict file")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
@@ -234,7 +234,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   {
     auto kp2 = elle::cryptography::rsa::keypair::generate(1024);
     auto pub2 = elle::serialization::json::serialize(kp2.K());
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     fs = make(path, node_id, true, 10, kp);
     // queue a attr change
     fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",

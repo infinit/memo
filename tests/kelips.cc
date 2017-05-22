@@ -94,11 +94,7 @@ public:
   Beyond()
   {
     register_route("/networks/bob/network/endpoints", elle::reactor::http::Method::GET,
-      [&] (
-           Headers const&,
-           Cookies const&,
-           Parameters const&,
-           elle::Buffer const&) -> std::string
+      [&] (Headers const&, Cookies const&, Parameters const&, elle::Buffer const&)
       {
         auto res = elle::serialization::json::serialize(_endpoints, false).string();
         while (true)
@@ -111,19 +107,19 @@ public:
         ELLE_LOG("endpoints: '%s'", res);
         return res;
       });
-    elle::os::setenv("INFINIT_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()), true);
+    elle::os::setenv("INFINIT_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
   }
-  ~Beyond()
-  {
-  }
+
   void push(infinit::model::Address id, Endpoints eps)
   {
     _endpoints["bob"][elle::sprintf("%s", id)] = e2b(eps);
   }
+
   void pull(infinit::model::Address id)
   {
     _endpoints["bob"].erase(elle::sprintf("%s", id));
   }
+
   void push(infinit::model::doughnut::Doughnut& d)
   {
     Endpoints eps {
@@ -134,14 +130,17 @@ public:
     };
     push(d.id(), eps);
   }
+
   void pull(infinit::model::doughnut::Doughnut& d)
   {
     pull(d.id());
   }
+
   void cleanup()
   {
     _endpoints.clear();
   }
+
 private:
   // username -> {node_id -> endpoints}
   using NetEndpoints = std::unordered_map<std::string,
@@ -160,7 +159,7 @@ using Nodes = std::vector<
 /// \param count   number of nodes to create.
 static
 Nodes
-run_nodes(bfs::path where,
+run_nodes(bfs::path const& where,
           elle::cryptography::rsa::KeyPair const& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false,
@@ -236,7 +235,7 @@ run_nodes(bfs::path where,
 static
 std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
 make_observer(std::shared_ptr<imd::Doughnut>& root_node,
-              bfs::path where,
+              bfs::path const& where,
               elle::cryptography::rsa::KeyPair const& kp,
               int groups,
               int replication_factor,
@@ -371,7 +370,7 @@ ELLE_TEST_SCHEDULED(basic)
 {
   auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -423,7 +422,7 @@ namespace
   {
     elle::filesystem::TemporaryDirectory d;
     auto tmp = d.path();
-    elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+    elle::os::setenv("INFINIT_HOME", tmp.string());
     auto kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
     auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, false, false);
@@ -605,7 +604,7 @@ ELLE_TEST_SCHEDULED(conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -684,7 +683,7 @@ ELLE_TEST_SCHEDULED(times)
 {
   elle::filesystem::TemporaryDirectory d;
   auto const tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
   auto fsp
@@ -737,7 +736,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
@@ -774,7 +773,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   static const int iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
@@ -801,7 +800,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
@@ -942,10 +941,10 @@ ELLE_TEST_SCHEDULED(beyond_storage)
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "2", 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "5", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "2");
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "5");
   // disable RDV so that nodes won't find each other that way
-  elle::os::setenv("INFINIT_RDV", "", 1);
+  elle::os::setenv("INFINIT_RDV", "");
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));
