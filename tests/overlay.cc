@@ -109,44 +109,41 @@ private:
   ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
 };
 
-/// A TCP socket that we can close/reopen, for tests.
+/// A TCP socket that we can close for tests.
 class TCPInstrument
 {
 public:
   TCPInstrument(int port)
-    : server()
-    , socket("127.0.0.1", port)
+    : _server()
+    , _socket("127.0.0.1", port)
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
     , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
                                         [this] { this->_serve(); }))
   {
-    this->server.listen();
+    this->_server.listen();
     this->_transmission.open();
+    ELLE_DEBUG("%s: built, port = %s/%s", this,
+               port, this->_server.local_endpoint().port());
   }
-
-  elle::reactor::network::TCPServer server;
-  elle::reactor::network::TCPSocket socket;
-  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, transmission);
 
   Endpoint
   endpoint()
   {
-    return Endpoint(boost::asio::ip::address::from_string("127.0.0.1"),
-                    this->server.local_endpoint().port());
+    // FIXME: why not _endpoint?
+    return {boost::asio::ip::address::from_string("127.0.0.1"),
+        this->_server.local_endpoint().port()};
   }
 
   void
   close()
   {
+    ELLE_DEBUG("%s: close", this);
     this->_thread->terminate_now();
-    this->socket.close();
+    this->_socket.close();
   }
 
 private:
   ELLE_LOG_COMPONENT("infinit.overlay.test.TCPInstrument");
-
-  ELLE_ATTRIBUTE(Endpoint, endpoint);
-  ELLE_ATTRIBUTE(Endpoint, client_endpoint);
 
   void
   _forward(elle::reactor::network::TCPSocket& in,
@@ -157,18 +154,19 @@ private:
     {
       try
       {
+        ELLE_DEBUG("%s: _forward", this);
         auto size = in.read_some(elle::WeakBuffer(buf));
         elle::reactor::wait(this->_transmission);
         out.write(elle::WeakBuffer(buf, size));
       }
       catch (elle::reactor::network::ConnectionClosed const&)
       {
-        ELLE_LOG("_forward: ConnectionClosed, breaking");
+        ELLE_LOG("%s: _forward: ConnectionClosed, breaking", this);
         break;
       }
       catch (elle::reactor::network::Error const& e)
       {
-        ELLE_LOG("ignoring exception %s", e);
+        ELLE_LOG("%s: _forward: ignoring exception %s", this, e);
       }
     }
   }
@@ -176,24 +174,28 @@ private:
   void
   _serve()
   {
-    auto socket = this->server.accept();
+    auto socket = this->_server.accept();
     elle::With<elle::reactor::Scope>() << [&] (auto& scope)
     {
       scope.run_background(elle::sprintf("%s forward", this),
                            [this, &socket]
                            {
-                             this->_forward(*socket, this->socket);
+                             this->_forward(*socket, this->_socket);
                            });
       scope.run_background(elle::sprintf("%s backward", this),
                            [this, &socket]
                            {
-                             this->_forward(this->socket, *socket);
+                             this->_forward(this->_socket, *socket);
                            });
       elle::reactor::wait(scope);
-      ELLE_LOG("_serve: done");
+      ELLE_LOG("%s: _serve: done", this);
     };
   }
 
+  elle::reactor::network::TCPServer _server;
+  elle::reactor::network::TCPSocket _socket;
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, transmission);
+  ELLE_ATTRIBUTE(Endpoint, endpoint);
   ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
 };
 
@@ -449,19 +451,19 @@ ELLE_TEST_SCHEDULED(
                        ::paxos = false,
                        ::storage = nullptr,
                        ::protocol = infinit::model::doughnut::Protocol::utp);
-      auto loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
-                              {instrument.endpoint()}};
+      auto const loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
+                                    {instrument.endpoint()}};
       ELLE_LOG("connect DHTs")
         discover(dht_b, dht_a, loc, true);
       // Ensure one request can go through.
       {
-        auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
+        auto const block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
           dht_a.dht->seal_and_insert(*block, tcr());
         ELLE_LOG("lookup block")
         {
           auto remote = dht_b.dht->overlay()->lookup(block->address()).lock();
-          BOOST_CHECK_EQUAL(remote->id(), dht_a.dht->id());
+          BOOST_TEST(remote->id() == dht_a.dht->id());
         }
       }
       // Partition peer
@@ -1246,19 +1248,21 @@ ELLE_TEST_SCHEDULED(
         doughnut::consensus::rebalance_auto_expand = false,
         doughnut::connect_timeout = std::chrono::milliseconds(valgrind(100, 10)),
         doughnut::soft_fail_running = true);
-      auto loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
-      Address addr;
-      // Ensure one request can go through.
-      {
-        auto block = dht_a->dht->make_block<MutableBlock>(std::string("stale"));
-        addr = block->address();
-        ELLE_LOG("store block")
-          dht_a->dht->seal_and_insert(*block, tcr());
-      }
+      auto const loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
+      auto const value = std::string("stale");
+      auto const addr = [&dht_a, &value]
+        // Ensure one request can go through.
+        {
+          auto block = dht_a->dht->make_block<MutableBlock>(value);
+          auto const res = block->address();
+          ELLE_LOG("store block")
+            dht_a->dht->seal_and_insert(*block, tcr());
+          return res;
+        }();
       ELLE_LOG("connect DHTs")
         discover(dht_b, *dht_a, loc, true);
       ELLE_LOG("lookup block")
-        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
+        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), value);
       ELLE_LOG("stale connection")
       {
         instrument.transmission().close();
@@ -1290,7 +1294,7 @@ ELLE_TEST_SCHEDULED(
               return l.id() == dht_a->dht->id();
             });
         ELLE_LOG("check fetching the block");
-        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
+        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), value);
       }
       ELLE_LOG("done");
     };
