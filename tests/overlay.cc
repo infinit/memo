@@ -79,11 +79,11 @@ private:
   ELLE_LOG_COMPONENT("infinit.overlay.test.UTPInstrument");
 
   ELLE_ATTRIBUTE(Endpoint, endpoint);
-  ELLE_ATTRIBUTE(Endpoint, client_endpoint);
   void
   _serve()
   {
     char buf[10000];
+    auto client_endpoint = Endpoint{};
     while (true)
     {
       try
@@ -93,11 +93,11 @@ private:
         elle::reactor::wait(this->_transmission);
         if (ep.port() != _endpoint.port())
         {
-          _client_endpoint = ep;
+          client_endpoint = ep;
           server.send_to(elle::ConstWeakBuffer(buf, sz), _endpoint.udp());
         }
         else
-          server.send_to(elle::ConstWeakBuffer(buf, sz), _client_endpoint.udp());
+          server.send_to(elle::ConstWeakBuffer(buf, sz), client_endpoint.udp());
       }
       catch (elle::reactor::network::Error const& e)
       {
