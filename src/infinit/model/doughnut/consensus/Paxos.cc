@@ -1820,7 +1820,10 @@ namespace infinit
                 {
                   auto quorum = conflict->value.get<PaxosServer::Quorum>();
                   if (quorum == ids)
+                  {
                     ELLE_TRACE("someone else rebalanced to the same quorum");
+                    return true;
+                  }
                   else if (signed(quorum.size()) == this->_factor)
                     ELLE_TRACE(
                       "someone else rebalanced to a sufficient quorum");
