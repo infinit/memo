@@ -264,7 +264,7 @@
     }
   },
   "minio": {
-    "name": "minio",
+    "name": "Minio",
     "description": "Minio enables applications to easily build their own scalable cloud storage infrastructure.",
     "properties": {
       "logic": ["object"],
