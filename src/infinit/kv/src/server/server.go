@@ -106,6 +106,7 @@ func (server *kvServer) put(key string, value []byte, update bool, atomic bool) 
 }
 
 func (server *kvServer) Insert(ctx context.Context, req *service.InsertRequest) (*service.InsertResponse, error) {
+	grpclog.Printf("insert %s\n", req.GetKey())
 	if err := server.put(req.GetKey(), req.GetValue(), false, true); err != nil {
 		return nil, err
 	}
@@ -113,6 +114,7 @@ func (server *kvServer) Insert(ctx context.Context, req *service.InsertRequest) 
 }
 
 func (server *kvServer) Update(ctx context.Context, req *service.UpdateRequest) (*service.UpdateResponse, error) {
+	grpclog.Printf("update %s", req.GetKey())
 	if err := server.put(req.GetKey(), req.GetValue(), true, true); err != nil {
 		return nil, err
 	}
@@ -120,6 +122,7 @@ func (server *kvServer) Update(ctx context.Context, req *service.UpdateRequest) 
 }
 
 func (server *kvServer) Upsert(ctx context.Context, req *service.UpsertRequest) (*service.UpsertResponse, error) {
+	grpclog.Printf("upsert %s\n", req.GetKey())
 	if err := server.put(req.GetKey(), req.GetValue(), false, false); err != nil {
 		return nil, err
 	}
@@ -127,6 +130,7 @@ func (server *kvServer) Upsert(ctx context.Context, req *service.UpsertRequest) 
 }
 
 func (server *kvServer) Get(ctx context.Context, req *service.GetRequest) (*service.GetResponse, error) {
+	grpclog.Printf("get %s\n", req.GetKey())
 	key := req.GetKey()
 	if key == "" {
 		return nil, grpc.Errorf(codes.InvalidArgument, "key is empty")
@@ -151,6 +155,7 @@ func (server *kvServer) Get(ctx context.Context, req *service.GetRequest) (*serv
 }
 
 func (server *kvServer) Remove(ctx context.Context, req *service.RemoveRequest) (*service.RemoveResponse, error) {
+	grpclog.Printf("remove %s\n", req.GetKey())
 	key := req.GetKey()
 	if key == "" {
 		return nil, grpc.Errorf(codes.InvalidArgument, "key is empty")
@@ -166,6 +171,7 @@ func (server *kvServer) Remove(ctx context.Context, req *service.RemoveRequest) 
 }
 
 func (server *kvServer) List(ctx context.Context, req *service.ListRequest) (*service.ListResponse, error) {
+	grpclog.Printf("list\n")
 	block, err := server.rootBlock()
 	if err != nil {
 		return nil, err
@@ -359,6 +365,7 @@ func (server *kvServer) store(op operation) error {
 		if status.GetCurrent() == nil {
 			break
 		}
+		grpclog.Printf("conflict storing, replay changes\n")
 		block = status.Current
 		if km, err = getMap(block); err != nil {
 			return err

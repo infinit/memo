@@ -38,5 +38,6 @@ func main() {
 	defer kvConn.Close()
 	grpcServer := grpc.NewServer()
 	kv.RegisterKvServer(grpcServer, server.NewServer(client, *kvName, *kvBootstrap))
+	grpclog.Printf("key-value store ready\n")
 	grpcServer.Serve(kvConn)
 }
