@@ -20,9 +20,11 @@ ELLE_LOG_COMPONENT("infinit.filesystem.FileHandle");
 namespace
 {
   using elle::os::getenv;
-  const int max_embed_size = getenv("INFINIT_MAX_EMBED_SIZE", 8192);
-  const int lookahead_blocks = getenv("INFINIT_LOOKAHEAD_BLOCKS", 5);
-  const int max_lookahead_threads = getenv("INFINIT_LOOKAHEAD_THREADS", 3);
+  auto const max_embed_size = getenv("INFINIT_MAX_EMBED_SIZE", 8192);
+  auto const lookahead_blocks = getenv("INFINIT_LOOKAHEAD_BLOCKS", 5);
+  auto const max_lookahead_threads = getenv("INFINIT_LOOKAHEAD_THREADS", 3);
+  using Size = elle::Buffer::Size;
+  auto const default_first_block_size = Size(getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", 0));
 }
 
 namespace infinit
@@ -37,9 +39,6 @@ namespace infinit
         return std::chrono::high_resolution_clock::now();
       }
     }
-
-    const uint64_t FileBuffer::default_first_block_size
-      = elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", 0);
 
     FileHandle::FileHandle(FileSystem& owner,
                            FileData data,
@@ -169,7 +168,7 @@ namespace infinit
       }
       // scroll offset so that offset 0 is first fat block
       offset -= _file._data.size();
-      off_t end = offset + size;
+      auto end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
       _last_read_block = start_block;
       _check_prefetch();
@@ -177,7 +176,7 @@ namespace infinit
       if (start_block == end_block)
       {
         // single block case
-        off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
+        auto block_offset = offset - (off_t)start_block * (off_t)block_size;
         auto it = _blocks.find(start_block);
         std::shared_ptr<elle::Buffer> block;
         if (it != _blocks.end())
@@ -269,12 +268,10 @@ namespace infinit
       if (size == 0)
         return 0;
       // figure out first block size for this file
-      uint64_t max_first_block_size = 0;
-      if (this->_file._fat.empty())
-        max_first_block_size = std::max(default_first_block_size,
-                                      _file._data.size());
-      else
-        max_first_block_size = _file._data.size();
+      auto max_first_block_size =
+        this->_file._fat.empty()
+        ? std::max(default_first_block_size, _file._data.size())
+        : _file._data.size();
       ELLE_TRACE_SCOPE("%s: write %s bytes at offset %s fbs %s)",
                        *this, size, offset, max_first_block_size);
       ELLE_ASSERT_EQ(buffer.size(), size);
@@ -284,7 +281,7 @@ namespace infinit
       {
         // write on first block
         _fat_changed = true;
-        auto wend = std::min(uint64_t(size + offset), max_first_block_size);
+        auto wend = std::min(Size(size + offset), max_first_block_size);
         if (_file._data.size() < wend)
         {
           auto oldsz = _file._data.size();
