@@ -1877,10 +1877,17 @@ namespace infinit
               ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
             ELLE_ENFORCE_EQ(quorum.erase(this->doughnut().id()), 1u);
             ELLE_DEBUG("new quorum: %f", quorum);
-            auto client = this->_client(address);
-            auto latest = this->_latest(client, address);
-            if (!this->_rebalance(client, address, quorum, latest))
-              ELLE_WARN("%f: unable to rebalance %f", this, address);
+            try
+            {
+              auto client = this->_client(address);
+              auto latest = this->_latest(client, address);
+              if (!this->_rebalance(client, address, quorum, latest))
+                ELLE_WARN("%f: unable to rebalance %f", this, address);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%f: unable to rebalance %f: %f", this, address, e);
+            }
           }
         }
 
