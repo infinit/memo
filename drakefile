@@ -515,16 +515,15 @@ def configure(
   ## ---- ##
   ## kv.  ##
   ## ---- ##
-  if cxx_toolkit.os is not windows:
-    kv = drake.include(
-      'src/infinit/kv',
-      go_toolkit = go_toolkit,
-      go_config = go_config,
-      grpc = grpc,
-      infinit_cli = infinit_cli,
-    )
-    rule_tests << kv.rule_tests
-    rule_check << kv.rule_check
+  kv = drake.include(
+    'src/infinit/kv',
+    go_toolkit = go_toolkit,
+    go_config = go_config,
+    grpc = grpc,
+    infinit_cli = infinit_cli,
+  )
+  rule_tests << kv.rule_tests
+  rule_check << kv.rule_check
 
   ## -------- ##
   ## Licenses ##
