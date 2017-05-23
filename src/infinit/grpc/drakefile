@@ -124,10 +124,19 @@ class GRPCGoGen(GRPCGen):
     srcs = []
     if plugin is None:
       if toolkit is not None:
-        plugin = drake.go.GoPackage(
-          package = 'github.com/golang/protobuf/protoc-gen-go',
-          target = '%s/bin/protoc-gen-go' % toolkit.path,
-          toolkit = toolkit)
+        if toolkit.os == 'windows':
+          plugin = drake.node('%s/bin/%s/protoc-gen-go.exe' % (
+            toolkit.path, toolkit.platform_str()))
+        else:
+          plugin = drake.node('%s/bin/protoc-gen-go' % toolkit.path)
+        if not plugin.builder:
+          drake.go.FetchPackage(
+            url = 'github.com/golang/protobuf/protoc-gen-go',
+            toolkit = toolkit,
+            targets = [
+              plugin,
+            ],
+          )
       elif os.environ.get('GOPATH'):
         plugin = drake.node('%s/bin/protoc-gen-go' % os.environ['GOPATH'])
       elif os.environ.get('GOROOT'):
