@@ -160,7 +160,7 @@ namespace
       DHT client(owner = this->owner_keys,
                  keys = k,
                  storage = nullptr,
-                 make_consensus = no_cheat_consensus,
+                 dht::consensus_builder = no_cheat_consensus(pax),
                  paxos = pax,
                  std::forward<Args>(args) ...
                  );
@@ -890,7 +890,7 @@ void read_all(std::shared_ptr<elle::reactor::filesystem::Path> p)
 
 ELLE_TEST_SCHEDULED(acls)
 {
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus());
   auto client0 = servers.client(false, {}, user_name="user0");
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1");
@@ -1472,7 +1472,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
 
 ELLE_TEST_SCHEDULED(conflicts)
 {
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus(), yielding_overlay = true);
   auto client0 = servers.client(false, {}, user_name="user0", yielding_overlay = true);
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1", yielding_overlay = true);
@@ -1626,7 +1626,7 @@ ELLE_TEST_SCHEDULED(world_perm_mode)
   auto client1 = servers.client(false, {});
   auto client2 = servers.client(true);
   auto client3 = DHTs::Client("volume", servers.dht(false, {}),
-    ifs::map_other_permissions = false);
+                              ifs::map_other_permissions = false);
   client1.fs->path("/");
   client1.fs->path("/")->chmod(0755);
   write_file(client1.fs->path("/foo"), "bar");
@@ -1751,7 +1751,7 @@ ELLE_TEST_SCHEDULED(block_size)
        return false;
   };
   elle::ConstWeakBuffer cc(content.data(), content.size());
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus(), yielding_overlay = true);
   auto client1 = servers.client(false, {}, yielding_overlay = true);
   auto client2 = servers.client(false, {}, yielding_overlay = true);
   BOOST_CHECK(write_file(client1.fs->path("/foo")));

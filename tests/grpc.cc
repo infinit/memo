@@ -222,7 +222,7 @@ public:
     DHT client(owner = this->owner_keys,
                keys = k,
                storage = nullptr,
-               make_consensus = no_cheat_consensus,
+               dht::consensus_builder = no_cheat_consensus(pax),
                paxos = pax,
                std::forward<Args>(args) ...
                );
