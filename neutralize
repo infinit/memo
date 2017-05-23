@@ -1,0 +1,27 @@
+#! /usr/bin/env python3
+
+import re
+import sys
+
+def parse_args():
+    import argparse
+    p = argparse.ArgumentParser(description='Neutralize things in our logs.')
+    p.add_argument('-p', '--preserve', nargs='*',
+                   help='names to preserve')
+    return p.parse_args()
+
+args = parse_args()
+hexas = {}
+preserve = '|'.join('(?:{})'.format(p) for p in args.preserve) if args.preserve else None
+
+def repl_hexa(match):
+    s = match.group(0)
+    if preserve and re.match(preserve, s):
+        return s
+    if s not in hexas:
+        hexas[s] = '{:#06x}'.format(len(hexas))
+    return hexas[s]
+
+for l in sys.stdin:
+    l = re.sub('(0x[0-9a-fA-F]+)', repl_hexa, l)
+    print(l, end='')

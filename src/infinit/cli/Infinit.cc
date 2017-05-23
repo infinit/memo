@@ -132,7 +132,7 @@ namespace infinit
           ELLE_WARN("Something is wrong with your locale settings,"
                     " overriding: %s",
                     e.what());
-          elle::os::setenv("LC_ALL", "C", 1);
+          elle::os::setenv("LC_ALL", "C");
         }
 #endif
       }

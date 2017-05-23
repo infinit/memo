@@ -475,7 +475,7 @@ namespace infinit
           {
             prev_home = elle::os::getenv("INFINIT_HOME", "");
             prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
-            elle::os::setenv("INFINIT_HOME", su.home, 1);
+            elle::os::setenv("INFINIT_HOME", su.home);
             if (!elle::os::getenv("INFINIT_HOME_OVERRIDE", "").empty())
               elle::os::setenv("INFINIT_HOME",
                 elle::os::getenv("INFINIT_HOME_OVERRIDE", ""), 1);
@@ -495,9 +495,9 @@ namespace infinit
             if (prev_home.empty())
               elle::os::unsetenv("INFINIT_HOME");
             else
-              elle::os::setenv("INFINIT_HOME", prev_home, 1);
+              elle::os::setenv("INFINIT_HOME", prev_home);
             if (!prev_data_home.empty())
-              elle::os::setenv("INFINIT_DATA_HOME", prev_data_home, 1);
+              elle::os::setenv("INFINIT_DATA_HOME", prev_data_home);
             elle::seteuid(prev_euid);
             elle::setegid(prev_egid);
           }

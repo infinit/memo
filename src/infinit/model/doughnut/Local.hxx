@@ -41,11 +41,11 @@ namespace infinit
                                        &rpc, std::ref(args)...);
               try
               {
-                return RPCServer::umbrella(f);
+                RPCServer::umbrella(f);
               }
               catch (UnknownRPC const& e)
               {
-                // FIXME: Ignore ? Evict ? Should probably be configurable. So
+                // FIXME: Ignore? Evict? Should probably be configurable. So
                 // far only Kouncil uses this, and it's definitely an ignore.
                 ELLE_WARN("error contacting %s: %s", c, e);
               }

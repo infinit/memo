@@ -444,7 +444,7 @@ namespace infinit
       ELLE_TRACE("Spawning with %s %s", args, env);
       // FIXME upgrade Process to accept env
       for (auto const& e: env)
-        elle::os::setenv(e.first, e.second, true);
+        elle::os::setenv(e.first, e.second);
       m.process = std::make_unique<elle::system::Process>(args, true);
       int pid = m.process->pid();
       std::thread t([pid] {

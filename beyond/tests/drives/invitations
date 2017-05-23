@@ -9,6 +9,9 @@ from utils import *
 
 from copy import deepcopy
 
+crash_email = 'crash+passport_generation@infinit.sh'
+
+
 def setup(beyond, user = None):
   if user is None:
     user = User()
@@ -70,9 +73,8 @@ class Test(unittest.TestCase):
       passports = beyond.get('users/%s/passports' % bob['name'],
                              auth = bob).json()['passports']
       assertEq(len(passports), 0)
-      emails = beyond.emailer.get_specifics(
-        'developers+passport_generation@infinit.sh',
-        'Internal/Passport Generation Error')
+      emails = beyond.emailer.get_specifics(crash_email,
+                                            'Internal/Passport Generation Error')
       assertEq(len(emails), 1)
       assertIn('Unknown network', emails[0]['errors'])
 

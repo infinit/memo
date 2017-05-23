@@ -248,18 +248,30 @@ class Infinit(TemporaryDirectory):
     return response
 
 def assertEq(a, b):
-  if a != b:
-    diff = ''.join(udiff(a.splitlines(1),
-                         b.splitlines(1),
+  if a == b:
+    print('PASS: {} == {}'.format(a, b), file=sys.stderr)
+  else:
+    def lines(s):
+      s = str(s)
+      if s[:-1] != '\n':
+        s += '\n'
+      return s.splitlines(1)
+
+    diff = ''.join(udiff(lines(a),
+                         lines(b),
                          fromfile='a', tofile='b'))
     raise AssertionError('%r != %r\n%s' % (a, b, diff))
 
 def assertNeq(a, b):
-  if a == b:
+  if a != b:
+    print('PASS: {} != {}'.format(a, b), file=sys.stderr)
+  else:
     raise AssertionError('%r == %r' % (a, b))
 
 def assertIn(a, b):
-  if a not in b:
+  if a in b:
+    print('PASS: {} in {}'.format(a, b), file=sys.stderr)
+  else:
     raise AssertionError('%r not in %r' % (a, b))
 
 def throws(f, contains = None):

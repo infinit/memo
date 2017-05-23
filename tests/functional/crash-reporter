@@ -6,11 +6,13 @@ with TemporaryDirectory() as tmp, \
      Beyond() as beyond, \
      Infinit(beyond = beyond) as bob:
   server = '%s/crash/report' % beyond.domain
-  email = 'developers@infinit.io'
+  email = 'crash@infinit.sh'
   template = 'Internal/Crash Report'
 
   def report_emails():
-    return beyond.emailer.get_specifics(email, template)
+    res = beyond.emailer.get_specifics(email, template)
+    print("emails:", res, file=sys.stderr)
+    return res
 
   def dumps():
     return os.listdir(str(tmp))
