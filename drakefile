@@ -300,6 +300,7 @@ def configure(
                                     cxx_toolkit = cxx_toolkit,
                                     cxx_config = cxx_config)
     crash_reporter_lib = import_lib(crash_reporting)
+    cxx_config.define('INFINIT_ENABLE_CRASH_REPORTER')
 
   ## -------- ##
   ## Binaries ##
