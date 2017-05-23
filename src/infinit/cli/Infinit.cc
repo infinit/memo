@@ -55,7 +55,7 @@ namespace infinit
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
-        if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+        if (!elle::os::getenv("INFINIT_DISABLE_SIGNAL_HANDLER", false))
         {
           static const auto signals = {SIGINT, SIGTERM
 #ifndef INFINIT_WINDOWS
