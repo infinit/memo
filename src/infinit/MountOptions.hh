@@ -44,9 +44,7 @@ namespace infinit
     using Strings = std::vector<std::string>;
     using Environ = std::unordered_map<std::string, std::string>;
 
-    MountOptions();
     void to_commandline(Strings& arguments, Environ& env) const;
-    // void merge(boost::program_options::variables_map const& args);
     void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
@@ -96,6 +94,9 @@ namespace infinit
 #endif
                  ))>;
   };
+
+  /// Print for debugging.
+  std::ostream& operator<<(std::ostream& os, MountOptions const& mo);
 }
 
 ELLE_DAS_SERIALIZE(infinit::MountOptions);
