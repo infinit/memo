@@ -1149,7 +1149,7 @@ namespace infinit
               }
           });
         // Experimental: poll root on mount to trigger caching.
-#   if 0
+#if 0
         auto root_poller = boost::optional<std::thread>{};
         if (mo.mountpoint && mo.cache && mo.cache.get())
           root_poller.emplace(
@@ -1172,7 +1172,7 @@ namespace infinit
             if (root_poller)
               root_poller->join();
           });
-#   endif
+#endif
         if (volume.default_permissions && !volume.default_permissions->empty())
         {
           auto ops =

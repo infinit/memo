@@ -1,4 +1,7 @@
 #include <infinit/Volume.hh>
+
+#include <elle/algorithm.hh>
+
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/utility.hh>
 
@@ -6,6 +9,8 @@ ELLE_LOG_COMPONENT("infinit");
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   Volume::Volume(descriptor::BaseDescriptor::Name name,
                  std::string network,
                  MountOptions const& mount_options,
@@ -51,73 +56,65 @@ namespace infinit
               bool allow_root_creation,
               bool map_other_permissions
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-              , boost::optional<std::string> volname_
+              , boost::optional<std::string> volname
 #endif
 #ifdef INFINIT_MACOSX
-              , boost::optional<std::string> volicon_
+              , boost::optional<std::string> volicon
 #endif
     )
   {
-    {
-      auto opts = std::vector<std::string>{};
-      auto env = std::unordered_map<std::string, std::string>{};
-      mount_options.to_commandline(opts, env);
-      ELLE_TRACE("mount options: %s  environ %s", opts, env);
-    }
-    auto mountpoint = boost::optional<boost::filesystem::path>{};
+    ELLE_TRACE("mount options: %s", mount_options);
+    auto mountpoint = boost::optional<bfs::path>{};
     if (this->mount_options.mountpoint)
-      mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
+      mountpoint = bfs::path(this->mount_options.mountpoint.get());
     auto fs = std::make_unique<filesystem::FileSystem>(
-      infinit::filesystem::model = dht,
-      infinit::filesystem::allow_root_creation = allow_root_creation,
-      infinit::filesystem::volume_name = this->name,
-      infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
-      infinit::filesystem::mountpoint = mountpoint,
-      infinit::filesystem::map_other_permissions = map_other_permissions,
-      infinit::filesystem::block_size = block_size);
+      filesystem::model = dht,
+      filesystem::allow_root_creation = allow_root_creation,
+      filesystem::volume_name = this->name,
+      filesystem::root_block_cache_dir = this->root_block_cache_dir(),
+      filesystem::mountpoint = mountpoint,
+      filesystem::map_other_permissions = map_other_permissions,
+      filesystem::block_size = block_size);
     auto driver =
       std::make_unique<elle::reactor::filesystem::FileSystem>(std::move(fs), true);
     if (mountpoint)
     {
       auto fuse_options = std::vector<std::string>{
         "infinit-volume",
-        "-o", "noatime",
-        "-o", "hard_remove",
       };
+      auto add =
+        [&fuse_options] (std::string const& name,
+                         std::string const& val = {})
+        {
+          elle::push_back(fuse_options,
+                          "-o",
+                          val.empty()
+                          ? elle::sprintf("%s", name)
+                          : elle::sprintf("%s=%s", name, val));
+        };
+      add("noatime");
+      add("hard_remove");
       if (mount_options.readonly && mount_options.readonly.get())
-      {
-        fuse_options.emplace_back("-o");
-        fuse_options.emplace_back("ro");
-      }
+        add("ro");
 #ifndef INFINIT_WINDOWS
       if (mount_options.fuse_options)
         for (auto const& opt: *mount_options.fuse_options)
-        {
-          fuse_options.emplace_back("-o");
-          fuse_options.emplace_back(opt);
-        }
+          add(opt);
 #endif
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-      auto add_option =
-        [&fuse_options] (std::string const& opt_name,
-                         std::string const& opt_val)
-        {
-          fuse_options.emplace_back("-o");
-          fuse_options.emplace_back(elle::sprintf("%s=%s", opt_name, opt_val));
-        };
-      add_option("volname", volname_.value_or(this->name));
+      add("volname", volname.value_or(this->name));
 #endif
 #ifdef INFINIT_MACOSX
-      add_option("daemon_timeout", "600");
-      if (volicon_)
-        add_option("volicon", *volicon_);
+      add("daemon_timeout", "600");
+      if (volicon)
+        add("volicon", *volicon);
 #endif
       driver->mount(*mountpoint, fuse_options);
     }
     return driver;
   }
 
-  boost::filesystem::path
+  bfs::path
   Volume::root_block_cache_dir() const
   {
     return xdg_state_home() / this->network / std::string(this->name);
