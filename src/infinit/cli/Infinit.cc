@@ -27,7 +27,7 @@
 #include <infinit/cli/utility.hh>
 #include <infinit/utility.hh>
 
-ELLE_LOG_COMPONENT("infinit");
+ELLE_LOG_COMPONENT("cli");
 
 namespace bfs = boost::filesystem;
 

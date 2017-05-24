@@ -19,7 +19,7 @@
 #include <infinit/cli/Error.hh>
 
 
-ELLE_LOG_COMPONENT("ifnt.cli.utility");
+ELLE_LOG_COMPONENT("cli.utility");
 
 namespace infinit
 {
