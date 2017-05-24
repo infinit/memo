@@ -330,7 +330,7 @@ namespace infinit
                   }
                   catch (...)
                   {
-                    ELLE_TRACE("handshake error: {}",
+                    ELLE_TRACE("%s: handshake error: %s",
                                socket, elle::exception_string());
                     // Delay termination from destructor.
                     elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
