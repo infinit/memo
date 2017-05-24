@@ -1032,17 +1032,13 @@ namespace infinit
       if (mo.mountpoint)
       {
 #ifdef INFINIT_WINDOWS
-        if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
-          ;
-        else
+        if (mo.mountpoint->size() != 2 || (*mo.mountpoint)[1] != ':')
 #elif defined INFINIT_MACOSX
         // Do not try to create folder in /Volumes.
-        auto mount_path = bfs::path(mo.mountpoint.get());
+        auto mount_path = bfs::path(*mo.mountpoint);
         auto mount_parent
           = boost::algorithm::to_lower_copy(mount_path.parent_path().string());
-        if (mount_parent.find("/volumes") == 0)
-          ;
-        else
+        if (mount_parent.find("/volumes") != 0)
 #endif
         try
         {
@@ -1094,7 +1090,7 @@ namespace infinit
       {
         local_endpoint = model->local()->server_endpoint();
         if (port_file)
-          port_to_file(local_endpoint.get().port(), *port_file);
+          port_to_file(local_endpoint->port(), *port_file);
         if (endpoints_file)
           endpoints_to_file(model->local()->server_endpoints(),
                             *endpoints_file);
@@ -1108,8 +1104,6 @@ namespace infinit
         cli.report_action("running", "volume", volume.name);
         auto& dht = *model;
         auto fs = volume.run(std::move(model),
-                             mo.mountpoint,
-                             mo.readonly,
                              allow_root_creation,
                              map_other_permissions
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS

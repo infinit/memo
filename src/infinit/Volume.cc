@@ -51,8 +51,6 @@ namespace infinit
 
   std::unique_ptr<elle::reactor::filesystem::FileSystem>
   Volume::run(std::shared_ptr<model::doughnut::Doughnut> dht,
-              boost::optional<std::string> mountpoint_, // FIXME: unused.
-              boost::optional<bool> readonly,
               bool allow_root_creation,
               bool map_other_permissions
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
@@ -63,10 +61,10 @@ namespace infinit
 #endif
     )
   {
-    ELLE_TRACE("mount options: %s", mount_options);
+    ELLE_TRACE("mount options: %s", this->mount_options);
     auto mountpoint = boost::optional<bfs::path>{};
     if (this->mount_options.mountpoint)
-      mountpoint = bfs::path(this->mount_options.mountpoint.get());
+      mountpoint = bfs::path(*this->mount_options.mountpoint);
     auto fs = std::make_unique<filesystem::FileSystem>(
       filesystem::model = dht,
       filesystem::allow_root_creation = allow_root_creation,
@@ -94,7 +92,7 @@ namespace infinit
         };
       add("noatime");
       add("hard_remove");
-      if (mount_options.readonly && mount_options.readonly.get())
+      if (mount_options.readonly.value_or(false))
         add("ro");
 #ifndef INFINIT_WINDOWS
       if (mount_options.fuse_options)

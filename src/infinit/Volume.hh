@@ -24,15 +24,13 @@ namespace infinit
 
     std::unique_ptr<elle::reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
-        boost::optional<std::string> mountpoint_ = {},
-        boost::optional<bool> readonly = {},
         bool allow_root_creation = false,
         bool map_other_permissions = true
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
-        , boost::optional<std::string> volname_ = {}
+        , boost::optional<std::string> volname = {}
 #endif
 #ifdef INFINIT_MACOSX
-        , boost::optional<std::string> volicon_ = {}
+        , boost::optional<std::string> volicon = {}
 #endif
       );
 
