@@ -24,14 +24,14 @@ namespace crash_reporting
 
     void
     upload_existing() const;
-    int32_t
-    crashes_pending_upload();
+    /// The number of minidump waiting to be sent.
+    int
+    crashes_pending_upload() const;
 
   private:
     void
     _upload(bfs::path const& path) const;
     ELLE_ATTRIBUTE(std::string, crash_url);
-    ELLE_ATTRIBUTE_R(bool, enabled);
     ELLE_ATTRIBUTE(std::unique_ptr<breakpad::ExceptionHandler>, exception_handler);
     ELLE_ATTRIBUTE(bfs::path, dumps_path);
     ELLE_ATTRIBUTE(std::string, version);
