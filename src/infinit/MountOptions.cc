@@ -1,10 +1,9 @@
 #include <infinit/MountOptions.hh>
 
+#include <elle/printf.hh>
+
 namespace infinit
 {
-  MountOptions::MountOptions()
-  {}
-
   template <typename T>
   void merge(T& a, const T& b)
   {
@@ -84,5 +83,14 @@ namespace infinit
       args("--mountpoint", *mountpoint);
     if (as)
       args("--as", *as);
+  }
+
+  std::ostream&
+  operator<<(std::ostream& os, MountOptions const& mo)
+  {
+    auto opts = std::vector<std::string>{};
+    auto env = std::unordered_map<std::string, std::string>{};
+    mo.to_commandline(opts, env);
+    return elle::fprintf(os, "MountOptions(%s, %s)", opts, env);
   }
 }

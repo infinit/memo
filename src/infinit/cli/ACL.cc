@@ -9,7 +9,7 @@
 #include <infinit/cli/xattrs.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
-ELLE_LOG_COMPONENT("infinit-acl");
+ELLE_LOG_COMPONENT("cli.acl");
 
 namespace infinit
 {

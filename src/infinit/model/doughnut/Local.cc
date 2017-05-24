@@ -32,8 +32,8 @@ using Serializer = elle::serialization::Binary;
 
 namespace
 {
-  auto const ipv4_enabled = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-  auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+  auto const ipv4_enabled = !elle::os::getenv("INFINIT_NO_IPV4", false);
+  auto const ipv6_enabled = !elle::os::getenv("INFINIT_NO_IPV6", false);
 }
 
 namespace infinit

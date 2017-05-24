@@ -6,10 +6,7 @@
 #include <type_traits>
 #include <vector>
 
-#if defined INFINIT_WINDOWS || defined NO_EXECINFO
-# define INFINIT_WITH_CRASH_REPORTER 0
-#else
-# define INFINIT_WITH_CRASH_REPORTER 1
+#if INFINIT_ENABLE_CRASH_REPORTER
 # include <crash_reporting/CrashReporter.hh>
 #endif
 
@@ -30,7 +27,7 @@
 #include <infinit/cli/utility.hh>
 #include <infinit/utility.hh>
 
-ELLE_LOG_COMPONENT("infinit");
+ELLE_LOG_COMPONENT("cli");
 
 namespace bfs = boost::filesystem;
 
@@ -58,7 +55,7 @@ namespace infinit
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
-        if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+        if (!elle::os::getenv("INFINIT_DISABLE_SIGNAL_HANDLER", false))
         {
           static const auto signals = {SIGINT, SIGTERM
 #ifndef INFINIT_WINDOWS
@@ -81,19 +78,18 @@ namespace infinit
         }
       }
 
-#if INFINIT_WITH_CRASH_REPORTER
+#if INFINIT_ENABLE_CRASH_REPORTER
       /// Crash reporter.
       std::shared_ptr<crash_reporting::CrashReporter>
       make_crash_reporter()
       {
-        auto const request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
-        if (request == "1"
-            || production_build && request != "0")
+        if (elle::os::getenv("INFINIT_CRASH_REPORTER", production_build))
         {
           auto const host = elle::os::getenv("INFINIT_CRASH_REPORT_HOST",
                                              beyond());
           auto const url = elle::sprintf("%s/crash/report", host);
           auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+          ELLE_DEBUG("dump to %s", dumps_path);
           return std::make_shared<crash_reporting::CrashReporter>(url, dumps_path,
                                                                   version_describe());
         }
@@ -336,7 +332,7 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
-#if INFINIT_WITH_CRASH_REPORTER
+#if INFINIT_ENABLE_CRASH_REPORTER
         auto report_thread = make_crash_reporter_thread();
         auto report_upload = [&report_thread] {
           if (report_thread)

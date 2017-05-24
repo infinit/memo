@@ -606,7 +606,7 @@ namespace infinit
       }
       else if (network_name)
       {
-        // Fetch all networks for network.
+        // Fetch all volumes for network.
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("networks/%s/volumes", net_name),
@@ -617,20 +617,14 @@ namespace infinit
       }
       else
       {
-        // Fetch all networks for owner.
+        // Fetch all volumes for owner.
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("users/%s/volumes", owner.name),
             "volumes for user",
             owner.name,
             owner);
-        for (auto const& volume: res["volumes"])
-          try
-          {
-            ifnt.volume_save(std::move(volume));
-          }
-          catch (infinit::ResourceAlreadyFetched const& error)
-          {
-          }
+        for (auto const& v: res["volumes"])
+          ifnt.volume_save(v, true);
       }
     }
 
@@ -1032,17 +1026,13 @@ namespace infinit
       if (mo.mountpoint)
       {
 #ifdef INFINIT_WINDOWS
-        if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
-          ;
-        else
+        if (mo.mountpoint->size() != 2 || (*mo.mountpoint)[1] != ':')
 #elif defined INFINIT_MACOSX
         // Do not try to create folder in /Volumes.
-        auto mount_path = bfs::path(mo.mountpoint.get());
+        auto mount_path = bfs::path(*mo.mountpoint);
         auto mount_parent
           = boost::algorithm::to_lower_copy(mount_path.parent_path().string());
-        if (mount_parent.find("/volumes") == 0)
-          ;
-        else
+        if (mount_parent.find("/volumes") != 0)
 #endif
         try
         {
@@ -1094,7 +1084,7 @@ namespace infinit
       {
         local_endpoint = model->local()->server_endpoint();
         if (port_file)
-          port_to_file(local_endpoint.get().port(), *port_file);
+          port_to_file(local_endpoint->port(), *port_file);
         if (endpoints_file)
           endpoints_to_file(model->local()->server_endpoints(),
                             *endpoints_file);
@@ -1108,8 +1098,6 @@ namespace infinit
         cli.report_action("running", "volume", volume.name);
         auto& dht = *model;
         auto fs = volume.run(std::move(model),
-                             mo.mountpoint,
-                             mo.readonly,
                              allow_root_creation,
                              map_other_permissions
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
@@ -1149,7 +1137,7 @@ namespace infinit
               }
           });
         // Experimental: poll root on mount to trigger caching.
-#   if 0
+#if 0
         auto root_poller = boost::optional<std::thread>{};
         if (mo.mountpoint && mo.cache && mo.cache.get())
           root_poller.emplace(
@@ -1172,7 +1160,7 @@ namespace infinit
             if (root_poller)
               root_poller->join();
           });
-#   endif
+#endif
         if (volume.default_permissions && !volume.default_permissions->empty())
         {
           auto ops =
@@ -1233,7 +1221,7 @@ namespace infinit
           }
         });
 #ifdef INFINIT_MACOSX
-        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", true))
         {
           reachability.reset(new elle::reactor::network::Reachability(
             {},

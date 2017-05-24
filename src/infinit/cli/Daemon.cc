@@ -473,15 +473,11 @@ namespace infinit
           Lock(SystemUser const& su, elle::reactor::Lockable& l)
             : elle::reactor::Lock(l)
           {
-            prev_home = elle::os::getenv("INFINIT_HOME", "");
-            prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
             elle::os::setenv("INFINIT_HOME", su.home);
             if (!elle::os::getenv("INFINIT_HOME_OVERRIDE", "").empty())
               elle::os::setenv("INFINIT_HOME",
-                elle::os::getenv("INFINIT_HOME_OVERRIDE", ""), 1);
+                elle::os::getenv("INFINIT_HOME_OVERRIDE", ""));
             elle::os::unsetenv("INFINIT_DATA_HOME");
-            prev_euid = geteuid();
-            prev_egid = getegid();
             elle::setegid(su.gid);
             elle::seteuid(su.uid);
           }
@@ -502,8 +498,10 @@ namespace infinit
             elle::setegid(prev_egid);
           }
 
-          std::string prev_home, prev_data_home;
-          int prev_euid, prev_egid;
+          std::string const prev_home = elle::os::getenv("INFINIT_HOME", "");
+          std::string const prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
+          int const prev_euid = geteuid();
+          int const prev_egid = getegid();
         };
 
         Lock

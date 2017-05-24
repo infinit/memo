@@ -421,8 +421,7 @@ namespace infinit
       auto drive = ifnt.drive_get(drive_name);
       auto volume = ifnt.volume_get(drive.volume);
       auto network = ifnt.network_get(drive.network, owner);
-      auto permissions =
-        volume.default_permissions ? volume.default_permissions.get() : "none";
+      auto permissions = volume.default_permissions.value_or("none");
 
       auto invitees = Invitations{};
       if (users.empty() && emails.empty())
