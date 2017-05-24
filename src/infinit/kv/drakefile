@@ -42,7 +42,7 @@ def configure(
 
   # XXX: Dynamic dependency fetching does not work in parallel for some
   # packages so declare them statically. This is the case when a single git repo
-  # contains several dependencies – grpc, protobuf, etc.
+  # contains several dependencies - grpc, protobuf, etc.
   grpc_package_tgts = \
     [drake.node(t % (go_toolkit.path, go_toolkit.platform_str())) for t in [
     # '%s/pkg/%s/github.com/golang/protobuf/proto.a',
