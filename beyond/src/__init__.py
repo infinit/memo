@@ -404,7 +404,7 @@ class Beyond:
     if len(errors) > 0:
       self.__emailer.send_one(
         recipient_email = 'crash+passport_generation@infinit.sh',
-        recipient_name = 'Developers',
+        recipient_name = 'Crash',
         variables = {
           'user': user.name,
           'email': email,
@@ -430,7 +430,7 @@ class Beyond:
       with open('%s/client.dmp' % temp_dir, 'rb') as crash_dump:
         self.__emailer.send_one(
           recipient_email = 'crash@infinit.sh',
-          recipient_name = 'Developers',
+          recipient_name = 'Crash',
           variables = variables,
           files = [crash_dump],
           **self.template('Internal/Crash Report')

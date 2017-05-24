@@ -6,16 +6,11 @@ import os
 
 def parse_options():
   parser = argparse.ArgumentParser(description = 'Organize breakpad symbol files')
-  parser.add_argument('-i', '--input',
-                      required = True,
-                      metavar = 'PATH',
-                      type = str,
-                      help = 'folder with .sym files')
-  parser.add_argument('-o', '--output',
-                      required = True,
-                      metavar = 'PATH',
-                      type = str,
-                      help = 'folder to output to')
+  opt = lambda *a, **kw: parser.add_argument(*a, **kw)
+  opt('-i', '--input', required = True, metavar = 'PATH', type = str,
+      help = 'folder with .sym files')
+  opt('-o', '--output', required = True, metavar = 'PATH', type = str,
+      help = 'folder to output to')
   return parser.parse_args()
 
 def parent_dir(path):

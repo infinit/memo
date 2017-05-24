@@ -608,7 +608,7 @@ main(int argc, char** argv)
   catch (elle::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-    if (elle::os::inenv("INFINIT_BACKTRACE"))
+    if (elle::os::getenv("INFINIT_BACKTRACE", false))
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
