@@ -606,7 +606,7 @@ namespace infinit
       }
       else if (network_name)
       {
-        // Fetch all networks for network.
+        // Fetch all volumes for network.
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("networks/%s/volumes", net_name),
@@ -617,20 +617,14 @@ namespace infinit
       }
       else
       {
-        // Fetch all networks for owner.
+        // Fetch all volumes for owner.
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("users/%s/volumes", owner.name),
             "volumes for user",
             owner.name,
             owner);
-        for (auto const& volume: res["volumes"])
-          try
-          {
-            ifnt.volume_save(std::move(volume));
-          }
-          catch (infinit::ResourceAlreadyFetched const& error)
-          {
-          }
+        for (auto const& v: res["volumes"])
+          ifnt.volume_save(v, true);
       }
     }
 

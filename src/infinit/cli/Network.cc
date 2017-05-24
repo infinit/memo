@@ -584,8 +584,9 @@ namespace infinit
           "network", name);
         save(network);
       }
-      else // Fetch all networks for owner.
+      else
       {
+        // Fetch all networks for owner.
         using Networks
           = std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>;
         auto res =
