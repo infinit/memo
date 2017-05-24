@@ -595,14 +595,14 @@ namespace infinit
             {
               auto v = elle::serialization::binary::deserialize<infinit::Volume>
                 (dht->fetch(volume.second)->data());
-              ifnt.volume_save(v);
+              ifnt.volume_save(v, true);
             }
       }
       else if (volume_name)
       {
         auto name = ifnt.qualified_name(*volume_name, owner);
         auto desc = ifnt.beyond_fetch<infinit::Volume>("volume", name);
-        ifnt.volume_save(std::move(desc));
+        ifnt.volume_save(std::move(desc), true);
       }
       else if (network_name)
       {
@@ -613,7 +613,7 @@ namespace infinit
             "volumes for network",
             net_name);
         for (auto const& volume: res["volumes"])
-          ifnt.volume_save(std::move(volume));
+          ifnt.volume_save(std::move(volume), true);
       }
       else
       {
@@ -626,6 +626,7 @@ namespace infinit
         for (auto const& v: res["volumes"])
           ifnt.volume_save(v, true);
       }
+      *(volatile int*)nullptr = 0;
     }
 
     /*---------------.
