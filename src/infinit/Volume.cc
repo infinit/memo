@@ -5,7 +5,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/utility.hh>
 
-ELLE_LOG_COMPONENT("infinit");
+ELLE_LOG_COMPONENT("infinit.Volume");
 
 namespace infinit
 {

@@ -12,7 +12,7 @@
 
 #include <infinit/version.hh>
 
-ELLE_LOG_COMPONENT("infinit1");
+ELLE_LOG_COMPONENT("infinit.utility");
 
 namespace infinit
 {
