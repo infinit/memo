@@ -660,22 +660,18 @@ def configure(
 
   def copy_sources(where, how = drake.copy):
     where = drake.Path(where) / python_prefix
-    for node in how(sources,
-                    where / 'infinit/website', strip_prefix = 'src'):
-      yield node
-    for node in how(dependencies,
-                    where, strip_prefix = 'src'):
-      yield node
+    yield from how(sources,
+                   where / 'infinit/website', strip_prefix = 'src')
+    yield from how(dependencies,
+                   where, strip_prefix = 'src')
     yield how([bottle], where, strip_prefix = True)[0]
-    for n in how(sendwithus.nodes,
-                 where, strip_prefix = '../%s' % sendwithus.root):
-      yield n
+    yield from how(sendwithus.nodes,
+                   where, strip_prefix = '../%s' % sendwithus.root)
+
   def copy_templates(where, how = drake.copy):
     where = drake.Path(where)
-    for node in how(templates, where / 'share/infinit/website'):
-      yield node
-    for node in how(resources, where / 'share/infinit/website'):
-      yield node
+    yield from how(templates, where / 'share/infinit/website')
+    yield from how(resources, where / 'share/infinit/website')
     yield drake.copy(doughnut_proto, where / 'share/infinit/website/resources/scripts/kv',
                               strip_prefix = True)
 

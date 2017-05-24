@@ -32,6 +32,7 @@ def str2bool(v):
 ## ------ ##
 
 ADMINS = [
+  'akim.demaille@infinit.sh',
   'antony.mechin@infinit.sh',
   'christopher.crone@infinit.sh',
   'gaetan.rochel@infinit.sh',
