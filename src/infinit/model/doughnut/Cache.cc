@@ -225,7 +225,7 @@ namespace infinit
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
             elle::err("invalid block");
           }
-          static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+          static bool decode = !elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", false);
           if (decode)
             try
             {
@@ -504,8 +504,8 @@ namespace infinit
                     break;
                   }
                 }
-                static const int batch_size = std::stoi(
-                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", "20"));
+                static const int batch_size =
+                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", 20);
                 for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
                 {
                   std::vector<Model::AddressVersion> batch;

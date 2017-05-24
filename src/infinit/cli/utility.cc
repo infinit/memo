@@ -40,8 +40,8 @@ namespace infinit
       , _network(network)
       , _self(self)
     {
-      bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-      bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+      bool v4 = !elle::os::getenv("INFINIT_NO_IPV4", false);
+      bool v6 = !elle::os::getenv("INFINIT_NO_IPV6", false)
        && network.dht()->version >= elle::Version(0, 7, 0);
       Endpoints endpoints;
       if (advertise)

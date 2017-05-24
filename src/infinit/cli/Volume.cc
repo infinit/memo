@@ -1227,7 +1227,7 @@ namespace infinit
           }
         });
 #ifdef INFINIT_MACOSX
-        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", true))
         {
           reachability.reset(new elle::reactor::network::Reachability(
             {},

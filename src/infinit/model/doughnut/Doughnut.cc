@@ -210,7 +210,7 @@ namespace infinit
       Protocol
       deprecate_utp(Protocol const& p)
       {
-        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        auto utp_guard = elle::os::getenv("INFINIT_UTP", false);
         if (!utp_guard && p == Protocol::all)
         {
           ELLE_WARN(
