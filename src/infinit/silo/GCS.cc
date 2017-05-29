@@ -18,7 +18,7 @@ ELLE_LOG_COMPONENT("infinit.storage.GCS");
 
 
 #define BENCH(name)                                       \
-  static elle::Bench bench("bench.gcs." name, 10000_sec); \
+  static elle::Bench bench("bench.gcs." name, std::chrono::seconds(10000)); \
   elle::Bench::BenchScope bs(bench)
 
 using StatusCode = elle::reactor::http::StatusCode;
@@ -27,13 +27,6 @@ namespace infinit
 {
   namespace silo
   {
-    std::string
-    GCS::_url(Key key) const
-    {
-      return elle::sprintf("https://storage.googleapis.com/%s/%s/%x",
-        this->_bucket, this->_root, key);
-    }
-
     GCS::GCS(std::string const& name,
              std::string const& bucket,
              std::string const& root,
@@ -42,6 +35,13 @@ namespace infinit
       , _bucket(bucket)
       , _root(root.empty() ? std::string(".infinit-storage") : root)
     {}
+
+    std::string
+    GCS::_url(Key key) const
+    {
+      return elle::sprintf("https://storage.googleapis.com/%s/%s/%x",
+        this->_bucket, this->_root, key);
+    }
 
     elle::Buffer
     GCS::_get(Key key) const

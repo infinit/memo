@@ -19,9 +19,10 @@
 
 ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
 
-#define BENCH(name)                                          \
-  static elle::Bench bench("bench.gdrive." name, 10000_sec); \
-  elle::Bench::BenchScope bs(bench)
+#define BENCH(name)                                                     \
+  static auto bench =                                                   \
+    elle::Bench("bench.gdrive." name, std::chrono::seconds(10000));     \
+  auto bs = elle::Bench::BenchScope(bench)
 
 namespace infinit
 {

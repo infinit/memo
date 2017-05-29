@@ -15,8 +15,9 @@
 
 ELLE_LOG_COMPONENT("infinit.storage.S3");
 
-#define BENCH(name)                                      \
-  static elle::Bench bench("bench.s3store." name, 10000_sec); \
+#define BENCH(name)                                                     \
+  static auto bench =                                                   \
+    elle::Bench("bench.s3store." name, std::chrono::seconds(10000));    \
   elle::Bench::BenchScope bs(bench)
 
 namespace infinit

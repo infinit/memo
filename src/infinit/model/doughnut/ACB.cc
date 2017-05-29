@@ -264,7 +264,7 @@ namespace infinit
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
         }
-        static elle::Bench bench("bench.acb.decrypt_2", 10000_sec);
+        static elle::Bench bench("bench.acb.decrypt_2", std::chrono::seconds(10000));
         elle::Bench::BenchScope bs(bench);
         auto secret = [&]() {
           if (use_encrypt)
@@ -614,7 +614,7 @@ namespace infinit
       blocks::ValidationResult
       BaseACB<Block>::_validate(Model const& model, bool writing) const
       {
-        static elle::Bench bench("bench.acb._validate", 10000_sec);
+        static elle::Bench bench("bench.acb._validate", std::chrono::seconds(10000));
         elle::Bench::BenchScope scope(bench);
         bool disable_signature = !this->doughnut()->encrypt_options().validate_signatures;
         ELLE_DEBUG("%s: validate owner part", *this)
@@ -790,7 +790,7 @@ namespace infinit
       BaseACB<Block>::_seal(boost::optional<int> version,
                             boost::optional<elle::cryptography::SecretKey const&> key)
       {
-        static elle::Bench bench("bench.acb.seal", 10000_sec);
+        static elle::Bench bench("bench.acb.seal", std::chrono::seconds(10000));
         elle::Bench::BenchScope scope(bench);
         if (!version && this->Super::_seal_version && *this->Super::_seal_version)
         {
@@ -815,7 +815,7 @@ namespace infinit
 
         if (acl_changed)
         {
-          static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
+          static elle::Bench bench("bench.acb.seal.aclchange", std::chrono::seconds(10000));
           elle::Bench::BenchScope scope(bench);
           ELLE_TRACE_SCOPE("ACL changed, seal");
           this->_acl_changed = false;
@@ -833,7 +833,7 @@ namespace infinit
             ELLE_DUMP("signature: %x", this->signature());
         if (data_changed)
         {
-          static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
+          static elle::Bench bench("bench.acb.seal.datachange", std::chrono::seconds(10000));
           elle::Bench::BenchScope scope(bench);
           ++this->_data_version;
           ELLE_TRACE_SCOPE(

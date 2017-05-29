@@ -33,7 +33,7 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos");
 
 #define BENCH(name)                                      \
-  static elle::Bench bench("bench.paxos." name, 10000_sec); \
+  static elle::Bench bench("bench.paxos." name, std::chrono::seconds(10000)); \
   elle::Bench::BenchScope bs(bench)
 
 namespace infinit

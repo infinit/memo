@@ -76,15 +76,18 @@ enum PacketType
 
 ELLE_LOG_COMPONENT("infinit.fs.sftp");
 
-#define BENCH(name)                                      \
-  static elle::Bench bench("bench.sftp." name, 10000_sec); \
-  elle::Bench::BenchScope bs(bench)
+#define BENCH(name)                                                     \
+  static auto bench =                                                   \
+    elle::Bench("bench.sftp." name, std::chrono::seconds(10000));       \
+  auto bs = elle::Bench::BenchScope(bench)
 
-static
-std::unique_ptr<infinit::silo::Silo>
-make(std::vector<std::string> const& args)
+namespace
 {
-  return std::make_unique<infinit::silo::SFTP>(args[0], args[1]);
+  std::unique_ptr<infinit::silo::Silo>
+  make(std::vector<std::string> const& args)
+  {
+    return std::make_unique<infinit::silo::SFTP>(args[0], args[1]);
+  }
 }
 
 FACTORY_REGISTER(infinit::silo::Silo, "sftp", &make);
