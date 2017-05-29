@@ -91,7 +91,7 @@ namespace infinit
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 
       this->_size_cache[key] = value.size();
-      this->_block_count += update ? 0 : 1;
+      this->_block_count += exists ? 0 : 1;
 
       return update ? value.size() - size : value.size();
     }
