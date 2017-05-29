@@ -1420,7 +1420,8 @@ namespace infinit
                       auto const& q = chosen->value.get<PaxosServer::Quorum>();
                       ELLE_DEBUG_SCOPE("Paxos elected another quorum: %f", q);
                       b->seal(chosen->proposal.version + 1);
-                      throw Paxos::PaxosServer::WrongQuorum(q, peers_id);
+                      throw Paxos::PaxosServer::WrongQuorum(
+                        q, peers_id, chosen->proposal);
                     }
                     else
                     {
