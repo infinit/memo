@@ -766,6 +766,9 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
 
+      if (elle::os::getenv("INFINIT_CRASH", false))
+        *(volatile int*)nullptr = 0;
+
       if (cli.script())
       {
         auto l = elle::json::make_array(ifnt.volumes_get(), [&](auto const& volume) {
