@@ -22,6 +22,7 @@ installed_binaries = []
 rule_build = None
 rule_check = None
 rule_install = None
+# //symbols: prepare the symbol files for crash-reporter.
 rule_symbols = None
 rule_tests = None
 
@@ -388,7 +389,7 @@ def configure(
   debian_debug_dir = 'debian-debug'
   debian_syms_dir = \
     drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
-  installed_libraries = []
+  installed_libraries = set()
   # CLI
   infinit_cli_sources = drake.nodes(
     'src/infinit/cli/ACL.cc',
@@ -489,8 +490,9 @@ def configure(
   binaries.append(infinit_cli)
   installed_binaries.append(infinit_cli)
   for lib in infinit_cli.dynamic_libraries:
-    if lib not in installed_libraries:
-      installed_libraries.append(lib)
+    installed_libraries.add(lib)
+    for d in lib.dependencies_recursive:
+      installed_libraries.add(d)
   for m in infinit_modes:
     b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
     if windows:
