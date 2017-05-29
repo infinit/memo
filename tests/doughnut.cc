@@ -1754,6 +1754,41 @@ namespace rebalancing
       });
     elle::reactor::wait(elle::reactor::Waitables{&wait_a, &wait_b});
   }
+
+  ELLE_TEST_SCHEDULED(conflict_quorum)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("conflict"));
+    ELLE_LOG("write block");
+      dht_a->dht->seal_and_insert(*block);
+    auto dht_d = make_resign_dht(3);
+    dht_d->overlay->connect(*dht_a->overlay);
+    dht_d->overlay->connect(*dht_b->overlay);
+    dht_d->overlay->connect(*dht_c->overlay);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    int count = 0;
+    elle::reactor::Barrier confirm;
+    local_a.confirming().connect(
+      [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (++count == 1)
+          elle::reactor::wait(confirm);
+        else
+          confirm.open();
+      });
+    auto rebalanced =
+      elle::reactor::waiter(local_b.rebalanced(), block->address());
+    ELLE_LOG("disconnect third dht")
+      dht_c.reset();
+    elle::reactor::wait(rebalanced);
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -2052,6 +2087,8 @@ ELLE_TEST_SUITE()
     {
       auto conflict = &rebalancing::conflict;
       rebalancing->add(BOOST_TEST_CASE(conflict), 0, valgrind(3));
+      auto conflict_quorum = &rebalancing::conflict_quorum;
+      rebalancing->add(BOOST_TEST_CASE(conflict_quorum), 0, valgrind(3));
     }
   }
 }
