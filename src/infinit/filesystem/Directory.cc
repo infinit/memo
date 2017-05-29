@@ -641,7 +641,7 @@ namespace infinit
         [self, files, fs = &fs, running,
          parked, nthreads, group_size, available]
         {
-          static elle::Bench bench("bench.fs.prefetch", 10000_sec);
+          static elle::Bench bench("bench.fs.prefetch", std::chrono::seconds(10000));
           elle::Bench::BenchScope bs(bench);
           auto start_time = boost::posix_time::microsec_clock::universal_time();
           int nf = 0;

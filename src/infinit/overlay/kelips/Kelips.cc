@@ -51,9 +51,10 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
-#define BENCH(name)                                      \
-  static elle::Bench bench("bench.kelips." name, 10000_sec); \
-  elle::Bench::BenchScope bs(bench)
+#define BENCH(name)                                                     \
+  static auto bench =                                                   \
+    elle::Bench("bench.kelips." name, std::chrono::seconds(10000));     \
+  auto bs = elle::Bench::BenchScope(bench)
 
 using Serializer = elle::serialization::Binary;
 
@@ -1301,7 +1302,7 @@ namespace infinit
             ep.sender = p.sender;
             ep.observer = p.observer;
             {
-              static elle::Bench decrypt("kelips.encrypt", 10_sec);
+              static auto decrypt = elle::Bench("kelips.encrypt", std::chrono::seconds(10));
               elle::Bench::BenchScope bs(decrypt);
               ep.encrypt(*key.first, p, *this->doughnut());
             }
@@ -1342,10 +1343,13 @@ namespace infinit
             return;
           }
         }
-        static elle::Bench bencher("kelips.packet_size", 5_sec);
-        bencher.add(b.size());
+        {
+          static auto bench
+            = elle::Bench("kelips.packet_size", std::chrono::seconds(5));
+          bench.add(b.size());
+        }
         elle::reactor::Lock l(_udp_send_mutex);
-        static elle::Bench bench("kelips.send", 5_sec);
+        static elle::Bench bench("kelips.send", std::chrono::seconds(5));
         elle::Bench::BenchScope bs(bench);
         ELLE_DUMP("%s: sending %s bytes packet to %s\n%x", *this, b.size(), e, b);
         b.size(b.size()+8);
@@ -1420,7 +1424,7 @@ namespace infinit
             {
               std::unique_ptr<packet::Packet> plain;
               {
-                static elle::Bench decrypt("kelips.decrypt", 10_sec);
+                static elle::Bench decrypt("kelips.decrypt", std::chrono::seconds(10));
                 elle::Bench::BenchScope bs(decrypt);
                 plain = p->decrypt(*key.first, *this->doughnut());
               }
@@ -1812,10 +1816,8 @@ namespace infinit
       Node::pickFiles()
       {
         using Res = std::unordered_multimap<Address, std::pair<Time, Address>>;
-        static elle::Bench bencher("kelips.pickFiles", 10_sec);
+        static elle::Bench bencher("kelips.pickFiles", std::chrono::seconds(10));
         elle::Bench::BenchScope bench_scope(bencher);
-        static elle::Bench bench_new_candidates("kelips.newCandidates", 10_sec);
-        static elle::Bench bench_old_candidates("kelips.oldCandidates", 10_sec);
         auto current_time = now();
         int max_new = _config.gossip.files / 2;
         int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
@@ -1834,8 +1836,14 @@ namespace infinit
               && current_time - f.second.last_gossip > timeout)
             old_candidates++;
         }
-        bench_new_candidates.add(new_candidates);
-        bench_old_candidates.add(old_candidates);
+        {
+          static auto bench_new_candidates
+            = elle::Bench("kelips.newCandidates", std::chrono::seconds(10));
+          static auto bench_old_candidates
+            = elle::Bench("kelips.oldCandidates", std::chrono::seconds(10));
+          bench_new_candidates.add(new_candidates);
+          bench_old_candidates.add(old_candidates);
+        }
         auto res = Res{};
         if (new_candidates  >= max_new * 2)
         {
@@ -2249,7 +2257,7 @@ namespace infinit
       Node::addLocalResults(packet::GetFileRequest* p,
                             elle::reactor::yielder<NodeLocation> const* yield)
       {
-        static elle::Bench nlocalhit("kelips.localhit", 10_sec);
+        static elle::Bench nlocalhit("kelips.localhit", std::chrono::seconds(10));
         int nhit = 0;
         int fg = group_of(p->fileAddress);
         auto const iterators = [&]
@@ -2453,10 +2461,10 @@ namespace infinit
         }
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                    p->results);
-        static elle::Bench stime = elle::Bench("kelips.GETM_RTT", boost::posix_time::seconds(5));
+        static auto stime = elle::Bench("kelips.GETM_RTT", std::chrono::seconds(5));
         stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
           (now() - it->second->startTime)).count());
-        static elle::Bench shops = elle::Bench("kelips.GETM_HOPS", boost::posix_time::seconds(5));
+        static auto shops = elle::Bench("kelips.GETM_HOPS", std::chrono::seconds(5));
         shops.add(p->ttl);
 
         it->second->multi_result = p->results;
@@ -2477,10 +2485,10 @@ namespace infinit
         }
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                    p->result);
-        static elle::Bench stime = elle::Bench("kelips.GET_RTT", boost::posix_time::seconds(5));
+        static auto stime = elle::Bench("kelips.GET_RTT", std::chrono::seconds(5));
         stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
           (now() - it->second->startTime)).count());
-        static elle::Bench shops = elle::Bench("kelips.GET_HOPS", boost::posix_time::seconds(5));
+        static auto shops = elle::Bench("kelips.GET_HOPS", std::chrono::seconds(5));
         shops.add(p->ttl);
         it->second->result = p->result;
         it->second->barrier.open();
@@ -2595,10 +2603,10 @@ namespace infinit
           ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
           return;
         }
-        static elle::Bench stime = elle::Bench("kelips.PUT_RTT", boost::posix_time::seconds(5));
+        static auto stime = elle::Bench("kelips.PUT_RTT", std::chrono::seconds(5));
         stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
           (now() - it->second->startTime)).count());
-        static elle::Bench shops = elle::Bench("kelips.PUT_HOPS", boost::posix_time::seconds(5));
+        static elle::Bench shops = elle::Bench("kelips.PUT_HOPS", std::chrono::seconds(5));
         shops.add(p->ttl);
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id, p->results);
         it->second->result = p->results;
@@ -2714,8 +2722,8 @@ namespace infinit
           r.ttl = _config.query_get_ttl;
           r.count = n;
           int fg = group_of(file);
-          static elle::Bench bench_localresult("kelips.localresult", 10_sec);
-          static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
+          static elle::Bench bench_localresult("kelips.localresult", std::chrono::seconds(10));
+          static elle::Bench bench_localbypass("kelips.localbypass", std::chrono::seconds(10));
           if (!query_node && fg == _group && !ignore_local_cache)
           {
             // check if we have it locally
@@ -3027,7 +3035,7 @@ namespace infinit
           elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
           cleanup();
           // some stats
-          static elle::Bench n_files("kelips.file_count", 10_sec);
+          static elle::Bench n_files("kelips.file_count", std::chrono::seconds(10));
           n_files.add(_state.files.size());
 
           // pick a target
@@ -3083,7 +3091,7 @@ namespace infinit
       void
       Node::cleanup()
       {
-        static elle::Bench bench("kelips.cleared_files", 10_sec);
+        static elle::Bench bench("kelips.cleared_files", std::chrono::seconds(10));
         auto it = _state.files.begin();
         auto t = now();
         auto file_timeout = std::chrono::milliseconds(_config.file_timeout_ms);

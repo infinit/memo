@@ -262,7 +262,7 @@ namespace infinit
                          Address owner, elle::Buffer const& salt,
                          elle::Version const& version)
       {
-        static elle::Bench bench("bench.chb.hash", 10000_sec);
+        static elle::Bench bench("bench.chb.hash", std::chrono::seconds(10000));
         elle::Bench::BenchScope bs(bench);
         elle::Buffer saltowner(salt);
         if (version < elle::Version(0, 4, 0))

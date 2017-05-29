@@ -521,7 +521,7 @@ namespace infinit
     void
     File::stat(struct stat* st)
     {
-      static elle::Bench bench("bench.file.stat", 10000_sec);
+      static elle::Bench bench("bench.file.stat", std::chrono::seconds(10000));
       elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));
@@ -542,9 +542,7 @@ namespace infinit
       {
         ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
         if (e.error_code() != EACCES)
-        {
           throw;
-        }
       }
       catch (elle::Error const& e)
       {
