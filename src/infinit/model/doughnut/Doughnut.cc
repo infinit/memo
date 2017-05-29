@@ -36,7 +36,6 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/MonitoringServer.hh>
 #include <infinit/silo/MissingKey.hh>
