@@ -43,9 +43,9 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project $PROJECT --source-dir $SOURCE_DIR --build-dir $BUILD_DIR --install-dir $INSTALL_DIR"
     - cd "$BUILD_DIR"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //build"
-    - scl enable devtoolset-4 rh-python34 "python3 drake--beyond=false -j $(nproc) //check"
-    - scl enable devtoolset-4 rh-python34 "python3 drake--beyond=false -j $(nproc) //install"
-    - scl enable devtoolset-4 rh-python34 "python3 drake--beyond=false -j $(nproc) //redhat"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //check"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //install"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //redhat"
     - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //debian-debug"
@@ -88,14 +88,13 @@ x86_64-ubuntu-gcc4:
     - ssh buildslave@packages.infinit.sh 'make debian'
     - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
     - time python3 drake //docker
-    - docker tag infinit:${DESC} mefyl/infinit:${DESC}
-    - time docker push mefyl/infinit:${DESC}
-    - docker rmi {,mefyl/}infinit:${DESC}
+    - docker tag memo:${DESC} mefyl/memo:${DESC}
+    - time docker push mefyl/memo:${DESC}
+    - docker rmi {,mefyl/}memo:${DESC}
     - time python3 drake //beyond/docker
     - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
     - time docker push mefyl/infinit-beyond:${DESC}
     - docker rmi {,mefyl/}infinit-beyond:${DESC}
-    - if [ -n "$SIBYLFS" ]; then time python3 drake //sibylfs; fi
     - cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
@@ -123,18 +122,18 @@ x86_64-alpine-gcc:
     - time python3 drake --beyond=false -j $(nproc) //build
     - time python3 drake --beyond=false -j $(nproc) //check
     - time python3 drake --beyond=false -j $(nproc) //install
-    - TARBALL=/tmp/infinit-x86_64-alpine-gcc-$DESC.tbz
-    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - TARBALL=/tmp/memo-x86_64-alpine-gcc-$DESC.tbz
+    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - rm "$TARBALL"
     - python3 drake //docker-alpine
-    - docker tag infinit-alpine:$DESC mefyl/infinit-alpine:$DESC
-    - docker push mefyl/infinit-alpine:$DESC
-    - docker rmi {,mefyl/}infinit-alpine:$DESC
-    - python3 drake //src/infinit/grpc/docker
-    - docker tag infinit-client-python:$DESC mefyl/infinit-client-python:$DESC
-    - docker push mefyl/infinit-client-python:$DESC
-    - docker rmi {,mefyl/}infinit-client-python:$DESC
+    - docker tag memo-alpine:$DESC mefyl/memo-alpine:$DESC
+    - docker push mefyl/memo-alpine:$DESC
+    - docker rmi {,mefyl/}memo-alpine:$DESC
+    - python3 drake //src/memo/grpc/docker
+    - docker tag memo-client-python:$DESC mefyl/memo-client-python:$DESC
+    - docker push mefyl/memo-client-python:$DESC
+    - docker rmi {,mefyl/}memo-client-python:$DESC
     - time cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
@@ -163,9 +162,9 @@ x86_64-jessie-gcc4:
     - time python3 drake --beyond=false -j $(nproc) //check
     - time python3 drake --beyond=false -j $(nproc) //install
     - time python3 drake --beyond=false -j $(nproc) //debian
-    - time scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
-    - rm "infinit_${DESC}_amd64.deb"
-    - time if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
+    - time scp "memo_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
+    - rm "memo_${DESC}_amd64.deb"
+    - time if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "memo-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - time ssh buildslave@packages.infinit.sh 'make debian'
     - time cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
@@ -198,11 +197,11 @@ x86_64-windows-mingw4:
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
     - cd "$SOURCE_DIR"
-    - mv "$INSTALL_DIR" "infinit-${DESC}"
-    - zip -r "infinit-${DESC}.zip" "infinit-${DESC}"
-    - mv "infinit-${DESC}" "$INSTALL_DIR"
-    - scp "infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
-    - rm "infinit-${DESC}.zip"
+    - mv "$INSTALL_DIR" "memo-${DESC}"
+    - zip -r "memo-${DESC}.zip" "memo-${DESC}"
+    - mv "memo-${DESC}" "$INSTALL_DIR"
+    - scp "memo-${DESC}.zip" buildslave@packages.infinit.sh:tmp
+    - rm "memo-${DESC}.zip"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.zip' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
     - x86_64
@@ -229,13 +228,13 @@ x86_64-osx-clang:
     - python3 drake -j 4 //beyond/check
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j 4 //install
-    - TARBALL=/tmp/infinit-x86_64-osx-clang3-$DESC.tbz
-    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - TARBALL=/tmp/memo-x86_64-osx-clang3-$DESC.tbz
+    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - ssh debian@debian.infinit.io 'make brew'
     - rm "$TARBALL"
     - python3 drake -j 4 //debian-debug
-    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "$BUILD_DIR"/infinit-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "$BUILD_DIR"/memo-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
   tags:
     - x86_64
