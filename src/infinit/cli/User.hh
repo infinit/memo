@@ -30,7 +30,7 @@ namespace infinit
       : public Object<User>
     {
     public:
-      User(Infinit& infinit);
+      User(Memo& memo);
       using Modes = decltype(elle::meta::list(
                                cli::create,
                                cli::delete_,

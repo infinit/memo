@@ -18,7 +18,7 @@ namespace infinit
       : public Object<Silo>
     {
     public:
-      Silo(Infinit& cli);
+      Silo(Memo& memo);
       using Modes = decltype(elle::meta::list(cli::create,
                                               cli::delete_,
                                               cli::export_,
@@ -38,7 +38,7 @@ namespace infinit
                                  INFINIT_ENTREPRISE(,cli::gcs)
                                  INFINIT_ENTREPRISE(,cli::google_drive)
                                  INFINIT_ENTREPRISE(,cli::s3)));
-        Create(Infinit& infinit);
+        Create(Memo& memo);
 
         INFINIT_ENTREPRISE(
 

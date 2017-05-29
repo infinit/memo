@@ -21,7 +21,7 @@ namespace infinit
       : public Object<Daemon>
     {
     public:
-      Daemon(Infinit& infinit);
+      Daemon(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::disable_storage,
                                     cli::enable_storage,

@@ -106,7 +106,7 @@ namespace infinit
   boost::filesystem::path
   home()
   {
-    auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
+    auto const infinit_home = elle::os::getenv("MEMO_HOME", "");
     return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
   }
 
@@ -115,11 +115,11 @@ namespace infinit
   _xdg(std::string const& type,
        boost::filesystem::path const& def)
   {
-    auto const infinit = elle::os::getenv("INFINIT_" + type, "");
+    auto const infinit = elle::os::getenv("MEMO_" + type, "");
     auto const xdg = elle::os::getenv("XDG_" + type, "");
     auto const dir =
       !infinit.empty() ? infinit :
-      !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/filesystem" :
+      !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/memo" :
       def;
     try
     {
@@ -129,7 +129,7 @@ namespace infinit
     {
       ELLE_LOG_COMPONENT("xdg");
       std::string env =
-        !infinit.empty() ? "INFINIT_" : !xdg.empty() ? "XDG_" : "";
+        !infinit.empty() ? "MEMO_" : !xdg.empty() ? "XDG_" : "";
       if (!env.empty())
         ELLE_WARN("Invalid \"%s%s\" directory: %s", env, type, e.what());
       elle::err(e.what());
@@ -141,7 +141,7 @@ namespace infinit
   _xdg_home(std::string const& type,
             boost::filesystem::path const& def)
   {
-    return _xdg(type + "_HOME", home() / def / "infinit/filesystem");
+    return _xdg(type + "_HOME", home() / def / "infinit/memo");
   }
 
   inline
@@ -180,7 +180,7 @@ namespace infinit
       "RUNTIME_DIR",
       fallback
         ? *fallback
-        : tmpdir() / "infinit" / elle::system::username());
+        : tmpdir() / "memo" / elle::system::username());
   }
 
   inline

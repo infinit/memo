@@ -20,8 +20,8 @@ namespace infinit
 
     using Async = infinit::model::doughnut::consensus::Async;
 
-    Journal::Journal(Infinit& infinit)
-      : Object(infinit)
+    Journal::Journal(Memo& memo)
+      : Object(memo)
       , describe(*this,
                  "Describe asynchronous operation(s)",
                  cli::network,

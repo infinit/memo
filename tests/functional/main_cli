@@ -3,18 +3,18 @@
 from utils import *
 
 with Infinit() as bob:
-  bob.run(['infinit', 'user', 'create'])
-  bob.run(['infinit', 'user', 'list',
+  bob.run(['memo', 'user', 'create'])
+  bob.run(['memo', 'user', 'list',
            '--compatibility-version', '0.3.0'])
-  bob.run(['infinit', 'user', 'list',
+  bob.run(['memo', 'user', 'list',
            '--compatibility-version', '0.5.2'])
   throws(lambda: bob.run(
-    ['infinit', 'user', 'list', '--compatibility-version', '0.119.0']))
+    ['memo', 'user', 'list', '--compatibility-version', '0.119.0']))
   throws(lambda: bob.run(
-    ['infinit', 'user', 'list', '--compatibility-version', '1..']))
+    ['memo', 'user', 'list', '--compatibility-version', '1..']))
   throws(lambda: bob.run(
-    ['infinit', 'user', 'list', '--compatibility-version', ' ']))
+    ['memo', 'user', 'list', '--compatibility-version', ' ']))
   throws(lambda: bob.run(
-    ['infinit', 'user', 'list', '--compatibility-version', 'nekolas']))
+    ['memo', 'user', 'list', '--compatibility-version', 'nekolas']))
   throws(lambda: bob.run(
-    ['infinit', 'user', 'list', '--compatibility-version', '0..']))
+    ['memo', 'user', 'list', '--compatibility-version', '0..']))

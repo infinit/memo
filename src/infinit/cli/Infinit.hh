@@ -29,16 +29,16 @@ namespace infinit
 {
   namespace cli
   {
-    using InfinitCallable =
+    using MemoCallable =
       elle::das::named::Function<
         void (decltype(help = false), decltype(version = false))>;
 
-    class Infinit
+    class Memo
       : public elle::Printable::as<Infinit>
-      , public InfinitCallable
+      , public MemoCallable
     {
     public:
-      Infinit(infinit::Infinit& infinit);
+      Memo(infinit::Infinit& infinit);
 
       // Helpers
       infinit::User
@@ -53,9 +53,9 @@ namespace infinit
                  bool stdout_def = true);
       boost::optional<boost::filesystem::path>
       avatar_path(std::string const& name) const;
-      static
+      virtual
       std::string
-      default_user_name();
+      default_user_name() const;
       infinit::User
       default_user();
 

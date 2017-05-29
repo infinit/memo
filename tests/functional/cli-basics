@@ -6,29 +6,29 @@ import re
 
 with Infinit() as bob:
   def xfail(command, message):
-    err = bob.run(['infinit'] + command, return_code = 2)[1]
+    err = bob.run(['memo'] + command, return_code = 2)[1]
     # Replace Window paths with Unix ones.
-    err = re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', err)
+    err = re.sub(r'Z:.*?\\memo.exe', './bin/memo', err)
     # Gee...  Maybe do this in assertEq?
     err = err.replace('\r\n', '\n')
     assertEq(message, err)
 
   xfail(['--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit --help' for more information.\n")
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo --help' for more information.\n")
 
   xfail(['foo'],
-        "./bin/infinit: command line error: unknown object type: foo\n"
-        "Try './bin/infinit --help' for more information.\n")
+        "./bin/memo: command line error: unknown object type: foo\n"
+        "Try './bin/memo --help' for more information.\n")
 
   xfail(['network', 'foo'],
-        "./bin/infinit: command line error: unknown mode for object network: foo\n"
-        "Try './bin/infinit network --help' for more information.\n")
+        "./bin/memo: command line error: unknown mode for object network: foo\n"
+        "Try './bin/memo network --help' for more information.\n")
 
   xfail(['network', '--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit network --help' for more information.\n")
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo network --help' for more information.\n")
 
   xfail(['network', 'list', '--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit network list --help' for more information.\n")
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo network list --help' for more information.\n")

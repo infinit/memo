@@ -92,8 +92,8 @@ namespace infinit
     | Device.  |
     `---------*/
 
-    Device::Device(Infinit& infinit)
-      : Object(infinit)
+    Device::Device(Memo& memo)
+      : Object(memo)
       , receive(
         *this,
                 "Receive an object from another device using {hub}",
@@ -102,7 +102,7 @@ namespace infinit
                                  "another device using {hub}", false}}
                 },
                 cli::user = false,
-                cli::name = Infinit::default_user_name(),
+                cli::name = memo.default_user_name(),
                 cli::passphrase = boost::none)
       , transmit(*this,
                  "transmit an object to another device using {hub}",
@@ -122,12 +122,12 @@ namespace infinit
     namespace
     {
       void
-      receive_user(cli::Infinit& cli,
+      receive_user(cli::Memo& cli,
                    std::string const& name,
                    boost::optional<std::string> const& passphrase)
       {
         auto& ifnt = cli.infinit();
-        auto pass = passphrase ? *passphrase : Infinit::read_passphrase();
+        auto pass = passphrase ? *passphrase : Memo::read_passphrase();
         auto hashed_pass = cli.hash_password(pass, _pair_salt);
         try
         {
@@ -181,13 +181,13 @@ namespace infinit
     namespace
     {
       void
-      transmit_user(cli::Infinit& cli,
+      transmit_user(cli::Memo& cli,
                     boost::optional<std::string> const& passphrase,
                     bool countdown)
       {
         auto& ifnt = cli.infinit();
         auto user = cli.as_user();
-        auto pass = passphrase ? *passphrase : Infinit::read_passphrase();
+        auto pass = passphrase ? *passphrase : Memo::read_passphrase();
         auto key = elle::cryptography::SecretKey{pass};
         auto p = PairingInformation(
           key.encipher(to_json(user),

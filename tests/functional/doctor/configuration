@@ -4,7 +4,7 @@ import os
 from utils import *
 import re
 
-home = os.path.abspath(os.environ['INFINIT_HOME_ROOT'])
+home = os.path.abspath(os.environ['MEMO_HOME_ROOT'])
 leftovers = os.path.join(home, 'leftovers')
 
 def read_result(name, formatting = {}):
@@ -57,13 +57,13 @@ def leftovers_text(res):
 
 import subprocess
 for home, (i, (json_output, text_output)) in expectations.items():
-  infinit = Infinit(home = os.path.join(os.environ['INFINIT_HOME_ROOT'], home))
-  res = infinit.run_json(['infinit', 'doctor', 'configuration',  '--script', '--as', 'bob'],
+  infinit = Infinit(home = os.path.join(os.environ['MEMO_HOME_ROOT'], home))
+  res = infinit.run_json(['memo', 'doctor', 'configuration',  '--script', '--as', 'bob'],
                          return_code = i)
   if home == 'leftovers':
     res = leftovers_json(res)
   assertEq(res, json_output)
-  output = infinit.run(['infinit', 'doctor', 'configuration',  '--as', 'bob', '--no-color'],
+  output = infinit.run(['memo', 'doctor', 'configuration',  '--as', 'bob', '--no-color'],
                          return_code = i)[0].strip().replace('\r', '').split('\n')
   if i == 0:
     output = output[:-2]

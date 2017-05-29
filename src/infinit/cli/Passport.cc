@@ -11,8 +11,8 @@ namespace infinit
 
   namespace cli
   {
-    Passport::Passport(Infinit& infinit)
-      : Object(infinit)
+    Passport::Passport(Memo& memo)
+      : Object(memo)
       , create(*this,
                "Create a passport for a user to a network",
                elle::das::cli::Options(),
@@ -163,7 +163,7 @@ namespace infinit
     namespace
     {
       boost::optional<std::string>
-      qualified_name(infinit::cli::Infinit& cli,
+      qualified_name(infinit::cli::Memo& cli,
                      boost::optional<std::string> const& name,
                      boost::optional<infinit::User const&> owner = {})
       {

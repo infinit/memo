@@ -16,7 +16,7 @@ namespace infinit
       : public Object<Block>
     {
     public:
-      Block(Infinit& infinit);
+      Block(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::deserialize));
 

@@ -19,7 +19,7 @@ namespace infinit
       /// Default server to ping with.
       static std::string const connectivity_server;
 
-      Doctor(Infinit& infinit);
+      Doctor(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::all,
                                     cli::configuration,

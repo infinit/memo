@@ -6,7 +6,7 @@ namespace infinit
   namespace cli
   {
     // Instantiate
-    template class Object<Silo, Infinit>;
+    template class Object<Silo, Memo>;
     template class Object<Silo::Create, Silo>;
   }
 }

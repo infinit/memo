@@ -101,9 +101,9 @@ namespace infinit
       }
     }
 
-    Silo::Silo(Infinit& infinit)
-      : Object(infinit)
-      , create(infinit)
+    Silo::Silo(Memo& memo)
+      : Object(memo)
+      , create(memo)
       , delete_(*this,
                 "Delete local silo",
                 name,
@@ -119,8 +119,8 @@ namespace infinit
       , list(*this, "List local silos")
     {}
 
-    Silo::Create::Create(Infinit& infinit)
-      : Object(infinit)
+    Silo::Create::Create(Memo& memo)
+      : Object(memo)
       INFINIT_ENTREPRISE(
       , dropbox(*this,
                 "Store blocks on Dropbox",
@@ -188,7 +188,7 @@ namespace infinit
 
     static
     void
-    mode_create(Infinit& cli,
+    mode_create(Memo& cli,
                 boost::optional<std::string> output,
                 std::unique_ptr<infinit::silo::SiloConfig> config)
     {

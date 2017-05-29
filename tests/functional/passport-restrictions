@@ -4,44 +4,44 @@ from utils import *
 
 with TemporaryDirectory() as tmp, \
     Infinit() as infinit_1, Infinit() as infinit_2:
-  infinit_1.run(['infinit', 'user', 'create',  'user'])
+  infinit_1.run(['memo', 'user', 'create',  'user'])
   infinit_1.run([
-    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    'memo', 'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
-    'infinit', 'network', 'create', 'network',
+    'memo', 'network', 'create', 'network',
     '--silo', 'storage',
     '--kelips', '--k', '1',
     '--as', 'user',
   ])
   network = infinit_1.run_json([
-    'infinit', 'network', 'export', 'network',
+    'memo', 'network', 'export', 'network',
     '--as', 'user',
   ])
   # Device 2
-  infinit_2.run(['infinit', 'user', 'create', 'user2'])
+  infinit_2.run(['memo', 'user', 'create', 'user2'])
   infinit_2.run([
-    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    'memo', 'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  infinit_2.run(['infinit', 'network', 'import'], input = network)
+  infinit_2.run(['memo', 'network', 'import'], input = network)
   user2 = infinit_2.run_json  ([
-    'infinit', 'user', 'export',  'user2'
+    'memo', 'user', 'export',  'user2'
   ])
-  infinit_1.run(['infinit', 'user', 'import'], input = user2)
-  passport = infinit_1.run_json(['infinit', 'passport', 'create',
+  infinit_1.run(['memo', 'user', 'import'], input = user2)
+  passport = infinit_1.run_json(['memo', 'passport', 'create',
       '--user', 'user2', '--network', 'network', '--as', 'user',
       '--deny-write', '--deny-storage',
       '--output', '-'
   ])
-  infinit_2.run(['infinit', 'passport', 'import'], input = passport)
+  infinit_2.run(['memo', 'passport', 'import'], input = passport)
   try:
-    infinit_2.run(['infinit', 'network', 'link', 'user/network',
+    infinit_2.run(['memo', 'network', 'link', 'user/network',
         '--silo', 'storage', '--as', 'user2'])
   except:
     pass
   else:
     raise Exception('link with storage should have failed')
-  infinit_2.run(['infinit', 'network', 'link', 'user/network',
+  infinit_2.run(['memo', 'network', 'link', 'user/network',
         '--as', 'user2'])

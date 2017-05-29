@@ -68,7 +68,7 @@ class Infinit(TemporaryDirectory):
 
   @property
   def version(self):
-    return self.run(['infinit', '--version'])[0]
+    return self.run(['memo', '--version'])[0]
 
   @property
   def user(self):
@@ -80,11 +80,11 @@ class Infinit(TemporaryDirectory):
 
   @property
   def data_home(self):
-    return '%s/.local/share/infinit/filesystem' % self.dir
+    return '%s/.local/share/infinit/memo' % self.dir
 
   @property
   def state_path(self):
-    return '%s/.local/state/infinit/filesystem' % self.dir
+    return '%s/.local/state/infinit/memo' % self.dir
 
   @property
   def silos_path(self):
@@ -139,9 +139,9 @@ class Infinit(TemporaryDirectory):
       'INFINIT_BACKTRACE': '1',
     }
     if self.dir is not None:
-      env_['INFINIT_HOME'] = self.dir
+      env_['MEMO_HOME'] = self.dir
     if self.__user is not None:
-      env_['INFINIT_USER'] = self.__user
+      env_['MEMO_USER'] = self.__user
     env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
     for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
       if k in os.environ:
@@ -433,17 +433,17 @@ class User():
   def run(self, cli, **kargs):
     return self.infinit.run(
       cli.split(' ') if isinstance(cli, str) else cli,
-      env = { 'INFINIT_USER': self.name }, **kargs)
+      env = { 'MEMO_USER': self.name }, **kargs)
 
   def run_json(self, *args, **kwargs):
     if 'env' in kwargs:
-      env['INFINIT_USER'] = self.name
+      env['MEMO_USER'] = self.name
     else:
-      kwargs['env'] = { 'INFINIT_USER': self.name }
+      kwargs['env'] = { 'MEMO_USER': self.name }
     return self.infinit.run_json(*args, **kwargs)
 
   def run_split(self, args, **kargs):
-    return self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
+    return self.infinit.run(args, env = { 'MEMO_USER': self.name }, **kargs)
 
   def async(self, cli, **kargs):
     import threading

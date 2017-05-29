@@ -18,7 +18,7 @@ namespace infinit
       : public Object<Credentials>
     {
     public:
-      Credentials(Infinit& infinit);
+      Credentials(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::add,
                                     cli::delete_,

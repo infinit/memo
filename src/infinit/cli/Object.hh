@@ -12,7 +12,7 @@ namespace infinit
 {
   namespace cli
   {
-    template <typename Self, typename Owner = Infinit>
+    template <typename Self, typename Owner = Memo>
     class Object;
 
     template <typename Self, typename Owner>
@@ -20,13 +20,13 @@ namespace infinit
       : public elle::das::named::Function<void (decltype(help = false))>
     {
     public:
-      Object(Infinit& infinit);
+      Object(Memo& memo);
       void
       help(std::ostream& s);
       void
       call(bool help);
       void
-      apply(Infinit& cli, std::vector<std::string>& args);
+      apply(Memo& cli, std::vector<std::string>& args);
       template <typename Symbol, typename ... Args>
       static
       auto
@@ -38,7 +38,7 @@ namespace infinit
       auto
       bind(Symbol const& s, Args&& ... args)
         -> decltype(binding(s, std::forward<Args>(args)...));
-      ELLE_ATTRIBUTE_R(Infinit&, cli);
+      ELLE_ATTRIBUTE_R(Memo&, cli);
       ELLE_ATTRIBUTE_R(elle::das::cli::Options, options, protected);
     };
 
@@ -48,7 +48,7 @@ namespace infinit
       using type = bool;
       static
       bool
-      value(infinit::cli::Infinit& infinit,
+      value(infinit::cli::Memo& infinit,
             Object& o,
             std::vector<std::string>& args,
             bool& found)

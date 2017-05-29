@@ -49,8 +49,8 @@ namespace infinit
       const std::string GoogleDrivePrint::pretty{"Google Drive"};
     }
 
-    Credentials::Credentials(Infinit& infinit)
-      : Object(infinit)
+    Credentials::Credentials(Memo& memo)
+      : Object(memo)
       , add(*this,
             "Add credentials for a third-party service",
             name,
@@ -203,7 +203,7 @@ namespace infinit
     {
       template <typename Service>
       void
-      pull_(infinit::cli::Infinit& cli,
+      pull_(infinit::cli::Memo& cli,
             Service service,
             boost::optional<std::string> const& name,
             bool allow_missing);
@@ -354,7 +354,7 @@ namespace infinit
       /// \param allow_missing Do not xxx.
       template <typename Service>
       void
-      pull_(infinit::cli::Infinit& cli,
+      pull_(infinit::cli::Memo& cli,
             Service service,
             boost::optional<std::string> const& account,
             bool allow_missing)

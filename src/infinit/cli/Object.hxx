@@ -11,10 +11,10 @@ namespace infinit
   namespace cli
   {
     template <typename Self, typename Owner>
-    Object<Self, Owner>::Object(Infinit& infinit)
+    Object<Self, Owner>::Object(Memo& memo)
       : elle::das::named::Function<void (decltype(cli::help = false))>(
         elle::das::bind_method(*this, cli::call), cli::help = false)
-      , _cli(infinit)
+      , _cli(memo)
     {
       this->_options.emplace(
         "help", elle::das::cli::Option('h', "show this help message"));
@@ -65,10 +65,10 @@ namespace infinit
     Object<Self, Owner>::help(std::ostream& s)
     {
       using Symbol = find_name<Self, Owner>;
-      Infinit::usage(
+      Memo::usage(
         s, elle::sprintf("%s [MODE|--help]", Symbol::name()));
       elle::fprintf(s,
-                    "Infinit %s management utility.\n"
+                    "Memo %s management utility.\n"
                     "\n"
                     "Modes:\n",
                     Symbol::name());
@@ -96,7 +96,7 @@ namespace infinit
 
     template <typename Self, typename Owner>
     void
-    Object<Self, Owner>::apply(Infinit&, std::vector<std::string>& args)
+    Object<Self, Owner>::apply(Memo&, std::vector<std::string>& args)
     {
       using Symbol = find_name<Self, Owner>;
       try
@@ -138,7 +138,7 @@ namespace infinit
 
     template <typename Self, typename Sig, typename Symbol>
     void
-    Mode<Self, Sig, Symbol>::apply(Infinit& infinit,
+    Mode<Self, Sig, Symbol>::apply(Memo& memo,
                                    std::vector<std::string>& args)
     {
       auto options = this->options;
@@ -146,17 +146,17 @@ namespace infinit
         help = false,
         cli::compatibility_version = boost::none,
         script = false,
-        as = infinit.default_user_name());
-      auto const verb = infinit.command_line().at(1);
+        as = memo.default_user_name());
+      auto const verb = memo.command_line().at(1);
       auto const vars = VarMap{
         {"action", elle::sprintf("to %s", verb)},
         {"hub", beyond(true)},
-        {"object", infinit.command_line().at(0)},
+        {"object", memo.command_line().at(0)},
         {"verb", verb},
       };
       auto show_help = [&] (std::ostream& s)
         {
-          Infinit::usage(s, vars.expand("{object} {verb} [OPTIONS]"));
+          Memo::usage(s, vars.expand("{object} {verb} [OPTIONS]"));
           s << vars.expand(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;
@@ -174,12 +174,12 @@ namespace infinit
                std::string as,
                auto&& ... args)
           {
-            infinit.as(as);
-            infinit.script(script);
+            memo.as(as);
+            memo.script(script);
             if (compatibility_version)
             {
               ensure_version_is_supported(*compatibility_version);
-              infinit.compatibility_version(std::move(compatibility_version));
+              memo.compatibility_version(std::move(compatibility_version));
             }
             if (help)
               show_help(std::cout);

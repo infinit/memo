@@ -17,7 +17,7 @@ namespace infinit
 #endif
     class Device;
     class Doctor;
-    class Infinit;
+    class Memo;
     class Journal;
     class Network;
     class Passport;

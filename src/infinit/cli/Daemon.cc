@@ -36,8 +36,8 @@ namespace infinit
   {
     using Strings = Daemon::Strings;
 
-    Daemon::Daemon(Infinit& infinit)
-      : Object(infinit)
+    Daemon::Daemon(Memo& memo)
+      : Object(memo)
       , disable_storage(*this,
                         "Disable storage on associated network",
                         cli::name)
@@ -409,7 +409,7 @@ namespace infinit
 
       void
       _run(infinit::Infinit& ifnt,
-           Infinit& cli,
+           Memo& cli,
            Strings const& login_user,
            boost::optional<std::string> const& default_network,
            Strings const& advertise_host,

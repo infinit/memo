@@ -43,8 +43,8 @@ namespace infinit
     namespace bfs = boost::filesystem;
     namespace dnut = infinit::model::doughnut;
 
-    Network::Network(Infinit& infinit)
-      : Object(infinit)
+    Network::Network(Memo& memo)
+      : Object(memo)
       , create(*this,
                "Create a network",
                cli::name,
@@ -845,7 +845,7 @@ namespace infinit
                             dnut::Doughnut& dht,
                             bool push)>;
       void
-      network_run(Infinit& cli,
+      network_run(Memo& cli,
                   std::string const& network_name,
 #ifndef INFINIT_WINDOWS
                   bool daemon = false,

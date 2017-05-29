@@ -459,7 +459,7 @@ def configure(
     infinit_cli_deps.append(crash_reporter_lib)
 
   infinit_cli = drake.cxx.Executable(
-    'bin/infinit',
+    'bin/memo',
     infinit_cli_sources + infinit_cli_deps,
     cxx_toolkit,
     cli_cxx_config,
@@ -469,14 +469,6 @@ def configure(
   for lib in infinit_cli.dynamic_libraries:
     if lib not in installed_libraries:
       installed_libraries.append(lib)
-  for m in infinit_modes:
-    b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
-    if windows:
-      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target
-    else:
-      b = drake.Symlink('bin/%s' % b, infinit_cli)
-    binaries.append(b)
-    installed_binaries.append(b)
   if enable_crash_reporting:
     for lib in installed_libraries:
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
@@ -812,7 +804,7 @@ def configure(
       doctor_configuration_test = functional_test(
         'doctor/configuration',
         env = {
-          'INFINIT_HOME_ROOT': str(
+          'MEMO_HOME_ROOT': str(
             drake.path_source('tests/functional/doctor/homes')
           )
         })

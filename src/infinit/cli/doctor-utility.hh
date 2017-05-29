@@ -1556,7 +1556,7 @@ namespace
   {
     using boost::algorithm::starts_with;
     return elle::os::environ([](auto const& k, auto const& v) {
-        return ((starts_with(k, "INFINIT_") || starts_with(k, "ELLE_"))
+        return ((starts_with(k, "MEMO_") || starts_with(k, "ELLE_"))
                 && v != "reactor.network.UTPSocket:NONE");
       });
   }
@@ -1570,7 +1570,7 @@ namespace
 
 
   void
-  _connectivity(infinit::cli::Infinit& cli,
+  _connectivity(infinit::cli::Memo& cli,
                 boost::optional<std::string> const& server,
                 boost::optional<uint16_t> upnp_tcp_port,
                 boost::optional<uint16_t> upnp_utp_port,
@@ -1858,7 +1858,7 @@ namespace
   }
 
   void
-  _system_sanity(infinit::cli::Infinit& cli,
+  _system_sanity(infinit::cli::Memo& cli,
                  SystemSanityResults& result)
   {
     result.fuse = {fuse(false)};
@@ -1954,7 +1954,7 @@ namespace
   }
 
   void
-  _configuration_integrity(infinit::cli::Infinit& cli,
+  _configuration_integrity(infinit::cli::Memo& cli,
                            bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
@@ -2176,7 +2176,7 @@ namespace
   }
 
   void
-  _report_error(infinit::cli::Infinit& cli,
+  _report_error(infinit::cli::Memo& cli,
                 Output& out, bool sane, bool warning = false)
   {
     if (!sane)
@@ -2197,7 +2197,7 @@ namespace
 
   template <typename Report>
   void
-  _output(infinit::cli::Infinit& cli,
+  _output(infinit::cli::Memo& cli,
           Output& out,
           Report const& results)
   {
