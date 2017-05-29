@@ -16,7 +16,6 @@
 #include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Remote.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
@@ -81,7 +80,6 @@ namespace infinit
           do
           {
             ELLE_DEBUG("%s: yield %s", *this, this->_peers[i]);
-            // FIXME: don't always yield Paxos
             yield(this->_make_member(this->_peers[i]));
             i = (i + 1) % size;
           }
