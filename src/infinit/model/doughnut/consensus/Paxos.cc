@@ -796,6 +796,7 @@ namespace infinit
               catch (MissingBlock const&)
               {
                 // The block was deleted in the meantime.
+                ELLE_TRACE("block %f was deleted while rebalancing", address);
               }
               catch (elle::Error const& e)
               {
