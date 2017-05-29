@@ -858,17 +858,6 @@ def configure(
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
-    if website:
-      website = drake.include(
-        'website',
-        python = elle.python3,
-        prefix = prefix,
-        git = git,
-        bottle = bottle,
-        sendwithus = sendwithus,
-        PatchAndInstall = PatchAndInstall,
-        doughnut_proto = grpc.doughnut_proto,
-      )
 
   ## ----- ##
   ## Tests ##
