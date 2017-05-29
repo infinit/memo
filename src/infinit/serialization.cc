@@ -27,6 +27,7 @@ namespace infinit
     DEFINE((0, 7, 2), (0, 2, 0)),
     DEFINE((0, 7, 3), (0, 2, 0)),
     DEFINE((0, 8, 0), (0, 3, 0)),
+    DEFINE((0, 9, 0), (0, 4, 0)),
   }};
 
 #undef DEFINE
