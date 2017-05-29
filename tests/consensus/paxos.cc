@@ -11,14 +11,21 @@ ELLE_TEST_SCHEDULED(availability_2)
   a->overlay->connect(*b->overlay);
   auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
   block->data(elle::Buffer("foo"));
-  a->dht->seal_and_insert(*block);
+  ELLE_LOG("insert block")
+    a->dht->seal_and_insert(*block);
   block->data(elle::Buffer("foobar"));
-  a->dht->seal_and_update(*block);
-  b.reset();
-  block->data(elle::Buffer("foobarbaz"));
-  BOOST_CHECK_EQUAL(a->dht->fetch(block->address())->data(), "foobar");
-  BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
-                    elle::athena::paxos::TooFewPeers);
+  ELLE_LOG("update block")
+    a->dht->seal_and_update(*block);
+  ELLE_LOG("stop second DHT")
+    b.reset();
+  ELLE_LOG("read block")
+    BOOST_CHECK_EQUAL(a->dht->fetch(block->address())->data(), "foobar");
+  ELLE_LOG("update block")
+  {
+    block->data(elle::Buffer("foobarbaz"));
+    BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
+                      elle::athena::paxos::TooFewPeers);
+  }
 }
 
 ELLE_TEST_SCHEDULED(availability_3)
