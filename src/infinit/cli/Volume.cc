@@ -626,7 +626,6 @@ namespace infinit
         for (auto const& v: res["volumes"])
           ifnt.volume_save(v, true);
       }
-      *(volatile int*)nullptr = 0;
     }
 
     /*---------------.
