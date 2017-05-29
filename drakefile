@@ -503,12 +503,11 @@ def configure(
     binaries.append(b)
     installed_binaries.append(b)
   if enable_crash_reporting:
-    for lib in installed_libraries:
-      lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
+    for f in installed_libraries | set(installed_binaries):
+      sym = drake.node('%s.sym' % f.path())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       lib,
-                                       lib_sym)
-      installed_symbols.append(lib_sym)
+                                       f, sym)
+      installed_symbols.append(sym)
     if prefix:
       symbols_dir = '%s/%s' % (prefix, git.version())
       for s in installed_symbols:
