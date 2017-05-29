@@ -54,6 +54,7 @@
 
     <div class="comparison">
       <div class="memo">
+        <p>Scalable by nature</p>
         <p>Instead of relying on authoritative manager nodes, all the nodes play both the role of manager and worker, collectively participating in maintaining consistency, routing messages, hosting replicas and more.</p>
       </div>
       <div>
@@ -61,25 +62,29 @@
         <strong>Scalability</strong>
       </div>
       <div class="etcd">
+        <p>Designed for workers to scale, not managers</p>
         <p>The manager/worker model has been designed for workers to be easily scaled out, leaving managers out of the equation and therefore limiting the overall system's scalability.</p>
       </div>
     </div>
 
     <div class="comparison">
       <div class="memo">
-        <p>Since every node can process a client's request, it is far more complicated to overflow the system, hence doing away with bottlenecks, single points of failure and cascading effects.</p>
+        <p>All the nodes can process the clients' requests</p>
+        <p>Since every node can process a client's request, it is far more complicated to overflow the system, hence removing bottlenecks, single points of failure and cascading effects.</p>
       </div>
       <div>
         <img src="${url('images/icons/resilience.png')}" alt="resilience"><br>
         <strong>Resilience</strong>
       </div>
       <div class="etcd">
+        <p>The managers could get overflowed and fail</p>
         <p>The manager nodes may get overflowed by requests and fail, leading clients to redirect their requests to the remaining managers which in turn could get overflowed taking down the whole system through a cascading effect.</p>
       </div>
     </div>
 
     <div class="comparison">
       <div class="memo">
+        <p>More nodes in the system means more bandwidth and power</p>
         <p>Thanks to the natural distribution of the decentralized model, the more nodes in the system, the faster requests will be processed.</p>
       </div>
       <div>
@@ -87,12 +92,14 @@
         <strong>Performance</strong>
       </div>
       <div class="etcd">
+        <p>The managers have limited capacity</p>
         <p>The manager nodes, being limited in number, have intrinsec limited capacity to handle a large number of client requests in parallel.</p>
       </div>
     </div>
 
     <div class="comparison">
       <div class="memo">
+        <p>No concentration of authority</p>
         <p>No concentration of power in authoritative nodes means that the system is far more complicated to attack.</p>
       </div>
       <div>
@@ -100,12 +107,14 @@
         <strong>Security</strong>
       </div>
       <div class="etcd">
+        <p>Managers are ideal targets</p>
         <p>Because manager nodes orchestrate the system but also handle access control, such nodes represent an ideal target for an attacker.</p>
       </div>
     </div>
 
     <div class="comparison">
       <div class="memo">
+        <p>Multiple per-value quorums</p>
         <p>Instead of relying on a single quorum of manager nodes for maintaing consistency, memo makes use of per-value quorums, allowing for better performance (increased parallism), fault tolerance and scalability.</p>
       </div>
       <div>
@@ -113,6 +122,7 @@
         <strong>Consistency</strong>
       </div>
       <div class="etcd">
+        <p>Consensus is achieved within the managers</p>
         <p>On top of handling clients' specific requests, orchestrating the system etc, the manager nodes are also responsible for maintaining consistency whenever a value is updated. As such, those managers have inherent limited capacity to process many of those update requests in parallel.</p>
       </div>
     </div>
