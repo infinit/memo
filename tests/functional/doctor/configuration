@@ -24,15 +24,11 @@ expectations = {
   # Credentials for aws_storage missing.
   'missing_credentials': (1, read_result('missing_credentials')),
   # Check leftovers in the home.
-  'leftovers': (0, read_result('leftovers', {'leftovers': leftovers})),
+  # 'leftovers': (0, read_result('leftovers', {'leftovers': leftovers})),
   # Storage aws_storage deleted.
   'missing_storage': (1, read_result('missing_storage')),
-  # Network bob/aws_network missing.
-  'missing_network': (1, read_result('missing_network')),
   # Everything ok.
-  'ok': (0, read_result('ok')),
-  # Volume bob/aws_volume missing.
-  'missing_volume': (1, read_result('missing_volume'))
+  'ok': (0, read_result('ok'))
 }
 
 # Path are hard to manage with wine. Just check if the important elements are
@@ -50,24 +46,24 @@ def leftovers_json(res):
   return res
 
 def leftovers_text(res):
-  assertIn('leftovers', res[6])
-  assertIn('foo', res[6])
-  res[6] = '  [WARNING] foo'
-  assertIn('leftovers', res[7])
-  assertIn('linked_networks', res[7])
-  assertIn('bar', res[7])
-  res[7] = '  [WARNING] linked_networks/bar'
+  assertIn('leftovers', res[4])
+  assertIn('foo', res[4])
+  res[4] = '  [WARNING] foo'
+  assertIn('leftovers', res[5])
+  assertIn('linked_networks', res[5])
+  assertIn('bar', res[5])
+  res[5] = '  [WARNING] linked_networks/bar'
   return res
 
 import subprocess
 for home, (i, (json_output, text_output)) in expectations.items():
   infinit = Infinit(home = os.path.join(os.environ['INFINIT_HOME_ROOT'], home))
-  res = infinit.run_json(['infinit-doctor', '--configuration',  '--script', '--as', 'bob'],
+  res = infinit.run_json(['infinit', 'doctor', 'configuration',  '--script', '--as', 'bob'],
                          return_code = i)
   if home == 'leftovers':
     res = leftovers_json(res)
   assertEq(res, json_output)
-  output = infinit.run(['infinit-doctor', '--configuration',  '--as', 'bob', '--no-color'],
+  output = infinit.run(['infinit', 'doctor', 'configuration',  '--as', 'bob', '--no-color'],
                          return_code = i)[0].strip().replace('\r', '').split('\n')
   if i == 0:
     output = output[:-2]

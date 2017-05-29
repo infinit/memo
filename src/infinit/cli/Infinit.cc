@@ -143,10 +143,6 @@ namespace infinit
           return "identity for user";
         else if (object == "network")
           return "network descriptor";
-        else if (object == "volume")
-          return "volume descriptor";
-        else if (object == "drive")
-          return "drive descriptor";
         else
           return object;
       }
@@ -251,34 +247,6 @@ namespace infinit
 
     namespace
     {
-      /// Filename, with possible `.exe` suffix removed.
-      std::string
-      program_name(std::string const& argv0)
-      {
-        // Possible suffix.
-        auto res = bfs::path(argv0).filename().string();
-        static auto const suffix = std::string(".exe");
-        if (boost::algorithm::ends_with(res, suffix))
-          res.resize(res.size() - suffix.size());
-        return res;
-      }
-
-      /// From an old executable name (e.g. `infinit-users`), extract
-      /// the object (e.g., `users`).
-      std::string
-      object_from(std::string const& argv0)
-      {
-        // Mandatory prefix.
-        static auto const prefix = std::string("infinit-");
-        if (!boost::algorithm::starts_with(argv0, prefix))
-          elle::err("unrecognized infinit executable name: %s", argv0);
-        auto res = argv0.substr(prefix.size());
-        // Renamed objects.
-        if (res == "storage")
-          res = "silo";
-        return res;
-      }
-
       /// Return true if we found (and ran) the command.
       bool
       run_command(Infinit& cli, std::vector<std::string>& args)
@@ -293,34 +261,7 @@ namespace infinit
       void
       main_impl(std::vector<std::string>& args)
       {
-        // The name of the command typed by the user, say `infinit-users`.
-        auto prog = program_name(args[0]);
-        if (prog == "infinit")
-          args.erase(args.begin());
-        else
-        {
-          // The corresponding object, say `users`.
-          args[0] = object_from(prog);
-          if (args.size() > 1 && elle::das::cli::is_option(args[1]))
-            if (args[1] == "-v" || args[1] == "--version")
-              args.erase(args.begin());
-            else if (args[1] != "-h" && args[1] != "--help")
-              // This is the mode.  We no longer require a leading `--`.
-              args[1] = args[1].substr(2);
-          ELLE_WARN("%s is deprecated, please run: infinit %s",
-                    prog, boost::algorithm::join(args, " "));
-        }
-        if (args[0] == "network" && args[1] == "list-storage")
-          args[1] = "list-silos";
-        boost::transform(args, args.begin(),
-                         [] (std::string const& entry) -> std::string
-                         {
-                           if (entry == "--storage")
-                             return "--silo";
-                           else if (entry == "--storage-class")
-                             return "--silo-class";
-                           return entry;
-                         });
+        args.erase(args.begin());
         auto infinit = infinit::Infinit{};
         auto&& cli = Infinit(infinit);
         if (args.empty() || elle::das::cli::is_option(args[0], options))

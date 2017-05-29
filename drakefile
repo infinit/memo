@@ -165,8 +165,6 @@ def configure(
     drake.node('src/infinit/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   infinit_sources = drake.nodes(
-    'src/infinit/Drive.cc',
-    'src/infinit/Drive.hh',
     'src/infinit/Infinit.cc',
     'src/infinit/Infinit.hh',
     'src/infinit/Infinit.hxx',
@@ -182,8 +180,6 @@ def configure(
     'src/infinit/User.cc',
     'src/infinit/User.hh',
     'src/infinit/Version.hh',
-    'src/infinit/Volume.cc',
-    'src/infinit/Volume.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/utility.hh',
@@ -377,7 +373,6 @@ def configure(
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
   cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
-  cli_cxx_config.define('INFINIT_WITH_LDAP', '1' if elle.elle.ldap else '0')
   if enable_crash_reporting:
     additional_libs.append(crash_reporter_lib)
   additional_libs += [elle_lib, reactor_lib, cryptography_lib]
@@ -391,8 +386,6 @@ def configure(
   installed_libraries = []
   # CLI
   infinit_cli_sources = drake.nodes(
-    'src/infinit/cli/ACL.cc',
-    'src/infinit/cli/ACL.hh',
     'src/infinit/cli/Block.cc',
     'src/infinit/cli/Block.hh',
     'src/infinit/cli/Credentials.cc',
@@ -401,8 +394,6 @@ def configure(
     'src/infinit/cli/Device.hh',
     'src/infinit/cli/Doctor.cc',
     'src/infinit/cli/Doctor.hh',
-    'src/infinit/cli/Drive.cc',
-    'src/infinit/cli/Drive.hh',
     'src/infinit/cli/Error.hh',
     'src/infinit/cli/Infinit.cc',
     'src/infinit/cli/Infinit.hh',
@@ -418,40 +409,27 @@ def configure(
     'src/infinit/cli/Silo.hh',
     'src/infinit/cli/User.cc',
     'src/infinit/cli/User.hh',
-    'src/infinit/cli/Volume.cc',
-    'src/infinit/cli/Volume.hh',
     'src/infinit/cli/utility.cc',
     'src/infinit/cli/utility.hh',
     'src/infinit/cli/xattrs.cc',
     'src/infinit/cli/xattrs.hh',
   )
   infinit_modes = [
-      'acl',
       'block',
       'credentials',
       'device',
       'doctor',
-      'drive',
       'journal',
       'network',
       'passport',
       'silo',
       'user',
-      'volume',
   ]
   if with_daemon:
     infinit_modes.append('daemon')
     infinit_cli_sources += drake.nodes(
       'src/infinit/cli/Daemon.cc',
       'src/infinit/cli/Daemon.hh',
-      'src/infinit/cli/MountManager.cc',
-      'src/infinit/cli/MountManager.hh',
-    )
-  if elle.elle.ldap:
-    infinit_modes.append('ldap')
-    infinit_cli_sources += drake.nodes(
-      'src/infinit/cli/LDAP.cc',
-      'src/infinit/cli/LDAP.hh',
     )
   infinit_cli_instantiate = drake.node(
     'src/infinit/cli/Infinit-instantiate.cc')
@@ -820,20 +798,16 @@ def configure(
               'cli-basics',
               'cli-backward-compatibility',
               'device_cli',
-              'drive_cli',
               'errors',
               #FIXME: 'flow',
               'main_cli',
               'network_cli',
               'passport-restrictions',
-              'passport-sign-delegate',
+              # 'passport-sign-delegate',
               'passport_cli',
-              # 'rebalancing',
               'sanity',
-              'single-user-two-devices-shared-storage',
               'storage_cli',
               'user_cli',
-              'volume_cli',
             ]))
       doctor_configuration_test = functional_test(
         'doctor/configuration',
@@ -852,21 +826,6 @@ def configure(
       tests.append(doctor_configuration_test)
       if enable_crash_reporting:
         tests.append(functional_test('crash-reporter'))
-      if linux:
-        pjdfstest = drake.include(
-          'pjdfstest',
-          cxx_toolkit = cxx_toolkit,
-          cxx_config = cxx_config)
-        tests.append(functional_test(
-          'pjdfstest',
-          {
-            'PJDFSTESTS': str(pjdfstest.tests_folder),
-            'PATH': '%s:%s' % (
-              drake.path_build('pjdfstest', absolute = True),
-              os.environ['PATH']),
-          },
-          [pjdfstest.pjdfstest]
-        ))
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test

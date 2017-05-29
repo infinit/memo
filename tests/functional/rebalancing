@@ -17,37 +17,36 @@ def initialize(infinits):
         'infinit.overlay*',
       ])
     i.env['INFINIT_USER'] = i.user
-    i.run(['infinit-user', '--create'])
-    i.run(['infinit-storage',
-           '--create', 'storage', '--filesystem',
+    i.run(['infinit', 'user', 'create'])
+    i.run(['infinit', 'storage',
+           'create', 'storage', '--filesystem',
            '--path', '%s/blocks' % i.dir])
   # Exchange users
   for (lhs, rhs) in permutations(infinits, 2):
-    user, _ = rhs.run(['infinit-user', '--export'])
-    lhs.run(['infinit-user', '--import'], input = user)
+    user, _ = rhs.run(['infinit', 'user', 'export'])
+    lhs.run(['infinit', 'user', 'import'], input = user)
   # Create network and volume, distribute passports and link
   a = infinits[0]
-  a.run(['infinit-network', '--create', 'network', '--kelips',
+  a.run(['infinit', 'network', 'create', 'network', '--kelips',
          '--replication-factor', '3',
          '--eviction-delay', '1s',
          '--kelips-contact-timeout', '3s',
-         '--storage', 'storage'])
-  network, _ = a.run(['infinit-network', '--export', 'network'])
-  a.run(['infinit-volume',
+         '--silo', 'storage'])
+  network, _ = a.run(['infinit', 'network', 'export', 'network'])
+  a.run(['infinit', 'volume',
          '--create', 'volume', '--network', 'network'])
-  volume, _ = a.run(['infinit-volume', '--export', 'volume'])
+  volume, _ = a.run(['infinit', 'volume', 'export', 'volume'])
   for i in infinits[1:]:
-    i.run(['infinit-network', '--import'], input = network)
-    i.run(['infinit-volume', '--import'], input = volume)
-    a.run(['infinit-passport',
-           '--create', '--network', 'network',
+    i.run(['infinit', 'network', 'import'], input = network)
+    i.run(['infinit', 'volume', 'import'], input = volume)
+    a.run(['infinit', 'passport',
+           'create', '--network', 'network',
            '--user', i.user])
-    p, _ = a.run(['infinit-passport',
+    p, _ = a.run(['infinit', 'passport',
                   '--export', '--network', 'network',
                   '--user', i.user])
-    i.run(['infinit-passport', '--import'], input = p)
-    i.run(['infinit-network',
-           '--link', 'a/network', '--storage', 'storage'])
+    i.run(['infinit', 'passport', 'import'], input = p)
+    i.run(['infinit', 'network','link', 'a/network', '--silo', 'storage'])
 
 def run(*infinits):
   def wait_file(path):
@@ -58,7 +57,7 @@ def run(*infinits):
       except FileNotFoundError:
         time.sleep(0.1)
   run_a = infinits[0].spawn(
-    ['infinit-volume',
+    ['infinit', 'volume',
      '--run', 'a/volume', '--script', '--allow-root-creation',
      '--endpoints-file', '%s/endpoints' % infinits[0].dir])
   wait_file('%s/endpoints' % infinits[0].dir)
@@ -68,7 +67,7 @@ def run(*infinits):
   peers = ['--peer', '%s/endpoints' % infinits[0].dir]
   for i in infinits[1:]:
     res.append(i.spawn(
-      ['infinit-network',
+      ['infinit', 'network',
        '--run', 'a/network', '--script',
        '--endpoints-file', '%s/endpoints' % i.dir] + peers))
     wait_file('%s/endpoints' % i.dir)
@@ -135,7 +134,7 @@ def test_a():
     # Kill C, plug D
     run_c.terminate()
     wait(run_c)
-    run_d = d.spawn(['infinit-network',
+    run_d = d.spawn(['infinit', 'network',
                      '--run', 'a/network', '--script',
                      '--peer', '%s/endpoints' % a.dir,
                      '--peer', '%s/endpoints' % b.dir])

@@ -301,18 +301,6 @@ namespace infinit
       }
       if (purge)
       {
-        // XXX Remove volumes and drives that are on network owned by this user.
-        // Currently only the owner of a network can create volumes/drives.
-        for (auto const& drive: ifnt.drives_get())
-        {
-          if (ifnt.owner_name(drive.name) == user.name)
-            ifnt.drive_delete(drive);
-        }
-        for (auto const& volume: ifnt.volumes_get())
-        {
-          if (ifnt.owner_name(volume.name) == user.name)
-            ifnt.volume_delete(volume);
-        }
         for (auto const& pair: ifnt.passports_get())
         {
           auto network = pair.first.network();

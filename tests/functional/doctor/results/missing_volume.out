@@ -1,7 +1,4 @@
 [OK] User
 [OK] Silos
 [OK] Networks
-[OK] Volumes
-[ERROR] Drives:
-  [ERROR] bob/aws_drive is faulty because volume "bob/aws_volume" is missing
 [OK] Leftovers

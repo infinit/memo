@@ -29,8 +29,7 @@ namespace infinit
                                     cli::run,
                                     cli::start,
                                     cli::status,
-                                    cli::stop,
-                                    cli::manage_volumes));
+                                    cli::stop));
       using Strings = std::vector<std::string>;
 
       /*------------------------.
@@ -67,33 +66,11 @@ namespace infinit
       void
       mode_fetch(std::string const& name);
 
-      /*-----------------------.
-      | Mode: manage_volumes.  |
-      `-----------------------*/
-      Mode<Daemon,
-           void (decltype(cli::list = false),
-                 decltype(cli::status = false),
-                 decltype(cli::start = false),
-                 decltype(cli::stop = false),
-                 decltype(cli::restart = false),
-                 decltype(cli::name = boost::optional<std::string>())),
-           decltype(modes::mode_manage_volumes)>
-      manage_volumes;
-      void
-      mode_manage_volumes(bool list = false,
-                          bool status = false,
-                          bool start = false,
-                          bool stop = false,
-                          bool restart = false,
-                          boost::optional<std::string> const& name = {});
-
       /*------------.
       | Mode: run.  |
       `------------*/
       Mode<Daemon,
            void (decltype(cli::login_user = Strings{}),
-                 decltype(cli::mount = Strings{}),
-                 decltype(cli::mount_root = boost::optional<std::string>()),
                  decltype(cli::default_network = boost::optional<std::string>()),
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::fetch = false),
@@ -114,8 +91,6 @@ namespace infinit
       run;
       void
       mode_run(Strings const& login_user,
-               Strings const& mount,
-               boost::optional<std::string> const& mount_root,
                boost::optional<std::string> const& default_network,
                Strings const& advertise_host,
                bool fetch,
@@ -138,8 +113,6 @@ namespace infinit
       `--------------*/
       Mode<Daemon,
            void (decltype(cli::login_user = Strings{}),
-                 decltype(cli::mount = Strings{}),
-                 decltype(cli::mount_root = boost::optional<std::string>()),
                  decltype(cli::default_network = boost::optional<std::string>()),
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::fetch = false),
@@ -160,8 +133,6 @@ namespace infinit
       start;
       void
       mode_start(Strings const& login_user,
-                 Strings const& mount,
-                 boost::optional<std::string> const& mount_root,
                  boost::optional<std::string> const& default_network,
                  Strings const& advertise_host,
                  bool fetch,

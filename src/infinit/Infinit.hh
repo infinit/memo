@@ -6,7 +6,6 @@
 
 #include <elle/flat-set.hh>
 
-#include <infinit/Drive.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
 #include <infinit/User.hh>
@@ -62,8 +61,6 @@ namespace infinit
     network_delete(std::string const& name_,
                    User const& user,
                    bool unlink);
-    std::vector<Drive>
-    drives_get() const;
     NetworkDescriptor
     network_descriptor_get(std::string const& name_,
                            User const& owner,
@@ -140,23 +137,6 @@ namespace infinit
                 bool clear = false);
     std::unordered_map<std::string, std::vector<std::string>>
     silo_networks(std::string const& silo_name);
-
-
-    /*---------.
-    | Volume.  |
-    `---------*/
-
-    bool
-    volume_has(std::string const& name);
-    Volume
-    volume_get(std::string const& name);
-    void
-    volume_save(Volume const& volume, bool overwrite = false);
-    bool
-    volume_delete(Volume const& volume);
-    std::vector<Volume>
-    volumes_get() const;
-
 
     /*--------------.
     | Credentials.  |
@@ -241,10 +221,6 @@ namespace infinit
     _users_path() const;
     boost::filesystem::path
     _user_path(std::string const& name) const;
-    boost::filesystem::path
-    _volumes_path() const;
-    boost::filesystem::path
-    _volume_path(std::string const& name) const;
     static
     void
     _open_read(boost::filesystem::ifstream& f,
@@ -278,30 +254,9 @@ namespace infinit
                 std::string const& type,
                 bool overwrite = false,
                 std::ios_base::openmode mode = std::ios_base::out);
-    boost::filesystem::path
-    _drives_path() const;
-    boost::filesystem::path
-    _drive_path(std::string const& name) const;
-    void
-    drive_save(Drive const& drive,
-               bool overwrite = true);
-    Drive
-    drive_get(std::string const& name);
-    bool
-    drive_delete(Drive const& drive);
-    boost::filesystem::path
-    _drive_icon_path() const;
-    boost::filesystem::path
-    _drive_icon_path(std::string const& name) const;
-    Drive
-    drive_fetch(std::string const& name);
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name);
-    std::vector<Volume>
-    volumes_for_network(std::string const& network_name);
-    std::vector<Drive>
-    drives_for_volume(std::string const& volume_name);
     // saving & loading
     template <typename T>
     static

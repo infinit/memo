@@ -488,15 +488,6 @@ namespace infinit
       }
       if (purge)
       {
-        auto volumes = ifnt.volumes_for_network(network.name);
-        // FIXME: wouldn't a simple loop suffice?  With a
-        // delete_volume function.  Actually, that's quite some
-        // duplication with Volument::mode_delete, no?
-        for (auto const& volume: volumes)
-          for (auto const& drive: ifnt.drives_for_volume(volume.name))
-            ifnt.drive_delete(drive);
-        for (auto const& volume: volumes)
-          ifnt.volume_delete(ifnt.volume_get(volume.name));
         for (auto const& user: ifnt.user_passports_for_network(network.name))
           ifnt.passport_delete(network.name, user);
       }

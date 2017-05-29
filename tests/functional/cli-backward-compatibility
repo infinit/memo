@@ -37,7 +37,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     ## ---- ##
     ## User ##
     ## ---- ##
-    users = user('infinit-user', '--list')
+    users = user('infinit', 'user', 'list')
     print(users)
     assertEq(users, [
       { 'name': 'other', 'has_private_key': True },
@@ -46,14 +46,14 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     ])
 
     # User 'user'.
-    u = user('infinit-user', '--export', '--name', 'user', '--full')
+    u = user('infinit', 'user', 'export', '--name', 'user', '--full')
     assertEq(u['name'], 'user')
     assertIn('public_key', u)
     assertIn('rsa', u['public_key'])
     assertIn('private_key', u)
     assertIn('rsa', u['private_key'])
     # User 'owner'.
-    o = user('infinit-user', '--export', '--name', 'owner')
+    o = user('infinit', 'user', 'export', '--name', 'owner')
     assertEq(o['name'], 'owner')
     assertIn('public_key', o)
     assertIn('rsa', o['public_key'])
@@ -61,7 +61,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     ## -------- ##
     ## Networks ##
     ## -------- ##
-    networks = user('infinit-network', '--list')
+    networks = user('infinit', 'network', 'list')
     assertEq(networks,
              [
                {'name': 'owner/network1', 'linked': False},
@@ -69,12 +69,12 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
              ])
     # Network 'network1'.
     try:
-      network1 = user('infinit-network', '--export', '--name', 'owner/network1')
+      network1 = user('infinit', 'network', 'export', '--name', 'owner/network1')
       assert False
     except Exception:
       pass
     # Network 'network0'.
-    network0 = user('infinit-network', '--export', '--name', 'owner/network0')
+    network0 = user('infinit', 'network', 'export', '--name', 'owner/network0')
     assertEq(network0['name'], 'owner/network0')
     assertEq(network0['owner']['rsa'], o['public_key']['rsa'])
     if version < Version('0.4.0'):
@@ -85,14 +85,14 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     ## --------- ##
     ## Passports ##
     ## --------- ##
-    passports = user('infinit-passport', '--list')
+    passports = user('infinit', 'passport', 'list')
     assertEq(passports, [
       {'network': 'owner/network1', 'user': 'other'},
       {'network': 'owner/network1', 'user': 'user'},
       {'network': 'owner/network0', 'user': 'user'}
     ])
     for passport in map(
-        lambda network: user('infinit-passport', '--export',
+        lambda network: user('infinit', 'passport', 'export',
                             '--user', 'user', '--network', network),
         [passport['network'] for passport in passports]):
       assertEq(passport['allow_sign'], False)
@@ -102,46 +102,14 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       assertEq(passport['user']['rsa'], u['public_key']['rsa'])
 
     ### Fakely link passport.
-    user('infinit-network', '--link', '--name', 'owner/network1',
+    user('infinit', 'network', 'link', '--name', 'owner/network1',
         '--output', '-')
     ### Really link the network.
-    user('infinit-network', '--link', '--name', 'owner/network1')
+    user('infinit', 'network', 'link', '--name', 'owner/network1')
     # Network 'network1'.<
-    network1 = user('infinit-network', '--export', '--name', 'owner/network1')
+    network1 = user('infinit', 'network', 'export', '--name', 'owner/network1')
     assertEq(network1['name'], 'owner/network1')
     assertEq(network1['owner']['rsa'], o['public_key']['rsa'])
-
-    ## ------- ##
-    ## Volumes ##
-    ## ------- ##
-    volumes = user('infinit-volume', '--list')
-    print(volumes)
-    assertEq(volumes, [
-      { 'name': 'owner/volume0', 'network': 'owner/network1' },
-      { 'name': 'owner/volume1', 'network': 'owner/network1' },
-    ])
-    for volume in map(
-        lambda name: user('infinit-volume', '--export', '--name', name),
-        [volume_descrption['name'] for volume_descrption in volumes]):
-      assertEq(volume['name'][:-1], 'owner/volume')
-      assertEq(volume['network'][:-1], 'owner/network')
-
-    ## ------ ##
-    ## Drives ##
-    ## ------ ##
-    drives = user('infinit-drive', '--list')
-    print(drives)
-    assertEq(drives, [
-      { 'name': 'owner/drive0', 'status': 'ok', 'description': '' },
-      { 'name': 'owner/drive1', 'status': 'pending', 'description': '' },
-    ])
-    for drive in map(
-        lambda name: user('infinit-drive', '--export', '--name', name),
-        [drive_descrption['name'] for drive_descrption in drives]):
-      assertEq(set(drive["users"].keys()), {'user', 'owner'})
-      assertEq(drive['name'][:-1], 'owner/drive')
-      assertEq(drive['volume'][:-1], 'owner/volume')
-      assertEq(drive['network'][:-1], 'owner/network')
 
     ## --------- ##
     ## Same home ##
@@ -149,43 +117,43 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
 
     # Use a previously linked network.
     other = partial(run, as_user = 'other')
-    assertEq(other('infinit-network', '--list'), [
+    assertEq(other('infinit', 'network', 'list'), [
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': False },
     ])
-    other('infinit-network', '--link', 'owner/network1')
+    other('infinit', 'network', 'link', 'owner/network1')
     # Other should have his owner/network0 linked.
-    assertEq(other('infinit-network', '--list'), [
+    assertEq(other('infinit', 'network', 'list'), [
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': True },
     ])
     # User should still have both networks linked.
-    assertEq(user('infinit-network', '--list'), [
+    assertEq(user('infinit', 'network', 'list'), [
       { 'name': 'owner/network0', 'linked': True },
       { 'name': 'owner/network1', 'linked': True },
     ])
 
     # New user in the same home.
     new = partial(run, as_user = 'new')
-    new('infinit-user', '--create', '--name', 'new')
-    assertEq(new('infinit-network', '--list'), [
+    new('infinit', 'user', 'create', '--name', 'new')
+    assertEq(new('infinit', 'network', 'list'), [
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': False },
     ])
-    throws(lambda: new('infinit-network', '--link', 'owner/network0'))
-    throws(lambda: new('infinit-network', '--link', 'owner/network1'))
-    new('infinit-network', '--create', '--name', 'network')
-    assertEq(new('infinit-network', '--list'), [
+    throws(lambda: new('infinit', 'network', 'link', 'owner/network0'))
+    throws(lambda: new('infinit', 'network', 'link', 'owner/network1'))
+    new('infinit', 'network', 'create', '--name', 'network')
+    assertEq(new('infinit', 'network', 'list'), [
       { 'name': 'new/network', 'linked': True },
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': False },
     ])
-    assertEq(other('infinit-network', '--list'), [
+    assertEq(other('infinit', 'network', 'list'), [
       { 'name': 'new/network', 'linked': False },
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': True },
     ])
-    assertEq(user('infinit-network', '--list'), [
+    assertEq(user('infinit', 'network', 'list'), [
       { 'name': 'new/network', 'linked': False },
       { 'name': 'owner/network0', 'linked': True },
       { 'name': 'owner/network1', 'linked': True },
@@ -195,20 +163,20 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     ## Network delete ##
     ## -------------- ##
     assertEq(
-      user('infinit-network', '--list'),
+      user('infinit', 'network', 'list'),
       [
         { 'name': 'new/network', 'linked': False },
         { 'name': 'owner/network0', 'linked': True },
         { 'name': 'owner/network1', 'linked': True },
       ])
     # Network is still linked for other.
-    throws(lambda: user('infinit-network', '--delete', '--name', 'owner/network1'))
+    throws(lambda: user('infinit', 'network', 'delete', '--name', 'owner/network1'))
     # Unlink it.
-    user('infinit-network', '--unlink', '--name', 'owner/network1')
+    user('infinit', 'network', 'unlink', '--name', 'owner/network1')
     # Can't unlink it twice.
-    throws(lambda: user('infinit-network', '--unlink', '--name', 'owner/network1'))
+    throws(lambda: user('infinit', 'network', 'unlink', '--name', 'owner/network1'))
     assertEq(
-      user('infinit-network', '--list'),
+      user('infinit', 'network', 'list'),
       [
         { 'name': 'new/network', 'linked': False },
         { 'name': 'owner/network0', 'linked': True },
@@ -216,18 +184,18 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       ])
     # User can create a network (and is automatically linked with it) and
     # delete it direct.
-    user('infinit-network', '--create', '--kelips', '--name', 'network')
+    user('infinit', 'network', 'create', '--kelips', '--name', 'network')
     assertEq(
-      user('infinit-network', '--list'),
+      user('infinit', 'network', 'list'),
       [
         { 'name': 'new/network', 'linked': False },
         { 'name': 'owner/network0', 'linked': True },
         { 'name': 'owner/network1', 'linked': False },
         { 'name': 'user/network', 'linked': True },
       ])
-    user('infinit-network', '--delete', '--name', 'user/network', '--unlink')
+    user('infinit', 'network', 'delete', '--name', 'user/network', '--unlink')
     assertEq(
-      user('infinit-network', '--list'),
+      user('infinit', 'network', 'list'),
       [
         { 'name': 'new/network', 'linked': False },
         { 'name': 'owner/network0', 'linked': True},

@@ -1,22 +1,4 @@
 {
-    "drives": [
-        {
-            "name": "bob/aws_drive",
-            "sane": false,
-            "volume": {
-                "name": "bob/aws_volume",
-                "reason": "missing",
-                "sane": false,
-                "warning": false
-            },
-            "warning": false
-        },
-        {
-            "name": "bob/fs_drive",
-            "sane": true,
-            "warning": false
-        }
-    ],
     "leftovers": [],
     "networks": [
         {
@@ -45,13 +27,6 @@
             "reason": "\"/tmp/\" is readable and writable",
             "sane": true,
             "type": "filesystem",
-            "warning": false
-        }
-    ],
-    "volumes": [
-        {
-            "name": "bob/fs_volume",
-            "sane": true,
             "warning": false
         }
     ]

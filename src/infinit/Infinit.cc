@@ -272,22 +272,6 @@ namespace infinit
     });
   }
 
-  std::vector<Drive>
-  Infinit::drives_get() const
-  {
-    auto res = std::vector<Drive>{};
-    for (auto const& p
-           : bfs::recursive_directory_iterator(this->_drives_path()))
-      if (is_visible_file(p))
-      {
-        bfs::ifstream f;
-        this->_open_read(
-          f, p.path(), p.path().filename().string(), "drive");
-        res.emplace_back(load<Drive>(f));
-      }
-    return res;
-  }
-
   NetworkDescriptor
   Infinit::network_descriptor_get(std::string const& name_,
                                   User const& owner,
@@ -617,57 +601,6 @@ namespace infinit
     return res;
   }
 
-  bool
-  Infinit::volume_has(std::string const& name)
-  {
-    bfs::ifstream f;
-    return exists(this->_volume_path(name));
-  }
-
-  Volume
-  Infinit::volume_get(std::string const& name)
-  {
-    bfs::ifstream f;
-    this->_open_read(f, this->_volume_path(name), name, "volume");
-    return load<Volume>(f);
-  }
-
-  void
-  Infinit::volume_save(Volume const& volume, bool overwrite)
-  {
-    bfs::ofstream f;
-    bool existed = this->_open_write(
-      f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
-    save(f, volume);
-    this->report_local_action()(existed ? "updated" : "saved", "volume",
-                                volume.name);
-  }
-
-  bool
-  Infinit::volume_delete(Volume const& volume)
-  {
-    auto deleted =
-      this->_delete(this->_volume_path(volume.name), "volume", volume.name);
-    this->_delete_all(volume.root_block_cache_dir(), "root block for volume",
-                      volume.name);
-    return deleted;
-  }
-
-  std::vector<Volume>
-  Infinit::volumes_get() const
-  {
-    auto res = std::vector<Volume>{};
-    for (auto const& p
-           : bfs::recursive_directory_iterator(this->_volumes_path()))
-      if (is_visible_file(p))
-      {
-        bfs::ifstream f;
-        this->_open_read(f, p.path(), p.path().filename().string(), "volume");
-        res.emplace_back(load<Volume>(f));
-      }
-    return res;
-  }
-
   void
   Infinit::credentials_add(std::string const& name, std::unique_ptr<Credentials> a)
   {
@@ -905,20 +838,6 @@ namespace infinit
     return this->_users_path() / name;
   }
 
-  bfs::path
-  Infinit::_volumes_path() const
-  {
-    auto root = xdg_data_home() / "volumes";
-    create_directories(root);
-    return root;
-  }
-
-  bfs::path
-  Infinit::_volume_path(std::string const& name) const
-  {
-    return this->_volumes_path() / name;
-  }
-
   void
   Infinit::_open_read(bfs::ifstream& f,
                     bfs::path const& path,
@@ -952,66 +871,6 @@ namespace infinit
     return exists;
   }
 
-  bfs::path
-  Infinit::_drives_path() const
-  {
-    auto root = xdg_data_home() / "drives";
-    create_directories(root);
-    return root;
-  }
-
-  bfs::path
-  Infinit::_drive_path(std::string const& name) const
-  {
-    return this->_drives_path() / name;
-  }
-
-  void
-  Infinit::drive_save(Drive const& drive,
-                      bool overwrite)
-  {
-    bfs::ofstream f;
-    bool existed = this->_open_write(
-      f, this->_drive_path(drive.name), drive.name, "drive", overwrite);
-    save(f, drive);
-    this->report_local_action()(existed ? "updated" : "saved", "drive",
-                                drive.name);
-  }
-
-  Drive
-  Infinit::drive_get(std::string const& name)
-  {
-    bfs::ifstream f;
-    this->_open_read(f, this->_drive_path(name), name, "drive");
-    return load<Drive>(f);
-  }
-
-  bool
-  Infinit::drive_delete(Drive const& drive)
-  {
-    return this->_delete(this->_drive_path(drive.name), "drive", drive.name);
-  }
-
-  bfs::path
-  Infinit::_drive_icon_path() const
-  {
-    auto root = xdg_cache_home() / "icons";
-    create_directories(root);
-    return root;
-  }
-
-  bfs::path
-  Infinit::_drive_icon_path(std::string const& name) const
-  {
-    return this->_drive_icon_path() / name;
-  }
-
-  Drive
-  Infinit::drive_fetch(std::string const& name)
-  {
-    return beyond_fetch<Drive>("drive", name);
-  }
-
 
   std::vector<std::string>
   Infinit::user_passports_for_network(std::string const& network_name)
@@ -1022,33 +881,9 @@ namespace infinit
     return res;
   }
 
-  std::vector<Volume>
-  Infinit::volumes_for_network(std::string const& network_name)
-  {
-    std::vector<Volume> res;
-    for (auto const& volume: this->volumes_get())
-    {
-      if (volume.network == network_name)
-        res.push_back(volume);
-    }
-    return res;
-  }
-
-  std::vector<Drive>
-  Infinit::drives_for_volume(std::string const& volume_name)
-  {
-    std::vector<Drive> res;
-    for (auto const& drive: this->drives_get())
-    {
-      if (drive.volume == volume_name)
-        res.push_back(drive);
-    }
-    return res;
-  }
-
-    /*-------.
-    | Beyond |
-    `-------*/
+  /*-------.
+  | Beyond |
+  `-------*/
 
   elle::json::Json
   Infinit::beyond_login(std::string const& name,

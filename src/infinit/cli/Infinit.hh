@@ -12,7 +12,6 @@
 
 #include <infinit/cli/Error.hh>
 
-#include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
 #if INFINIT_WITH_DAEMON
@@ -20,16 +19,11 @@
 #endif
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Doctor.hh>
-#include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
-#if INFINIT_WITH_LDAP
-# include <infinit/cli/LDAP.hh>
-#endif
 #include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
-#include <infinit/cli/Volume.hh>
 
 namespace infinit
 {
@@ -121,7 +115,6 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
-      ACL acl = *this;
       Block block = *this;
       Credentials credentials = *this;
 #if INFINIT_WITH_DAEMON
@@ -129,35 +122,24 @@ namespace infinit
 #endif
       Device device = *this;
       Doctor doctor = *this;
-      Drive drive = *this;
       Journal journal = *this;
-#if INFINIT_WITH_LDAP
-      LDAP ldap = *this;
-#endif
       Network network{*this};
       Passport passport = *this;
       Silo silo = *this;
       User user = *this;
-      Volume volume = *this;
       using Objects
-        = decltype(elle::meta::list(cli::acl,
-                                    cli::block,
+        = decltype(elle::meta::list(cli::block,
                                     cli::credentials,
 #if INFINIT_WITH_DAEMON
                                     cli::daemon,
 #endif
                                     cli::device,
                                     cli::doctor,
-                                    cli::drive,
                                     cli::journal,
-#if INFINIT_WITH_LDAP
-                                    cli::ldap,
-#endif
                                     cli::network,
                                     cli::passport,
                                     cli::silo,
-                                    cli::user,
-                                    cli::volume));
+                                    cli::user));
       void
       help(std::ostream& s) const;
       void

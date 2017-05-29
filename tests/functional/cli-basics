@@ -32,7 +32,3 @@ with Infinit() as bob:
   xfail(['network', 'list', '--foo'],
         "./bin/infinit: command line error: unknown option: --foo\n"
         "Try './bin/infinit network list --help' for more information.\n")
-
-  xfail(['volume', 'create', 'name', '--network'],
-        "./bin/infinit: command line error: option requires an argument: --network\n"
-        "Try './bin/infinit volume create --help' for more information.\n")

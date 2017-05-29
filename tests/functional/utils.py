@@ -230,23 +230,6 @@ class Infinit(TemporaryDirectory):
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
 
-  def run_script(self,
-                 user = None,
-                 volume = 'volume',
-                 seq = None,
-                 peer = None,
-                 gdb = False,
-                 valgrind = False,
-                 **kwargs):
-    cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
-    if user is not None:
-      cmd += ['--as', user]
-    if peer is not None:
-      cmd += ['--peer', peer]
-    response = self.run_json(cmd, gdb = gdb, valgrind = valgrind,
-                             input = seq or kwargs)
-    return response
-
 def assertEq(a, b):
   if a == b:
     print('PASS: {} == {}'.format(a, b), file=sys.stderr)
