@@ -31,7 +31,7 @@ def find_binaries():
     if not path.endswith('/'):
       path += '/'
     try:
-      subprocess.check_call([path + 'infinit-user' + exe_ext, '--version'])
+      subprocess.check_call([path + 'memo' + exe_ext, '--version'])
       return path
     except FileNotFoundError:
       pass
@@ -354,14 +354,14 @@ class Beyond:
       import tempfile
       with tempfile.TemporaryDirectory() as directory:
         env = {
-          'INFINIT_DATA_HOME': str(directory),
-          'INFINIT_USER': self.delegate_user,
+          'MEMO_DATA_HOME': str(directory),
+          'MEMO_USER': self.delegate_user,
         }
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
-                  '--import', '-s']
+          args = [binary_path + 'memo%s' % exe_ext,
+                  type, 'import', '-s']
           try:
             subprocess.check_output(
               args,
@@ -382,7 +382,7 @@ class Beyond:
             import_data('network', network.json())
             output = subprocess.check_output(
               [
-                binary_path + 'infinit-passport' + exe_ext, '--create',
+                binary_path + 'memo' + exe_ext, 'passport', 'create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
@@ -403,7 +403,7 @@ class Beyond:
       errors.append(str(e))
     if len(errors) > 0:
       self.__emailer.send_one(
-        recipient_email = 'crash+passport_generation@infinit.sh',
+        recipient_email = 'developers+passport_generation@infinit.sh',
         recipient_name = 'Developers',
         variables = {
           'user': user.name,

@@ -272,7 +272,7 @@ class User(dict):
     import os
     import subprocess
     output = subprocess.check_output(
-      [infinit.beyond.binary_path + 'infinit-user', '--create',
+      [infinit.beyond.binary_path + 'memo', 'user', 'create',
        '--name', self['name'],
        '--output', '-'])
     import json
