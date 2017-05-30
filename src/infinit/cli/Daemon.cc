@@ -972,23 +972,20 @@ namespace infinit
             (void)gid;
             auto const system_user = SystemUser{uid};
             auto const user_manager = [&]{
-              if (auto it = elle::find(managers, uid))
-                return it->second.get();
-              else
+              auto p = managers.emplace(uid, nullptr);
+              if (p.second)
               {
                 auto const peer_mount_root = get_mount_root(system_user);
                 auto const lock = system_user.enter(mutex);
-                auto const res = new MountManager(ifnt,
-                                                  peer_mount_root,
-                                                  docker_mount_substitute);
+                auto res = std::make_unique<MountManager>(ifnt,
+                                                          peer_mount_root,
+                                                          docker_mount_substitute);
                 fill_manager_options(*res);
-                managers[uid].reset(res);
-                return res;
+                p.first->second = std::move(res);
               }
+              return p.first->second.get();
             }();
-            auto const name = elle::sprintf("%s server", **socket);
-            scope.run_background(
-              name,
+            scope.run_background(elle::sprintf("%s server", **socket),
               [socket, user_manager, system_user]
               {
                 auto on_end = std::function<void()>{};
