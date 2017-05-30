@@ -685,7 +685,8 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       ::paxos = true,
       ::storage = nullptr);
   discover(*client, *servers[0], false);
-  elle::reactor::sleep(500_ms);
+  elle::reactor::wait(client->dht->overlay()->on_discovery(),
+    [&](NodeLocation, bool) { return true;});
   infinit::model::Endpoints eps("127.0.0.1", 0);
   auto ep = *eps.begin();
   elle::reactor::Barrier b;
@@ -696,16 +697,20 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       infinit::grpc::serve_grpc(*servers[0]->dht, boost::none, ep, &listening_port);
     });
   elle::reactor::wait(b);
-  ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
+  ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
   auto mutable_block = client->dht
     ->make_block<infinit::model::blocks::MutableBlock>(std::string("{}"));
+  ELLE_TRACE("insert mb");
   client->dht->seal_and_insert(*mutable_block);
   auto task = [&](int id) {
+    ELLE_TRACE("%s: create channel", id);
     auto chan = grpc::CreateChannel(
         elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
     ::Block b;
+    ELLE_TRACE("%s: create stup", id);
     auto stub = Doughnut::NewStub(chan);
+    ELLE_TRACE("%s: fetch block", id);
     // Fetch mutable_block
     {
       grpc::ClientContext context;
@@ -749,6 +754,7 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
     }
     ELLE_LOG("%s update end, %s conflicts", id, conflicts);
   };
+  ELLE_TRACE("starting tasks");
   elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
   {
     for (int i=0; i<5; ++i)
@@ -757,6 +763,7 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       });
     elle::reactor::wait(s);
   };
+  ELLE_TRACE("final check");
   auto nb = client->dht->fetch(mutable_block->address());
 }
 
