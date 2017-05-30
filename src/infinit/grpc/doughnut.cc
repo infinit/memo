@@ -134,6 +134,8 @@ namespace infinit
       {
          if (v.template is<E>())
          {
+           ELLE_DEBUG("grpc call failed with exception %s",
+                      elle::exception_string(v.template get<E>()));
            try
            {
              std::rethrow_exception(v.template get<E>());
@@ -248,7 +250,8 @@ namespace infinit
       // model's update() function does not handle parallel calls with the same
       // address, so wrap our call with a per-address mutex
       using MutexPtr = std::shared_ptr<elle::reactor::Mutex>;
-      using MutexMap = std::unordered_map<infinit::model::Address, MutexPtr>;
+      using MutexWeak = std::weak_ptr<elle::reactor::Mutex>;
+      using MutexMap = std::unordered_map<infinit::model::Address, MutexWeak>;
       auto map = std::make_shared<MutexMap>();
       return [map, f] (std::unique_ptr<infinit::model::blocks::Block> block,
         std::unique_ptr<infinit::model::ConflictResolver> resolver,
@@ -260,11 +263,11 @@ namespace infinit
         if (it == map->end())
         {
           mutex = MutexPtr(new elle::reactor::Mutex(),
-            [map, addr](elle::reactor::Mutex* m) {map->erase(addr); delete m;});
+            [map_ptr=map.get(), addr](elle::reactor::Mutex* m) {map_ptr->erase(addr); delete m;});
           (*map)[addr] = mutex;
         }
         else
-          mutex = it->second;
+          mutex = it->second.lock();
         elle::reactor::Lock lock(*mutex);
         f(std::move(block), std::move(resolver), decrypt_data);
       };
