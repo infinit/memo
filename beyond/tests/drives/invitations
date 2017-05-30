@@ -9,7 +9,7 @@ from utils import *
 
 from copy import deepcopy
 
-crash_email = 'crash+passport_generation@infinit.sh'
+crash_email = 'developers+passport_generation@infinit.sh'
 
 
 def setup(beyond, user = None):

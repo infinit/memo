@@ -213,6 +213,9 @@ class Emailer:
   def get_specifics(self, email, template):
     return self.get(email).setdefault(template, [])
 
+  def __str__(self):
+    return "Emailer: %s" % self.emails
+
 def url_parameters(url):
   params = urllib.parse.parse_qs(
     urllib.parse.urlparse(url).query)
