@@ -536,22 +536,17 @@ namespace infinit
           auto output = std::vector<std::vector<int>>{};
           for (auto const& r: results)
           {
-            auto o = elle::make_vector(r,
-                [&](auto const& loc)
-                {
-                  auto it = loc_indexes.find(loc.id());
-                  ELLE_ASSERT(it != loc_indexes.end());
-                  return it->second;
-                });
+            auto o = elle::make_vector(r, [&](auto const& loc) {
+                return loc_indexes.at(loc.id());
+              });
             boost::sort(o);
-            auto it = res_indexes.find(o);
-            if (it == res_indexes.end())
+            if (auto it = elle::find(res_indexes, o))
+              output.push_back({-1 * it->second - 1}); // Careful, 0 == -0.
+            else
             {
               output.push_back(o);
               res_indexes.emplace(o, output.size()-1);
             }
-            else
-              output.push_back({-1 * it->second - 1}); // Careful, 0 == -0.
           }
           s.serialize("result_endpoints", locs);
           s.serialize("result_indexes", output);
