@@ -45,7 +45,8 @@ namespace infinit
       namespace consensus
       {
         template<typename F>
-        auto network_exception_to_unavailable(F f) -> decltype(f())
+        auto network_exception_to_unavailable(F f, bool missing = false)
+          -> decltype(f())
         {
           try
           {
@@ -55,6 +56,13 @@ namespace infinit
           {
             ELLE_TRACE("network exception in paxos: %s", e);
             throw elle::athena::paxos::Unavailable();
+          }
+          catch (MissingBlock const& e)
+          {
+            if (!missing)
+              throw;
+            ELLE_TRACE("weak error in paxos: %s", e);
+            throw elle::athena::paxos::WeakError(std::current_exception());
           }
         }
 
@@ -258,7 +266,7 @@ namespace infinit
               [&]
               {
                 return member->get(q, this->_address, this->_local_version);
-              });
+              }, true);
           }
 
           ELLE_ATTRIBUTE_R(std::ambivalent_ptr<Paxos::Peer>, member);
@@ -363,13 +371,15 @@ namespace infinit
                                Address address,
                                boost::optional<int> local_version)
         {
-          return network_exception_to_unavailable([&] {
-            auto get = make_rpc<boost::optional<PaxosClient::Accepted>(
-              PaxosServer::Quorum,
-              Address, boost::optional<int>)>("get");
-            get.set_context<Doughnut*>(&this->_doughnut);
-            return get(peers, address, local_version);
-          });
+          return network_exception_to_unavailable(
+            [&]
+            {
+              auto get = make_rpc<boost::optional<PaxosClient::Accepted>(
+                PaxosServer::Quorum,
+                Address, boost::optional<int>)>("get");
+              get.set_context<Doughnut*>(&this->_doughnut);
+              return get(peers, address, local_version);
+            }, true);
         }
 
         /*----------.

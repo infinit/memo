@@ -362,6 +362,20 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
   }
 }
 
+ELLE_TEST_SCHEDULED(missing_block, (bool, paxos))
+{
+  using namespace infinit::model;
+  DHTs dhts(paxos);
+  ELLE_LOG("fetch immutable block")
+    BOOST_CHECK_THROW(dhts.dht_a->fetch(
+                        Address::random(flags::immutable_block)),
+                      MissingBlock);
+  ELLE_LOG("fetch mutable block")
+    BOOST_CHECK_THROW(dhts.dht_a->fetch(
+                        Address::random(flags::mutable_block)),
+                      MissingBlock);
+}
+
 ELLE_TEST_SCHEDULED(async, (bool, paxos))
 {
   DHTs dhts(paxos);
@@ -1799,6 +1813,48 @@ namespace rebalancing
       dht_c.reset();
     elle::reactor::wait(rebalanced);
   }
+
+  ELLE_TEST_SCHEDULED(missing_block)
+  {
+    elle::reactor::Barrier confirm;
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("missing"));
+    ELLE_LOG("write block");
+      dht_a->dht->seal_and_insert(*block);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    for (auto l: {&local_a, &local_b})
+      l->confirming().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          elle::reactor::wait(confirm);
+        });
+    auto deleted = elle::reactor::waiter(
+      local_c.confirmed(),
+      [&] (Address a, Paxos::PaxosClient::Proposal const&)
+      { BOOST_TEST(a == block->address()); return true; });
+    elle::reactor::Thread resign(
+      "resign",
+      [&]
+      {
+        ELLE_LOG("resign third dht")
+          dht_c->dht->resign();
+      });
+    elle::reactor::wait(deleted);
+    ELLE_LOG("fetch block")
+    {
+      auto fetched = dht_a->dht->fetch(block->address());
+      BOOST_TEST(fetched->data() == block->data());
+    }
+    confirm.open();
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -2020,6 +2076,7 @@ ELLE_TEST_SUITE()
   }
   TEST(CHB);
   TEST(OKB);
+  TEST(missing_block);
   TEST(async);
   TEST(ACB);
   TEST(NB);
@@ -2099,6 +2156,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(conflict), 0, valgrind(3));
       auto conflict_quorum = &rebalancing::conflict_quorum;
       rebalancing->add(BOOST_TEST_CASE(conflict_quorum), 0, valgrind(3));
+      auto missing_block = &rebalancing::missing_block;
+      rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
     }
   }
 }
