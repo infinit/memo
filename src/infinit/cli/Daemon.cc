@@ -8,6 +8,7 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/Exit.hh>
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 #include <elle/serialization/json.hh>
@@ -211,7 +212,7 @@ namespace infinit
       void
       daemon_stop()
       {
-        int pid = daemon_pid(true);
+        auto const pid = daemon_pid(true);
         if (!pid)
           elle::err("daemon is not running");
         try
@@ -430,10 +431,8 @@ namespace infinit
 
       struct SystemUser
       {
-        SystemUser(unsigned int uid,
-                   unsigned int gid,
-                   std::string name,
-                   std::string home)
+        SystemUser(unsigned int uid, unsigned int gid,
+                   std::string name, std::string home)
           : uid(uid)
           , gid(gid)
           , name(name)
@@ -565,8 +564,7 @@ namespace infinit
       std::string
       DockerVolumePlugin::mount(std::string const& name)
       {
-        auto it = _mount_count.find(name);
-        if (it != _mount_count.end())
+        if (auto it = elle::find(_mount_count, name))
         {
           ELLE_TRACE("Already mounted");
           ++it->second;
@@ -633,16 +631,18 @@ namespace infinit
                     elle::reactor::network::HttpServer::Cookies const&,       \
                     elle::reactor::network::HttpServer::Parameters const&,    \
                     elle::Buffer const& data) -> std::string
-        _server->register_route("/Plugin.Activate",  elle::reactor::http::Method::POST,
+        _server->register_route("/Plugin.Activate",
+                                elle::reactor::http::Method::POST,
           [] ROUTE_SIG {
             ELLE_TRACE("Activating plugin");
             return "{\"Implements\": [\"VolumeDriver\"]}";
           });
-        _server->register_route("/VolumeDriver.Create", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Create",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
-            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto const json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
             std::string err;
             try
             {
@@ -670,7 +670,8 @@ namespace infinit
             }
             return "{\"Err\": \"" + err + "\"}";
           });
-        _server->register_route("/VolumeDriver.Remove", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Remove",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             elle::err("use infinit volume delete to delete volumes");
             // auto lock = this->_user.enter(this->_mutex);
@@ -693,36 +694,38 @@ namespace infinit
             // boost::replace_all(err, "\"", "'");
             // return "{\"Err\": \"" + err + "\"}";
           });
-        _server->register_route("/VolumeDriver.Get", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Get",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
-            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-            auto name = boost::any_cast<std::string>(json.at("Name"));
+            auto const json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto const name = boost::any_cast<std::string>(json.at("Name"));
             if (this->_manager.exists(name))
               return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
             else
               return "{\"Err\": \"No such mount\"}";
           });
-        _server->register_route("/VolumeDriver.Mount", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Mount",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
-            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-            auto name = boost::any_cast<std::string>(json.at("Name"));
-            std::string mountpoint = mount(name);
-            std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
-                + mountpoint +"\"}";
+            auto const json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto const name = boost::any_cast<std::string>(json.at("Name"));
+            auto const mountpoint = mount(name);
+            auto const res = "{\"Err\": \"\", \"Mountpoint\": \"" + mountpoint + "\"}";
             ELLE_TRACE("reply: %s", res);
             return res;
           });
-        _server->register_route("/VolumeDriver.Unmount", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Unmount",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
-            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-            auto name = boost::any_cast<std::string>(json.at("Name"));
-            auto it = _mount_count.find(name);
+            auto const json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto const name = boost::any_cast<std::string>(json.at("Name"));
+            auto const it = _mount_count.find(name);
             if (it == _mount_count.end())
               return "{\"Err\": \"No such mount\"}";
             --it->second;
@@ -733,12 +736,13 @@ namespace infinit
             }
             return "{\"Err\": \"\"}";
           });
-        _server->register_route("/VolumeDriver.Path", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Path",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
-            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-            auto name = boost::any_cast<std::string>(json.at("Name"));
+            auto const json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto const name = boost::any_cast<std::string>(json.at("Name"));
             try
             {
               return "{\"Err\": \"\", \"Mountpoint\": \""
@@ -750,9 +754,10 @@ namespace infinit
               return "{\"Err\": \"" + err + "\"}";
             }
           });
-        _server->register_route("/VolumeDriver.List", elle::reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.List",
+                                elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            auto lock = this->_user.enter(this->_mutex);
+            auto const lock = this->_user.enter(this->_mutex);
             auto res = std::string{"{\"Err\": \"\", \"Volumes\": [ "};
             for (auto const& n: this->_manager.list())
               res += "{\"Name\": \"" + n  + "\"},";
@@ -760,9 +765,8 @@ namespace infinit
             res += "]}";
             return res;
           });
-         _server->register_route(
-           "/VolumeDriver.Capabilities",
-           elle::reactor::http::Method::POST,
+         _server->register_route("/VolumeDriver.Capabilities",
+                                 elle::reactor::http::Method::POST,
            [this] ROUTE_SIG {
              return "{}";
          });
@@ -863,19 +867,19 @@ namespace infinit
           }
           else
           {
-            auto env_run_dir = elle::os::getenv("XDG_RUNTIME_DIR", "");
-            auto user_run_dir = !env_run_dir.empty()
-              ? env_run_dir : elle::sprintf("/run/user/%s", user.uid);
-            if (bfs::create_directories(user_run_dir))
+            auto const run_dir =
+              elle::os::getenv("XDG_RUNTIME_DIR",
+                               elle::sprintf("/run/user/%s", user.uid));
+            if (bfs::create_directories(run_dir))
             {
-              elle::chown(user_run_dir, user.uid, user.gid);
-              bfs::permissions(user_run_dir, bfs::owner_all);
+              elle::chown(run_dir, user.uid, user.gid);
+              bfs::permissions(run_dir, bfs::owner_all);
             }
             {
               if (mutex.locked())
                 elle::err("call get_mount_root() before .enter() on the SystemUser");
               auto lock = user.enter(mutex);
-              auto res = elle::sprintf("%s/infinit/filesystem/mnt", user_run_dir);
+              auto res = elle::sprintf("%s/infinit/filesystem/mnt", run_dir);
               bfs::create_directories(res);
               return res;
             }
@@ -884,14 +888,14 @@ namespace infinit
         auto user_mount_root = get_mount_root(system_user);
         // Scope for lock.
         {
-          auto lock = system_user.enter(mutex);
+          auto const lock = system_user.enter(mutex);
           for (auto const& u: login_user)
           {
-            auto sep = u.find(':');
-            auto name = u.substr(0, sep);
-            auto pass = u.substr(sep+1);
-            auto c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
-            auto json = ifnt.beyond_login(name, c);
+            auto const sep = u.find(':');
+            auto const name = u.substr(0, sep);
+            auto const pass = u.substr(sep+1);
+            auto const c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
+            auto const json = ifnt.beyond_login(name, c);
             elle::serialization::json::SerializerIn input(json, false);
             auto user = input.deserialize<infinit::User>();
             ifnt.user_save(user, true);
@@ -956,7 +960,7 @@ namespace infinit
             socklen_t len = sizeof ucred;
             if (getsockopt(native, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)
             {
-               ELLE_ERR("getsocopt(peercred) failed: %s", strerror(errno));
+               ELLE_ERR("getsockopt(peercred) failed: %s", strerror(errno));
                continue;
             }
             uid = ucred.uid;
@@ -966,24 +970,23 @@ namespace infinit
 #endif
             static elle::reactor::Mutex mutex;
             (void)gid;
-            auto system_user = SystemUser{uid};
-            auto user_manager = [&]{
-              auto it = managers.find(uid);
-              if (it == managers.end())
-                {
-                  auto peer_mount_root = get_mount_root(system_user);
-                  auto lock = system_user.enter(mutex);
-                  auto res = new MountManager(ifnt,
-                                              peer_mount_root,
-                                              docker_mount_substitute);
-                  fill_manager_options(*res);
-                  managers[uid].reset(res);
-                  return res;
-                }
-              else
+            auto const system_user = SystemUser{uid};
+            auto const user_manager = [&]{
+              if (auto it = elle::find(managers, uid))
                 return it->second.get();
+              else
+              {
+                auto const peer_mount_root = get_mount_root(system_user);
+                auto const lock = system_user.enter(mutex);
+                auto const res = new MountManager(ifnt,
+                                                  peer_mount_root,
+                                                  docker_mount_substitute);
+                fill_manager_options(*res);
+                managers[uid].reset(res);
+                return res;
+              }
             }();
-            auto name = elle::sprintf("%s server", **socket);
+            auto const name = elle::sprintf("%s server", **socket);
             scope.run_background(
               name,
               [socket, user_manager, system_user]
@@ -1007,7 +1010,7 @@ namespace infinit
                     auto json =
                       boost::any_cast<elle::json::Object>(elle::json::read(**socket));
                     auto reply = [&] {
-                      SystemUser::Lock lock(system_user.enter(mutex));
+                      auto const lock = system_user.enter(mutex);
                       return process_command(json, *user_manager, on_end);
                     }();
                     ELLE_TRACE("Writing reply: '%s'", reply);
@@ -1051,7 +1054,7 @@ namespace infinit
     {
       std::cout << daemon_command(
         "{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
-        +",\"hold\": "  + (hold ? "true": "false")   + "}", hold);
+        + ",\"hold\": " + (hold ? "true" : "false") + "}", hold);
     }
 
 
@@ -1068,16 +1071,17 @@ namespace infinit
         auto p = name.find_first_of('/');
         if (p == name.npos)
           elle::err("Malformed qualified name");
-        return {name.substr(p+1), ifnt.user_get(name.substr(0, p))};
+        else
+          return {name.substr(p+1), ifnt.user_get(name.substr(0, p))};
       }
 
       void link_network(infinit::Infinit& ifnt,
                         std::string const& name,
                         elle::json::Object const& options = elle::json::Object{})
       {
-        auto cname = split(ifnt, name);
+        auto const cname = split(ifnt, name);
         auto desc = ifnt.network_descriptor_get(cname.first, cname.second, false);
-        auto users = ifnt.users_get();
+        auto const users = ifnt.users_get();
         auto passport = boost::optional<infinit::Passport>{};
         auto user = boost::optional<infinit::User>{};
         ELLE_TRACE("checking if any user is owner");
@@ -1126,7 +1130,7 @@ namespace infinit
           auto silodesc = optional(options, "silo");
           if (silodesc && silodesc->empty())
           {
-            auto siloname = boost::replace_all_copy(name + "_silo", "/", "_");
+            auto const siloname = boost::replace_all_copy(name + "_silo", "/", "_");
             ELLE_LOG("Creating local silo %s", siloname);
             auto path = infinit::xdg_data_home() / "blocks" / siloname;
             return
@@ -1179,8 +1183,8 @@ namespace infinit
         ifnt.network_save(desc);
         try
         {
-          auto nname = split(ifnt, name);
-          auto net = ifnt.network_get(nname.first, nname.second, true);
+          auto const nname = split(ifnt, name);
+          auto const net = ifnt.network_get(nname.first, nname.second, true);
         }
         catch (elle::Error const&)
         {
@@ -1197,8 +1201,8 @@ namespace infinit
         ifnt.volume_save(desc, true);
         try
         {
-          auto nname = split(ifnt, desc.network);
-          auto net = ifnt.network_get(nname.first, nname.second, true);
+          auto const nname = split(ifnt, desc.network);
+          auto const net = ifnt.network_get(nname.first, nname.second, true);
         }
         catch (infinit::MissingLocalResource const&)
         {
