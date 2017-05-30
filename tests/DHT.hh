@@ -59,6 +59,12 @@ public:
   }
 
   void
+  _cleanup() override
+  {
+    this->disconnect_all();
+  }
+
+  void
   _discover(infinit::model::NodeLocations const& peers) override
   {
     ELLE_ABORT("not implemented");
