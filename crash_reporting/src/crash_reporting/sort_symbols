@@ -2,6 +2,7 @@
 
 import argparse
 import shutil
+import subprocess
 import os
 
 def parse_options():
@@ -11,6 +12,8 @@ def parse_options():
       help = 'folder with .sym files')
   opt('-o', '--output', required = True, metavar = 'PATH', type = str,
       help = 'folder to output to')
+  opt('-d', '--demangler', metavar = 'PROG', type = str, default = 'c++filt',
+      help = 'name of the demangling program')
   return parser.parse_args()
 
 def parent_dir(path):
@@ -29,20 +32,56 @@ def check_dirs(input_dir, output_dir):
     exit(1)
 
 def sym_output_path(output_dir, sym_file):
-  name, ext = os.path.splitext(sym_file)
-  if ext != '.sym':
-    print('[INFO] ignoring file: %s' % sym_file)
-    return None
+  '''The name under which the symbol file sym_file will be installed
+  in the output_dir.  Requires to load the symbol file to get its
+  UID and its name.'''
+  fname, ext = os.path.splitext(sym_file)
+  bname = os.path.basename(fname)
   res = None
-  try:
-    with open(str(sym_file), 'r') as f:
-      line = f.readline()
-      uid = line.split(' ')[3]
-      name = line.split(' ')[4].strip()
-      res = os.path.join(*[output_dir, name, uid])
-  except Exception as e:
-    print('[ERROR] unable to read file (%s): %s' % (sym_file, e))
+  if ext == '.sym':
+    try:
+      with open(str(sym_file), 'r') as f:
+        line = f.readline()
+        uid = line.split(' ')[3]
+        name = line.split(' ')[4].strip()
+        if name != os.path.basename(fname):
+          print('[WARNING] mismatch between file name ({}) and embedded name ({})'
+                .format(bname, name))
+        res = os.path.join(*[output_dir, name, uid], bname + ext)
+    except Exception as e:
+      print('[ERROR] unable to read file (%s): "%s"' % (sym_file, str(e)))
+  else:
+    print('[INFO] ignoring file: %s' % sym_file)
   return res
+
+
+def set_perms(f):
+  '''chmod a+r, u+w.'''
+  import stat
+  os.chmod(f, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR)
+
+
+def demangle(in_, out, demangler):
+  '''Save in file name `out` the content of file name `in_`, c++filt'ed
+  if we can.  Yes, it is weird that we need to demangle ourselves.
+
+  '''
+  if demangler:
+    with open(out, 'w') as output, \
+         open(in_, 'r') as input:
+      p = subprocess.Popen(demangler, stdin=input, stdout=output,
+                           universal_newlines=True)
+      res, err = p.communicate()
+      status = p.wait()
+      if status == 0:
+        set_perms(out)
+        return
+      else:
+        print('[WARNING] could not use the demangler: {}'
+              .format(demangler))
+  # Worst case: keep the file as is.
+  shutil.copy(in_, out)
+
 
 args = parse_options()
 input_dir = args.input
@@ -51,14 +90,13 @@ check_dirs(input_dir, output_dir)
 
 for subdir, dirs, files in os.walk(input_dir):
   for f in files:
-    path = os.path.join(subdir, f)
-    out_path = sym_output_path(output_dir, path)
-    if out_path is not None:
-      if os.path.exists(os.path.join(out_path, f)):
-        tmp = os.path.join(out_path, f)
-        print('[INFO] overwriting: %s' % tmp)
-        import stat
-        os.chmod(tmp, stat.S_IWRITE)
+    in_path = os.path.join(subdir, f)
+    out_path = sym_output_path(output_dir, in_path)
+    if out_path:
+      print(out_path)
+      if os.path.exists(out_path):
+        print('[INFO] overwriting: %s' % out_path)
+        set_perms(out_path)
       if not os.path.exists(out_path):
-        os.makedirs(out_path, exist_ok = True)
-      shutil.copy(path, out_path)
+        os.makedirs(os.path.dirname(out_path), exist_ok = True)
+      demangle(in_path, out_path, args.demangler)
