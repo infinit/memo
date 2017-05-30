@@ -114,10 +114,6 @@ namespace crash_reporting
       ELLE_ERR("%s: unable to read crash dump: %s", this, path);
       return;
     }
-    ELLE_DEBUG("%s: uploading: %s", this, path);
-    auto r = elle::reactor::http::Request(this->_crash_url,
-                                          elle::reactor::http::Method::PUT,
-                                          "application/json");
     // The content of `path`, in base 64.
     auto const minidump = [&f]
       {
@@ -141,7 +137,11 @@ namespace crash_reporting
         {"platform", elle::system::platform::os_description()},
         {"version", this->_version},
       };
+    ELLE_DEBUG("%s: uploading: %s", this, path);
     ELLE_DUMP("%s: content to upload: %s", this, content);
+    auto r = elle::reactor::http::Request(this->_crash_url,
+                                          elle::reactor::http::Method::PUT,
+                                          "application/json");
     elle::json::write(r, content);
     if (r.status() == elle::reactor::http::StatusCode::OK)
     {

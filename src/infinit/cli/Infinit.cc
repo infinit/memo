@@ -110,6 +110,12 @@ namespace infinit
                cr->upload_existing();
            });
       }
+#else
+      std::unique_ptr<elle::reactor::Thread>
+      make_crash_reporter_thread()
+      {
+        return {};
+      }
 #endif
 
       void
@@ -332,25 +338,11 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
-#if INFINIT_ENABLE_CRASH_REPORTER
         auto report_thread = make_crash_reporter_thread();
-        auto report_upload = [&report_thread] {
-          if (report_thread)
-            elle::reactor::wait(*report_thread);
-        };
-#else
-        auto report_upload = []{};
-#endif
-        try
-        {
-          check_broken_locale();
-          main_impl(args);
-        }
-        catch (...)
-        {
-          report_upload();
-          throw;
-        }
+        check_broken_locale();
+        main_impl(args);
+        if (report_thread)
+          elle::reactor::wait(*report_thread);
       }
     }
 
