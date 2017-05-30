@@ -283,8 +283,10 @@ namespace infinit
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
-            res.push_back(std::make_unique<PaxosPeer>(
-                            std::move(member), address, local_version));
+            // If the overlay yields, the member can be deleted in between.
+            if (auto lock = member.lock())
+              res.push_back(std::make_unique<PaxosPeer>(
+                              std::move(member), address, local_version));
           return res;
         }
 
