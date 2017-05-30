@@ -676,9 +676,8 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       ::id = special_id(i+1),
       ::make_overlay = make_kouncil,
       ::paxos = true));
-  for (int i=0; i<3; ++i)
-    for (int j=i+1; j<3; ++j)
-      ::discover(*servers[i], *servers[j], false);
+  for (int j=1; j<3; ++j)
+    ::discover(*servers[0], *servers[j], false, false, true, true);
   auto client = std::make_unique<DHT>(
       ::keys = keys,
       ::make_overlay = make_kouncil,
@@ -1121,7 +1120,7 @@ ELLE_TEST_SUITE()
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
   // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
   master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
-  master.add(BOOST_TEST_CASE(doughnut_parallel), 0, valgrind(20));
+  master.add(BOOST_TEST_CASE(doughnut_parallel), 0, valgrind(60));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
 #ifndef INFINIT_WINDOWS
   // Test runs fine on native windows, but sometimes get stuck on wine
