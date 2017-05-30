@@ -1045,37 +1045,43 @@ namespace rebalancing
   void
   run_extend_shrink_and_write()
   {
-    DHT dht_a(dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::seconds(0));
-    ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b(dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::seconds(0));
-    DHT dht_c(dht::consensus::rebalance_auto_expand = false);
-    ELLE_LOG("third DHT: %s", dht_b.dht->id());
-    dht_b.overlay->connect(*dht_a.overlay);
-    dht_c.overlay->connect(*dht_a.overlay);
+    DHT dht_a(id = special_id(1),
+              dht::consensus::rebalance_auto_expand = true,
+              dht::consensus::node_timeout = std::chrono::seconds(0));
+    DHT dht_b(id = special_id(2),
+              dht::consensus::rebalance_auto_expand = true,
+              dht::consensus::node_timeout = std::chrono::seconds(0));
+    DHT dht_c(id = special_id(3),
+              dht::consensus::rebalance_auto_expand = false);
+    dht_a.overlay->connect(*dht_b.overlay);
+    dht_a.overlay->connect(*dht_c.overlay);
     dht_b.overlay->connect(*dht_c.overlay);
+    auto& paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     auto b1 = dht_a.dht->make_block<BT>();
     ELLE_LOG("write block to quorum of 3")
     {
       b1->data(std::string("extend_and_write 1"));
       dht_a.dht->seal_and_insert(*b1);
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
     }
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
-    dht_c.overlay->disconnect(*dht_a.overlay);
-    dht_c.overlay->disconnect(*dht_b.overlay);
-    auto& paxos_a =
-      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
+    {
+      dht_c.overlay->disconnect(*dht_a.overlay);
+      dht_c.overlay->disconnect(*dht_b.overlay);
       paxos_a.rebalance(b1->address());
-      DHT dht_d(dht::consensus::rebalance_auto_expand = false);
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
-    dht_d.overlay->connect(*dht_a.overlay);
-    dht_d.overlay->connect(*dht_b.overlay);
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
+    }
+    DHT dht_d(id = special_id(4),
+              dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("rebalance block to quorum of 3")
+    {
+      dht_d.overlay->connect(*dht_a.overlay);
+      dht_d.overlay->connect(*dht_b.overlay);
       paxos_a.rebalance(b1->address());
+    }
     ELLE_LOG("write block to quorum of 3")
     {
       b1->data(std::string("extend_and_write 1 bis"));
@@ -1085,24 +1091,16 @@ namespace rebalancing
       }
       catch (infinit::model::Conflict const& c)
       {
-        ELLE_LOG("second write attempt");
-        dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
-          .data(std::string("extend_and_write 1 bis"));
-        try
+        ELLE_LOG("resolve conflict")
         {
-          dht_a.dht->seal_and_update(*c.current());
-        }
-        catch (infinit::model::Conflict const& c)
-        {
-          ELLE_LOG("third write attempt");
           dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
             .data(std::string("extend_and_write 1 bis"));
           dht_a.dht->seal_and_update(*c.current());
         }
       }
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
     }
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
   }
 
   ELLE_TEST_SCHEDULED(extend_shrink_and_write)
