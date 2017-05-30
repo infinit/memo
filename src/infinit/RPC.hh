@@ -358,8 +358,9 @@ namespace infinit
         ELLE_DEBUG_SCOPE("decipher RPC");
         try
         {
-          static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench
+            = elle::Bench("bench.rpcserve.decipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           if (request.size() > 262144)
           {
             auto& key = this->_key.get();
@@ -418,8 +419,9 @@ namespace infinit
       }
       if (had_key)
       {
-        static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);
-        elle::Bench::BenchScope bs(bench);
+        static auto bench =
+          elle::Bench("bench.rpcserve.encipher", std::chrono::seconds(10000));
+        auto bs = elle::Bench::BenchScope(bench);
         if (response.size() >= 262144)
         {
           auto& key = this->_key.get();
@@ -616,8 +618,9 @@ namespace infinit
         outs.flush();
         if (self.key())
         {
-          static elle::Bench bench("bench.rpcclient.encipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench =
+            elle::Bench("bench.rpcclient.encipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           ELLE_DEBUG("encipher request")
             if (call.size() > 262144)
             {
@@ -640,8 +643,9 @@ namespace infinit
         auto response = channel.read();
         if (self.key())
         {
-          static elle::Bench bench("bench.rpcclient.decipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench
+            = elle::Bench("bench.rpcclient.decipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           if (response.size() > 262144)
           {
             elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {

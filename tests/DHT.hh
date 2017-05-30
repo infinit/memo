@@ -59,6 +59,12 @@ public:
   }
 
   void
+  _cleanup() override
+  {
+    this->disconnect_all();
+  }
+
+  void
   _discover(infinit::model::NodeLocations const& peers) override
   {
     ELLE_ABORT("not implemented");
@@ -277,7 +283,7 @@ public:
       with_cache = false,
       user_name = "",
       yielding_overlay = false,
-      protocol = dht::Protocol::all,
+      protocol = dht::Protocol::tcp,
       port = boost::none,
       dht::connect_timeout =
         elle::defaulted(std::chrono::milliseconds(5000)),
