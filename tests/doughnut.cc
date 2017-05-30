@@ -1708,42 +1708,52 @@ namespace rebalancing
     elle::reactor::Barrier a_acceptance;
     elle::reactor::Barrier confirmation_a;
     elle::reactor::Barrier confirmation_b;
-    b_proposal.close();
     for (auto l: {&local_a, &local_b})
       l->proposing().connect(
         [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
         {
           if (p.sender == dht_b->dht->id())
+          {
+            ELLE_LOG("block B proposal");
             elle::reactor::wait(b_proposal);
+          }
         });
     local_b.accepting().connect(
         [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
         {
           if (p.sender == dht_a->dht->id())
+          {
+            ELLE_LOG("block A acceptance on B");
             elle::reactor::wait(a_acceptance);
+          }
         });
     auto a_stuck = elle::reactor::waiter(
       local_a.accepted(),
       [&] (Address, Paxos::PaxosClient::Proposal const& p)
       { return p.sender == dht_a->dht->id(); });
-    ELLE_LOG("disconnect third dht")
+    ELLE_LOG("disconnect C")
       dht_c.reset();
-    elle::reactor::wait(a_stuck);
-    b_proposal.open();
+    ELLE_LOG("wait until A has accepted on A")
+      elle::reactor::wait(a_stuck);
+    ELLE_LOG("release B")
+      b_proposal.open();
     auto wait_a =
       elle::reactor::waiter(local_b.rebalanced(), block->address());
     auto wait_b =
       elle::reactor::waiter(local_a.rebalanced(), block->address());
+    ELLE_LOG("wait until B has picked the quorum");
     boost::signals2::connection connection = local_a.confirming().connect(
       [&] (Address, Paxos::PaxosClient::Proposal const& p)
       {
         if (p.sender == dht_b->dht->id())
         {
-          a_acceptance.open();
-          elle::reactor::wait(
-            local_a.confirming(),
-            [&] (Address, Paxos::PaxosClient::Proposal const& p)
-            { return p.sender == dht_a->dht->id(); });
+          ELLE_LOG("release A")
+            a_acceptance.open();
+          ELLE_LOG("wait until A has picked the quorum too")
+            elle::reactor::wait(
+              local_a.proposed(),
+              [&] (Address, Paxos::PaxosClient::Proposal const& p)
+              { return p.sender == dht_a->dht->id(); });
           connection.disconnect();
           for (auto l: {&local_a, &local_b})
           {
