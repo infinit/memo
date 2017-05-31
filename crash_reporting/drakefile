@@ -140,7 +140,7 @@ def configure(cxx_toolkit = None,
       'common/linux/safe_readlink.h',
     ]
     breakpad_sources = \
-      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, sources)))
+      drake.nodes(*['breakpad/src/%s' % f for f in sources])
     # File is not in repo unless you use Google's tools.
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',

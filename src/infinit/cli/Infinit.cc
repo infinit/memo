@@ -6,10 +6,6 @@
 #include <type_traits>
 #include <vector>
 
-#if INFINIT_ENABLE_CRASH_REPORTER
-# include <crash_reporting/CrashReporter.hh>
-#endif
-
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -25,6 +21,7 @@
 
 #include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/report-crash.hh>
 #include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("cli");
@@ -43,13 +40,6 @@ namespace infinit
   {
     namespace
     {
-      bool constexpr production_build
-#ifdef INFINIT_PRODUCTION_BUILD
-      = true;
-#else
-      = false;
-#endif
-
       void
       install_signal_handlers(Infinit& cli)
       {
@@ -77,46 +67,6 @@ namespace infinit
           }
         }
       }
-
-#if INFINIT_ENABLE_CRASH_REPORTER
-      /// Crash reporter.
-      std::shared_ptr<crash_reporting::CrashReporter>
-      make_crash_reporter()
-      {
-        if (elle::os::getenv("INFINIT_CRASH_REPORTER", production_build))
-        {
-          auto const host = elle::os::getenv("INFINIT_CRASH_REPORT_HOST",
-                                             beyond());
-          auto const url = elle::sprintf("%s/crash/report", host);
-          auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-          ELLE_DEBUG("dump to %s", dumps_path);
-          return std::make_shared<crash_reporting::CrashReporter>(url, dumps_path,
-                                                                  version_describe());
-        }
-        else
-          return {};
-      }
-
-      /// Thread to send the crash reports (some might be pending from
-      /// previous runs, saved on disk).
-      std::unique_ptr<elle::reactor::Thread>
-      make_crash_reporter_thread()
-      {
-        return std::make_unique<elle::reactor::Thread>
-          ("crash report",
-           [cr = make_crash_reporter()]
-           {
-             if (cr)
-               cr->upload_existing();
-           });
-      }
-#else
-      std::unique_ptr<elle::reactor::Thread>
-      make_crash_reporter_thread()
-      {
-        return {};
-      }
-#endif
 
       void
       check_broken_locale()
@@ -325,7 +275,8 @@ namespace infinit
                              return "--silo";
                            else if (entry == "--storage-class")
                              return "--silo-class";
-                           return entry;
+                           else
+                             return entry;
                          });
         auto infinit = infinit::Infinit{};
         auto&& cli = Infinit(infinit);
@@ -338,7 +289,7 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
-        auto report_thread = make_crash_reporter_thread();
+        auto report_thread = make_reporter_thread();
         check_broken_locale();
         main_impl(args);
         if (report_thread)
