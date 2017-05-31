@@ -1,9 +1,8 @@
 #include <infinit/overlay/kademlia/kademlia.hh>
 
-#include <random>
-
 #include <elle/json/exceptions.hh>
 #include <elle/log.hh>
+#include <elle/random.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
@@ -104,8 +103,6 @@ namespace elle
     {};*/
   }
 }
-
-static std::default_random_engine gen;
 
 namespace kademlia
 {
