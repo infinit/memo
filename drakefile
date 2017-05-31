@@ -186,6 +186,8 @@ def configure(
     'src/infinit/Version.hh',
     'src/infinit/Volume.cc',
     'src/infinit/Volume.hh',
+    'src/infinit/report-crash.cc',
+    'src/infinit/report-crash.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/utility.hh',

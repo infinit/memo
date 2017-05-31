@@ -14,17 +14,25 @@ namespace crash_reporting
   namespace bfs = boost::filesystem;
   namespace breakpad = google_breakpad;
 
+  /// Deal with crash reports: their generation, and their uploading.
   class CrashReporter
   {
   public:
+    /// If production build, install the crash handler.
+    ///
+    /// @param crash_url  where to upload the crash reports.
+    /// @param dumps_path directory where to find the dumps to save/send.
+    /// @param version   of the program currently running.
     CrashReporter(std::string crash_url,
                   bfs::path dumps_path,
                   std::string version);
     ~CrashReporter();
 
+    /// Upload the existing crash reports.
     void
     upload_existing() const;
-    /// The number of minidump waiting to be sent.
+
+    /// The number of minidumps waiting to be sent.
     int
     crashes_pending_upload() const;
 
