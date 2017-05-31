@@ -1,0 +1,70 @@
+memo is project combining a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
+
+memo is a project supported by the Docker's Infinit team and serves at backend for the Infinit Storage Platform project.
+
+## What the difference between the value store and the key-value store.
+
+The key-value store uses the value store to provide an higher-level interface like common key-value stores (etcd, zookeeper, etc.), where an arbitrary data can be stored under an arbitrary name.
+
+The value store is the lowest brick of the architecture, providing the fundamental object named `Blocks`, declined in a few flavors. Those blocks are cryptographically protected, their address is chosen randomly to guarantee an homogeneous distribution and prevent XXX(squating) and all operations are atomic, but the caller is responsible for keeping addresses.
+
+For more details you can consult [XXX: When shoould I use the value store against the key-value store]().
+
+## Getting memo
+
+To download the source code and build memo by yourself, get it from GitHub.
+
+```bash
+git clone https://github.com/infinit/memo --recursive # Clone memo and its submodules.
+```
+
+> *Note:* If you cloned it using the GitHub "clone" button, do not forget to run `git submodules update --init --recursive`!
+
+## How to build memo
+
+### Requirements
+
+- [gcc](https://gcc.gnu.org) (>= 4.9.2) or [clang](http://clang.llvm.org) (>= 3.5.0) or [mingw](http://mingw.org) (>= 5.3.0).
+- [python3](https://www.python.org/download) (>= 3.4.0) and [pip3](https://pip.pypa.io/en/stable).
+
+#### Core library
+
+memo use [Elle](https://github.com/infinit/drake), Infinit's core library.
+
+#### Build system
+
+memo uses [Drake](https://github.com/infinit/drake) and has it as a submodule.
+
+### How to compile
+
+For a detailed procedure, visit our [wiki: How to build](https://github.com/infinit/memo/wiki/How-to-build).
+
+First you need to install python dependencies.
+
+```bash
+sudo pip3 install -r requirements.txt -r drake/requirements.txt
+```
+> *Note:* If you don't want dependencies to be installed system-wide, you should consider using [virtualenv](https://virtualenv.pypa.io/en/stable/installation).
+
+Change directory to `_build/<architecture>` where you can find a generic Drake [configuration script](https://github.com/infinit/drake#basic-structures-of-a-drakefile-and-a-drake-script).
+
+#### GNU/Linux
+
+```bash
+cd _build/linux64
+./drake //build -j 4 # Build everything (using 4 jobs).
+```
+
+#### macOS
+
+```bash
+cd _build/osx
+./drake //build -j 4 # Build everything (using 4 jobs).
+```
+
+This will result on `bin/memo`.
+
+## Maintainers
+
+ * Website: https://infinit.sh/project/memo
+ * Email: open+memo@infinit.sh
