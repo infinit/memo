@@ -1853,6 +1853,36 @@ namespace rebalancing
     }
     confirm.open();
   }
+
+  ELLE_TEST_SCHEDULED(resign_insist)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resign_insist"));
+    ELLE_LOG("write block")
+      dht_a->dht->seal_and_insert(*block);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    int count = 0;
+    for (auto l: {&local_a, &local_b})
+      l->proposing().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          if (++count <= 16)
+            throw elle::athena::paxos::Unavailable();
+        });
+    auto rebalanced =
+      elle::reactor::waiter(local_c.rebalanced(), block->address());
+    dht_c.reset();
+    BOOST_TEST(count > 16);
+    elle::reactor::wait(rebalanced);
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -1961,7 +1991,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   b3 = client.dht->make_block<blocks::ACLBlock>();
   b3->data(std::string("baz"));
   BOOST_CHECK_NO_THROW(client.dht->seal_and_insert(*b3));
-
   // check admin can actually read the block
   auto cadm = DHT(storage = nullptr, keys=admin, owner=owner_key);
   cadm.dht->admin_keys().r.push_back(admin.K());
@@ -1972,7 +2001,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto b0a = cadm.dht->fetch(b0->address());
   no_cheating(cadm.dht.get(), b0a);
   BOOST_CHECK_THROW(b0a->data(), std::exception);
-
   // do some stuff with blocks owned by admin
   auto ba = cadm.dht->make_block<blocks::ACLBlock>();
   ba->data(std::string("foo"));
@@ -1991,7 +2019,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto ba4 = cadm.dht->fetch(ba->address());
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
-
   // try to change admin user's permissions
   auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
   b_perm->data(std::string("admin user data"));
@@ -2003,7 +2030,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
     b_perm->set_permissions(
       *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
     false, false), elle::Error);
-
   // check group admin key
   auto gadmin = elle::cryptography::rsa::keypair::generate(512);
   auto cadmg = DHT(storage = nullptr, keys=gadmin, owner=owner_key);
@@ -2020,13 +2046,11 @@ ELLE_TEST_SCHEDULED(admin_keys)
     g_K.reset(
       new elle::cryptography::rsa::PublicKey(g.public_control_key()));
   }
-
   auto bg = client.dht->make_block<blocks::ACLBlock>();
   bg->data(std::string("baz"));
   client.dht->seal_and_insert(*bg);
   auto bg2 = cadmg.dht->fetch(bg->address());
   BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
-
   // try to change admin group's permissions
   auto bg_perm = cadmg.dht->fetch(bg->address());
   // no_cheating(cadmg.dht.get(), bg_perm);
@@ -2035,7 +2059,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
       *cadmg.dht->make_user(elle::serialization::json::serialize(g_K)),
     false, false), elle::Error);
 }
-
 
 ELLE_TEST_SCHEDULED(disabled_crypto)
 {
@@ -2156,6 +2179,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(conflict_quorum), 0, valgrind(3));
       auto missing_block = &rebalancing::missing_block;
       rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
+      auto resign_insist = &rebalancing::resign_insist;
+      rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
     }
   }
 }

@@ -1880,29 +1880,36 @@ namespace infinit
           if (!local)
             return;
           auto paxos = std::static_pointer_cast<LocalPeer>(local);
-          auto blocks =
-            elle::make_vector(
-              elle::as_range(
-                paxos->node_blocks().get<LocalPeer::by_node>()
-                .equal_range(this->doughnut().id())));
-          for (auto nb: blocks)
+          for (bool done = false; !done;)
           {
-            auto address = nb.block;
-            ELLE_TRACE_SCOPE("rebalance %f out", address);
-            auto quorum =
-              ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
-            ELLE_ENFORCE_EQ(quorum.erase(this->doughnut().id()), 1u);
-            ELLE_DEBUG("new quorum: %f", quorum);
-            try
+            done = true;
+            auto blocks =
+              elle::make_vector(
+                elle::as_range(
+                  paxos->node_blocks().get<LocalPeer::by_node>()
+                  .equal_range(this->doughnut().id())));
+            for (auto nb: blocks)
             {
-              auto client = this->_client(address);
-              auto latest = this->_latest(client, address);
-              if (!this->_rebalance(client, address, quorum, latest))
-                ELLE_WARN("%f: unable to rebalance %f", this, address);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("%f: unable to rebalance %f: %f", this, address, e);
+              done = false;
+              auto address = nb.block;
+              ELLE_TRACE_SCOPE("rebalance %f out", address);
+              auto quorum =
+                ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
+              ELLE_ENFORCE_EQ(quorum.erase(this->doughnut().id()), 1u);
+              ELLE_DEBUG("new quorum: %f", quorum);
+              try
+              {
+                auto client = this->_client(address);
+                auto latest = this->_latest(client, address);
+                if (this->_rebalance(client, address, quorum, latest))
+                  paxos->rebalanced()(address);
+                else
+                  ELLE_WARN("%f: unable to rebalance %f", this, address);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("%f: unable to rebalance %f: %f", this, address, e);
+              }
             }
           }
         }
