@@ -7,6 +7,8 @@ import sys
 from itertools import chain
 import functools
 
+get_started = None
+
 build = None
 check = None
 install = None
@@ -511,8 +513,6 @@ def configure(
   resources += drake.nodes(
     'resources/json/comparisons.json',
     'resources/json/opensource.json',
-    'resources/json/platform/linux.json',
-    'resources/json/platform/windows.json',
   )
 
   resources_icons = drake.nodes(
@@ -741,11 +741,11 @@ def configure(
   )
 
   resources = resources + resources_icons + resources_logos
+  global get_started
   get_started = {}
   get_started['scripts'] = drake.nodes(
     'resources/scripts/get-started/doctor.sh',
     'resources/scripts/get-started/bob/device_C/echo-failed.sh',
-    'resources/scripts/get-started/bob/device_C/volume-',
     'resources/scripts/get-started/bob/device_C/cat.sh',
     'resources/scripts/get-started/bob/device_C/network-fetch.sh',
     'resources/scripts/get-started/bob/device_C/volume-mount.sh',
@@ -779,6 +779,11 @@ def configure(
     'resources/scripts/get-started/alice/device_B/network-link.sh',
     'resources/scripts/get-started/alice/device_B/receive.sh',
   )
+  get_started['variables'] = drake.nodes(
+    'resources/json/platform/linux.json',
+    'resources/json/platform/windows.json',
+  )
+  resources += get_started['variables']
 
   if python is not None:
     python_version = python.version

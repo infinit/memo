@@ -1,1 +1,1 @@
-echo "or not" > awesome.txt
+echo "or not" > ${guide_mountpoint}${dir}awesome.txt
