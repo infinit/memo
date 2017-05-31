@@ -24,15 +24,16 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/UUID.hh>
+#include <elle/Version.hh>
 #include <elle/algorithm.hh>
 #include <elle/format/base64.hh>
 #include <elle/os/environ.hh>
+#include <elle/random.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 #include <elle/system/Process.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
-#include <elle/Version.hh>
 
 #include <elle/reactor/scheduler.hh>
 
@@ -1274,32 +1275,29 @@ ELLE_TEST_SCHEDULED(basic)
 
   ELLE_LOG("randomizing a file")
   {
-    std::default_random_engine gen;
-    std::uniform_int_distribution<>dist(0, 255);
     auto const random_size = 10000;
     {
       auto h = fs->path("/tbig")->create(O_CREAT|O_RDWR, 0644);
       for (int i = 0; i < random_size; ++i)
       {
-        unsigned char c = dist(gen);
+        unsigned char c = elle::pick_one(256);
         h->write(elle::ConstWeakBuffer(&c, 1), 1, i);
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
-    std::uniform_int_distribution<>dist2(0, random_size - 1);
+    BOOST_TEST(file_size(fs->path("/tbig")) == random_size);
     for (int i=0; i < 2; ++i)
     {
       auto h = fs->path("/tbig")->open(O_RDWR, 0644);
       for (int i=0; i < 5; ++i)
       {
-        int sv = dist2(gen);
-        unsigned char c = dist(gen);
+        int sv = elle::pick_one(random_size);
+        unsigned char c = elle::pick_one(256);
         h->write(elle::ConstWeakBuffer(&c, 1), 1, sv);
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
+    BOOST_TEST(file_size(fs->path("/tbig")) == random_size);
   }
 
   ELLE_LOG("truncate")
