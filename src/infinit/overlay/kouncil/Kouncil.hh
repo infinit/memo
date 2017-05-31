@@ -155,7 +155,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All peers we are currently connected to.
         ELLE_ATTRIBUTE_R(Peers, peers);
-        ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
+
       private:
         void
         _broadcast();

@@ -579,7 +579,7 @@ namespace infinit
               auto const& range = this->peers().get<1>();
               auto const size = int(boost::size(range));
               ELLE_DEBUG("selecting %s nodes from %s peers", n, size);
-              for (auto i: elle::pick_n(std::min(n, size), range, this->_gen))
+              for (auto i: elle::pick_n(std::min(n, size), range))
                 yield(*i);
             }
             else
@@ -590,7 +590,7 @@ namespace infinit
                                  boost::optional<bool>(true)));
               auto const size = int(boost::size(range));
               ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
-              for (auto i: elle::pick_n(std::min(n, size), range, this->_gen))
+              for (auto i: elle::pick_n(std::min(n, size), range))
                 yield(*ELLE_ENFORCE(elle::find(this->peers(), i->id())));
             }
           };
