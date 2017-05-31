@@ -391,9 +391,7 @@ namespace infinit
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 
-          typedef
-            std::unordered_map<Address, int>
-            Transfers;
+          using Transfers = std::unordered_map<Address, int>;
           ELLE_ATTRIBUTE(Transfers, transfers);
 
         /*-----.

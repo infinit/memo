@@ -2,12 +2,14 @@
 
 #include <functional>
 #include <utility>
-#include <random>
+
+#include <boost/range/algorithm/sort.hpp>
 
 #include <elle/bench.hh>
 #include <elle/find.hh>
 #include <elle/memory.hh>
 #include <elle/multi_index_container.hh>
+#include <elle/random.hh>
 #include <elle/range.hh>
 #include <elle/serialization/json/Error.hh>
 
@@ -178,7 +180,7 @@ namespace infinit
             this->doughnut(),
             this->doughnut().id(),
             std::move(storage),
-            port ? port.get() : 0,
+            port.value_or(0),
             listen_address);
         }
 
@@ -434,7 +436,7 @@ namespace infinit
                   {
                     ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
                                      this);
-                    for (auto address: this->storage()->list())
+                    for (auto const& address: this->storage()->list())
                     {
                       elle::reactor::sleep(100_ms);
                       try
@@ -1652,12 +1654,12 @@ namespace infinit
               }
               else
               {
-                static bool balance = !elle::os::inenv("INFINIT_DISABLE_BALANCED_TRANSFERS");
+                static bool const balance =
+                  !elle::os::getenv("INFINIT_DISABLE_BALANCED_TRANSFERS", false);
                 if (balance && peers.size() > 1)
                 {
-                  static std::default_random_engine gen;
-                  std::shuffle(peers.begin(), peers.end(), gen);
-                  std::sort(peers.begin(), peers.end(), [this] (auto& p1, auto& p2) ->bool {
+                  std::shuffle(peers.begin(), peers.end(), elle::random_engine());
+                  boost::sort(peers, [this] (auto const& p1, auto const& p2) {
                     return this->_transfers[p1->id()] < this->_transfers[p2->id()];
                   });
                 }
@@ -1934,7 +1936,8 @@ namespace infinit
         | Stat |
         `-----*/
 
-        typedef std::unordered_map<std::string, boost::optional<Hit>> Hits;
+        using Hits =
+          std::unordered_map<std::string, boost::optional<Hit>>;
 
         class PaxosStat
           : public Consensus::Stat
