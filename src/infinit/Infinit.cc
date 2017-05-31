@@ -995,9 +995,9 @@ namespace infinit
   bfs::path
   Infinit::_drive_icon_path() const
   {
-    auto root = xdg_cache_home() / "icons";
-    create_directories(root);
-    return root;
+    auto res = xdg_cache_home() / "icons";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -1016,10 +1016,11 @@ namespace infinit
   std::vector<std::string>
   Infinit::user_passports_for_network(std::string const& network_name)
   {
-    std::vector<std::string> res;
-    for (auto const& pair: this->passports_get(network_name))
-      res.push_back(pair.second);
-    return res;
+    return elle::make_vector(this->passports_get(network_name),
+                             [](auto const& p)
+                             {
+                               return p.second;
+                             });
   }
 
   std::vector<Volume>
