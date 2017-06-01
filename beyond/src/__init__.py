@@ -401,7 +401,7 @@ class Beyond:
             errors.append(str(e))
     except BaseException as e:
       errors.append(str(e))
-    if len(errors) > 0:
+    if errors:
       self.__emailer.send_one(
         recipient_email = 'crash+passport_generation@infinit.sh',
         recipient_name = 'Crash',

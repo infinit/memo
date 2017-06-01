@@ -57,7 +57,7 @@ def configure(
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
     delegate_user = 'hub',
-    backend = []
+    backend = [],
 ):
 
   global build, install, package, rule_check, tests
@@ -322,7 +322,7 @@ def configure(
       'PYTHONPATH': str(path),
     }
     import os
-    if len(binaries):
+    if binaries:
       env['PATH'] = ':'.join([
         str(drake.path_build(binaries[0].path(True).dirname(),
                              absolute = True)),
@@ -408,8 +408,8 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(install_nodes(docker_path, how = drake.copy,
-                                 python_version = drake.Version(3, 5)), '/usr/')
-  binaries = drake.copy(binaries, docker_path / 'bin/couille',
+                                python_version = drake.Version(3, 5)), '/usr/')
+  binaries = drake.copy(binaries, docker_path / 'bin/stage',
                         strip_prefix = 'bin',
                         follow_symlinks = False)
   docker_file.add(binaries, '/usr/')
