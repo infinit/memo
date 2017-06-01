@@ -243,8 +243,8 @@ x86_64-osx-clang:
     - ssh debian@debian.infinit.io 'make brew'
     - rm "$TARBALL"
     - python3 drake -j 4 //debian-debug
-    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "$BUILD_DIR"/infinit-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
-    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
+    - scp "$BUILD_DIR"/infinit-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian
+    - ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
     - osx
