@@ -268,6 +268,7 @@ website:
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 drake -j $(nproc) //website/build
+    - python3 drake -j $(nproc) //website/check
     - python3 drake -j $(nproc) //website/install
     - python3 drake -j $(nproc) //website/debian
     - PACKAGE="website/infinit-sh_${DESC}_amd64.deb"
