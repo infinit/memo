@@ -1,0 +1,2 @@
+Copyright (C) 2017, Docker, Inc.
+All rights reserved.
