@@ -49,6 +49,9 @@
     % for property, value in properties:
       <%
         value_infinit = infinit['properties'][property]
+        value.sort()
+        value_infinit.sort()
+
         if value == value_infinit:
           is_similar = True
         else:
@@ -105,7 +108,7 @@
         <td class="competitor" ${'colspan="2"' if is_similar else ''}>
           % if value:
             % for item in value:
-              <span class="value">${item}</span>
+              <span class="value">${item.lower()}</span>
             % endfor
           % else:
             <span class="value unknown">?</span>
@@ -115,7 +118,7 @@
           % if value_infinit:
             <td class="infinit">
               % for item in value_infinit:
-                <span class="value">${item}</span>
+                <span class="value">${item.lower()}</span>
               % endfor
             </td>
           % else:
