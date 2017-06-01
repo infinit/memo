@@ -844,6 +844,12 @@ def configure(
     },
     package, 'debian').package
 
+  ## ----- ##
+  ## Tests ##
+  ## ----- ##
+  tests = drake.Rule('tests')
+  check = drake.Rule('check')
+
 # Local Variables:
 # mode: python
 # End:

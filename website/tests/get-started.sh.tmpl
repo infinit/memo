@@ -25,7 +25,7 @@ function retry {
   sleep $delay
 }
 
-export PATH=$INFINIT_BINARIES:$PATH
+export PATH=$INFINIT_BINARIES_PATH:$BEYOND_BINARY_PATH:$PATH
 
 # Cleanup.
 trap 'echo $PROCESSES; PIFS=$IFS; IFS=,; for PROC in $PROCESSES; do IFS=$PIFS; echo $PROC; kill -SIGINT $PROC; wait $PROC || true; done;' EXIT

@@ -947,17 +947,19 @@ def configure(
         runner = drake.Runner(
           exe = drake.node('website/tests/get-started.sh'),
           sources = list(chain(installed_binaries, beyond.build.dependencies)),
-          env = {'PYTHONPATH': str(
-            drake.path_build('beyond/lib/python%s:%s' % (
-              elle.python3.version,
-              drake.path_build(utils.path(True).dirname(), True)
-            ))),
-                 'INFINIT_BINARIES': str(
-                   drake.path_build(installed_binaries[0].path(True).dirname(),
-                                    absolute = True))
-                 })
+          env = {
+            'PYTHONPATH': str(
+              drake.path_build('beyond/lib/python%s:%s' % (
+                elle.python3.version,
+                drake.path_build(utils.path(True).dirname(), True)
+              ))),
+            'BEYOND_BINARY_PATH': str(drake.path_build('beyond/bin')),
+            'INFINIT_BINARIES_PATH': str(
+              drake.path_build(installed_binaries[0].path(True).dirname(),
+                               absolute = True))
+          })
         runner.reporting = drake.Runner.Reporting.on_failure
-        rule_check << runner.status
+        website.check << runner.status
 
   ## ----- ##
   ## Tests ##

@@ -338,8 +338,9 @@ Remotely saved user "alice".
 
     <p>The binary <em>infinit silo</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit silo create --filesystem --name local --capacity 1GB
-Created storage "local".</code></pre>
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/silo-create.sh' />
+Created storage "local".
+</code></pre>
 
     <h3 id="create-a-network">Create a network</h3>
 
@@ -394,7 +395,7 @@ Running volume "alice/my-volume".
     <p>That’s it! You can now create, list and access files from the mount point <code>${guide_mountpoint_abs}</code>. Try creating a file right now:
 
       <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/echo.sh' />
-<%include file='scripts/get-started/alice/device_A/cat.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/cat.sh' />
 everything is</code></pre>
 
     <h3 id="access-from-another-machine">Access from another machine</h3>
@@ -442,7 +443,7 @@ Fetched volume "alice/my-volume".
 
     <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/network-link.sh' />
 Linked device to network "alice/my-network".
-    </code></pre>
+</code></pre>
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
