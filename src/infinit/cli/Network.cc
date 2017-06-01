@@ -1,7 +1,6 @@
 #include <infinit/cli/Network.hh>
 
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/hex.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
@@ -27,12 +26,6 @@
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
-#include <grpc++/grpc++.h>
-#include <infinit/grpc/doughnut.pb.h>
-#include <infinit/grpc/doughnut.grpc.pb.h>
-#include <infinit/grpc/serializer.hh>
-
-
 #ifndef INFINIT_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
@@ -47,48 +40,8 @@ namespace infinit
     namespace bfs = boost::filesystem;
     namespace dnut = infinit::model::doughnut;
 
-    static auto alternative_decriptions = elle::das::cli::Options{
-      {"key", elle::das::cli::Option{
-          'k', "key to the block", false}},
-      {"value", elle::das::cli::Option{
-          'p', "value stored by the block", false}},
-      {"name", elle::das::cli::Option{
-          'n', "name of the NamedBlock", false}}
-    };
-
-    Network::Block::Block(Infinit& infinit)
-      : Object(infinit)
-      , insert(*this,
-               "Insert a block",
-               alternative_decriptions,
-               cli::grpc,
-               cli::value,
-               cli::name = boost::none,
-               cli::mutable_ = false)
-      , fetch(*this,
-              "Get a block",
-              alternative_decriptions,
-              cli::grpc,
-              cli::key = boost::none,
-              cli::name = boost::none,
-              cli::decrypt = true)
-      , update(*this,
-               "Update a block",
-               alternative_decriptions,
-               cli::grpc,
-               cli::key,
-               cli::value)
-      , remove(*this,
-               "Remove a block",
-               alternative_decriptions,
-               cli::grpc,
-               cli::key = boost::none,
-               cli::name = boost::none)
-    {}
-
     Network::Network(Infinit& infinit)
       : Object(infinit)
-      , block(infinit)
       , create(*this,
                "Create a network",
                cli::name,
@@ -237,209 +190,6 @@ namespace infinit
                cli::protocol = boost::none)
     {}
 
-    /*----------------------.
-    | Mode: block::insert.  |
-    `----------------------*/
-
-    void
-    Network::Block::mode_insert(std::string const& server,
-                                std::string const& value,
-                                boost::optional<std::string> const& name,
-                                bool mutable_)
-    {
-      auto chan = ::grpc::CreateChannel(
-        server, ::grpc::InsecureChannelCredentials());
-      auto kv = Doughnut::NewStub(chan);
-
-      ::InsertRequest insert;
-      if (!mutable_)
-      {
-        ::Block block;
-        if (name)
-        {
-          ::grpc::ClientContext ctx;
-          ::MakeNamedBlockRequest key;
-          key.set_key(*name);
-          kv->MakeNamedBlock(&ctx, key, &block);
-          block.set_data(value);
-        }
-        else
-        {
-          ::grpc::ClientContext ctx;
-          ::MakeImmutableBlockRequest data;
-          data.set_data(value);
-          kv->MakeImmutableBlock(&ctx, data, &block);
-        }
-        insert.mutable_block()->CopyFrom(block);
-      }
-      else
-      {
-        ::MakeMutableBlockRequest req;
-        {
-          ::grpc::ClientContext ctx;
-          kv->MakeMutableBlock(&ctx, req, insert.mutable_block());
-        }
-        insert.mutable_block()->set_data_plain(value);
-      }
-      {
-        ::grpc::ClientContext ctx;
-        ::InsertResponse res;
-        auto status = kv->Insert(&ctx, insert, &res);
-        if (!status.ok())
-          elle::err("Cannot insert block");
-      }
-      std::cout << boost::algorithm::hex(insert.block().address()) << std::endl;
-    }
-
-    /*---------------------.
-    | Mode: block::fetch.  |
-    `---------------------*/
-
-    static
-    std::string
-    address_from_name(Doughnut::Stub& stub,
-                      std::string const& name)
-    {
-      ::NamedBlockAddressResponse address;
-      ::NamedBlockAddressRequest req;
-      req.set_key(name);
-      {
-        ::grpc::ClientContext ctx;
-        stub.NamedBlockAddress(&ctx, req, &address);
-      }
-      return address.address();
-    }
-
-    static
-    bool
-    is_mutable_block(::Block const& block)
-    {
-      static auto const mutable_blocks = {"OKB"};
-      return std::find(mutable_blocks.begin(),
-                       mutable_blocks.end(),
-                       block.type()) != mutable_blocks.end();
-    }
-
-    class FetchBlockError
-      : public elle::Error
-    {
-      using Super = elle::Error;
-      using Super::Super;
-    };
-
-    ::Block
-    fetch_block(Doughnut::Stub& stub,
-                std::string const& address,
-                bool decrypt = true)
-    {
-      ::grpc::ClientContext ctx;
-      ::FetchRequest fetch;
-      fetch.set_address(address);
-      fetch.set_decrypt_data(decrypt);
-      ::FetchResponse res;
-      ::grpc::Status status = stub.Fetch(&ctx, fetch, &res);
-      if (!status.ok())
-        elle::err<FetchBlockError>("Cannot fetch block");
-      return res.block();
-    }
-
-    void
-    Network::Block::mode_fetch(std::string const& server,
-                               boost::optional<std::string> const& key,
-                               boost::optional<std::string> const& name,
-                               bool decrypt)
-    {
-      if (bool(name) == bool(key))
-        elle::err<CLIError>("specify either \"--key\" or \"--name\"");
-
-      auto chan = ::grpc::CreateChannel(
-        server, ::grpc::InsecureChannelCredentials());
-      auto kv = Doughnut::NewStub(chan);
-
-      auto address = key ? boost::algorithm::unhex(*key)
-                         : address_from_name(*kv, *name);
-      ::Block block;
-      try
-      {
-        block = fetch_block(*kv, address, decrypt);
-      }
-      catch (FetchBlockError const& e)
-      {
-        if (name)
-          elle::err("%s named %s", e.what(), *name);
-        else
-          elle::err("%s with key %s", e.what(), *key);
-      }
-      if (is_mutable_block(block) && decrypt)
-        std::cout << block.data_plain() << std::endl;
-      else
-        std::cout << block.data() << std::endl;
-    }
-
-    /*----------------------.
-    | Mode: block::update.  |
-    `----------------------*/
-
-    void
-    Network::Block::mode_update(std::string const& server,
-                                std::string const& key,
-                                std::string const& value)
-    {
-      auto chan = ::grpc::CreateChannel(
-        server, ::grpc::InsecureChannelCredentials());
-      auto kv = Doughnut::NewStub(chan);
-
-      auto block = fetch_block(*kv, boost::algorithm::unhex(key), false);
-      ::UpdateResponse response;
-      do
-      {
-        ::UpdateRequest update;
-        update.mutable_block()->CopyFrom(block);
-        update.mutable_block()->set_data_plain(value);
-        update.set_decrypt_data(true);
-        {
-          ::grpc::ClientContext ctx;
-          auto status = kv->Update(&ctx, update, &response);
-          if (response.has_current())
-            block = response.current();
-          else if (!status.ok())
-            elle::err("Cannot update block with key %s: %s",
-                      block.address(), response.message());
-        }
-      }
-      while (response.has_current());
-    }
-
-    /*----------------------.
-    | Mode: block::remove.  |
-    `----------------------*/
-
-    void
-    Network::Block::mode_remove(std::string const& server,
-                                boost::optional<std::string> const& key,
-                                boost::optional<std::string> const& name)
-    {
-      if (bool(name) == bool(key))
-        elle::err<CLIError>("specify either \"--key\" or \"--name\"");
-
-      auto chan = ::grpc::CreateChannel(
-        server, ::grpc::InsecureChannelCredentials());
-      auto kv = Doughnut::NewStub(chan);
-
-      ::RemoveRequest remove;
-      remove.set_address(key ? boost::algorithm::unhex(*key)
-                             : address_from_name(*kv, *name));
-      ::grpc::ClientContext ctx;
-      ::RemoveResponse res;
-      auto status = kv->Remove(&ctx, remove, &res);
-      if (!status.ok())
-      {
-        if (name)
-          elle::err("Couldn't remove block named %s", *name);
-        else
-          elle::err("Couldn't remove block with key %s", *key);
-      }
-    }
 
     /*---------------.
     | Mode: create.  |

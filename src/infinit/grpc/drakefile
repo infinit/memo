@@ -5,7 +5,6 @@ import os
 
 grpc_lib = None
 grpc = None
-plugin = None
 sources = None
 cxx_config_grpc = None
 doughnut_proto = None
@@ -43,7 +42,7 @@ class GRPCGen(drake.Builder):
 
 class GRPCCxxGen(GRPCGen):
 
-  def __init__(self, proto, protoc = None, plugin = None, dest = drake.Path('')):
+  def __init__(self, proto, protoc = None, plugin = None):
     name = proto.name_relative
     dsts = drake.nodes(
       name.with_extension('pb.h'),
@@ -85,6 +84,7 @@ class GRPCCxxGen(GRPCGen):
       'grpc-cmd': list(map(str, self.protoc_grpc_cmd)),
       'protoc-cmd': list(map(str, self.protoc_cc_cmd)),
     }
+
 
 class GRPCPyGen(GRPCGen):
 
@@ -138,17 +138,15 @@ def configure(
     with drake.templating.Context(content = {'proto': json.load(f)}):
       drake.node('doughnut.proto.tmpl')
   doughnut_proto = drake.node('doughnut.proto')
-  global gendn, genfs, plugin
-  # plugin = drake.node(grpc.grpc_cpp_plugin)
   gendn = GRPCCxxGen(
     doughnut_proto,
     protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin)).targets()
+    plugin = drake.node(grpc.grpc_cpp_plugin))
   genfs = GRPCCxxGen(
     drake.node('fs.proto'),
     protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin)).targets()
-  srcs = genfs + gendn + drake.nodes(
+    plugin = drake.node(grpc.grpc_cpp_plugin))
+  srcs = genfs.targets() + gendn.targets() + drake.nodes(
     'doughnut.cc',
     'grpc.cc',
     'filesystem.cc',
