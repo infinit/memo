@@ -58,6 +58,7 @@ def configure(
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
     delegate_user = 'hub',
     backend = [],
+    minidump_stackwalk = None,
 ):
 
   global build, install, package, rule_check, tests
@@ -247,6 +248,11 @@ def configure(
   version = git.description()
   debian_nodes = chain(
     debian_nodes,
+    drake.copy(
+      [minidump_stackwalk] if minidump_stackwalk else [],
+      'debian/bin',
+      strip_prefix = True
+    ),
     drake.copy(
       drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',

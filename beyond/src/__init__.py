@@ -14,6 +14,35 @@ from itertools import chain
 exe_ext = os.environ.get('EXE_EXT', '')
 host_os = os.environ.get('OS', '')
 
+## ------------ ##
+## Crash report ##
+## ------------ ##
+
+def symbolize_dump(in_, out = None):
+  '''Read this minidump file and save its content,
+  symbolized if possible.  It is safe to use in_ == out.'''
+  import subprocess
+  if not out:
+    out = in_
+  try:
+    with open(out + '.tmp', 'wb') as o:
+      p = subprocess.run(['minidump_stackwalk', in_], stdout=o)
+      if p.returncode:
+        print("symbolize: error: {}".format(p.stderr))
+      else:
+        print("symbolize: success")
+        os.rename(out + '.tmp', out)
+        return
+  except Exception as e:
+    print("symbolize: fatal: {}".format(e))
+
+  # Worst case: return the input file.
+  try:
+    os.rename(in_, out)
+  except Exception as e:
+    print("symbolizer: cannot rename dump file: {}".format(e))
+
+
 ## -------- ##
 ## Binaries ##
 ## -------- ##
@@ -428,14 +457,16 @@ class Beyond:
     }
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
-      with open('%s/client.dmp' % temp_dir, 'wb') as crash_dump:
-        crash_dump.write(data.getvalue())
-      with open('%s/client.dmp' % temp_dir, 'rb') as crash_dump:
+      tfile = '%s/client.dmp' % temp_dir
+      with open(tfile, 'wb') as f:
+        f.write(data)
+      symbolize_dump(tfile)
+      with open(tfile, 'rb') as dump:
         self.__emailer.send_one(
           recipient_email = 'crash@infinit.sh',
           recipient_name = 'Crash',
           variables = variables,
-          files = [crash_dump],
+          files = [dump],
           **self.template('Internal/Crash Report')
         )
 
