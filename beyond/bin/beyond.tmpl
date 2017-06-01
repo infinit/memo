@@ -14,6 +14,17 @@ os.environ['PYTHONPATH'] = '%s:%s' % (PYTHONPATH, os.environ.get('PYTHONPATH', '
 import infinit.beyond
 import infinit.beyond.bottle
 
+def symbolize(file):
+  import tempfile
+  with tempfile.NamedTemporaryFile('w+b') as f:
+    name = f.name
+    print("Files: ", file, name)
+    infinit.beyond.symbolize_dump(file, name)
+    with open(name, 'r') as input:
+      for l in input:
+        print(l, end='')
+
+
 def parse_options():
   import argparse
   # Parse options
@@ -137,10 +148,21 @@ def parse_options():
       default = False,
       help = 'Retain data from deleted users')
 
+
+  ## ----------------- ##
+  ## Debugging tools.  ##
+  ## ----------------- ##
+
+  # Make a minidump file human readable.
+  add('--symbolize', help = argparse.SUPPRESS)
+
   return parser.parse_args()
 
 try:
   args = parse_options()
+  if args.symbolize:
+    symbolize(args.symbolize)
+    exit(0)
   if args.gcs_login is not None and args.gcs_key is not None:
     from infinit.beyond.gcs import GCS
     gcs = GCS(login = args.gcs_login,

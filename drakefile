@@ -274,10 +274,12 @@ def configure(
                                     cxx_toolkit = cxx_toolkit,
                                     cxx_config = cxx_config)
     crash_reporter_lib = import_lib(crash_reporting)
+    minidump_stackwalk = crash_reporting.minidump_stackwalk_exe
     cxx_config.define('INFINIT_ENABLE_CRASH_REPORTER')
     cxx_config_infinit.define('INFINIT_ENABLE_CRASH_REPORTER')
     cxx_config_infinit.add_local_include_path('crash_reporting/src')
-
+  else:
+    minidump_stackwalk = None
 
   ## ------------ ##
   ## libinfinit.  ##
@@ -801,6 +803,7 @@ def configure(
           'binaries': installed_binaries,
           'debian': rule_debian
         },
+        minidump_stackwalk = minidump_stackwalk,
       )
       if enable_crash_reporting:
         crash_test_libs = [

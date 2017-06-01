@@ -8,6 +8,7 @@ lib_static = None
 library = None
 
 dump_syms_exe = None
+minidump_stackwalk_exe = None
 rule_tools = None
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
@@ -254,8 +255,10 @@ def configure(cxx_toolkit = None,
     'CC=%s' % cxx_toolkit.c,
     'CXX=%s' % cxx_toolkit.cxx,
   ]
+  global minidump_stackwalk_exe
+  minidump_stackwalk_exe = drake.cxx.Executable('breakpad/bin/minidump_stackwalk')
   breakpad_targets = [
-    drake.cxx.Executable('breakpad/bin/minidump_stackwalk'),
+    minidump_stackwalk_exe,
     drake.cxx.Executable('breakpad/bin/minidump_dump'),
     drake.cxx.Executable('breakpad/bin/microdump_stackwalk'),
   ]
