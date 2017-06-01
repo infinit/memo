@@ -142,11 +142,12 @@ def configure(
     'templates/pages/faq.html',
     'templates/pages/home.html',
     'templates/pages/legal.html',
-    'templates/pages/memo.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/product.html',
     'templates/pages/update.html',
+
+    'templates/pages/projects/memo.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
@@ -508,6 +509,8 @@ def configure(
     'resources/images/logos/memo@2x.png',
     'resources/images/logos/github.png',
     'resources/images/logos/github@2x.png',
+    'resources/images/logos/etcd-consul-zookeeper.png',
+    'resources/images/logos/etcd-consul-zookeeper@2x.png',
   )
 
   resources += drake.nodes(
@@ -738,6 +741,10 @@ def configure(
     'resources/images/icons/policy-based@2x.png',
     'resources/images/icons/strongly-consistent.png',
     'resources/images/icons/strongly-consistent@2x.png',
+    'resources/images/icons/performance.png',
+    'resources/images/icons/performance@2x.png',
+    'resources/images/icons/resilience.png',
+    'resources/images/icons/resilience@2x.png',
   )
 
   resources = resources + resources_icons + resources_logos

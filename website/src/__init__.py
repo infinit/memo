@@ -82,7 +82,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/project/memo', name = 'memo')
-  @view('pages/memo.html')
+  @view('pages/projects/memo.html')
   def root(self):
     return {
       'title': 'Memo Key-Value Store',

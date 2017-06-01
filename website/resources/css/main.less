@@ -2131,27 +2131,48 @@ body.memo {
     p.subtitle { width: 90%; margin: auto; max-width: 530px; }
 
     .memo, .etcd { width: 38%; float: left;}
-    .memo { margin-left: 10%; margin-right: 2%; }
-    .etcd { margin-left: 2%; margin-right: 10%; }
+    .etcd { margin-left: 10%; margin-right: 2%; }
+    .memo { margin-left: 2%; margin-right: 10%; }
 
     .schemas {
       margin-top: 55px;
+
+      img.logo { max-height: 39px; width: auto; }
+      .etcd img.logo { margin-top: 6px;}
+      strong {
+        display: inline-block; font-size: 16px; font-family: @sf; text-transform: uppercase;
+        margin: 35px 0 25px 0;
+      }
     }
 
     .comparison {
       clear: both; padding-top: 65px;
 
-      p { font-size: 18px; max-width: 400px; margin:auto; line-height: 26px; margin-top: 10px;}
-      div {
-        float: left; width: 10%;
+      p {
+        max-width: 400px; margin:auto; line-height: 22px;
+        margin-top: 10px; font-size: 15px; font-style: italic; color: #394D54;
+      }
 
+      p.summary {
+        font-weight: bold; font-size: 18px; font-style: normal; color: @infinitblack;
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      }
+
+      div {
+        float: left; width: 14%;
+
+        hr { margin-top: -10px; height: 1px; background: @infinitblack; border: none; }
+        img { margin-top: 15px;}
         strong {
           font-family: @sf; text-transform: uppercase; font-size: 15px;
-          display: inline-block; margin-top: 5px;
+          display: inline-block; margin-top: 11px; background: white; padding: 0 7px;
         }
       }
-      .memo, .etcd { width: 33%; }
-      .memo p { font-weight: 600; }
+      .memo, .etcd { width: 33%;  margin-right: 0; }
+      .memo { margin-left: 0; }
+      .etcd { margin-right: 0; }
+      .memo p { text-align: left; }
+      .etcd p { text-align: right; }
 
       &.consistency div img { margin-top: 15px;}
     }
