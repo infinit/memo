@@ -1118,8 +1118,6 @@ ELLE_TEST_SUITE()
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
-  // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
-  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
   master.add(BOOST_TEST_CASE(doughnut_parallel), 0, valgrind(60));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
 #ifndef INFINIT_WINDOWS
@@ -1127,6 +1125,8 @@ ELLE_TEST_SUITE()
   // between the return of the grpc service callback and the return of
   // the client function call (both running in system threads).
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
+  // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
+  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
 #endif
   atexit(google::protobuf::ShutdownProtobufLibrary);
 }
