@@ -129,7 +129,8 @@ namespace infinit
       template <typename T>
       static
       void value(SerializerOut& sout, T& v, ::grpc::Status& err,
-                 elle::Version const& version)
+                 elle::Version const& version,
+                 bool is_void)
       {
          if (v.template is<E>())
          {
@@ -160,7 +161,10 @@ namespace infinit
          }
          else
          {
-           sout.serialize_forward(v);
+           if (!is_void)
+             sout.serialize(
+               cxx_to_message_name(elle::type_info<A>().name()),
+               v.template get<A>());
          }
       }
     };
@@ -175,6 +179,7 @@ namespace infinit
                  RESP* response)
     {
       ::grpc::Status status = ::grpc::Status::OK;
+      ::grpc::StatusCode code = ::grpc::INTERNAL;
       sched.mt_run<void>("invoke", [&] {
           try
           {
@@ -182,7 +187,9 @@ namespace infinit
                        elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
+            code = ::grpc::INVALID_ARGUMENT;
             auto call = typename NF::Call(sin);
+            code = ::grpc::INTERNAL;
             auto res = nf(std::move(call));
             ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
@@ -190,18 +197,19 @@ namespace infinit
             if (NOEXCEPT) // it will compile anyway no need for static switch
             {
               auto* adapted = OptionFirst<typename NF::Result::Super>::value(res, status);
-              if (status.ok())
+              if (status.ok() && !decltype(res)::is_void::value)
                 sout.serialize_forward(*adapted);
             }
             else
             {
-              ExceptionExtracter<typename NF::Result::Super>::value(sout, res, status, dht.version());
+              ExceptionExtracter<typename NF::Result::Super>::value(
+                sout, res, status, dht.version(), decltype(res)::is_void::value);
             }
           }
           catch (elle::Error const& e)
           {
-            ELLE_ERR("boum %s", e);
-            ELLE_ERR("%s", e.backtrace());
+            ELLE_TRACE("GRPC invoke failed with %s", e);
+            status = ::grpc::Status(code, e.what());
           }
       });
       return status;
@@ -248,7 +256,7 @@ namespace infinit
         (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
       ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
         (dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockAddressRequest , ::NamedBlockAddressResponse , true>
+      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse , true>
         (dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
         (dht.remove, dht, "/Doughnut/remove");

@@ -2,6 +2,7 @@
 
 #include <infinit/model/doughnut/Dock.hh>
 
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/multi_index_container.hh>
 #include <elle/network/Interface.hh>
@@ -61,15 +62,18 @@ namespace infinit
                  Protocol protocol,
                  boost::optional<int> port,
                  boost::optional<boost::asio::ip::address> listen_address,
-                 boost::optional<std::string> rdv_host)
+                 boost::optional<std::string> rdv_host,
+                 boost::optional<std::chrono::milliseconds> tcp_heartbeat)
         : _doughnut(doughnut)
-        , _protocol(protocol)
+        , _tcp_heartbeat(tcp_heartbeat)
         , _local_utp_server(
           doughnut.local() ? nullptr : new elle::reactor::network::UTPServer)
         , _utp_server(doughnut.local() ?
                       *doughnut.local()->utp_server() :
                       *this->_local_utp_server)
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
+        ELLE_DEBUG("tcp heartbeat: %s", tcp_heartbeat);
         if (this->_local_utp_server)
         {
           bool v6 = ipv6_enabled
@@ -82,7 +86,7 @@ namespace infinit
         }
         if (rdv_host)
         {
-          auto uid = elle::sprintf("%x", _doughnut.id());
+          auto const uid = elle::sprintf("%x", _doughnut.id());
           this->_rdv_connect_thread.reset(
             new elle::reactor::Thread(
               "rdv_connect",
@@ -102,7 +106,6 @@ namespace infinit
 
       Dock::Dock(Dock&& source)
         : _doughnut(source._doughnut)
-        , _protocol(source._protocol)
         , _local_utp_server(std::move(source._local_utp_server))
         , _utp_server(source._utp_server)
       {}
@@ -118,7 +121,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: disconnect", this);
         {
           // First terminate thread asynchronoulsy, otherwise some of these
-          // thread could initiate new connection while we terminate others.
+          // threads could initiate new connection while we terminate others.
           auto connecting_copy = this->connecting();
           for (auto& connecting: connecting_copy)
             if (auto c = connecting.lock())
@@ -195,12 +198,16 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: connect to %f", this, l);
         // Check if we already have a connection to that peer.
-        auto connected = this->_connected.find(l.id());
-        if (l.id() != Address::null && connected != this->_connected.end())
+        if (l.id() != Address::null)
         {
-          auto res = ELLE_ENFORCE(connected->lock());
-          ELLE_TRACE("already connected: %s", res);
-          return res;
+          if (auto i = elle::find(this->_connected, l.id()))
+          {
+            auto res = ELLE_ENFORCE(i->lock());
+            ELLE_TRACE("%s: already connected %f: %s", this, l, res);
+            return res;
+          }
+          else
+            ELLE_TRACE("%s: not yet connected %f", this, l);
         }
         // Check if we are already connecting to that peer.
         {
@@ -212,7 +219,7 @@ namespace infinit
             auto c = ELLE_ENFORCE(wc.lock());
             if (c->id() == l.id())
             {
-              ELLE_TRACE("already connecting: %s", c);
+              ELLE_TRACE("already connecting to %f: %s", l, c);
               return c;
             }
           }
@@ -289,28 +296,48 @@ namespace infinit
                   this->_thread->dispose(true);
                   this->_thread.release();
                   this->_on_connection.disconnect_all_slots();
-              });
+                });
               this->_cleanup_on_disconnect = std::function<void()>();
               bool connected = false;
-              ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
+              ELLE_TRACE_SCOPE("%f: connection attempt to %s endpoints",
                                this, this->_location.endpoints().size());
               ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
-              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
+              auto handshake =
+                [&] (std::unique_ptr<std::iostream> socket,
+                     boost::optional<std::chrono::milliseconds> ping)
                 {
+                  ELLE_TRACE("%f: handshake: %s", this, socket);
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
-                  auto serializer = elle::make_unique<elle::protocol::Serializer>(
-                    *socket, sv, false);
+                  auto serializer =
+                    elle::make_unique<elle::protocol::Serializer>(
+                      *socket, sv, false,
+                      ping,
+                      ping);
                   auto channels =
-                  elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
-                  if (!disable_key)
-                    this->_key_exchange(*channels);
-                  ELLE_TRACE("%s: connected", this);
-                  this->_socket = std::move(socket);
-                  this->_serializer = std::move(serializer);
-                  this->_channels = std::move(channels);
-                  ELLE_ASSERT(this->_channels);
-                  connected = true;
+                    elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
+                  try
+                  {
+                    if (!disable_key)
+                      this->_key_exchange(*channels);
+                    ELLE_TRACE("%f: connected", this);
+                    this->_socket = std::move(socket);
+                    this->_serializer = std::move(serializer);
+                    this->_channels = std::move(channels);
+                    ELLE_ASSERT(this->_channels);
+                    connected = true;
+                  }
+                  catch (...)
+                  {
+                    ELLE_TRACE("%f: handshake: %s: caught: %s",
+                               this, socket, elle::exception_string());
+                    // Delay termination from destructor.
+                    elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
+                    {
+                      channels.reset();
+                    };
+                    throw;
+                  }
                 };
               auto umbrella = [&, this] (auto const& f)
                 {
@@ -322,18 +349,20 @@ namespace infinit
                     }
                     catch (elle::reactor::network::Error const& e)
                     {
-                      ELLE_DEBUG("%s: endpoint network failure: %s", this, e);
+                      ELLE_DEBUG("%f: endpoint network failure: %s", this, e);
                     }
                     catch (HandshakeFailed const& hs)
                     {
-                      ELLE_WARN("%s: endpoint handshake failure: %s", this, hs);
+                      ELLE_WARN("%f: endpoint handshake failure: %s", this, hs);
                     }
                   };
                 };
               elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
               {
-                if (this->_dock.protocol().with_tcp())
+                if (this->_dock.doughnut().protocol().with_tcp())
                   for (auto const& e: this->_location.endpoints())
+                  {
+                    ELLE_TRACE("trying to connect to %s", e);
                     scope.run_background(
                       elle::sprintf("%s: tcp://%s",
                                     elle::reactor::scheduler().current()->name(), e),
@@ -341,11 +370,22 @@ namespace infinit
                         [&, e]
                         {
                           using elle::reactor::network::TCPSocket;
-                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                          handshake(elle::make_unique<TCPSocket>(e.tcp()),
+                                    this->_dock._tcp_heartbeat);
+                          this->_serializer->ping_timeout().connect(
+                            [this]
+                            {
+                              ELLE_WARN("%s: heartbeat timeout", this);
+                              this->_disconnected_exception =
+                                std::make_exception_ptr(
+                                  elle::reactor::network::ConnectionClosed());
+                              this->_thread->terminate();
+                            });
                           this->_connected_endpoint = e;
                           scope.terminate_now();
                         }));
-                if (this->_dock.protocol().with_utp())
+                  }
+                if (this->_dock.doughnut().protocol().with_utp())
                   scope.run_background(
                     elle::sprintf("%s: utp://%s",
                                   this, this->_location.endpoints()),
@@ -360,7 +400,7 @@ namespace infinit
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
-                        handshake(std::move(socket));
+                        handshake(std::move(socket), {});
                         scope.terminate_now();
                       }));
                 elle::reactor::wait(scope);
@@ -401,12 +441,16 @@ namespace infinit
               }
               this->_connected = true;
               ELLE_TRACE("connected through %s", this->_connected_endpoint);
-              auto connected_it =
+              this->_connected_it =
                 this->_dock._connected.insert(this->shared_from_this()).first;
               this->_dock._connecting.erase(connecting_it);
               auto const cleanup = [&]
                 {
-                  this->_dock._connected.erase(connected_it);
+                  if (this->_connected_it)
+                  {
+                    this->_dock._connected.erase(this->_connected_it.get());
+                    this->_connected_it.reset();
+                  }
                   this->_disconnected = true;
                   this->_disconnected_since = std::chrono::system_clock::now();
                   {
@@ -459,8 +503,18 @@ namespace infinit
 
       Dock::Connection::~Connection() noexcept(false)
       {
-        if (this->_thread)
-          this->_thread->terminate_now(false);
+        if (this->_connected_it)
+        {
+          this->_dock._connected.erase(this->_connected_it.get());
+          this->_connected_it.reset();
+        }
+        // Delay termination from destructor.
+        elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
+        {
+          if (this->_thread)
+            this->_thread->terminate_now(false);
+          this->_channels.reset();
+        };
       }
 
       void
@@ -469,7 +523,8 @@ namespace infinit
         if (!this->_disconnected && this->_thread && !this->_thread->done())
         {
           ELLE_TRACE_SCOPE("%s: disconnect", this);
-          this->_thread->terminate_now();
+          // Do not suicide we might be unwinding.
+          this->_thread->terminate_now(false);
           if (this->_cleanup_on_disconnect)
             this->_cleanup_on_disconnect();
         }
@@ -600,8 +655,11 @@ namespace infinit
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
-            this->_rpc_server._key.emplace(key);
-            this->_credentials = std::move(password);
+            if (this->dock().doughnut().encrypt_options().encrypt_rpc)
+            {
+              this->_rpc_server._key.emplace(key);
+              this->_credentials = std::move(password);
+            }
           }
         }
         catch (elle::Error& e)

@@ -27,7 +27,10 @@ namespace infinit
           [&]
           {
             ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
-            this->_channels = _remote->_connection->channels().get();
+            // Hold a reference to the connection, in case we
+            // disconnect/reconnect concurrently.
+            auto connection = this->_remote->_connection;
+            this->_channels = connection->channels().get();
             auto creds = _remote->credentials();
             if (!creds.empty())
             {

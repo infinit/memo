@@ -3,6 +3,7 @@
 #include <elle/reactor/filesystem.hh>
 #include <elle/reactor/Barrier.hh>
 #include <elle/reactor/Thread.hh>
+
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
 
@@ -10,12 +11,14 @@ namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
     namespace rfs = elle::reactor::filesystem;
 
     class Directory;
     using DirectoryPtr = std::shared_ptr<Directory>;
     using MutableBlock = infinit::model::blocks::MutableBlock;
     class FileHandle;
+
     class File
       : public rfs::Path
       , public Node
@@ -34,10 +37,10 @@ namespace infinit
       void unlink() override;
       void mkdir(mode_t mode) override { THROW_EXIST(); }
       void rmdir() override {THROW_NOTDIR(); }
-      void rename(boost::filesystem::path const& where) override;
-      boost::filesystem::path readlink() override { THROW_NOENT(); }
-      void symlink(boost::filesystem::path const& where) override { THROW_EXIST(); }
-      void link(boost::filesystem::path const& where) override;
+      void rename(bfs::path const& where) override;
+      bfs::path readlink() override { THROW_NOENT(); }
+      void symlink(bfs::path const& where) override { THROW_EXIST(); }
+      void link(bfs::path const& where) override;
       void chmod(mode_t mode) override;
       void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override;
@@ -76,7 +79,7 @@ namespace infinit
       FileConflictResolver(elle::serialization::SerializerIn& s,
                            elle::Version const& v);
       FileConflictResolver();
-      FileConflictResolver(boost::filesystem::path path, model::Model* model,
+      FileConflictResolver(bfs::path path, model::Model* model,
                            WriteTarget target);
       std::unique_ptr<Block>
       operator()(Block& b,
@@ -86,7 +89,7 @@ namespace infinit
                 elle::Version const& version) override;
       std::string
       description() const override;
-      boost::filesystem::path _path;
+      bfs::path _path;
       model::Model* _model;
       WriteTarget _target;
       using serialization_tag = infinit::serialization_tag;

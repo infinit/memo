@@ -16,6 +16,8 @@ namespace infinit
          elle::service::aws::S3::StorageClass storage_class,
          boost::optional<int64_t> capacity);
       ~S3();
+      std::string
+      type() const override { return "s3"; }
 
     protected:
       elle::Buffer

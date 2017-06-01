@@ -55,6 +55,7 @@ ELLE_DAS_SYMBOL(version_a);
 ELLE_DAS_SYMBOL(version_b);
 ELLE_DAS_SYMBOL(version_c);
 ELLE_DAS_SYMBOL(monitoring_socket_path_a);
+ELLE_DAS_SYMBOL(encrypt_options);
 
 static
 int
@@ -84,6 +85,7 @@ public:
       version_b = boost::optional<elle::Version>(),
       version_c = boost::optional<elle::Version>(),
       monitoring_socket_path_a = boost::optional<boost::filesystem::path>(),
+      encrypt_options = infinit::model::doughnut::EncryptOptions(),
       make_overlay =
       [] (int,
           infinit::model::NodeLocations peers,
@@ -114,6 +116,7 @@ public:
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
         boost::optional<boost::filesystem::path> monitoring_socket_path_a,
+        infinit::model::doughnut::EncryptOptions encrypt_options,
         std::function<
           std::unique_ptr<infinit::overlay::Stonehenge>(
             int,
@@ -136,6 +139,7 @@ public:
                            std::move(storage_c) ,
                            version_a, version_b, version_c,
                            std::move(monitoring_socket_path_a),
+                           std::move(encrypt_options),
                            std::move(make_overlay),
                            std::move(make_consensus));
               }, std::forward<Args>(args)...);
@@ -164,6 +168,7 @@ private:
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
+       infinit::model::doughnut::EncryptOptions encrypt_options,
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
@@ -235,7 +240,8 @@ private:
         std::move(storage_a),
         dht::version = version_a,
         infinit::model::doughnut::monitoring_socket_path =
-          monitoring_socket_path_a);
+          monitoring_socket_path_a,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_b.
     {
@@ -260,7 +266,8 @@ private:
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
-        dht::version = version_b);
+        dht::version = version_b,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_c.
     {
@@ -285,7 +292,8 @@ private:
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),
-        dht::version = version_c);
+        dht::version = version_c,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
@@ -715,9 +723,8 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 | Paxos: wrong quorum |
 `--------------------*/
 
-// Make one of the overlay return a partial quorum, missing one of the three
-// members, and check it gets fixed.
-
+/// Make one of the overlay return a partial quorum, missing one of the three
+/// members, and check it gets fixed.
 class WrongQuorumStonehenge
   : public infinit::overlay::Stonehenge
 {
@@ -741,8 +748,8 @@ public:
 
 ELLE_TEST_SCHEDULED(wrong_quorum)
 {
-  WrongQuorumStonehenge* stonehenge;
-  DHTs dhts(
+  auto stonehenge = static_cast<WrongQuorumStonehenge*>(nullptr);
+  auto dhts = DHTs(
     make_overlay =
     [&stonehenge] (int dht,
                    infinit::model::NodeLocations peers,
@@ -957,7 +964,9 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     auto obj = res.result.get();
     BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
     BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
-    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    // UTP was temporarily deprecated.
+    // BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    BOOST_TEST(boost::any_cast<std::string>(obj["protocol"]) == "tcp");
     BOOST_CHECK_EQUAL(
       boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
     auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
@@ -1349,8 +1358,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::storage::Storage> storage,
-      dht::Protocol p) override
+      std::unique_ptr<infinit::storage::Storage> storage) override
     {
       return std::make_unique<Local>(
         *this,
@@ -1589,6 +1597,34 @@ namespace rebalancing
     ELLE_LOG("read block")
       BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
   }
+
+  ELLE_TEST_SCHEDULED(evict_removed_blocks, (bool, immutable))
+  {
+    auto dht_a = DHT(make_consensus = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %f", dht_a.dht->id());
+    auto dht_b = DHT(make_consensus = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("second DHT: %f", dht_b.dht->id());
+    auto ba = make_block(dht_a, immutable, "evict_faulty");
+    auto bb = make_block(dht_a, immutable, "evict_faulty");
+    auto bc = make_block(dht_a, immutable, "evict_faulty");
+    ELLE_LOG("write blocks");
+    {
+      dht_a.dht->seal_and_insert(*ba);
+      dht_a.dht->seal_and_insert(*bb);
+      dht_a.dht->seal_and_insert(*bc);
+    }
+    ELLE_LOG("remove block")
+      dht_a.dht->remove(bb->address());
+    ELLE_LOG("disconnect second dht")
+    {
+      dht_b.overlay->disconnect_all();
+      local_a.evict()();
+    }
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -1772,6 +1808,24 @@ ELLE_TEST_SCHEDULED(admin_keys)
     false, false), elle::Error);
 }
 
+
+ELLE_TEST_SCHEDULED(disabled_crypto)
+{
+  auto key = elle::cryptography::rsa::keypair::generate(key_size());
+  infinit::model::doughnut::EncryptOptions eopts(false, false, false);
+  DHTs dhts(true, encrypt_options = eopts, keys_a = key, keys_b=key, keys_c = key);
+  auto b = dhts.dht_a->make_block<blocks::ACLBlock>(elle::Buffer("canard", 6));
+  auto baddr = b->address();
+  dhts.dht_a->insert(std::move(b));
+  auto bc = dhts.dht_b->fetch(baddr);
+  BOOST_CHECK_EQUAL(bc->data(), "canard");
+  auto bi = dhts.dht_a->make_block<blocks::ImmutableBlock>(elle::Buffer("canard", 6));
+  auto biaddr = bi->address();
+  dhts.dht_a->insert(std::move(bi));
+  auto bic = dhts.dht_b->fetch(biaddr);
+  BOOST_CHECK_EQUAL(bic->data(), "canard");
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -1817,6 +1871,7 @@ ELLE_TEST_SUITE()
   paxos->add(BOOST_TEST_CASE(admin_keys));
   paxos->add(BOOST_TEST_CASE(batch_quorum));
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
+  paxos->add(BOOST_TEST_CASE(disabled_crypto));
   {
     using namespace tests_paxos;
     paxos->add(BOOST_TEST_CASE(CHB_no_peer));
@@ -1857,6 +1912,12 @@ ELLE_TEST_SUITE()
       auto evict_faulty_OKB = [] () { evict_faulty(false); };
       rebalancing->add(BOOST_TEST_CASE(evict_faulty_CHB), 0, valgrind(3));
       rebalancing->add(BOOST_TEST_CASE(evict_faulty_OKB), 0, valgrind(3));
+    }
+    {
+      auto evict_removed_blocks_CHB = [] () { evict_removed_blocks(true); };
+      auto evict_removed_blocks_OKB = [] () { evict_removed_blocks(false); };
+      rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_CHB), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_OKB), 0, valgrind(3));
     }
   }
 }

@@ -1,4 +1,7 @@
 #include <infinit/overlay/kouncil/Configuration.hh>
+
+#include <elle/serialization/json/Error.hh>
+
 #include <infinit/overlay/kouncil/Kouncil.hh>
 
 namespace infinit
@@ -54,7 +57,8 @@ namespace infinit
       Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* doughnut)
       {
-        return std::make_unique<Kouncil>(doughnut, std::move(local),
+        return std::make_unique<Kouncil>(doughnut,
+                                         std::move(local),
                                          this->_eviction_delay);
       }
     }

@@ -30,16 +30,15 @@ namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 std::unique_ptr<elle::reactor::filesystem::FileSystem>
-make(
-  bfs::path where,
-  infinit::model::Address node_id,
-  bool enable_async,
-  int cache_size,
-  elle::cryptography::rsa::KeyPair& kp)
+make(bfs::path where,
+     infinit::model::Address node_id,
+     bool enable_async,
+     int cache_size,
+     elle::cryptography::rsa::KeyPair& kp)
 {
   std::unique_ptr<infinit::storage::Storage> s;
-  boost::filesystem::create_directories(where / "store");
-  boost::filesystem::create_directories(where / "async");
+  bfs::create_directories(where / "store");
+  bfs::create_directories(where / "async");
   s.reset(new infinit::storage::Filesystem(where / "store"));
   infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
@@ -81,7 +80,7 @@ make(
 void
 cleanup(bfs::path where)
 {
-  boost::filesystem::remove_all(where);
+  bfs::remove_all(where);
 }
 
 void
@@ -114,7 +113,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
   auto fs = make(path, node_id, true, 10, kp);
   auto root = fs->path("/");
@@ -267,7 +266,7 @@ ELLE_TEST_SCHEDULED(async_groups)
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
 
   // Create group
@@ -350,7 +349,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
 
   // squash creating directories
@@ -413,7 +412,7 @@ ELLE_TEST_SCHEDULED(async_squash)
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
   elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   auto fs = make(path, node_id, true, 100, kp);
@@ -444,7 +443,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
 
   auto fs = make(path, node_id, false, 0, kp);

@@ -12,6 +12,11 @@ namespace infinit
 {
   namespace model
   {
+    namespace flags
+    {
+      static const uint8_t block_kind = 1;
+    }
+
     Address::Address()
       : _value()
       , _mutable_block(true)
@@ -99,7 +104,7 @@ namespace infinit
     std::ostream&
     operator << (std::ostream& out, Address const& k)
     {
-      if (out.flags() & std::ios::fixed)
+      if (is_fixed(out))
       {
         out << "0x";
         out << elle::format::hexadecimal::encode(

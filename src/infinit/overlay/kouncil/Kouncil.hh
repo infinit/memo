@@ -6,10 +6,10 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/random_access_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
 #include <elle/athena/LamportAge.hh>
+#include <elle/optional.hh>
 #include <elle/multi_index_container.hh>
 #include <elle/unordered_map.hh>
 
@@ -23,6 +23,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(disappearance);
     ELLE_DAS_SYMBOL(endpoints);
     ELLE_DAS_SYMBOL(stamp);
+    ELLE_DAS_SYMBOL(storing);
   }
 
   namespace overlay
@@ -74,6 +75,7 @@ namespace infinit
           ELLE_ATTRIBUTE_R(Address, node);
           ELLE_ATTRIBUTE_R(Address, block);
         };
+
         /// Node / owned block addresses mapping.
         using AddressBook = bmi::multi_index_container<
           Entry,
@@ -84,8 +86,8 @@ namespace infinit
             bmi::hashed_non_unique<
               bmi::const_mem_fun<
                 Entry, Address const&, &Entry::block>>,
-            bmi::sequenced<>
-          >>;
+            bmi::hashed_unique<
+              bmi::identity<Entry>>>>;
         /// Peers by id.
         using Peer = Overlay::Member;
         using Peers =
@@ -96,7 +98,6 @@ namespace infinit
               bmi::global_fun<
                 Peer const&, Address, &_details::peer_id>>,
             bmi::random_access<>>>;
-
         /// Local node.
         using Local = infinit::model::doughnut::Local;
         /// Remote node.
@@ -119,10 +120,10 @@ namespace infinit
         ///
         /// @arg dht              The owning Doughnut.
         /// @arg local            The local server, null if pure client.
-        /// @arg eviction_delay   A time out, in seconds.
+        /// @arg eviction_delay   A time out, in seconds. Default: 20mn.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                std::chrono::seconds eviction_delay = std::chrono::seconds{12000});
+                boost::optional<std::chrono::seconds> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -139,6 +140,14 @@ namespace infinit
         ELLE_ATTRIBUTE(std::vector<boost::signals2::scoped_connection>,
                        connections);
 
+      /*-----------.
+      | Properties |
+      `-----------*/
+      protected:
+        using Overlay::storing;
+        void
+        storing(bool v) override;
+
       /*-------------.
       | Address book |
       `-------------*/
@@ -151,7 +160,10 @@ namespace infinit
       private:
         void
         _broadcast();
-        ELLE_ATTRIBUTE(elle::reactor::Channel<Address>, new_entries);
+        /// Events about blocks: (block, inserted or removed).
+        /// If true, inserted, if false removed.
+        ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
+                       new_entries);
         ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, broadcast_thread);
 
       /*------.
@@ -167,9 +179,13 @@ namespace infinit
         {
           PeerInfo(Address id, Endpoints endpoints,
                    int64_t stamp = -1,
-                   LamportAge disappearance = {});
-          PeerInfo(Address id, Endpoints endpoints, Time t,
-                   LamportAge disappearance= {});
+                   LamportAge disappearance = {},
+                   boost::optional<bool> storing = {});
+          PeerInfo(Address id,
+                   Endpoints endpoints,
+                   Time t,
+                   LamportAge disappearance = {},
+                   boost::optional<bool> storing = {});
           explicit PeerInfo(NodeLocation const& loc);
           /// Merge peer information in this.
           ///
@@ -185,9 +201,6 @@ namespace infinit
           location() const;
           void
           print(std::ostream& o) const;
-          /// We lost contact with this peer at @a t.
-          void
-          disappear(Time t = Clock::now());
 
           /// Peer id.
           ELLE_ATTRIBUTE_R(Address, id);
@@ -198,6 +211,8 @@ namespace infinit
           /// Time when we lost connection with this peer, or
           /// LamportAge::null() if all is well.
           ELLE_ATTRIBUTE_RWX(LamportAge, disappearance);
+          /// Whether that host accepts new blocks
+          ELLE_ATTRIBUTE_RW(boost::optional<bool>, storing);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
@@ -211,7 +226,11 @@ namespace infinit
           PeerInfo,
           bmi::indexed_by<
             bmi::hashed_unique<
-              bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
+              bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>,
+            bmi::hashed_non_unique<
+              bmi::const_mem_fun<PeerInfo,
+                                 boost::optional<bool> const&,
+                                 &PeerInfo::storing>>>>;
         /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
 
@@ -292,9 +311,9 @@ namespace infinit
       | Lookup |
       `-------*/
       protected:
-        elle::reactor::Generator<WeakMember>
+        MemberGenerator
         _allocate(Address address, int n) const override;
-        elle::reactor::Generator<WeakMember>
+        MemberGenerator
         _lookup(Address address, int n, bool fast) const override;
         WeakMember
         _lookup_node(Address address) const override;

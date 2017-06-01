@@ -13,6 +13,7 @@ namespace infinit
     {
       class ACLBlock
         : public MutableBlock
+        , private InstanceTracker<ACLBlock>
       {
       /*------.
       | Types |
@@ -20,21 +21,20 @@ namespace infinit
       public:
         using Self = ACLBlock;
         using Super = MutableBlock;
+        static char const* type;
 
       /*-------------.
       | Construction |
       `-------------*/
         ACLBlock(ACLBlock const& other);
       protected:
-        ACLBlock(Address address);
-        ACLBlock(Address address, elle::Buffer data);
+        ACLBlock(Address address, elle::Buffer data = {});
         friend class infinit::model::Model;
 
       /*-------.
       | Clone  |
       `-------*/
       public:
-
         std::unique_ptr<blocks::Block>
         clone() const override;
 

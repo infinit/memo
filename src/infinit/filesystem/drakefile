@@ -3,7 +3,7 @@ sources = drake.nodes(
   'Directory.hh',
   'File.cc',
   'File.hh',
-  'FileData.hh',
+  'FileHeader.hh',
   'FileHandle.cc',
   'FileHandle.hh',
   'Node.cc',
@@ -17,7 +17,12 @@ sources = drake.nodes(
   'filesystem.cc',
   'filesystem.hh',
   'filesystem.hxx',
+  'fwd.hh',
   'umbrella.hh',
   'xattribute.cc',
   'xattribute.hh',
 )
+
+# Local Variables:
+# mode: python
+# End:

@@ -19,3 +19,6 @@
 [submodule "src/infinit/grpc/grpc"]
 	path = src/infinit/grpc/grpc
 	url = https://github.com/infinit/grpc.git
+[submodule "prometheus-cpp"]
+	path = prometheus/prometheus-cpp
+	url = https://github.com/infinit/prometheus-cpp.git

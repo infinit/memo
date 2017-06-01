@@ -13,13 +13,26 @@ namespace infinit
     {
     public:
       using Blocks = std::unordered_map<Key, elle::Buffer>;
+
       Memory();
+      /// The blocks will not be copied nor released, they must remain
+      /// alive at least as long as `this`.
       Memory(Blocks& blocks);
+      ~Memory();
       /// Number of bytes stored.
       std::size_t
       size() const;
+      std::string
+      type() const override { return "memory"; }
 
     protected:
+      /// Retrieve a key, or throw if missing.
+      typename Blocks::iterator _find(Key k);
+      /// Retrieve a key, or throw if missing.
+      typename Blocks::const_iterator _find(Key k) const;
+      /// Check all is well.
+      void
+      _check_invariants() const;
       elle::Buffer
       _get(Key k) const override;
       int

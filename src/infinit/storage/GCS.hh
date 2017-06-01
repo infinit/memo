@@ -24,6 +24,9 @@ namespace infinit
           std::string const& root,
           std::string const& refresh_token);
 
+      std::string
+      type() const override { return "gcs"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

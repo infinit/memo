@@ -1,6 +1,8 @@
 #pragma once
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
+
+#include <elle/reactor/semaphore.hh>
 
 #include <elle/reactor/semaphore.hh>
 
@@ -14,6 +16,9 @@ namespace infinit
     {
     public:
       SFTP(std::string const& host, std::string const& path);
+      std::string
+      type() const override { return "sftp"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;

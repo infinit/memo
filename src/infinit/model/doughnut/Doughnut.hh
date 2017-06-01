@@ -21,6 +21,7 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Dock.hh>
 #include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/overlay/Overlay.hh>
 
 namespace infinit
@@ -62,6 +63,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(admin_keys);
       ELLE_DAS_SYMBOL(connect_timeout);
       ELLE_DAS_SYMBOL(consensus_builder);
+      ELLE_DAS_SYMBOL(encrypt_options);
       ELLE_DAS_SYMBOL(id);
       ELLE_DAS_SYMBOL(keys);
       ELLE_DAS_SYMBOL(listen_address);
@@ -76,7 +78,35 @@ namespace infinit
       ELLE_DAS_SYMBOL(soft_fail_running);
       ELLE_DAS_SYMBOL(soft_fail_timeout);
       ELLE_DAS_SYMBOL(storage);
+      ELLE_DAS_SYMBOL(tcp_heartbeat);
       ELLE_DAS_SYMBOL(version);
+
+      struct EncryptOptions
+      {
+        bool encrypt_at_rest;     // encrypt data on storage
+        bool encrypt_rpc;         // encrypt data in-flight
+        bool validate_signatures; // compute and validate signatures
+
+        EncryptOptions(bool at_rest, bool rpc, bool sig)
+          : encrypt_at_rest(at_rest)
+          , encrypt_rpc(rpc)
+          , validate_signatures(sig)
+          {}
+        EncryptOptions()
+         : encrypt_at_rest(true)
+         , encrypt_rpc(true)
+         , validate_signatures(true)
+         {}
+        EncryptOptions(EncryptOptions&& b) = default;
+        EncryptOptions(EncryptOptions const& b) = default;
+        EncryptOptions&
+        operator = (EncryptOptions &&) = default;
+        using Model = elle::das::Model<
+          EncryptOptions,
+          elle::meta::List<symbols::Symbol_encrypt_at_rest,
+                           symbols::Symbol_encrypt_rpc,
+                           symbols::Symbol_validate_signatures>>;
+      };
 
       /// Doughnut.
       ///
@@ -97,6 +127,8 @@ namespace infinit
         template <typename ... Args>
         Doughnut(Args&& ... args);
         ~Doughnut();
+        void
+        resign();
 
       private:
         using Init = decltype(
@@ -126,7 +158,10 @@ namespace infinit
             doughnut::soft_fail_timeout =
               std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
             doughnut::soft_fail_running =
-              std::declval<elle::Defaulted<bool>>()));
+              std::declval<elle::Defaulted<bool>>(),
+            doughnut::tcp_heartbeat =
+              std::declval<boost::optional<std::chrono::milliseconds>>(),
+            doughnut::encrypt_options = EncryptOptions()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
@@ -155,19 +190,28 @@ namespace infinit
         int
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
+        ELLE_ATTRIBUTE_R(Protocol, protocol);
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
+        ELLE_ATTRIBUTE_R(EncryptOptions, encrypt_options);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
+#if INFINIT_ENABLE_PROMETHEUS
+        /// Gauge on the number of peers.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, member_gauge);
+        /// Gauge on blocks count.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, blocks_gauge);
+        /// Gauge on bytes count.
+        ELLE_ATTRIBUTE_R(prometheus::GaugePtr, bytes_gauge);
+#endif
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, terminating);
-        ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);
@@ -258,6 +302,8 @@ namespace infinit
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat;
+        EncryptOptions encrypt_options;
         using Model = elle::das::Model<
           Configuration,
           decltype(elle::meta::list(symbols::overlay,
@@ -265,7 +311,6 @@ namespace infinit
                                     symbols::owner,
                                     symbols::passport,
                                     symbols::name))>;
-
 
         Configuration(
           Address id,
@@ -279,7 +324,9 @@ namespace infinit
           boost::optional<int> port,
           elle::Version version,
           AdminKeys admin_keys,
-          std::vector<Endpoints> peers);
+          std::vector<Endpoints> peers,
+          boost::optional<std::chrono::milliseconds> tcp_heartbeat = {},
+          EncryptOptions encrypt_options = EncryptOptions());
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration() override;
@@ -295,7 +342,7 @@ namespace infinit
           boost::filesystem::path const& p,
           bool async = false,
           bool cache = false,
-          boost::optional<int> cach_size = {},
+          boost::optional<int> cache_size = {},
           boost::optional<std::chrono::seconds> cache_ttl = {},
           boost::optional<std::chrono::seconds> cache_invalidation = {},
           boost::optional<uint64_t> disk_cache_size = {},

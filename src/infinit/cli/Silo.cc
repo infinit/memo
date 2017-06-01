@@ -26,27 +26,27 @@ namespace infinit
   {
     namespace
     {
-      int64_t
-      convert_capacity(int64_t value, std::string const& quantifier)
+      long double
+      convert_capacity(long double value, std::string const& quantifier)
       {
         if (quantifier == "b" || quantifier == "")
           return value;
         if (quantifier == "kb")
           return value * 1000;
         if (quantifier == "kib")
-          return value << 10;
+          return value * 1024;
         if (quantifier == "mb")
-          return value * 1000000;
+          return value * 1000 * 1000;
         if (quantifier == "mib")
-          return value << 20;
+          return value * 1024 * 1024;
         if (quantifier == "gb")
-          return value * 1000000000;
+          return value * 1000 * 1000 * 1000;
         if (quantifier == "gib")
-          return value << 30;
+          return value * 1024 * 1024 * 1024;
         if (quantifier == "tb")
-          return value * 1000000000000;
+          return value * 1000 * 1000 * 1000 * 1000;
         if (quantifier == "tib")
-          return value << 40;
+          return value * 1024 * 1024 * 1024 * 1024;
         elle::err("invalid capacity: %s", quantifier);
       }
 
@@ -65,9 +65,9 @@ namespace infinit
               break;
           return res ? res : "";
         }();
-        auto intval =
-          std::stoll(value.substr(0, value.size() - quantifier.size()));
-        return convert_capacity(intval, quantifier);
+        auto double_value =
+          std::stold(value.substr(0, value.size() - quantifier.size()));
+        return std::llround(convert_capacity(double_value, quantifier));
       }
 
       boost::optional<int64_t>
@@ -181,7 +181,7 @@ namespace infinit
            cli::capacity = boost::none,
            cli::output = boost::none,
            cli::endpoint = "amazonaws.com",
-           cli::storage_class = boost::none,
+           cli::silo_class = boost::none,
            cli::path = boost::none)
       )
     {}
@@ -198,7 +198,7 @@ namespace infinit
         s.serialize_forward(config);
       }
       else
-        cli.infinit().storage_save(config->name, config);
+        cli.infinit().silo_save(config->name, config);
     }
 
     INFINIT_ENTREPRISE(
@@ -286,7 +286,7 @@ namespace infinit
                           boost::optional<std::string> capacity,
                           boost::optional<std::string> output,
                           std::string const& endpoint,
-                          boost::optional<std::string> const& storage_class_str,
+                          boost::optional<std::string> const& silo_class_str,
                           boost::optional<std::string> root)
     {
       if (!root)
@@ -299,19 +299,19 @@ namespace infinit
         bucket,
         root.get(),
         endpoint);
-      elle::service::aws::S3::StorageClass storage_class = elle::service::aws::S3::StorageClass::Default;
-      if (storage_class_str)
+      elle::service::aws::S3::StorageClass silo_class = elle::service::aws::S3::StorageClass::Default;
+      if (silo_class_str)
       {
-        auto sc = boost::algorithm::to_lower_copy(*storage_class_str);
+        auto sc = boost::algorithm::to_lower_copy(*silo_class_str);
         if (sc == "standard")
-          storage_class = elle::service::aws::S3::StorageClass::Standard;
+          silo_class = elle::service::aws::S3::StorageClass::Standard;
         else if (sc == "standard_ia")
-          storage_class = elle::service::aws::S3::StorageClass::StandardIA;
+          silo_class = elle::service::aws::S3::StorageClass::StandardIA;
         else if (sc == "reduced_redundancy")
-          storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
+          silo_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
         else
           elle::err<CLIError>("unrecognized storage class: %s",
-                           storage_class_str);
+                              silo_class_str);
       }
       mode_create(
         this->cli(),
@@ -319,7 +319,7 @@ namespace infinit
         elle::make_unique<infinit::storage::S3StorageConfig>(
           name,
           std::move(aws_credentials),
-          storage_class,
+          silo_class,
           convert_capacity(capacity),
           std::move(description)));
     }
@@ -353,9 +353,9 @@ namespace infinit
                       boost::optional<std::string> output)
     {
       auto o = this->cli().get_output(output);
-      auto storage = this->cli().infinit().storage_get(name);
-      elle::serialization::json::serialize(storage, *o, false);
-      this->cli().report_exported(std::cout, "storage", name);
+      auto silo = this->cli().infinit().silo_get(name);
+      elle::serialization::json::serialize(silo, *o, false);
+      this->cli().report_exported(std::cout, "silo", name);
     }
 
     void
@@ -363,13 +363,13 @@ namespace infinit
     {
       auto i = this->cli().get_input(input);
       {
-        auto storage = elle::serialization::json::deserialize<
+        auto silo = elle::serialization::json::deserialize<
           std::unique_ptr<infinit::storage::StorageConfig>>(*i, false);
-        if (storage->name.size() == 0)
-          elle::err("storage name is empty");
+        if (silo->name.size() == 0)
+          elle::err("silo name is empty");
         // FIXME: no need to pass the name
-        this->cli().infinit().storage_save(storage->name, storage);
-        this->cli().report_imported("storage", storage->name);
+        this->cli().infinit().silo_save(silo->name, silo);
+        this->cli().report_imported("silo", silo->name);
       }
     }
 
@@ -377,30 +377,31 @@ namespace infinit
     void
     Silo::mode_list()
     {
-      auto storages = this->cli().infinit().storages_get();
+      auto silos = this->cli().infinit().silos_get();
       if (this->cli().script())
       {
         auto l = elle::json::Array{};
-        for (auto const& storage: storages)
+        for (auto const& silo: silos)
         {
           auto o = elle::json::Object{
-            {"name", static_cast<std::string>(storage->name)},
-            {"capacity", (storage->capacity
-                          ? pretty_print(*storage->capacity) : "unlimited")},
+            {"name", static_cast<std::string>(silo->name)},
+            {"capacity", (silo->capacity ? pretty_print(*silo->capacity)
+                          : "unlimited")},
           };
-          if (storage->description)
-            o["description"] = storage->description.get();
+          if (silo->description)
+            o["description"] = silo->description.get();
           l.emplace_back(std::move(o));
         }
         elle::json::write(std::cout, l);
       }
       else
-        for (auto const& storage: storages)
+        for (auto const& silo: silos)
           elle::print(
             std::cout, "{0}{1? \"{1}\"}: {2}\n",
-            storage->name, storage->description,
-            storage->capacity
-            ? pretty_print(*storage->capacity) : "unlimited");
+            silo->name, silo->description,
+            silo->capacity ?
+            pretty_print(*silo->capacity) :
+            "unlimited");
     }
 
     void
@@ -409,18 +410,17 @@ namespace infinit
                       bool purge)
     {
       auto& infinit = this->cli().infinit();
-      auto storage = infinit.storage_get(name);
-      auto user = this->cli().as_user();
-      auto fs_storage =
-        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get());
-      if (clear && !fs_storage)
-        elle::err("only filesystem storages can be cleared");
+      auto silo = infinit.silo_get(name);
+      auto fs_silo =
+        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(silo.get());
+      if (clear && !fs_silo)
+        elle::err("only filesystem silos can be cleared");
       if (purge)
-        for (auto const& pair: infinit.storage_networks(name))
+        for (auto const& pair: infinit.silo_networks(name))
           for (auto const& user_name: pair.second)
             infinit.network_unlink(
               pair.first, infinit.user_get(user_name));
-      infinit.storage_delete(storage, clear);
+      infinit.silo_delete(silo, clear);
     }
   }
 }

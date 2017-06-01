@@ -1,0 +1,20 @@
+Usage: _build/macosx64/bin/infinit-storage MODE [OPTIONS...]
+
+Infinit storage management utility:
+
+Modes:
+  --create                     Create a storage
+  --list                       List storages
+  --export                     Export storage information
+  --import                     Import storage information
+  --delete                     Delete a storage
+
+Miscellaneous:
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
+  -a [ --as ] arg              User to run commands as (default: system user)
+
+

@@ -1,0 +1,5 @@
+daemon: status: Usage: _build/macosx64/bin/infinit-daemon --status [OPTIONS...]
+
+Query daemon status:
+
+

@@ -1,0 +1,9 @@
+user: pull: Usage: _build/macosx64/bin/infinit-user --pull [OPTIONS...]
+
+Remove a user from the Hub:
+
+Pull options:
+  -n [ --name ] arg      User to remove (default: system user)
+  --purge                Remove objects owned by the user
+
+

@@ -46,16 +46,18 @@ namespace infinit
           fetch(Address address, boost::optional<int> local_version = {});
           void
           remove(Address address, blocks::RemoveSignature rs);
+          using MemberGenerator = overlay::Overlay::MemberGenerator;
           static
           std::unique_ptr<blocks::Block>
-          fetch_from_members(
-            elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
-            Address address,
-            boost::optional<int> local_version);
+          fetch_from_members(MemberGenerator& peers,
+                             Address address,
+                             boost::optional<int> local_version);
           void
           remove_many(Address address,
                       blocks::RemoveSignature rs,
                       int factor);
+          void
+          resign();
         protected:
           virtual
           void
@@ -72,6 +74,9 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);
+          virtual
+          void
+          _resign();
 
         /*-----.
         | Stat |
@@ -96,8 +101,7 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
-                     std::unique_ptr<storage::Storage> storage,
-                     Protocol p);
+                     std::unique_ptr<storage::Storage> storage);
 
 
         /*-----------.
@@ -117,6 +121,18 @@ namespace infinit
         public:
           void
           print(std::ostream&) const override;
+        };
+
+        class StackedConsensus
+          : public Consensus
+        {
+        public:
+          StackedConsensus(std::unique_ptr<Consensus> backend);
+          template<typename C>
+          static
+          C*
+          find(Consensus* top);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend, protected);
         };
 
         /*--------------.
@@ -154,3 +170,5 @@ namespace infinit
     }
   }
 }
+
+# include <infinit/model/doughnut/Consensus.hxx>

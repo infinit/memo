@@ -1,13 +1,11 @@
-#ifndef INFINIT_OVERLAY_KADEMLIA_HH
-# define INFINIT_OVERLAY_KADEMLIA_HH
+#pragma once
 
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/network/udp-socket.hh>
+#include <elle/serialization/Serializer.hh>
 
-# include <infinit/overlay/Overlay.hh>
-# include <elle/serialization/Serializer.hh>
-# include <elle/reactor/network/udp-socket.hh>
-# include <elle/reactor/Barrier.hh>
-# include <elle/reactor/Generator.hh>
-# include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace kademlia
 {
@@ -21,6 +19,7 @@ namespace kademlia
     PrettyEndpoint(boost::asio::ip::address h, int p)
     : Endpoint(h, p) {}
   };
+
   struct Configuration
   {
     Configuration();
@@ -37,6 +36,7 @@ namespace kademlia
     int refresh_interval_ms;
     int storage_lifetime_ms;
   };
+
   namespace packet
   {
     struct Ping;
@@ -47,6 +47,7 @@ namespace kademlia
     struct FindValueReply;
     struct Store;
   }
+
   class Kademlia
     : public infinit::overlay::Overlay
     , public elle::Printable
@@ -60,16 +61,17 @@ namespace kademlia
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
+
   /*------.
   | Peers |
   `------*/
   protected:
     void
     _discover(infinit::overlay::NodeLocations const& peers) override;
-    elle::reactor::Generator<WeakMember>
+    MemberGenerator
     _allocate(infinit::model::Address address,
             int n) const override;
-    elle::reactor::Generator<WeakMember>
+    MemberGenerator
     _lookup(infinit::model::Address address,
             int n,
             bool fast) const override;
@@ -81,9 +83,9 @@ namespace kademlia
   `-----------*/
   public:
     std::string
-    type_name() override;
+    type_name() const override;
     elle::json::Array
-    peer_list() override;
+    peer_list() const override;
     elle::json::Object
     stats() override;
 
@@ -129,11 +131,13 @@ namespace kademlia
       Time last_seen;
       int unack_ping;
     };
+
     struct Store
     {
       Endpoint endpoint;
       Time last_seen;
     };
+
     struct Query
     {
       Address target;
@@ -147,6 +151,7 @@ namespace kademlia
       int n; // number ofr results requested
       int steps; // number of replies we got
     };
+
     std::shared_ptr<Query> startQuery(Address const& a, bool storage);
     boost::optional<Address> recurseRequest(
       Query& q,
@@ -185,5 +190,3 @@ namespace infinit
     }
   }
 }
-
-#endif

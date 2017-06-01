@@ -16,6 +16,8 @@ namespace infinit
             std::string const& password,
             // Mix address and password to get a different key per block.
             bool salt = true);
+      std::string
+      type() const override { return "cache"; }
 
     protected:
       elle::Buffer
@@ -26,6 +28,11 @@ namespace infinit
       _erase(Key k) override;
       std::vector<Key>
       _list() override;
+
+      using SecretKey = elle::cryptography::SecretKey;
+      /// The secret key corresponding to @a k.
+      SecretKey
+      _secret_key(Key const& k) const;
 
     private:
       std::unique_ptr<Storage> _backend;

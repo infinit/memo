@@ -1,5 +1,6 @@
 #pragma once
 
+#include <elle/algorithm.hh>
 #include <elle/factory.hh>
 
 #include <infinit/model/doughnut/Cache.hh>
@@ -142,19 +143,19 @@ public:
   }
 
 protected:
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _allocate(infinit::model::Address address, int n) const override
   {
     return this->_find(address, n, true);
   }
 
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _lookup(infinit::model::Address address, int n, bool) const override
   {
     return this->_find(address, n, false);
   }
 
-  elle::reactor::Generator<WeakMember>
+  MemberGenerator
   _find(infinit::model::Address address, int n, bool write) const
   {
     if (_yield)
@@ -164,9 +165,9 @@ protected:
                      this, n, write ? " new" : "", address);
     return elle::reactor::generator<Overlay::WeakMember>(
       [=]
-      (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+      (MemberGenerator::yielder const& yield)
       {
-        if (this->_fail_addresses.find(address) != this->_fail_addresses.end())
+        if (elle::contains(this->_fail_addresses, address))
           return;
         int count = n;
         auto it = this->_partial_addresses.find(address);
@@ -248,7 +249,9 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 `------*/
 
 class DHT
+  : public elle::Printable
 {
+  ELLE_LOG_COMPONENT("tests.DHT");
 public:
   using make_consensus_t
     = std::function<std::unique_ptr<dht::consensus::Consensus>
@@ -262,6 +265,7 @@ public:
   template <typename ... Args>
   DHT(Args&& ... args)
   {
+    ELLE_TRACE("contruct: %s", this);
     // FIXME: use named::extend to not repeat dht::Doughnut arguments
     elle::das::named::prototype(
       paxos = true,
@@ -333,12 +337,30 @@ public:
   elle::reactor::network::TCPSocket
   connect_tcp()
   {
-    return elle::reactor::network::TCPSocket(
-      this->dht->local()->server_endpoint().tcp());
+    for (auto const& ep: this->dht->local()->server_endpoints())
+      try
+      {
+        ELLE_TRACE("connect_tcp: %s, endpoint: %s", this, ep);
+        return ep.tcp();
+      }
+      catch (...)
+      {
+        ELLE_LOG("%s: connection failed: %s",
+                 *this, elle::exception_string());
+      }
+    ELLE_ERR("connect_tcp: all connection attempts failed");
+    abort();
   }
 
   std::shared_ptr<dht::Doughnut> dht;
   Overlay* overlay;
+
+protected:
+  void
+  print(std::ostream& s) const override
+  {
+    elle::fprintf(s, "%s", this->dht);
+  }
 
 private:
   void
@@ -443,10 +465,9 @@ protected:
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
-             std::unique_ptr<infinit::storage::Storage> storage,
-             dht::Protocol p) override
+             std::unique_ptr<infinit::storage::Storage> storage) override
   {
-    return _backend->make_local(port, listen, std::move(storage), p);
+    return _backend->make_local(port, listen, std::move(storage));
   }
 
   std::unique_ptr<infinit::model::blocks::Block>

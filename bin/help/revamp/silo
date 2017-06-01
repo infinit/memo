@@ -1,0 +1,13 @@
+Usage: infinit-storage silo [MODE|--help]
+Infinit silo management utility.
+
+Modes:
+  create     Create local silo
+  delete     Delete local silo
+  export     Export local silo
+  import     Import local silo
+  list       List local silos
+
+Options:
+  -h, --help                show this help message
+

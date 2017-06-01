@@ -1,0 +1,23 @@
+user: create: Usage: _build/macosx64/bin/infinit-user --create [OPTIONS...]
+
+Create a user:
+
+Create options:
+  -n [ --name ] arg       User name (default: system user)
+  --description arg       Description of user
+  -k [ --key ] arg        RSA key pair in PEM format - e.g. your SSH key 
+                          (default: generate key pair)
+  --push-user             Push the user to the Hub
+  -p [ --push ]           Alias for --push-user
+  --email arg             User email address (optional)
+  --fullname arg          Fullname of user (optional)
+  --full                  Include private key in order to facilitate device 
+                          pairing and fetching lost keys
+  --password arg          Password to authenticate with the Hub. Used with 
+                          --full (default: prompt for password)
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables 
+                          authentication through LDAP
+  -o [ --output ] arg     File to write the user to
+                          (default: stdout)
+
+

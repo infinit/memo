@@ -8,6 +8,7 @@
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/DummyPeer.hh>
+#include <infinit/model/prometheus.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
@@ -23,7 +24,26 @@ namespace infinit
                      std::shared_ptr<infinit::model::doughnut::Local> local)
       : _doughnut(dht)
       , _local(local)
-    {}
+      , _storing(true)
+    {
+#if INFINIT_ENABLE_PROMETHEUS
+      if (auto* g = _doughnut->member_gauge().get())
+      {
+        ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
+        ELLE_TRACE("%s: construct, gauge: %s", this, g->Value());
+        this->on_discovery().connect([this, g](NodeLocation, bool){
+            ELLE_DEBUG("%s: signaling one more than %s",
+                     this, g->Value());
+            g->Increment();
+          });
+        this->on_disappearance().connect([this, g](model::Address, bool){
+            ELLE_DEBUG("%s: signaling one less than %s",
+                     this, g->Value());
+            g->Decrement();
+          });
+      }
+#endif
+    }
 
     Overlay::~Overlay()
     {
@@ -45,6 +65,7 @@ namespace infinit
     void
     Overlay::cleanup()
     {
+      ELLE_TRACE_SCOPE("%s: cleanup", this);
       this->_cleanup();
     }
 
@@ -105,30 +126,34 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Overlay::allocate(model::Address address, int n) const
+      -> MemberGenerator
     {
       ELLE_TRACE_SCOPE("%s: allocate %s nodes for %f", this, n, address);
       return this->_allocate(address, n);
     }
 
-    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    auto
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
+      -> LocationGenerator
     {
       ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", *this, n, addresses);
       return this->_lookup(addresses, n);
     }
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Overlay::lookup(model::Address address, int n, bool fast) const
+      -> MemberGenerator
     {
       ELLE_TRACE_SCOPE("%s: lookup%s %s nodes for %f",
                        this, fast ? " (fast)" : "", n, address);
       return this->_lookup(address, n, fast);
     }
 
-    Overlay::WeakMember
+    auto
     Overlay::lookup(model::Address address) const
+      -> WeakMember
     {
       ELLE_TRACE_SCOPE("%s: lookup 1 node for %f", this, address);
       for (auto res: this->_lookup(address, 1, false))
@@ -136,17 +161,16 @@ namespace infinit
       throw model::MissingBlock(address);
     }
 
-    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    auto
     Overlay::_lookup(std::vector<model::Address> const& addresses, int n) const
+      -> LocationGenerator
     {
-      return elle::reactor::Generator<std::pair<model::Address, WeakMember>>(
-        [this, addresses, n]
-        (elle::reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
+      return [this, addresses, n](LocationGenerator::yielder const& yield)
         {
           for (auto const& a: addresses)
             for (auto res: this->_lookup(a, n, false))
               yield(std::make_pair(a, res));
-        });
+        };
     }
 
     Configuration::Configuration(elle::serialization::SerializerIn& input)
@@ -154,8 +178,9 @@ namespace infinit
       this->serialize(input);
     }
 
-    Overlay::WeakMember
+    auto
     Overlay::lookup_node(model::Address address) const
+      -> WeakMember
     {
       if (auto res = this->_lookup_node(address))
         return res;
@@ -163,13 +188,12 @@ namespace infinit
         throw NodeNotFound(address);
     }
 
-    elle::reactor::Generator<Overlay::WeakMember>
+    auto
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
+      -> MemberGenerator
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
-      return elle::reactor::generator<Overlay::WeakMember>(
-        [this, addresses]
-        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+      return [this, addresses](MemberGenerator::yielder const& yield)
         {
           elle::reactor::for_each_parallel(
             addresses,
@@ -192,7 +216,7 @@ namespace infinit
                                  *this->doughnut(), address)));
             },
             "fetch node by address");
-        });
+        };
     }
 
     /*----------.

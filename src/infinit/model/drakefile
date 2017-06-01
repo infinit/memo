@@ -36,6 +36,7 @@ sources = drake.nodes(
   'doughnut/Cache.hh',
   'doughnut/Consensus.cc',
   'doughnut/Consensus.hh',
+  'doughnut/Consensus.hxx',
   'doughnut/Dock.cc',
   'doughnut/Dock.hh',
   'doughnut/Doughnut.cc',
@@ -76,6 +77,8 @@ sources = drake.nodes(
   'faith/Faith.hh',
   'paranoid/Paranoid.cc',
   'paranoid/Paranoid.hh',
+  'prometheus.cc',
+  'prometheus.hh',
 )
 
 # Local Variables:

@@ -1,0 +1,12 @@
+doctor: connectivity: Usage: _build/macosx64/bin/infinit-doctor --connectivity [OPTIONS...]
+
+Perform connectivity checks:
+
+Connectivity options:
+  --no-color             Don't use colored output
+  --upnp_tcp_port arg    Port to try to get an tcp upnp connection on
+  --upnp_udt_port arg    Port to try to get an udt upnp connection on
+  --server arg           Connectivity server address (default = 192.241.139.66)
+  -v [ --verbose ]       Output everything
+
+

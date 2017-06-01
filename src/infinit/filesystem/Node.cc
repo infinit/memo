@@ -8,24 +8,47 @@
 
 #include <memory>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <elle/cast.hh>
 #include <elle/serialization/json.hh>
 
 #include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/Unreachable.hh>
+#include <infinit/filesystem/umbrella.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Node");
+
+namespace bfs = boost::filesystem;
+namespace rfs = elle::reactor::filesystem;
+
+namespace
+{
+  std::pair<bool, bool>
+  parse_flags(std::string const& flags)
+  {
+    if (flags == "clear")
+      return {false, false};
+    else if (flags == "setr")
+      return {true, false};
+    else if (flags == "setw")
+      return {false, true};
+    else if (flags == "setrw")
+      return {true, true};
+    else
+      THROW_NODATA();
+  }
+}
 
 namespace infinit
 {
@@ -38,8 +61,7 @@ namespace infinit
     {
     public:
       ACLConflictResolver(model::Model* model,
-                          bool r,
-                          bool w,
+                          bool r, bool w,
                           std::string const& key)
         : _model(model)
         , _read(r)
@@ -225,8 +247,10 @@ namespace infinit
       auto& h = this->_header();
       h.uid = uid;
       h.gid = gid;
-      if (acl_preserver && gid >= gid_start && gid < gid_start + gid_count
-        && acl_save[gid - gid_start])
+      if (acl_preserver
+          && gid >= gid_start
+          && gid < gid_start + gid_count
+          && acl_save[gid - gid_start])
       {
         auto block = this->_header_block();
         // clear current perms
@@ -272,14 +296,14 @@ namespace infinit
       {
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
-        if (special->find("auth.") == 0)
+        if (boost::starts_with(*special, "auth."))
         {
           auto perms = special->substr(5);
           ELLE_DEBUG("set permissions %s", perms);
           set_permissions(perms, v, this->_address);
           return;
         }
-        else if (special->find("auth_others") == 0)
+        else if (boost::starts_with(*special, "auth_others"))
         {
           auto block = this->_header_block(true);
           bool r = v.find("r") != std::string::npos;
@@ -320,7 +344,7 @@ namespace infinit
             return;
           }
         }
-        else if (special->find("register.") == 0)
+        else if (boost::starts_with(*special, "register."))
         {
           auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
@@ -337,7 +361,7 @@ namespace infinit
             rub, std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
           return;
         }
-        else if (special->find("group.") == 0)
+        else if (boost::starts_with(*special, "group."))
         {
           auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
@@ -401,7 +425,7 @@ namespace infinit
         }
         // New naming for group attributes:
         // infinit.groups.<group_name>.<attribute>
-        else if (special->find("groups.") == 0)
+        else if (boost::starts_with(*special, "groups."))
         {
           auto name_start = strlen("groups.");
           auto name_end = special->find_last_of('.');
@@ -425,14 +449,13 @@ namespace infinit
         }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
       }
-      /* Drop quarantine flags, preventing the files from being opened.
-      * https://github.com/osxfuse/osxfuse/issues/162
-      */
+      // Drop quarantine flags, preventing the files from being opened.
+      // https://github.com/osxfuse/osxfuse/issues/162
       if (k == "com.apple.quarantine")
         return;
-      if (k.substr(0, strlen(overlay_info)) == overlay_info)
+      if (boost::starts_with(k, overlay_info))
       {
-        std::string okey = k.substr(strlen(overlay_info));
+        auto const okey = k.substr(strlen(overlay_info));
         umbrella([&] {
           dynamic_cast<model::doughnut::Doughnut*>(
             this->_owner.block_store().get())->overlay()->query(okey, v);
@@ -485,13 +508,11 @@ namespace infinit
       }
       else if (op == "nodes")
       {
-        std::vector<std::string> nodes;
+        auto nodes = std::vector<std::string>{};
         // FIXME: hardcoded 3
         for (auto n: dht.overlay()->lookup(addr, 3))
-        {
           if (auto locked = n.lock())
-            nodes.push_back(elle::sprintf("%f", locked->id()));
-        }
+            nodes.emplace_back(elle::sprintf("%f", locked->id()));
         std::stringstream s;
         elle::serialization::json::serialize(nodes, s);
         return s.str();
@@ -527,7 +548,7 @@ namespace infinit
           }
           return elle::serialization::json::serialize(block).string();
         }
-        else if (special->find("block.") == 0)
+        else if (boost::starts_with(*special, "block."))
         {
           auto op = special->substr(6);
           if (block)
@@ -540,7 +561,7 @@ namespace infinit
           else
             return "<ROOT>";
         }
-        else if (special->find("blocks.") == 0)
+        else if (boost::starts_with(*special, "blocks."))
         {
           auto blocks = special->substr(7);
           auto dot = blocks.find(".");
@@ -559,10 +580,10 @@ namespace infinit
             return getxattr_block(*dht, op, addr);
           }
         }
-        else if (special->find("group.") == 0)
+        else if (boost::starts_with(*special, "group."))
         {
           auto operation = special->substr(6);
-          if (operation.find("control_key.") == 0)
+          if (boost::starts_with(operation, "control_key."))
           {
             std::string value = operation.substr(strlen("control_key."));
             return umbrella(
@@ -573,7 +594,7 @@ namespace infinit
                   g.public_control_key()).string();
               });
           }
-          else if (operation.find("list.") == 0)
+          else if (boost::starts_with(operation, "list."))
           {
             std::string value = operation.substr(strlen("list."));
             return umbrella(
@@ -606,7 +627,7 @@ namespace infinit
         }
         // New naming for group attributes:
         // infinit.groups.<group_name>.<attribute>
-        else if (special->find("groups.") == 0)
+        else if (boost::starts_with(*special, "groups."))
         {
           auto name_start = strlen("groups.");
           auto name_end = special->find_last_of('.');
@@ -626,13 +647,13 @@ namespace infinit
             elle::err("unknown group attribute: %s", attribute);
           }
         }
-        else if (special->find("mountpoint") == 0)
+        else if (boost::starts_with(*special, "mountpoint"))
         {
           return (
             this->_owner.mountpoint() ? this->_owner.mountpoint().get().string()
                                       : "");
         }
-        else if (special->find("resolve.") == 0)
+        else if (boost::starts_with(*special, "resolve."))
         {
           return umbrella(
             [&]
@@ -689,12 +710,12 @@ namespace infinit
           elle::json::write(ss, res, true);
           return ss.str();
         }
-        else if (special->find("root") == 0)
+        else if (boost::starts_with(*special, "root"))
         {
-          return this->full_path() == this->full_path().root_path() ? "true"
-                                                                    : "false";
+          return (this->full_path() == this->full_path().root_path()
+                  ? "true" : "false");
         }
-        else if (special->find("compatibility-version") == 0)
+        else if (boost::starts_with(*special, "compatibility-version"))
         {
           return umbrella(
             [&]
@@ -704,7 +725,7 @@ namespace infinit
               return elle::sprintf("%s", dht->version());
             });
         }
-        else if (special->find("cache.clear") == 0)
+        else if (boost::starts_with(*special, "cache.clear"))
         {
           auto c = dht->consensus().get();
           if (auto a = dynamic_cast<model::doughnut::consensus::Async*>(c))
@@ -810,41 +831,22 @@ namespace infinit
       return user;
     }
 
-    static std::pair<bool, bool> parse_flags(std::string const& flags)
-    {
-      bool r = false;
-      bool w = false;
-      if (flags == "clear")
-        ;
-      else if (flags == "setr")
-        r = true;
-      else if (flags == "setw")
-        w = true;
-      else if (flags == "setrw")
-      {
-        r = true;
-        w = true;
-      }
-      else
-        THROW_NODATA();
-      return std::make_pair(r, w);
-    }
-
     std::string
     Node::perms_to_json(ACLBlock& block)
     {
-      auto perms = block.list_permissions(*this->_owner.block_store());
-      elle::json::Array v;
-      for (auto const& perm: perms)
-      {
-        elle::json::Object o;
-        o["admin"] = perm.admin;
-        o["name"] = perm.user->name();
-        o["owner"] = perm.owner;
-        o["read"] = perm.read;
-        o["write"] = perm.write;
-        v.push_back(o);
-      }
+      auto const perms = block.list_permissions(*this->_owner.block_store());
+      auto v = elle::json::make_array(perms,
+        [](auto const& perm)
+           {
+             return elle::json::Object
+             {
+               {"admin", perm.admin},
+               {"name", perm.user->name()},
+               {"owner", perm.owner},
+               {"read", perm.read},
+               {"write", perm.write},
+             };
+           });
       std::stringstream ss;
       elle::json::write(ss, v, true);
       return ss.str();
@@ -856,7 +858,7 @@ namespace infinit
                           Address self_address)
     {
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
-      std::pair<bool, bool> perms = parse_flags(flags);
+      auto const perms = parse_flags(flags);
       auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
         this->_owner.fetch_or_die(self_address, {}, this->full_path()));
       if (!acl)
@@ -928,11 +930,12 @@ namespace infinit
     boost::optional<std::string>
     xattr_special(std::string const& name)
     {
-      if (name.find("infinit.") == 0)
+      if (boost::starts_with(name, "infinit."))
         return name.substr(8);
-      if (name.find("user.infinit.") == 0)
+      else if (boost::starts_with(name, "user.infinit."))
         return name.substr(13);
-      return {};
+      else
+        return {};
     }
   }
 }

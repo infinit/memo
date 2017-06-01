@@ -1,0 +1,10 @@
+storage: delete: Usage: _build/macosx64/bin/infinit-storage --delete --name STORAGE [OPTIONS...]
+
+Delete a storage:
+
+Delete options:
+  -n [ --name ] arg      Storage to delete
+  --clear-content        Remove all blocks (filesystem only)
+  --purge                Remove objects that depend on the storage
+
+

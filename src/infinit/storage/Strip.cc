@@ -1,4 +1,7 @@
 #include <infinit/storage/Strip.hh>
+
+#include <elle/algorithm.hh>
+
 #include <infinit/model/Address.hh>
 
 #include <boost/algorithm/string.hpp>
@@ -13,49 +16,58 @@ namespace infinit
     Strip::Strip(std::vector<std::unique_ptr<Storage>> backend)
       : _backend(std::move(backend))
     {
+      // This assumes that the metrics are already correct in the
+      // "backends".
+      for (auto const& b: _backend)
+      {
+        _usage += b->usage();
+        _block_count += b->block_count();
+      }
     }
 
     elle::Buffer
     Strip::_get(Key k) const
     {
-      return _backend[_disk_of(k)]->get(k);
+      return _storage_of(k).get(k);
     }
 
     int
     Strip::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      _backend[_disk_of(k)]->set(k, value, insert, update);
-      // FIXME: impl.
-      return 0;
+      return _storage_of(k).set(k, value, insert, update);
     }
 
     int
     Strip::_erase(Key k)
     {
-      _backend[_disk_of(k)]->erase(k);
-      // FIXME: impl.
-      return 0;
+      return _storage_of(k).erase(k);
     }
 
-    int
-    Strip::_disk_of(Key k) const
+    namespace
     {
-      auto value = k.value();
-      int res = 0;
-      for (unsigned i=0; i<sizeof(Key::Value); ++i)
-        res += value[i];
-      return res % _backend.size();
+      /// The sum of the digits of this address.
+      int
+      sum(Key k)
+      {
+        int res = 0;
+        for (auto c: k.value())
+          res += c;
+        return res;
+      }
+    }
+
+    Storage&
+    Strip::_storage_of(Key k) const
+    {
+      return *_backend[sum(k) % _backend.size()];
     }
 
     std::vector<Key>
     Strip::_list()
     {
-      std::vector<Key> res = _backend.front()->list();
-      for (unsigned i=1; i<_backend.size(); ++i)
-      {
-        auto keys = _backend[i]->list();
-        res.insert(res.end(), keys.begin(), keys.end());
-      }
+      auto res = std::vector<Key>{};
+      for (auto const& b: _backend)
+        elle::push_back(res, b->list());
       return res;
     }
 

@@ -8,12 +8,11 @@ namespace infinit
   {
     namespace koordinate
     {
-      /** An overlay that aggregates several underlying overlays.
-       *
-       *  Koordinates lets a node serve several overlays for other to query,
-       *  and forwards local requets to the first one. Future evolution may
-       *  enable to leverage several backend overlays depending on policies.
-       */
+      /// An overlay that aggregates several underlying overlays.
+      ///
+      /// Koordinate lets a node serve several overlays for others to query,
+      /// and forwards local requets to the first one.  Future evolutions may
+      /// enable to leverage several backend overlays depending on policies.
       class Koordinate
         : public Overlay
       {
@@ -34,13 +33,12 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        /** Construct a Koordinate with the given backends.
-         *
-         *  @arg   dht      The owning Doughnut.
-         *  @arg   local    The local server, null if pure client.
-         *  @arg   backends The underlying overlays.
-         *  @throw elle::Error if \a backends is empty.
-         */
+        /// Construct a Koordinate with the given backends.
+        ///
+        /// @arg   dht      The owning Doughnut.
+        /// @arg   local    The local server, null if pure client.
+        /// @arg   backends The underlying overlays.
+        /// @throw elle::Error if @a backends is empty.
         Koordinate(model::doughnut::Doughnut* dht,
                    std::shared_ptr<infinit::model::doughnut::Local> local,
                    Backends backends);
@@ -49,6 +47,9 @@ namespace infinit
         ~Koordinate() override;
         /// The underlying overlays.
         ELLE_ATTRIBUTE(Backends, backends);
+      protected:
+        void
+        _cleanup() override;
       private:
         /// Check invariants.
         void
@@ -68,13 +69,13 @@ namespace infinit
       | Lookup |
       `-------*/
       protected:
-        elle::reactor::Generator<WeakMember>
+        MemberGenerator
         _allocate(model::Address address, int n) const override;
 
-        elle::reactor::Generator<std::pair<model::Address, WeakMember>>
+        LocationGenerator
         _lookup(std::vector<model::Address> const& addrs, int n) const override;
 
-        elle::reactor::Generator<WeakMember>
+        MemberGenerator
         _lookup(model::Address address, int n, bool fast) const override;
 
         WeakMember

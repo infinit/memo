@@ -10,6 +10,7 @@ namespace infinit
     {
       class MutableBlock
         : public Block
+        , private InstanceTracker<MutableBlock>
       {
       /*------.
       | Types |
@@ -17,14 +18,15 @@ namespace infinit
       public:
         using Self = MutableBlock;
         using Super = Block;
+        static char const* type;
+
 
       /*-------------.
       | Construction |
       `-------------*/
-        MutableBlock(MutableBlock const& other);
+        MutableBlock(MutableBlock const& other) = default;
       protected:
-        MutableBlock(Address address);
-        MutableBlock(Address address, elle::Buffer data);
+        MutableBlock(Address address, elle::Buffer data = {});
         friend class infinit::model::Model;
         bool _data_changed;
 

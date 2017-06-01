@@ -35,5 +35,12 @@ namespace infinit
       std::string description;
       elle::das::cli::Options options;
     };
+
+    template <typename Self, typename Symbol, typename... Args>
+    using Mode2 = Mode<Self, void(Args...), Symbol>;
+
+#define MODE(Name, ...)                                         \
+    Mode2<Self, decltype(modes::mode_ ## Name), __VA_ARGS__> Name
+
   }
 }

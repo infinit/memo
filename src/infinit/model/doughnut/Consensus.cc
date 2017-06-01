@@ -164,6 +164,17 @@ namespace infinit
         }
 
         void
+        Consensus::resign()
+        {
+          ELLE_TRACE_SCOPE("%s: resign");
+          this->_resign();
+        }
+
+        void
+        Consensus::_resign()
+        {}
+
+        void
         Consensus::remove_many(Address address,
                                blocks::RemoveSignature rs,
                                int factor)
@@ -235,18 +246,14 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::fetch_from_members(
-          elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
-          Address address,
-          boost::optional<int> local_version)
+        Consensus::fetch_from_members(MemberGenerator& peers,
+                                      Address address,
+                                      boost::optional<int> local_version)
         {
-          std::unique_ptr<blocks::Block> result;
-          elle::reactor::Channel<overlay::Overlay::Member> connected;
-          using PeerGenerator = elle::reactor::Generator<overlay::Overlay::WeakMember>;
           bool hit = false;
           // try connecting to all peers in parallel
-          auto connected_peers = PeerGenerator(
-            [&](PeerGenerator::yielder yield)
+          auto connected_peers = MemberGenerator(
+            [&](MemberGenerator::yielder yield)
             {
               elle::With<elle::reactor::Scope>() <<
               [&peers,&yield,&hit] (elle::reactor::Scope& s)
@@ -323,17 +330,16 @@ namespace infinit
         `--------*/
 
         std::unique_ptr<Local>
-        Consensus::make_local(boost::optional<int> port,
-                              boost::optional<boost::asio::ip::address> listen_address,
-                              std::unique_ptr<storage::Storage> storage,
-                              Protocol p)
+        Consensus::make_local(
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> storage)
         {
           return std::make_unique<Local>(this->doughnut(),
                                          this->doughnut().id(),
                                          std::move(storage),
                                          port.value_or(0),
-                                         listen_address,
-                                         p);
+                                         listen_address);
         }
 
         /*-----------.
@@ -367,6 +373,11 @@ namespace infinit
           elle::fprintf(output,
                         "%f(%x)", elle::type_info(*this), (void*)(this));
         }
+
+        StackedConsensus::StackedConsensus(std::unique_ptr<Consensus> backend)
+          : Consensus(backend->doughnut())
+          , _backend(std::move(backend))
+        {}
 
         /*--------------.
         | Configuration |

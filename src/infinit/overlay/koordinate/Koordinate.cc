@@ -28,6 +28,13 @@ namespace infinit
       {}
 
       void
+      Koordinate::_cleanup()
+      {
+        for (auto& backend: this->_backends)
+          backend->cleanup();
+      }
+
+      void
       Koordinate::_validate() const
       {
         if (this->_backends.empty())
@@ -58,32 +65,35 @@ namespace infinit
       | Lookup |
       `-------*/
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Koordinate::_allocate(model::Address address,
                             int n) const
+        -> MemberGenerator
       {
         this->_validate();
         return (*begin(this->_backends))->allocate(address, n);
       }
 
-      elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+      auto
       Koordinate::_lookup(std::vector<model::Address> const& addrs, int n) const
+        -> LocationGenerator
       {
         this->_validate();
         return (*begin(this->_backends))->lookup(addrs, n);
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Koordinate::_lookup(model::Address address,
-                          int n,
-                          bool fast) const
+                          int n, bool fast) const
+        -> MemberGenerator
       {
         this->_validate();
         return (*begin(this->_backends))->lookup(address, n, fast);
       }
 
-      Overlay::WeakMember
+      auto
       Koordinate::_lookup_node(model::Address address) const
+        -> WeakMember
       {
         this->_validate();
         return (*begin(this->_backends))->lookup_node(address);

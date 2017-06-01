@@ -1,10 +1,11 @@
 #pragma once
 
-#include <iosfwd>
+#include <atomic>
 #include <cstdint>
+#include <iosfwd>
 
-#include <boost/signals2.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/signals2.hpp>
 
 #include <elle/Buffer.hh>
 #include <elle/attribute.hh>
@@ -13,6 +14,7 @@
 
 #include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 #include <infinit/model/Address.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/serialization.hh>
 #include <infinit/storage/fwd.hh>
 
@@ -28,6 +30,12 @@ namespace infinit
       missing,
       unknown
     };
+
+    /// Conversion to bool.
+    ///
+    /// To move eventually to elle.
+    bool
+    to_bool(std::string const& s);
 
     class Storage
     {
@@ -54,6 +62,7 @@ namespace infinit
        *                           the data.
        *  \throw MissingKey if the key is absent and not \a insert.
        */
+      // FIXME: why not passing `value` by value?
       int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);
@@ -73,11 +82,17 @@ namespace infinit
        */
       std::vector<Key>
       list();
+
       BlockStatus
       status(Key k);
-
       void
       register_notifier(std::function<void ()> f);
+
+      /// The type of storage (e.g., "s3").
+      virtual
+      std::string
+      type() const = 0;
+
     protected:
       virtual
       elle::Buffer
@@ -91,6 +106,7 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() = 0;
+
       /// Return the status of a given key.
       /// Implementations should check locally only if the information is
       /// available, or return BlockStatus::unknown.
@@ -98,13 +114,23 @@ namespace infinit
       BlockStatus
       _status(Key k);
 
+      /// Notify subscribers to register_notifier.
+      ///
+      /// Should be called by ctors of subclasses if they update
+      /// _usage, etc.
+      void
+      _notify_metrics();
+
       ELLE_ATTRIBUTE_R(boost::optional<int64_t>, capacity, protected);
-      ELLE_ATTRIBUTE_R(int64_t, usage, protected);
+      /// Number of bytes used.
+      ELLE_ATTRIBUTE_R(std::atomic<int64_t>, usage, protected);
       ELLE_ATTRIBUTE(int64_t, base_usage);
       ELLE_ATTRIBUTE(int64_t, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache,
                      mutable, protected);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
+      /// Number of blocks.
+      ELLE_ATTRIBUTE_R(std::atomic<int64_t>, block_count, protected);
     };
 
     std::unique_ptr<Storage>

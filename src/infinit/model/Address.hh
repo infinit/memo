@@ -17,7 +17,6 @@ namespace infinit
   {
     namespace flags
     {
-      static const uint8_t block_kind = 1;
       static const uint8_t mutable_block = 0;
       static const uint8_t immutable_block = 1;
     }

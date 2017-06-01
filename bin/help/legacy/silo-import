@@ -1,0 +1,8 @@
+storage: import: Usage: _build/macosx64/bin/infinit-storage --import --name STORAGE [OPTIONS...]
+
+Import storage information:
+
+Import options:
+  -i [ --input ] arg     File to read the storage from (default: stdin)
+
+

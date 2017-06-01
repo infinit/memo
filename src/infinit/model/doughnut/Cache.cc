@@ -97,8 +97,7 @@ namespace infinit
                      boost::optional<std::chrono::seconds> cache_ttl,
                      boost::optional<boost::filesystem::path> disk_cache_path,
                      boost::optional<uint64_t> disk_cache_size)
-          : Consensus(backend->doughnut())
-          , _backend(std::move(backend))
+          : StackedConsensus(std::move(backend))
           , _cache_invalidation(
             cache_invalidation ?
             cache_invalidation.get() : std::chrono::seconds(15))
@@ -135,13 +134,13 @@ namespace infinit
         `--------*/
 
         std::unique_ptr<Local>
-        Cache::make_local(boost::optional<int> port,
-                          boost::optional<boost::asio::ip::address> listen_address,
-                          std::unique_ptr<storage::Storage> storage,
-                          Protocol p)
+        Cache::make_local(
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> storage)
         {
           return this->_backend->make_local(
-            std::move(port), std::move(listen_address), std::move(storage), p);
+            std::move(port), std::move(listen_address), std::move(storage));
         }
 
         /*----------.

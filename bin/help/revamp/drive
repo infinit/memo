@@ -1,0 +1,17 @@
+Usage: infinit-drive drive [MODE|--help]
+Infinit drive management utility.
+
+Modes:
+  create     Create a drive (a network and volume pair)
+  delete     Delete a drive locally
+  export     Export a drive
+  fetch      Fetch drive from the Hub
+  invite     Invite a user to join the drive
+  join       Join a drive you were invited to (Hub operation)
+  list       List drives
+  pull       Remove a drive from the Hub
+  push       Push a drive to the Hub
+
+Options:
+  -h, --help                show this help message
+

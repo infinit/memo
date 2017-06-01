@@ -26,6 +26,12 @@ cfg = drake.cxx.Config()
 cfg.enable_debug_symbols()
 cfg.enable_optimization()
 
+# This is the configuration used to generate the Infinit packages.
+os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.7'
+cfg.use_local_libcxx = True
+for f in ('-ftemplate-depth=512', '-stdlib=libc++'):
+  cfg.flag(f)
+
 with drake.Drake('../..') as d:
   # When using MacPorts, valgrind/valgrind.h is in /opt/local/include,
   # together with Boost and many others that take precedence over our
@@ -36,4 +42,5 @@ with drake.Drake('../..') as d:
     python3 = python3,
     cxx_toolkit = tk,
     cxx_config = cfg,
+    prefix = '_install',
   )

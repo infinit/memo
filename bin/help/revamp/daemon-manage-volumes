@@ -1,0 +1,15 @@
+daemon: manage-volumes: Usage: infinit-daemon daemon manage-volumes [OPTIONS]
+Manage daemon controlled volumes
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+      --list              
+      --status            
+      --start             
+      --stop              
+      --restart             restart daemon
+  -n, --name arg            name of the daemon to manage-volumes (default: null)
+

@@ -32,10 +32,10 @@ namespace infinit
     }
 
     void
-    setxattr(std::string const& file,
-             std::string const& key,
-             std::string const& value,
-             bool fallback)
+    set_xattr(std::string const& file,
+              std::string const& key,
+              std::string const& value,
+              bool fallback)
     {
 #ifndef INFINIT_WINDOWS
 # ifdef INFINIT_MACOSX
@@ -62,11 +62,11 @@ namespace infinit
     }
 
     int
-    getxattr(std::string const& file,
-             std::string const& key,
-             char* val,
-             int val_size,
-             bool fallback)
+    get_xattr(std::string const& file,
+              std::string const& key,
+              char* val,
+              int val_size,
+              bool fallback)
     {
 #ifndef INFINIT_WINDOWS
       int res = -1;
@@ -95,7 +95,7 @@ namespace infinit
     path_mountpoint(std::string const& path, bool fallback)
     {
       char buffer[4095];
-      int sz = getxattr(path, "infinit.mountpoint", buffer, sizeof buffer, fallback);
+      int sz = get_xattr(path, "infinit.mountpoint", buffer, sizeof buffer, fallback);
       if (0 < sz)
         return std::string{buffer, size_t(sz)};
       else
@@ -121,7 +121,7 @@ namespace infinit
     path_is_root(std::string const& path, bool fallback)
     {
       char buffer[4095];
-      int sz = getxattr(path, "infinit.root", buffer, sizeof buffer, fallback);
+      int sz = get_xattr(path, "infinit.root", buffer, sizeof buffer, fallback);
       return 0 <= sz && std::string(buffer, sz) == "true";
     }
 
@@ -129,7 +129,7 @@ namespace infinit
     mountpoint_root(std::string const& path_in_mount, bool fallback)
     {
       enforce_in_mountpoint(path_in_mount, fallback);
-      bfs::path res = bfs::absolute(path_in_mount);
+      auto res = bfs::absolute(path_in_mount);
       while (!path_is_root(res.string(), fallback))
         res = res.parent_path();
       return res;

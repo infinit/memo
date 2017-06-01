@@ -10,14 +10,11 @@ namespace infinit
   {
     namespace blocks
     {
+      char const* ACLBlock::type = "acl";
+
       /*-------------.
       | Construction |
       `-------------*/
-
-      ACLBlock::ACLBlock(Address address)
-        : Super(address)
-      {}
-
       ACLBlock::ACLBlock(Address address, elle::Buffer data)
         : Super(address, data)
       {}

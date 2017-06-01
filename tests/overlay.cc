@@ -435,7 +435,8 @@ ELLE_TEST_SCHEDULED(
                    ::version = config.version,
                    ::keys = keys,
                    ::make_overlay = config.overlay_builder,
-                   ::paxos = false);
+                   ::paxos = false,
+                   ::protocol = infinit::model::doughnut::Protocol::utp);
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints().begin()->port()) <<
     [&] (UTPInstrument& instrument)
     {
@@ -444,7 +445,8 @@ ELLE_TEST_SCHEDULED(
                        ::keys = keys,
                        ::make_overlay = config.overlay_builder,
                        ::paxos = false,
-                       ::storage = nullptr);
+                       ::storage = nullptr,
+                       ::protocol = infinit::model::doughnut::Protocol::utp);
       auto loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
                               {instrument.endpoint()}};
       ELLE_LOG("connect DHTs")
@@ -662,9 +664,9 @@ ELLE_TEST_SCHEDULED(chain_connect,
 ELLE_TEST_SCHEDULED(
   key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::storage::Memory::Blocks blocks;
+  auto blocks = infinit::storage::Memory::Blocks{};
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto const id_a = special_id(1);
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
     ::version = config.version,
@@ -673,27 +675,36 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::make_unique<infinit::storage::Memory>(blocks));
-  int port = dht_a->dht->local()->server_endpoints().begin()->port();
-  DHT dht_b(
+  auto const port_a = dht_a->dht->local()->server_endpoints().begin()->port();
+  auto dht_b = DHT(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     ::storage = nullptr,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp);
-  discover(dht_b, *dht_a, anonymous, false, true);
-  auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
-  auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
-  acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
-    true, true);
-  acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
-    true, true);
-  dht_a->dht->seal_and_insert(*block, tcr());
-  auto b2 = dht_b.dht->fetch(block->address());
+
+  ELLE_LOG("discover")
+    discover(dht_b, *dht_a, anonymous, false, true);
+
+  // The address of a block stored by a.
+  auto addr = Address{};
+  ELLE_LOG("store block in a (%f)", dht_a)
+  {
+    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+    addr = block->address();
+    auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
+    acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
+                        true, true);
+    dht_a->dht->seal_and_insert(*block, tcr());
+  }
+
+  ELLE_LOG("changing block in b (%f)", dht_b);
+  auto b2 = dht_b.dht->fetch(addr);
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
   dht_b.dht->seal_and_update(*b2, tcr());
   // brutal restart of a
-  ELLE_LOG("disconnect A");
+  ELLE_LOG("disconnect A (%f)", dht_a);
   dht_a->dht->local()->utp_server()->socket()->close();
   ELLE_LOG("recreate A");
   auto dht_aa = std::make_unique<DHT>(
@@ -704,7 +715,7 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::make_unique<infinit::storage::Memory>(blocks),
-    ::port = port);
+    ::port = port_a);
   // rebind local somewhere else or we get EBADF from local_endpoint
   dht_a->dht->local()->utp_server()->socket()->bind(
     boost::asio::ip::udp::endpoint(
@@ -756,7 +767,7 @@ ELLE_TEST_SCHEDULED(
     discover(*dht_c, *dht_b, anonymous, false, true, true);
   }
   unsigned int pa = 0, pb = 0, pc = 0;
-  for (auto tgt: std::vector<DHT*>{dht_a.get(), dht_b.get(), dht_c.get()})
+  for (auto tgt: {dht_a.get(), dht_b.get(), dht_c.get()})
   {
     ELLE_LOG("store blocks in %s", tgt);
     auto client = std::make_unique<DHT>(
@@ -766,7 +777,7 @@ ELLE_TEST_SCHEDULED(
       ::paxos = false,
       ::storage = nullptr);
     discover(*client, *tgt, anonymous, false, true);
-    std::vector<infinit::model::Address> addrs;
+    auto addrs = std::vector<infinit::model::Address>{};
     for (int a = 0; a < 20; ++a)
     {
       try
@@ -783,13 +794,15 @@ ELLE_TEST_SCHEDULED(
         ELLE_ERR("Exception storing blocks: %s", e);
         throw;
       }
-      if (b1.size() - pa >= 5 && b2.size() - pb >= 5 && b3.size() - pc >=5)
+      if (b1.size() - pa >= 5
+          && b2.size() - pb >= 5
+          && b3.size() - pc >=5)
         break;
     }
     ELLE_LOG("stores: %s %s %s", b1.size(), b2.size(), b3.size());
-    BOOST_CHECK_GE(b1.size() - pa, 5);
-    BOOST_CHECK_GE(b2.size() - pb, 5);
-    BOOST_CHECK_GE(b3.size() - pc, 5);
+    BOOST_TEST(b1.size() - pa >= 5);
+    BOOST_TEST(b2.size() - pb >= 5);
+    BOOST_TEST(b3.size() - pc >= 5);
     pa = b1.size();
     pb = b2.size();
     pc = b3.size();
@@ -1068,11 +1081,18 @@ ELLE_TEST_SCHEDULED(
               {
                 except = std::current_exception();
               }
+              catch (elle::Error const& e)
+              {
+                // also intercept "no peer available for..." exceptions,
+                // which currently are not typed(FIXME when they are).
+                if (std::string(e.what()).find("no peer available for") == std::string::npos)
+                  throw;
+                except = std::current_exception();
+              }
               if (except)
               {
                 // This can be legit if a delete crossed our path
-                if (std::find(addrs.begin(), addrs.end(), addr)
-                    != addrs.end())
+                if (elle::contains(addrs, addr))
                 {
                   ELLE_ERR("exception on supposedly live block %f: %s",
                            addr, elle::exception_string(except));
@@ -1278,19 +1298,23 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
+  // FIXME: test run in TCP only because the BF for some reason takes forever
+  // (nearly 30s) to detect stale UTP connections.
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(10),
     ::keys = keys,
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
   if (get_kelips(*a))
     return; // kelips cannot handle automatic reconnection after on_disappearance()
   auto b = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(11),
     ::keys = keys,
-    ::make_overlay = config.overlay_builder);
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp);
   int port = b->dht->local()->server_endpoint().port();
   ELLE_LOG("connect DHTs")
     discover(*b, *a, anonymous, false, true, true);
@@ -1303,8 +1327,10 @@ ELLE_TEST_SCHEDULED(
         BOOST_TEST(id == special_id(11));
         return true;
       });
+    ELLE_LOG("stop b");
     b.reset();
     elle::reactor::wait(disappeared);
+    ELLE_LOG("a saw b disappear");
   }
   ELLE_LOG("start second DHT on port %s", port)
   {
@@ -1320,8 +1346,122 @@ ELLE_TEST_SCHEDULED(
       ::id = special_id(11),
       ::keys = keys,
       ::make_overlay = config.overlay_builder,
-      ::port = port);
+      ::port = port,
+      ::protocol = dht::Protocol::tcp);
+    ELLE_LOG("waiting for %f to discover %f", a, b)
     elle::reactor::wait(discovered);
+  }
+}
+
+ELLE_TEST_SCHEDULED(
+  remove,
+  (TestConfiguration, config),
+  (bool, anonymous))
+{
+  auto storage = infinit::storage::Memory::Blocks();
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
+  auto a = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(10),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    dht::consensus::rebalance_auto_expand = false);
+  auto id_b = special_id(11);
+  auto b = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = id_b,
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    dht::consensus::rebalance_auto_expand = false);
+  auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
+  ELLE_LOG("insert block on B")
+    b->dht->seal_and_insert(*block, tcr());
+  ELLE_LOG("connect DHTs")
+    discover(*b, *a, anonymous, false, true, true);
+  BOOST_TEST(
+    a->dht->overlay()->lookup(block->address()).lock()->id() == b->dht->id());
+  ELLE_LOG("remove block on B")
+    b->dht->remove(block->address());
+  ELLE_LOG("check block disappeared on A")
+    try
+    {
+      while (true)
+      {
+        a->dht->overlay()->lookup(block->address());
+        elle::reactor::yield();
+      }
+    }
+    catch (MissingBlock const&)
+    {}
+}
+
+ELLE_TEST_SCHEDULED(
+  remove_disconnected,
+  (TestConfiguration, config),
+  (bool, anonymous))
+{
+  auto storage = infinit::storage::Memory::Blocks();
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
+  auto a = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(10),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    ::paxos = false);
+  auto id_b = special_id(11);
+  auto b = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = id_b,
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    ::make_overlay = config.overlay_builder,
+    ::protocol = dht::Protocol::tcp,
+    ::paxos = false);
+  auto block = b->dht->make_block<MutableBlock>(std::string("1351"));
+  b->dht->seal_and_insert(*block, tcr());
+  ELLE_LOG("connect DHTs")
+    discover(*b, *a, anonymous, false, true, true);
+  BOOST_TEST(
+    a->dht->overlay()->lookup(block->address()).lock()->id() == b->dht->id());
+  ELLE_LOG("stop second DHT")
+  {
+    auto disappeared = elle::reactor::waiter(
+      a->dht->overlay()->on_disappearance(),
+      [&] (Address id, bool)
+      {
+        BOOST_TEST(id == id_b);
+        return true;
+      });
+    b.reset();
+    elle::reactor::wait(disappeared);
+  }
+  auto fail = [&]{
+    auto res = a->dht->overlay()->lookup(block->address());
+    ELLE_LOG("unexpected result: %s", res);
+  };
+  BOOST_CHECK_THROW(fail(), MissingBlock);
+  ELLE_LOG("start second DHT")
+  {
+    b = std::make_unique<DHT>(
+      ::version = config.version,
+      ::id = id_b,
+      ::keys = keys,
+      ::storage = std::make_unique<infinit::storage::Memory>(storage),
+      ::make_overlay = config.overlay_builder,
+      ::protocol = dht::Protocol::tcp,
+      // FIXME: horrible failure if paxos is set to true.  Can't we
+      // get something more readable?
+      ::paxos = false);
+    b->dht->remove(block->address());
+    BOOST_CHECK_THROW(b->dht->overlay()->lookup(block->address()),
+                      MissingBlock);
+    discover(*b, *a, anonymous, false, true, true);
+    BOOST_CHECK_THROW(a->dht->overlay()->lookup(block->address()),
+                      MissingBlock);
   }
 }
 
@@ -1384,7 +1524,6 @@ struct Cluster
   std::vector<std::unique_ptr<DHT>> servers;
 };
 
-
 ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
 {
@@ -1395,9 +1534,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   auto const& keys = cluster.keys;
   auto const& ports = cluster.ports;
   auto& servers = cluster.servers;
-
   cluster.discover();
-
   auto client = std::make_unique<DHT>(
       ::keys = keys,
       ::version = config.version,
@@ -1488,7 +1625,6 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   }
 }
 
-
 void
 test_churn_socket(TestConfiguration config, bool pasv)
 {
@@ -1496,12 +1632,10 @@ test_churn_socket(TestConfiguration config, bool pasv)
   auto const n = cluster.n;
   auto const& keys = cluster.keys;
   auto& servers = cluster.servers;
-
   // Let the servers discover themselves.
   cluster.discover();
   for (auto& s: servers)
     hard_wait(*s, n-1);
-
   // A client.
   auto client = DHT(
     ::keys = keys,
@@ -1517,7 +1651,6 @@ test_churn_socket(TestConfiguration config, bool pasv)
   // Wait for it to discover the first server.
   discover(client, *servers[0], false);
   hard_wait(client, n, client.dht->id());
-
   // Write some blocks.
   auto addrs = std::vector<infinit::model::Address>{};
   for (int i=0; i<50; ++i)
@@ -1528,7 +1661,6 @@ test_churn_socket(TestConfiguration config, bool pasv)
     ELLE_DEBUG("created %f", a);
     addrs.push_back(a);
   }
-
   for (int k=0; k < 3 / valgrind(1, 3); ++k)
   {
     ELLE_TRACE("shooting connections");
@@ -1583,11 +1715,9 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   /// Let's not wait eviction for too long.
   for (auto& c: cluster)
     get_kouncil(*c)->eviction_delay(std::chrono::seconds{valgrind(1, 5) * 10});
-
   /// A: the main peer.
   auto& dht_a = servers[0];
   auto const id_a = ids[0];
-
   /// B: a peer connected to A.
   auto& dht_b = servers[1];
   auto const id_b = ids[1];
@@ -1597,7 +1727,6 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     hard_wait(*dht_a, 1);
   ELLE_LOG("Peers of A (%s): %f", dht_a, get_peers(*dht_a));
   ELLE_LOG("Peers of B (%s): %f", dht_b, get_peers(*dht_b));
-
   // Shoot B.
   ELLE_LOG("shooting B")
   {
@@ -1612,14 +1741,12 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     elle::reactor::wait(b_disappeared);
   }
   ELLE_LOG("A knows B disappeared")
-
   // A no longer sees B.
   {
     auto ps = get_peers(*dht_a);
     ELLE_LOG("Peers of A (%s): %f", dht_a, ps);
     CHECK_NOT_IN(id_b, ps);
   }
-
   // C: A new peer, connected to A.  Node A should tell C about B.
   auto& dht_c = servers[2];
   ELLE_LOG("bringing node C up")
@@ -1633,15 +1760,12 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     // B and C are not connected.
     CHECK_IN(id_a, peers);
     CHECK_NOT_IN(id_b, peers);
-
     auto addrs = get_peers(*dht_c, "infos");
     ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
     CHECK_IN(id_b, addrs);
   }
-
   // Let some time pass.
   elle::reactor::sleep(2_sec);
-
   // Kill server A, C remains alone, remembering about A and B.
   {
     ELLE_LOG("kill A and wait for C to notice");
@@ -1660,7 +1784,6 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
       ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
       CHECK_IN(id_a, addrs);
       CHECK_IN(id_b, addrs);
-
       auto peers = get_peers(*dht_c);
       ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
       CHECK_NOT_IN(id_a, peers);
@@ -1686,7 +1809,6 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
       ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
       CHECK_IN(id_a, addrs);
       CHECK_IN(id_b, addrs);
-
       // And now C is in touch with B.
       auto peers = get_peers(*dht_c);
       ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
@@ -1718,6 +1840,100 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
       CHECK_NOT_IN(id_a, addrs);
       CHECK_IN(id_b, addrs);
     }
+  }
+}
+
+ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
+{
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
+  auto storage_a = infinit::storage::Memory::Blocks();
+  auto storage_b = infinit::storage::Memory::Blocks();
+  auto storage_c = infinit::storage::Memory::Blocks();
+  auto port = 0;
+  auto make_a = [&]
+    {
+      return elle::make_unique<DHT>(
+        ::version = config.version,
+        ::id = special_id(10),
+        ::keys = keys,
+        ::storage = std::make_unique<infinit::storage::Memory>(storage_a),
+        ::make_overlay = config.overlay_builder,
+        ::port = port,
+        dht::consensus::rebalance_auto_expand = false);
+    };
+  auto a = make_a();
+  auto b = DHT(
+    ::version = config.version,
+    ::id = special_id(11),
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage_b),
+    ::make_overlay = config.overlay_builder,
+    dht::consensus::rebalance_auto_expand = false);
+  auto c = DHT(
+    ::version = config.version,
+    ::id = special_id(12),
+    ::keys = keys,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage_c),
+    ::make_overlay = config.overlay_builder,
+    dht::consensus::rebalance_auto_expand = false);
+  discover(b, *a, false, false, true, true);
+  discover(b, c, false, false, true, true);
+  ELLE_LOG("insert first block");
+  {
+    auto block = b.dht->make_block<MutableBlock>(std::string("before"));
+    b.dht->seal_and_insert(*block);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 1);
+    BOOST_TEST(storage_c.size() == 1);
+  }
+  ELLE_LOG("insert second block");
+  {
+    a->dht->overlay()->storing(false);
+    auto block = b.dht->make_block<MutableBlock>(std::string("after"));
+    b.dht->seal_and_insert(*block);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 2);
+    BOOST_TEST(storage_c.size() == 2);
+  }
+  ELLE_LOG("stop DHT A")
+  {
+    port = a->dht->local()->server_endpoints().begin()->port();
+    auto disappeared_b = elle::reactor::waiter(
+      b.dht->overlay()->on_disappearance(),
+      [&] (Address id, bool) { return id == special_id(10); });
+    auto disappeared_c = elle::reactor::waiter(
+      c.dht->overlay()->on_disappearance(),
+      [&] (Address id, bool) { return id == special_id(10); });
+    a.reset();
+    elle::reactor::wait({disappeared_b, disappeared_c});
+  }
+  ELLE_LOG("insert third block");
+  {
+    auto block = b.dht->make_block<MutableBlock>(std::string("inbetween"));
+    b.dht->seal_and_insert(*block);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 3);
+    BOOST_TEST(storage_c.size() == 3);
+  }
+  ELLE_LOG("restart DHT A")
+  {
+    auto discovered_b = elle::reactor::waiter(
+      b.dht->overlay()->on_discovery(),
+      [&] (NodeLocation l, bool) { return l.id() == special_id(10); });
+    auto discovered_c = elle::reactor::waiter(
+      c.dht->overlay()->on_discovery(),
+      [&] (NodeLocation l, bool) { return l.id() == special_id(10); });
+    a = make_a();
+    a->dht->overlay()->storing(false);
+    elle::reactor::wait({discovered_b, discovered_c});
+  }
+  ELLE_LOG("insert fourth block")
+  {
+    auto block = b.dht->make_block<MutableBlock>(std::string("after_restart"));
+    b.dht->seal_and_insert(*block);
+    BOOST_TEST(storage_a.size() == 1);
+    BOOST_TEST(storage_b.size() == 4);
+    BOOST_TEST(storage_c.size() == 4);
   }
 }
 
@@ -1824,4 +2040,9 @@ ELLE_TEST_SUITE()
 
   // TEST_NAMED(kouncil, eviction, eviction, 600);
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
+  // FIXME: Kouncil < 0.8 does not handle removal, but kelips should pass those
+  // two tests.
+  TEST(kouncil, kouncil, "remove", 5, remove, false);
+  TEST(kouncil, kouncil, "remove_disconnected", 5, remove_disconnected, false);
+  TEST(kouncil, kouncil, "not_storing", 5, not_storing);
 }

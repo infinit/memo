@@ -134,7 +134,7 @@ namespace infinit
 #if INFINIT_WITH_LDAP
       LDAP ldap = *this;
 #endif
-      Network network = *this;
+      Network network{*this};
       Passport passport = *this;
       Silo silo = *this;
       User user = *this;

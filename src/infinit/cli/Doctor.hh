@@ -93,7 +93,7 @@ namespace infinit
                  decltype(cli::tcp_port = boost::optional<uint16_t>()),
                  decltype(cli::utp_port = boost::optional<uint16_t>()),
                  decltype(cli::xored_utp_port = boost::optional<uint16_t>()),
-                 decltype(cli::xored = boost::optional<std::string>()),
+                 decltype(cli::xored = boost::optional<std::string>("both")),
                  decltype(cli::no_color = false),
                  decltype(cli::verbose = false)),
            decltype(modes::mode_networking)>
@@ -108,9 +108,9 @@ namespace infinit
                       boost::optional<uint16_t> tcp_port,
                       boost::optional<uint16_t> utp_port,
                       boost::optional<uint16_t> xored_utp_port,
-                      boost::optional<std::string> const& xored,
-                      bool no_color,
-                      bool verbose);
+                      boost::optional<std::string> const& xored = std::string{"both"},
+                      bool no_color = false,
+                      bool verbose = false);
 
       /*---------------.
       | Mode: system.  |

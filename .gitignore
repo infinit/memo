@@ -3,3 +3,6 @@ TAGS
 __pycache__
 *node_modules*
 /_build/*/.drake
+
+# when running Prometheus from here.
+/data

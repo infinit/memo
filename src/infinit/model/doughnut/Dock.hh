@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/asio.hpp>
+#include <elle/reactor/asio.hh>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/global_fun.hpp>
 #include <boost/multi_index_container.hpp>
@@ -32,7 +32,8 @@ namespace infinit
              Protocol protocol = {},
              boost::optional<int> port = {},
              boost::optional<boost::asio::ip::address> listen_address = {},
-             boost::optional<std::string> rdv_host = {});
+             boost::optional<std::string> rdv_host = {},
+             boost::optional<std::chrono::milliseconds> tcp_heartbeat = {});
         Dock(Dock const&) = delete;
         Dock(Dock&&);
         ~Dock();
@@ -41,7 +42,8 @@ namespace infinit
         void
         cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
-        ELLE_ATTRIBUTE_R(Protocol, protocol);
+        ELLE_ATTRIBUTE_R(boost::optional<std::chrono::milliseconds>,
+                         tcp_heartbeat);
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
         ELLE_ATTRIBUTE_R(elle::reactor::network::UTPServer&, utp_server);
@@ -62,6 +64,27 @@ namespace infinit
       | Connection |
       `-----------*/
       public:
+        /// Connecting connections by endpoints.
+        template <typename Connection>
+        using Connecting = bmi::multi_index_container<
+          std::weak_ptr<Connection>,
+          bmi::indexed_by<
+            bmi::hashed_non_unique<
+              bmi::global_fun<
+                std::weak_ptr<Connection> const&,
+                Endpoints const&,
+                &weak_access<
+                  Connection, Endpoints const&, &Connection::endpoints>>>>>;
+        /// Connected connections by peer id.
+        template <typename Connection>
+        using Connected = bmi::multi_index_container<
+          std::weak_ptr<Connection>,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<
+                std::weak_ptr<Connection> const&,
+                Address const&,
+                &weak_access<Connection, Address const&, &Connection::id>>>>>;
         class Connection
           : public elle::Printable::as<Connection>
         {
@@ -103,6 +126,8 @@ namespace infinit
           ELLE_ATTRIBUTE_RX(KeyCache, key_hash_cache);
           ELLE_ATTRIBUTE(std::function<void()>, cleanup_on_disconnect);
           ELLE_ATTRIBUTE_R(std::weak_ptr<Connection>, self);
+          ELLE_ATTRIBUTE(boost::optional<Connected<Connection>::iterator>,
+                         connected_it);
 
         public:
           void
@@ -114,25 +139,6 @@ namespace infinit
           _key_exchange(elle::protocol::ChanneledStream& channels);
           friend class Dock;
         };
-        /// Connecting connections by endpoints.
-        using Connecting = bmi::multi_index_container<
-          std::weak_ptr<Connection>,
-          bmi::indexed_by<
-            bmi::hashed_non_unique<
-              bmi::global_fun<
-                std::weak_ptr<Connection> const&,
-                Endpoints const&,
-                &weak_access<
-                  Connection, Endpoints const&, &Connection::endpoints>>>>>;
-        /// Connected connections by peer id.
-        using Connected = bmi::multi_index_container<
-          std::weak_ptr<Connection>,
-          bmi::indexed_by<
-            bmi::hashed_unique<
-              bmi::global_fun<
-                std::weak_ptr<Connection> const&,
-                Address const&,
-                &weak_access<Connection, Address const&, &Connection::id>>>>>;
         /** Get a connection to the given location.
          *
          *  Retreive a connection to the current location, either already
@@ -146,8 +152,8 @@ namespace infinit
          */
         std::shared_ptr<Connection>
         connect(NodeLocation l, bool no_remote = false);
-        ELLE_ATTRIBUTE_R(Connecting, connecting);
-        ELLE_ATTRIBUTE(Connected, connected);
+        ELLE_ATTRIBUTE_R(Connecting<Connection>, connecting);
+        ELLE_ATTRIBUTE(Connected<Connection>, connected);
 
       /*-----.
       | Peer |

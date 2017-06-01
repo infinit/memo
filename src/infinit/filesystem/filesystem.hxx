@@ -7,8 +7,8 @@ namespace infinit
       std::string volume_name;
       std::shared_ptr<model::Model> model;
       boost::optional<elle::cryptography::rsa::PublicKey> owner;
-      boost::optional<boost::filesystem::path> root_block_cache_dir;
-      boost::optional<boost::filesystem::path> mountpoint;
+      boost::optional<bfs::path> root_block_cache_dir;
+      boost::optional<bfs::path> mountpoint;
       bool allow_root_creation;
       bool map_other_permissions;
       boost::optional<int> block_size;
@@ -18,8 +18,8 @@ namespace infinit
       init(std::string const& volume_name,
            std::shared_ptr<model::Model> model,
            boost::optional<elle::cryptography::rsa::PublicKey> owner,
-           boost::optional<boost::filesystem::path> root_block_cache_dir,
-           boost::optional<boost::filesystem::path> mountpoint,
+           boost::optional<bfs::path> root_block_cache_dir,
+           boost::optional<bfs::path> mountpoint,
            bool allow_root_creation,
            bool map_other_permissions,
            boost::optional<int> block_size)

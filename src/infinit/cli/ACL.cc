@@ -180,7 +180,7 @@ namespace infinit
         PermissionsResult res;
         res.path = path;
         char buf[4096];
-        int sz = getxattr(
+        int sz = get_xattr(
           path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
         if (sz < 0)
         {
@@ -203,7 +203,7 @@ namespace infinit
           bool dir = bfs::is_directory(path);
           if (dir)
           {
-            int sz = getxattr(
+            int sz = get_xattr(
               path.c_str(), "user.infinit.auth.inherit",
               buf, 4095, fallback_xattrs);
             if (sz < 0)
@@ -389,7 +389,7 @@ namespace infinit
         std::string attr = elle::sprintf("%s%s%s", base, action, action_detail);
         auto set_attr = [&] (std::string const& identifier)
           {
-            setxattr(path.string(), attr, group + ":" + identifier, fallback);
+            set_xattr(path.string(), attr, group + ":" + identifier, fallback);
           };
         std::string name = is_admin(object) ? object.substr(1) : object;
         try
@@ -424,10 +424,6 @@ namespace infinit
 
     ACL::ACL(Infinit& infinit)
       : Object(infinit)
-      , get_xattr(*this,
-                  "Get an extended attribute value",
-                  cli::path,
-                  cli::name)
       , group(*this,
               "Edit groups",
               cli::path,
@@ -499,11 +495,6 @@ namespace infinit
                   false
 #endif
         )
-      , set_xattr(*this,
-                  "Set an extended attribute value",
-                  cli::path,
-                  cli::name,
-                  cli::value)
     {}
 
     /*------------.
@@ -545,12 +536,12 @@ namespace infinit
       if (!is_directory(path))
         path = path.parent_path();
       if (create)
-        setxattr(path.string(), "user.infinit.group.create", group, fallback);
+        set_xattr(path.string(), "user.infinit.group.create", group, fallback);
       else if (delete_)
-        setxattr(path.string(), "user.infinit.group.delete", group, fallback);
+        set_xattr(path.string(), "user.infinit.group.delete", group, fallback);
       else if (description)
       {
-        setxattr(path.string(),
+        set_xattr(path.string(),
                  elle::sprintf("infinit.groups.%s.description", group),
                  description.get(), fallback);
       }
@@ -566,7 +557,7 @@ namespace infinit
       if (show)
       {
         char res[16384];
-        int sz = getxattr(path.string(), "user.infinit.group.list." + group,
+        int sz = get_xattr(path.string(), "user.infinit.group.list." + group,
                           res, sizeof res, fallback);
         if (sz >= 0)
         {
@@ -576,20 +567,6 @@ namespace infinit
         else
           elle::err("unable to list group: %s", group);
       }
-    }
-
-    /*----------------.
-    | Mode: get_xattr |
-    `----------------*/
-
-    void
-    ACL::mode_get_xattr(std::string const& path,
-                        std::string const& name)
-    {
-      char result[16384];
-      int length = getxattr(path, name, result, sizeof(result) - 1, true);
-      result[length] = 0;
-      std::cout << result << std::endl;
     }
 
     /*-----------.
@@ -643,7 +620,7 @@ namespace infinit
       auto passport = ifnt.passport_get(network.name, user_name);
       std::stringstream output;
       elle::serialization::json::serialize(passport, output, false);
-      setxattr(path, "user.infinit.register." + user_name, output.str(),
+      set_xattr(path, "user.infinit.register." + user_name, output.str(),
                fallback);
     }
 
@@ -678,7 +655,7 @@ namespace infinit
             try
             {
               std::string value = inherit ? "true" : "false";
-              setxattr(path, "user.infinit.auth.inherit", value, fallback_xattrs);
+              set_xattr(path, "user.infinit.auth.inherit", value, fallback_xattrs);
             }
             catch (PermissionDenied const&)
             {
@@ -698,7 +675,7 @@ namespace infinit
         {
           try
           {
-            setxattr(path, "user.infinit.auth_others",
+            set_xattr(path, "user.infinit.auth_others",
                      omode, fallback_xattrs);
           }
           catch (PermissionDenied const&)
@@ -724,7 +701,7 @@ namespace infinit
               {
                 try
                 {
-                  setxattr(path, "user.infinit.auth." + mode,
+                  set_xattr(path, "user.infinit.auth." + mode,
                            value, fallback_xattrs);
                 }
                 catch (PermissionDenied const&)
@@ -779,10 +756,10 @@ namespace infinit
       // Validate arguments.
       auto mode = mode_get(mode_name);
       auto omode = mode_get(others_mode_name);
+      auto combined = collate_users(users, boost::none, boost::none, groups);
       {
         if (paths.empty())
           throw elle::das::cli::MissingOption("path");
-        auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
           elle::err<CLIError>("must specify user when setting mode");
@@ -811,7 +788,7 @@ namespace infinit
       bool multi = paths.size() > 1 || recursive;
       for (auto const& path: paths)
       {
-        set_action(path, this->cli().infinit(), users, mode, omode,
+        set_action(path, this->cli().infinit(), combined, mode, omode,
                    inherit, disinherit, verbose, fallback, fetch, multi);
         if (traverse)
         {
@@ -819,7 +796,7 @@ namespace infinit
           while (!path_is_root(working_path.string(), fallback))
           {
             working_path = working_path.parent_path();
-            set_action(working_path.string(), this->cli().infinit(), users,
+            set_action(working_path.string(), this->cli().infinit(), combined,
                        "setr", "", false, false,
                        verbose, fallback, fetch, multi);
           }
@@ -827,22 +804,10 @@ namespace infinit
         if (recursive)
         {
           recursive_action(
-            set_action, path, this->cli().infinit(), users, mode, omode,
+            set_action, path, this->cli().infinit(), combined, mode, omode,
             inherit, disinherit, verbose, fallback, fetch, multi);
         }
       }
-    }
-
-    /*----------------.
-    | Mode: set_xattr |
-    `----------------*/
-
-    void
-    ACL::mode_set_xattr(std::string const& path,
-                        std::string const& name,
-                        std::string const& value)
-    {
-      setxattr(path, name, value, true);
     }
 
   }

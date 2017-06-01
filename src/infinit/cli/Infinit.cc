@@ -13,6 +13,7 @@
 # include <crash_reporting/CrashReporter.hh>
 #endif
 
+#include <boost/range/algorithm/transform.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -25,8 +26,9 @@
 #include <elle/das/Symbol.hh>
 #include <elle/das/cli.hh>
 
-#include <infinit/utility.hh>
+#include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit");
 
@@ -312,8 +314,19 @@ namespace infinit
           ELLE_WARN("%s is deprecated, please run: infinit %s",
                     prog, boost::algorithm::join(args, " "));
         }
+        if (args[0] == "network" && args[1] == "list-storage")
+          args[1] = "list-silos";
+        boost::transform(args, args.begin(),
+                         [] (std::string const& entry) -> std::string
+                         {
+                           if (entry == "--storage")
+                             return "--silo";
+                           else if (entry == "--storage-class")
+                             return "--silo-class";
+                           return entry;
+                         });
         auto infinit = infinit::Infinit{};
-        auto cli = Infinit(infinit);
+        auto&& cli = Infinit(infinit);
         if (args.empty() || elle::das::cli::is_option(args[0], options))
           elle::das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
@@ -542,7 +555,6 @@ namespace infinit
         elle::cryptography::hash(
           password, elle::cryptography::Oneway::sha256).string()
         );
-      return password;
     };
 
     std::string
@@ -564,6 +576,20 @@ namespace infinit
   }
 }
 
+namespace
+{
+  int
+  cli_error(std::string const& error, boost::optional<std::string> object = {})
+  {
+    elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
+    auto obj = object ? " " + *object : "";
+    elle::fprintf(std::cerr,
+                  "Try '%s%s --help' for more information.\n",
+                  argv_0, obj);
+    return 2;
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -575,13 +601,13 @@ main(int argc, char** argv)
     elle::reactor::Thread main(s, "main", [&] { infinit::cli::main(args); });
     s.run();
   }
+  catch (infinit::cli::CLIError const& e)
+  {
+    return cli_error(e.what(), e.object());
+  }
   catch (elle::das::cli::Error const& e)
   {
-    elle::fprintf(std::cerr, "%s: command line error: %s\n", argv[0], e.what());
-    elle::fprintf(std::cerr,
-                  "Try '%s --help' for more information.\n",
-                  argv[0]);
-    return 2;
+    return cli_error(e.what());
   }
   catch (elle::Error const& e)
   {

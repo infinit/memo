@@ -1,0 +1,8 @@
+drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE [OPTIONS...]
+
+Join a drive you were invited to (Hub operation):
+
+Join options:
+  -n [ --name ] arg      Drive to invite the user on
+
+

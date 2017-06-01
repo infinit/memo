@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <infinit/cli/Network.hh>
 
 #include <boost/algorithm/string/trim.hpp>
@@ -20,6 +22,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -46,7 +49,7 @@ namespace infinit
                "Create a network",
                cli::name,
                cli::description = boost::none,
-               cli::storage = Strings{},
+               cli::silo = Strings{},
                cli::port = boost::none,
                cli::replication_factor = 1,
                cli::eviction_delay = boost::none,
@@ -68,7 +71,12 @@ namespace infinit
                cli::k = boost::none,
                cli::kelips_contact_timeout = boost::none,
                cli::encrypt = boost::none,
-               cli::protocol = boost::none)
+               // Generic options
+               cli::protocol = boost::none,
+               cli::tcp_heartbeat = boost::none,
+               cli::disable_encrypt_at_rest = false,
+               cli::disable_encrypt_rpc = false,
+               cli::disable_signature = false)
       , delete_(*this,
                 "Delete a network locally",
                 cli::name,
@@ -98,7 +106,7 @@ namespace infinit
       , link(*this,
              "Link this device to a network",
              cli::name,
-             cli::storage = Strings{},
+             cli::silo = Strings{},
              cli::output = boost::none,
              cli::node_id = boost::none)
       , list(*this, "List networks")
@@ -126,9 +134,9 @@ namespace infinit
                       cli::no_local_endpoints = false,
                       cli::no_public_endpoints = false,
                       cli::advertise_host = Strings())
-      , list_storage(*this,
-                     "List all storage contributed by this device to a network",
-                     cli::name)
+      , list_silos(*this,
+                   "List all silos contributed by this device to a network",
+                   cli::name)
       , pull(*this,
              "Remove a network from {hub}",
              cli::name,
@@ -166,9 +174,12 @@ namespace infinit
             cli::no_public_endpoints = false,
             cli::advertise_host = Strings{},
             cli::grpc = boost::none,
+#if INFINIT_ENABLE_PROMETHEUS
+            cli::prometheus = boost::none,
+#endif
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none)
-      , stats(*this,
+      , stat(*this,
               "Fetch stats of a network on {hub}",
               cli::name)
       , unlink(*this,
@@ -275,17 +286,17 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::storage::StorageConfig>
-      make_storage_config(infinit::Infinit& ifnt,
-                          Strings const& storage)
+      make_silo_config(infinit::Infinit& ifnt,
+                       Strings const& silos)
       {
         auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
-        if (storage.empty())
+        if (silos.empty())
           return {};
         else
         {
           auto backends
-            = elle::make_vector(storage,
-                                [&](auto const& s) { return ifnt.storage_get(s); });
+            = elle::make_vector(silos,
+                                [&](auto const& s) { return ifnt.silo_get(s); });
           if (backends.size() == 1)
             return std::move(backends[0]);
           else
@@ -350,38 +361,43 @@ namespace infinit
     }
 
     void
-    Network::mode_create(std::string const& network_name,
-                         boost::optional<std::string> const& description,
-                         Strings const& storage_names,
-                         boost::optional<int> port,
-                         int replication_factor,
-                         boost::optional<std::string> const& eviction_delay,
-                         boost::optional<std::string> const& output_name,
-                         bool push_network,
-                         bool push,
-                         Strings const& admin_r,
-                         Strings const& admin_rw,
-                         Strings const& peer,
-                         // Consensus types.
-                         bool paxos,
-                         bool no_consensus,
-                         // Overlay types.
-                         bool kelips,
-                         bool kalimero,
-                         bool kouncil,
-                         // Kelips options,
-                         boost::optional<int> nodes,
-                         boost::optional<int> k,
-                         boost::optional<std::string> const& kelips_contact_timeout,
-                         boost::optional<std::string> const& encrypt,
-                         boost::optional<std::string> const& protocol)
+    Network::mode_create(
+      std::string const& network_name,
+      boost::optional<std::string> const& description,
+      Strings const& silos_names,
+      boost::optional<int> port,
+      int replication_factor,
+      boost::optional<std::string> const& eviction_delay,
+      boost::optional<std::string> const& output_name,
+      bool push_network,
+      bool push,
+      Strings const& admin_r,
+      Strings const& admin_rw,
+      Strings const& peer,
+      // Consensus types.
+      bool paxos,
+      bool no_consensus,
+      // Overlay types.
+      bool kelips,
+      bool kalimero,
+      bool kouncil,
+      // Kelips options,
+      boost::optional<int> nodes,
+      boost::optional<int> k,
+      boost::optional<std::string> kelips_contact_timeout,
+      boost::optional<std::string> encrypt,
+      boost::optional<std::string> protocol,
+      boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+      bool disable_encrypt_at_rest,
+      bool disable_encrypt_rpc,
+      bool disable_signature)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
-      auto overlay_config = [&]() -> std::unique_ptr<infinit::overlay::Configuration>
+      auto overlay_config =
+        [&] () -> std::unique_ptr<infinit::overlay::Configuration>
         {
           if (1 < kalimero + kelips + kouncil)
             elle::err<CLIError>("only one overlay type must be specified");
@@ -395,19 +411,22 @@ namespace infinit
         }();
       if (protocol)
         overlay_config->rpc_protocol = protocol_get(protocol);
-      auto storage = make_storage_config(ifnt, storage_names);
+      auto silo = make_silo_config(ifnt, silos_names);
       auto consensus_config = make_consensus_config(paxos,
                                                     no_consensus,
                                                     replication_factor,
                                                     eviction_delay);
       auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
-
+      infinit::model::doughnut::EncryptOptions encrypt_options(
+        !disable_encrypt_at_rest,
+        !disable_encrypt_rpc,
+        !disable_signature);
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
           std::move(consensus_config),
           std::move(overlay_config),
-          std::move(storage),
+          std::move(silo),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
@@ -419,7 +438,9 @@ namespace infinit
           std::move(port),
           infinit::version(),
           admin_keys,
-          parse_peers(peer));
+          parse_peers(peer),
+          tcp_heartbeat,
+          encrypt_options);
       {
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
@@ -541,6 +562,7 @@ namespace infinit
                 d->id,
                 std::move(desc.consensus),
                 std::move(desc.overlay),
+                // XXX[Storage]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
                 std::make_shared<elle::cryptography::rsa::PublicKey>(
@@ -550,7 +572,9 @@ namespace infinit
                 d->port,
                 desc.version,
                 desc.admin_keys,
-                desc.peers),
+                desc.peers,
+                desc.tcp_heartbeat,
+                desc.encrypt_options),
               desc.description);
             // Update linked network for user.
             ifnt.network_save(u, updated_network, true);
@@ -699,7 +723,7 @@ namespace infinit
 
     void
     Network::mode_link(std::string const& network_name,
-                       Strings const& storage_names,
+                       Strings const& silos_names,
                        boost::optional<std::string> const& output_name,
                        boost::optional<std::string> const& node_id)
     {
@@ -714,7 +738,7 @@ namespace infinit
           elle::err("%s is already linked with %s", network.name, owner.name);
       }
 
-      auto storage = make_storage_config(ifnt, storage_names);
+      auto silo = make_silo_config(ifnt, silos_names);
       auto desc = ifnt.network_descriptor_get(network_name, owner);
       auto const passport = [&] () -> infinit::Infinit::Passport
         {
@@ -735,7 +759,7 @@ namespace infinit
         }();
       if (!passport.verify(passport.certifier() ? *passport.certifier() : desc.owner))
         elle::err("passport signature is invalid");
-      if (storage && !passport.allow_storage())
+      if (silo && !passport.allow_storage())
         elle::err("passport does not allow storage");
       auto const id = [&]
         {
@@ -754,7 +778,7 @@ namespace infinit
           id,
           std::move(desc.consensus),
           std::move(desc.overlay),
-          std::move(storage),
+          std::move(silo),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(passport),
@@ -762,7 +786,9 @@ namespace infinit
           boost::optional<int>(),
           desc.version,
           desc.admin_keys,
-          desc.peers),
+          desc.peers,
+          desc.tcp_heartbeat,
+          desc.encrypt_options),
         desc.description);
       if (output_name)
         ifnt.save(*cli.get_output(output_name), network, false);
@@ -824,6 +850,7 @@ namespace infinit
 
     namespace
     {
+      /// Action to run by network_run.
       using Action =
         std::function<void (infinit::User& owner,
                             infinit::Network& network,
@@ -856,6 +883,9 @@ namespace infinit
                   bool no_public_endpoints = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> grpc = {},
+#if INFINIT_ENABLE_PROMETHEUS
+                  boost::optional<std::string> prometheus = {},
+#endif
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
                   Action const& action = {})
@@ -893,14 +923,20 @@ namespace infinit
 #endif
         );
         hook_stats_signals(*dht);
+        elle::reactor::Thread::unique_ptr grpc_thread;
         if (grpc)
         {
           auto const eps = model::Endpoints{*grpc};
           auto const ep = *eps.begin();
-          new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
+          grpc_thread.reset(new elle::reactor::Thread("grpc",
+            [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
-          });
+          }));
         }
+#if INFINIT_ENABLE_PROMETHEUS
+        if (prometheus)
+          infinit::prometheus::endpoint(*prometheus);
+#endif
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -1018,6 +1054,9 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          {}, // grpc
+#if INFINIT_ENABLE_PROMETHEUS
+         {}, // prometheus
+#endif
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
          [&] (infinit::User& owner,
@@ -1051,19 +1090,20 @@ namespace infinit
     }
 
 
-    /*---------------------.
-    | Mode: list_storage.  |
-    `---------------------*/
+    /*-------------------.
+    | Mode: list_silos.  |
+    `-------------------*/
 
     void
-    Network::mode_list_storage(std::string const& network_name)
+    Network::mode_list_silos(std::string const& network_name)
     {
-      ELLE_TRACE_SCOPE("list_storage");
+      ELLE_TRACE_SCOPE("list_silos");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
       auto network = ifnt.network_get(network_name, owner, true);
+      // XXX[Storage]: Network::modem::storage
       if (network.model->storage)
       {
         if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
@@ -1175,6 +1215,9 @@ namespace infinit
                       bool no_public_endpoints,
                       Strings advertise_host,
                       boost::optional<std::string> grpc,
+#if INFINIT_ENABLE_PROMETHEUS
+                      boost::optional<std::string> prometheus,
+#endif
                       boost::optional<bool> paxos_rebalancing_auto_expand,
                       boost::optional<bool> paxos_rebalancing_inspect)
     {
@@ -1208,6 +1251,9 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          grpc,
+#if INFINIT_ENABLE_PROMETHEUS
+         prometheus,
+#endif
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
          [&] (infinit::User& owner,
@@ -1347,14 +1393,14 @@ namespace infinit
     }
 
 
-    /*--------------.
-    | Mode: stats.  |
-    `--------------*/
+    /*-------------.
+    | Mode: stat.  |
+    `-------------*/
 
     void
-    Network::mode_stats(std::string const& network_name)
+    Network::mode_stat(std::string const& network_name)
     {
-      ELLE_TRACE_SCOPE("stats");
+      ELLE_TRACE_SCOPE("stat");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
@@ -1436,9 +1482,9 @@ namespace infinit
         if (!mountpoint)
           elle::err("A mountpoint is required to fetch groups.");
         char buf[32768];
-        int res = getxattr(*mountpoint,
-                           "infinit.group.control_key." + name,
-                           buf, 16384, true);
+        int res = get_xattr(*mountpoint,
+                            "infinit.group.control_key." + name,
+                            buf, 16384, true);
         if (res <= 0)
           elle::err("Unable to fetch group %s", name);
         auto b = elle::Buffer(buf, res);

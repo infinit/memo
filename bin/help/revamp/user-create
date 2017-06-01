@@ -1,0 +1,20 @@
+user: create: Usage: infinit-user user create [OPTIONS]
+Create a user
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the user to create (default: bob)
+      --description arg     user description (default: null)
+  -k, --key arg             RSA key pair in PEM format - e.g. your SSH key (default: null)
+  -e, --email arg           user email (default: null)
+      --fullname arg        user full name (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
+  -l, --ldap-name arg       user LDAP distinguished name (default: null)
+  -o, --output arg          file to write the user to (default: null)
+      --push-user           push user to the Hub
+  -p, --push                push user to the Hub
+      --full                include private key (do not use unless you understand the implications
+

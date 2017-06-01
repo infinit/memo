@@ -19,23 +19,11 @@ namespace infinit
       ACL(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(
-                     cli::get_xattr,
                      cli::group,
                      cli::list,
                      cli::register_,
-                     cli::set,
-                     cli::set_xattr
+                     cli::set
                      ));
-
-      // get-xattr
-      Mode<ACL,
-           void (decltype(cli::path)::Formal<std::string const&>,
-                 decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_get_xattr) >
-      get_xattr;
-      void
-      mode_get_xattr(std::string const& path,
-                     std::string const& name);
 
       // group
       Mode<ACL,
@@ -161,18 +149,6 @@ namespace infinit
                     std::string const& network,
                     bool fetch,
                     bool fallback);
-
-      // set-xattr
-      Mode<ACL,
-           void (decltype(cli::path)::Formal<std::string const&>,
-                 decltype(cli::name)::Formal<std::string const&>,
-                 decltype(cli::value)::Formal<std::string const&>),
-           decltype(modes::mode_set_xattr)>
-      set_xattr;
-      void
-      mode_set_xattr(std::string const& path,
-                     std::string const& attribute,
-                     std::string const& value);
     };
   }
 }

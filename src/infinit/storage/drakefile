@@ -5,10 +5,6 @@ def configure(entreprise_edition):
   sources = drake.nodes(
     'Adb.cc',
     'Adb.hh',
-    'Async.cc',
-    'Async.hh',
-    'Cache.cc',
-    'Cache.hh',
     'Collision.cc',
     'Collision.hh',
     'Crypt.cc',
@@ -45,3 +41,7 @@ def configure(entreprise_edition):
       'S3.cc',
       'S3.hh',
       )
+
+# Local Variables:
+# mode: python
+# End:

@@ -38,6 +38,8 @@ namespace infinit
             auto const addr = infinit::model::Address::from_string(name);
             this->_size_cache[addr] = size;
             this->_usage += size;
+            this->_block_count += 1;
+            _notify_metrics();
           }
       ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)",
                  this->_usage, this->_size_cache.size());
@@ -89,6 +91,7 @@ namespace infinit
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 
       this->_size_cache[key] = value.size();
+      this->_block_count += update ? 0 : 1;
 
       return update ? value.size() - size : value.size();
     }
@@ -103,6 +106,7 @@ namespace infinit
       if (!exists(path))
         throw MissingKey(key);
       remove(path);
+      this->_block_count -= 1;
 
       int const delta = this->_size_cache[key];
       this->_size_cache.erase(key);

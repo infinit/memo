@@ -8,6 +8,8 @@
 
 #include <sys/stat.h> // S_IMFT...
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 
@@ -67,7 +69,7 @@ namespace infinit
       : _model(nullptr)
     {}
 
-    FileConflictResolver::FileConflictResolver(boost::filesystem::path path, model::Model* model,
+    FileConflictResolver::FileConflictResolver(bfs::path path, model::Model* model,
                          WriteTarget target)
       : _path(path)
       , _model(model)
@@ -210,7 +212,7 @@ namespace infinit
       remove_undecoded_first_block.abort();
     }
 
-    FileData::FileData(boost::filesystem::path path,
+    FileData::FileData(bfs::path path,
                        Block& block, std::pair<bool, bool> perms,
                        int block_size)
       : _address(block.address())
@@ -277,7 +279,7 @@ namespace infinit
                  _fat.size(), _data.size());
     }
 
-    FileData::FileData(boost::filesystem::path path, Address address, int mode, int block_size)
+    FileData::FileData(bfs::path path, Address address, int mode, int block_size)
     {
       _path = path;
       _address = address;
@@ -442,10 +444,10 @@ namespace infinit
     }
 
     void
-    File::link(boost::filesystem::path const& where)
+    File::link(bfs::path const& where)
     {
       std::string newname = where.filename().string();
-      boost::filesystem::path newpath = where.parent_path();
+      bfs::path newpath = where.parent_path();
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
       if (dir->_data->_files.find(newname) != dir->_data->_files.end())
@@ -493,8 +495,7 @@ namespace infinit
         auto it = this->_owner.file_buffers().find(this->_filedata->address());
         if (it != this->_owner.file_buffers().end())
         {
-          auto file_buffer = it->second.lock();
-          if (file_buffer)
+          if (auto file_buffer = it->second.lock())
             file_buffer->_remove_data = true;
         }
         else
@@ -511,7 +512,7 @@ namespace infinit
     }
 
     void
-    File::rename(boost::filesystem::path const& where)
+    File::rename(bfs::path const& where)
     {
       ELLE_TRACE_SCOPE("%s: rename to %s", *this, where);
       Node::rename(where);
@@ -552,15 +553,12 @@ namespace infinit
       }
       auto it = _owner.file_buffers().find(_filedata->address());
       if (it != _owner.file_buffers().end())
-      {
-        auto fh = it->second.lock();
-        if (fh)
+        if (auto fh = it->second.lock())
         {
           ELLE_DEBUG("open file size overwrite: %s -> %s",
                      st->st_size, fh->_file._header.size);
           st->st_size = fh->_file._header.size;
         }
-      }
     }
 
     void
@@ -635,14 +633,16 @@ namespace infinit
         ELLE_DEBUG("considering %s: [%s, %s]", i,
           offset, offset + _filedata->_header.block_size);
         if (signed(offset) >= new_size)
-        { // kick the block
+        {
+          // kick the block
           ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
           if (_filedata->_fat[i].first != Address::null)
-            _owner.unchecked_remove(_filedata->_fat[i].first);
+            unchecked_remove_chb(*_owner.block_store(), _filedata->_fat[i].first, _address);
           _filedata->_fat.pop_back();
         }
         else if (signed(offset + _filedata->_header.block_size) >= new_size)
-        { // maybe truncate the block
+        {
+          // maybe truncate the block
           ELLE_DEBUG("truncating %f", _filedata->_fat[i].first);
           if (_filedata->_fat[i].first == Address::null)
             continue;
@@ -651,12 +651,10 @@ namespace infinit
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first, {}, this->full_path());
           elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
-          {
             buf.size(targetsize);
-          }
           auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
             sk.encipher(buf), _address);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          unchecked_remove_chb(*_owner.block_store(), _filedata->_fat[i].first, this->_address);
           _filedata->_fat[i].first = newblock->address();
           this->_owner.store_or_die(
             std::move(newblock), true,
@@ -672,9 +670,7 @@ namespace infinit
       // propagate to all opened file handles
       auto it = _owner.file_buffers().find(_filedata->address());
       if (it != _owner.file_buffers().end())
-      {
-        auto fh = it->second.lock();
-        if (fh)
+        if (auto fh = it->second.lock())
         {
           bool dirty = fh->_fat_changed;
           if (!dirty)
@@ -708,7 +704,6 @@ namespace infinit
             fh->_blocks.clear();
           }
         }
-      }
     }
 
     std::unique_ptr<rfs::Handle>
@@ -766,14 +761,16 @@ namespace infinit
       return _filedata->_header;
     }
 
-    std::vector<std::string> File::listxattr()
+    std::vector<std::string>
+    File::listxattr()
     {
       _fetch();
       ELLE_TRACE("file listxattr");
-      std::vector<std::string> res;
-      for (auto const& a: _filedata->_header.xattrs)
-        res.push_back(a.first);
-      return res;
+      return elle::make_vector(_filedata->_header.xattrs,
+                               [](auto const& a)
+                               {
+                                 return a.first;
+                               });
     }
 
     std::string
@@ -787,9 +784,12 @@ namespace infinit
             if (*special == "fat")
             {
               this->_fetch();
-              std::vector<std::string> fat;
-              for (auto const& entry: this->_filedata->_fat)
-                fat.push_back(elle::sprintf("%x", entry.first));
+              auto const fat
+                = elle::make_vector(this->_filedata->_fat,
+                                    [](auto const& entry)
+                                    {
+                                      return elle::sprintf("%x", entry.first);
+                                    });
               return elle::serialization::json::serialize(fat, false).string();
             }
             else if (*special == "auth")
@@ -826,9 +826,8 @@ namespace infinit
     File::child(std::string const& name)
     {
       // FIXME remove
-      static const char* attr_key = "$xattr.";
-      if (name.size() > strlen(attr_key)
-          && name.substr(0, strlen(attr_key)) == attr_key)
+      auto const attr_key = "$xattr.";
+      if (boost::starts_with(name, attr_key))
         return std::make_shared<XAttributeFile>(shared_from_this(),
           name.substr(strlen(attr_key)));
       else

@@ -16,6 +16,7 @@ namespace infinit
       : public Object<Network>
     {
     public:
+      using Self = Network;
       Network(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
@@ -30,11 +31,11 @@ namespace infinit
                                     cli::list,
                                     cli::unlink,
                                     cli::list_services,
-                                    cli::list_storage,
+                                    cli::list_silos,
                                     cli::pull,
                                     cli::push,
                                     cli::run,
-                                    cli::stats,
+                                    cli::stat,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -43,10 +44,10 @@ namespace infinit
       | Mode: create.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::description = boost::optional<std::string>()),
-                 decltype(cli::storage = Strings{}),
+                 decltype(cli::silo = Strings{}),
                  decltype(cli::port = boost::optional<int>()),
                  decltype(cli::replication_factor = 1),
                  decltype(cli::eviction_delay = boost::optional<std::string>()),
@@ -69,42 +70,52 @@ namespace infinit
                  decltype(cli::kelips_contact_timeout =
                           boost::optional<std::string>()),
                  decltype(cli::encrypt = boost::optional<std::string>()),
-                 decltype(cli::protocol = boost::optional<std::string>())),
+                 decltype(cli::protocol = boost::optional<std::string>()),
+                 decltype(cli::tcp_heartbeat =
+                          boost::optional<std::chrono::milliseconds>()),
+                 decltype(cli::disable_encrypt_at_rest = false),
+                 decltype(cli::disable_encrypt_rpc = false),
+                 decltype(cli::disable_signature = false)),
            decltype(modes::mode_create)>
       create;
       void
-      mode_create(std::string const& network_name,
-                  boost::optional<std::string> const& description = {},
-                  Strings const& storage = {},
-                  boost::optional<int> port = boost::none,
-                  int replication_factor = 1,
-                  boost::optional<std::string> const& eviction_delay = boost::none,
-                  boost::optional<std::string> const& output_name = boost::none,
-                  bool push_network = false,
-                  bool push = false,
-                  Strings const& admin_r = {},
-                  Strings const& admin_rw = {},
-                  Strings const& peer = {},
-                  // Consensus types.
-                  bool paxos = false,
-                  bool no_consensus = false,
-                  // Overlay types.
-                  bool kelips = false,
-                  bool kalimero = false,
-                  bool kouncil = false,
-                  // Kelips options,
-                  boost::optional<int> nodes = boost::none,
-                  boost::optional<int> k = boost::none,
-                  boost::optional<std::string> const& kelips_contact_timeout = boost::none,
-                  boost::optional<std::string> const& encrypt = boost::none,
-                  boost::optional<std::string> const& protocol = boost::none);
-
+      mode_create(
+        std::string const& network_name,
+        boost::optional<std::string> const& description = {},
+        Strings const& silo = {},
+        boost::optional<int> port = boost::none,
+        int replication_factor = 1,
+        boost::optional<std::string> const& eviction_delay = boost::none,
+        boost::optional<std::string> const& output_name = boost::none,
+        bool push_network = false,
+        bool push = false,
+        Strings const& admin_r = {},
+        Strings const& admin_rw = {},
+        Strings const& peer = {},
+        // Consensus types.
+        bool paxos = false,
+        bool no_consensus = false,
+        // Overlay types.
+        bool kelips = false,
+        bool kalimero = false,
+        bool kouncil = false,
+        // Kelips options,
+        boost::optional<int> nodes = boost::none,
+        boost::optional<int> k = boost::none,
+        boost::optional<std::string> kelips_contact_timeout = boost::none,
+        boost::optional<std::string> encrypt = boost::none,
+        // Generic options
+        boost::optional<std::string> protocol = boost::none,
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none,
+        bool disable_encrypt_at_rest = false,
+        bool disable_encrypt_rpc = false,
+        bool disable_signature = false);
 
       /*---------------.
       | Mode: delete.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::pull = false),
                  decltype(cli::purge = false),
@@ -121,7 +132,7 @@ namespace infinit
       | Mode: export.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>())),
            decltype(modes::mode_export)>
@@ -134,7 +145,7 @@ namespace infinit
       | Mode: fetch.  |
       `--------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name = boost::optional<std::string>())),
            decltype(modes::mode_fetch)>
       fetch;
@@ -145,7 +156,7 @@ namespace infinit
       | Mode: import.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::input = boost::optional<std::string>())),
            decltype(modes::mode_import)>
       import;
@@ -158,7 +169,7 @@ namespace infinit
       `----------------*/
 
 #ifndef INFINIT_WINDOWS
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>()),
                  decltype(cli::status = false),
@@ -181,16 +192,16 @@ namespace infinit
       | Mode: link.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
-                 decltype(cli::storage = Strings{}),
+                 decltype(cli::silo = Strings{}),
                  decltype(cli::output = boost::optional<std::string>()),
                  decltype(cli::node_id = boost::optional<std::string>())),
            decltype(modes::mode_link)>
       link;
       void
       mode_link(std::string const& network_name,
-                Strings const& storage_names = {},
+                Strings const& silos_names = {},
                 boost::optional<std::string> const& output_name = {},
                 boost::optional<std::string> const& node_id = {});
 
@@ -199,7 +210,7 @@ namespace infinit
       | Mode: list.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (),
            decltype(modes::mode_list)>
       list;
@@ -211,7 +222,7 @@ namespace infinit
       | Mode: list_services.  |
       `----------------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::peer = Strings()),
                  decltype(cli::async = false),
@@ -262,23 +273,23 @@ namespace infinit
                          Strings advertise_host = {});
 
 
-      /*---------------------.
-      | Mode: list_storage.  |
-      `---------------------*/
+      /*------------------.
+      | Mode: list_silos. |
+      `------------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_list_storage)>
-      list_storage;
+           decltype(modes::mode_list_silos)>
+      list_silos;
       void
-      mode_list_storage(std::string const& network_name);
+      mode_list_silos(std::string const& network_name);
 
 
       /*-------------.
       | Mode: pull.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::purge = false)),
            decltype(modes::mode_pull)>
@@ -292,7 +303,7 @@ namespace infinit
       | Mode: push.  |
       `-------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>),
            decltype(modes::mode_push)>
       push;
@@ -304,7 +315,7 @@ namespace infinit
       | Mode: run.  |
       `------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::input = boost::optional<std::string>()),
 #ifndef INFINIT_WINDOWS
@@ -334,7 +345,10 @@ namespace infinit
                  decltype(cli::no_public_endpoints = false),
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::grpc = boost::optional<std::string>()),
-                 // Hidden options.
+#if INFINIT_ENABLE_PROMETHEUS
+                 decltype(cli::prometheus = boost::optional<std::string>()),
+#endif
+                 // Options that used to be hidden.
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),
                  decltype(cli::paxos_rebalancing_inspect =
@@ -370,31 +384,30 @@ namespace infinit
                bool no_public_endpoints = false,
                Strings advertise_host = {},
                boost::optional<std::string> grpc = {},
-               // Hidden options.
+#if INFINIT_ENABLE_PROMETHEUS
+               boost::optional<std::string> prometheus = {},
+#endif
+               // Options that used to be hidden.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
                boost::optional<bool> paxos_rebalancing_inspect = {});
 
 
-      /*--------------.
-      | Mode: stats.  |
-      `--------------*/
+      /*-------------.
+      | Mode: stat.  |
+      `-------------*/
 
-      Mode<Network,
-           void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_stats)>
-      stats;
+      MODE(stat,
+           decltype(cli::name)::Formal<std::string const&>);
       void
-      mode_stats(std::string const& network_name);
+      mode_stat(std::string const& network_name);
 
 
       /*---------------.
       | Mode: unlink.  |
       `---------------*/
 
-      Mode<Network,
-           void (decltype(cli::name)::Formal<std::string const&>),
-           decltype(modes::mode_unlink)>
-      unlink;
+      MODE(unlink,
+          decltype(cli::name)::Formal<std::string const&>);
       void
       mode_unlink(std::string const& network_name);
 
@@ -403,7 +416,7 @@ namespace infinit
       | Mode: update.  |
       `---------------*/
 
-      Mode<Network,
+      Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::description = boost::optional<std::string>()),
                  decltype(cli::port = boost::optional<int>()),

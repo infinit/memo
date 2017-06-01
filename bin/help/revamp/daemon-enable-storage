@@ -1,0 +1,11 @@
+daemon: enable-storage: Usage: infinit-daemon daemon enable-storage [OPTIONS]
+Enable storage on associated network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -n, --name arg            name of the daemon to enable-storage
+      --hold arg            keep storage online until this process terminates
+

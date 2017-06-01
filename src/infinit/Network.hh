@@ -124,7 +124,9 @@ namespace infinit
       elle::Version version,
       model::doughnut::AdminKeys admin_keys,
       std::vector<model::Endpoints> peers,
-      boost::optional<std::string> description);
+      boost::optional<std::string> description,
+      boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+      model::doughnut::EncryptOptions encrypt_options);
 
     NetworkDescriptor(elle::serialization::SerializerIn& s);
 
@@ -141,5 +143,7 @@ namespace infinit
     elle::Version version;
     model::doughnut::AdminKeys admin_keys;
     std::vector<model::Endpoints> peers;
+    boost::optional<std::chrono::milliseconds> tcp_heartbeat;
+    model::doughnut::EncryptOptions encrypt_options;
   };
 }

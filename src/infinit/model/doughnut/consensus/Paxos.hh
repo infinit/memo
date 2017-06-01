@@ -5,10 +5,10 @@
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
-#include <elle/unordered_map.hh>
 #include <elle/Error.hh>
+#include <elle/unordered_map.hh>
 
-#include <elle/reactor/Generator.hh>
+#include <elle/das/tuple.hh>
 
 #include <elle/athena/paxos/Client.hh>
 
@@ -26,11 +26,14 @@ namespace infinit
       {
         namespace bmi = boost::multi_index;
 
+        ELLE_DAS_SYMBOL(address);
+        ELLE_DAS_SYMBOL(block);
         ELLE_DAS_SYMBOL(doughnut);
         ELLE_DAS_SYMBOL(replication_factor);
         ELLE_DAS_SYMBOL(lenient_fetch);
         ELLE_DAS_SYMBOL(rebalance_auto_expand);
         ELLE_DAS_SYMBOL(rebalance_inspect);
+        ELLE_DAS_SYMBOL(node);
         ELLE_DAS_SYMBOL(node_timeout);
 
         struct BlockOrPaxos;
@@ -49,7 +52,7 @@ namespace infinit
           using PaxosServer = elle::athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address> ;
           using Value = elle::Option<std::shared_ptr<blocks::Block>,
-                               Paxos::PaxosClient::Quorum>;
+                                     Paxos::PaxosClient::Quorum>;
 
         /*-------------.
         | Construction |
@@ -122,16 +125,16 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
-                     std::unique_ptr<storage::Storage> storage,
-                     Protocol p) override;
+                     std::unique_ptr<storage::Storage> storage) override;
 
-          using AcceptedOrError = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
-                            std::shared_ptr<elle::Error>>;
+          using AcceptedOrError
+            = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                        std::shared_ptr<elle::Error>>;
           using GetMultiResult = std::unordered_map<Address, AcceptedOrError>;
 
-        /*-----.
-        | Peer |
-        `-----*/
+        /*------------.
+        | Paxos::Peer |
+        `------------*/
         public:
           class Peer
             : public virtual doughnut::Peer
@@ -162,6 +165,9 @@ namespace infinit
                 boost::optional<int> local_version) = 0;
           };
 
+        /*------------------.
+        | Paxos::RemotePeer |
+        `------------------*/
           class RemotePeer
             : public Paxos::Peer
             , public doughnut::Remote
@@ -194,9 +200,9 @@ namespace infinit
                 boost::optional<int> local_version) override;
           };
 
-        /*----------.
-        | LocalPeer |
-        `----------*/
+        /*-----------------.
+        | Paxos::LocalPeer |
+        `-----------------*/
         public:
           class LocalPeer
             : public Paxos::Peer
@@ -228,7 +234,8 @@ namespace infinit
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
-            ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr, rebalance_inspector);
+            ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr,
+                             rebalance_inspector);
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>,
                            evict_threads);
@@ -337,18 +344,51 @@ namespace infinit
                     int,
                     &BlockRepartition::replication_factor> >
                 >>;
-
             /// Blocks quorum
             ELLE_ATTRIBUTE_R(Quorums, quorums);
             /// Nodes blocks
-            using NodeBlocks = std::unordered_map<
-              Address, std::unordered_set<Address>>;
+            using NodeBlock = elle::das::tuple<Symbol_node::Formal<Address>,
+                                               Symbol_block::Formal<Address>>;
+            static
+            Address
+            node(NodeBlock const& b)
+            {
+              return b.node;
+            }
+            static
+            Address
+            block(NodeBlock const& b)
+            {
+              return b.block;
+            }
+            struct by_node {};
+            struct by_block {};
+            using NodeBlocks = bmi::multi_index_container<
+              NodeBlock,
+              bmi::indexed_by<
+                bmi::hashed_unique<
+                  bmi::identity<NodeBlock>>,
+                bmi::hashed_non_unique<
+                  bmi::tag<by_node>,
+                  bmi::global_fun<NodeBlock const&,
+                                  Address,
+                                  &node>>,
+                bmi::hashed_non_unique<
+                  bmi::tag<by_block>,
+                  bmi::global_fun<NodeBlock const&,
+                                  Address,
+                                  &block>>>>;
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
             ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
             using NodeTimeouts =
               std::unordered_map<Address, boost::asio::deadline_timer>;
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
+
+          typedef
+            std::unordered_map<Address, int>
+            Transfers;
+          ELLE_ATTRIBUTE(Transfers, transfers);
 
         /*-----.
         | Stat |

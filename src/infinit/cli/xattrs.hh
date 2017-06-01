@@ -12,17 +12,17 @@ namespace infinit
     namespace bfs = boost::filesystem;
 
     void
-    setxattr(std::string const& path,
-             std::string const& attribute,
-             std::string const& value,
-             bool fallback);
+    set_xattr(std::string const& path,
+              std::string const& attribute,
+              std::string const& value,
+              bool fallback);
 
     int
-    getxattr(std::string const& file,
-             std::string const& key,
-             char* val,
-             int val_size,
-             bool fallback);
+    get_xattr(std::string const& file,
+              std::string const& key,
+              char* val,
+              int val_size,
+              bool fallback);
 
     boost::optional<std::string>
     path_mountpoint(std::string const& path, bool fallback);

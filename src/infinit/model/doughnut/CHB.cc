@@ -125,21 +125,27 @@ namespace infinit
       blocks::RemoveSignature
       CHB::_sign_remove(Model& model) const
       {
-        auto& dht = dynamic_cast<Doughnut&>(model);
         ELLE_TRACE("%s: sign_remove, owner=%x", *this, this->_owner);
         if (this->_owner == Address::null)
           return blocks::RemoveSignature();
+        return CHB::sign_remove(model, this->address(), this->_owner);
+      }
+
+      blocks::RemoveSignature
+      CHB::sign_remove(Model& model, Address chb, Address owner)
+      {
+        auto& dht = dynamic_cast<Doughnut&>(model);
         blocks::RemoveSignature res;
         // we need to figure out which key to use, the one giving us access to the owner
-        elle::Buffer to_sign(this->address().value());
+        elle::Buffer to_sign(chb.value());
         elle::Buffer signature;
         auto& keys = dht.keys();
-        auto block = dht.fetch(this->_owner);
+        auto block = dht.fetch(owner);
         // default behavior if signature not set below is to use doughnut key
         if (!block)
         {
           ELLE_WARN("CHB owner %x not found, cannot sign remove request",
-            this->_owner);
+            owner);
         }
         else
         {
@@ -147,7 +153,7 @@ namespace infinit
           if (!acb)
           {
             ELLE_WARN("CHB owner %x is not an ACB, cannot sign remove request",
-              this->_owner);
+              owner);
           }
           else
           {

@@ -8,7 +8,7 @@
 #include <elle/cryptography/SecretKey.hh>
 
 #include <elle/reactor/Barrier.hh>
-#include <elle/reactor/Generator.hh>
+#include <elle/reactor/MultiLockBarrier.hh>
 #include <elle/reactor/network/rdv-socket.hh>
 #include <elle/reactor/network/utp-server.hh>
 
@@ -204,11 +204,11 @@ namespace infinit
       | Overlay |
       `--------*/
       protected:
-        elle::reactor::Generator<Overlay::WeakMember>
+        MemberGenerator
         _allocate(infinit::model::Address address, int n) const override;
-        elle::reactor::Generator<Overlay::WeakMember>
+        MemberGenerator
         _lookup(infinit::model::Address address, int n, bool f) const override;
-        elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+        LocationGenerator
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
         WeakMember
         _lookup_node(Address address) const override;
@@ -280,11 +280,11 @@ namespace infinit
         void
         addLocalResults(
           packet::GetFileRequest* p,
-          elle::reactor::yielder<NodeLocation>::type const* yield);
+          elle::reactor::yielder<NodeLocation> const* yield);
         void
         addLocalResults(
           packet::MultiGetFileRequest* p,
-          elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+          elle::reactor::yielder<std::pair<Address, NodeLocation>> const* yield,
           std::vector<std::set<Address>>& result_sets);
         void
         kelipsMGet(
@@ -366,7 +366,8 @@ namespace infinit
         int _dropped_puts;
         int _dropped_gets;
         int _failed_puts;
-        std::unordered_map<Address, int> _under_duplicated;
+        using Index = std::unordered_map<Address, int>;
+        Index _under_duplicated;
         std::unordered_map<std::string, elle::Buffer> _challenges;
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, Overlay::Member>),
@@ -376,6 +377,8 @@ namespace infinit
           std::pair<elle::reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
+        elle::reactor::MultiLockBarrier _in_use;
+        bool _terminating;
       };
     }
   }

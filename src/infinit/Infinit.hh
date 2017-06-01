@@ -4,6 +4,8 @@
 
 #include <boost/signals2.hpp>
 
+#include <elle/flat-set.hh>
+
 #include <infinit/Drive.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
@@ -112,18 +114,32 @@ namespace infinit
     | Storage.  |
     `----------*/
 
-    std::unique_ptr<storage::StorageConfig>
-    storage_get(std::string const& name);
-    std::vector<std::unique_ptr<storage::StorageConfig>>
-    storages_get();
+    using SiloConfigPtr = std::unique_ptr<storage::StorageConfig>;
+    SiloConfigPtr
+    silo_get(std::string const& name);
+
+    struct Pred
+    {
+      bool
+      operator() (SiloConfigPtr const& lhs,
+                  SiloConfigPtr const& rhs) const
+      {
+        return lhs->name < rhs->name;
+      }
+    };
+
+    using Silos = boost::container::flat_set<SiloConfigPtr, Pred>;
+
+    Silos
+    silos_get();
     void
-    storage_save(std::string const& name,
-                 std::unique_ptr<storage::StorageConfig> const& storage);
+    silo_save(std::string const& name,
+              SiloConfigPtr const& silo);
     bool
-    storage_delete(std::unique_ptr<storage::StorageConfig> const& storage,
-                   bool clear = false);
+    silo_delete(SiloConfigPtr const& silo,
+                bool clear = false);
     std::unordered_map<std::string, std::vector<std::string>>
-    storage_networks(std::string const& storage_name);
+    silo_networks(std::string const& silo_name);
 
 
     /*---------.
@@ -218,9 +234,9 @@ namespace infinit
     boost::filesystem::path
     _passport_path(std::string const& network, std::string const& user) const;
     boost::filesystem::path
-    _storages_path() const;
+    _silos_path() const;
     boost::filesystem::path
-    _storage_path(std::string const& name) const;
+    _silo_path(std::string const& name) const;
     boost::filesystem::path
     _users_path() const;
     boost::filesystem::path
@@ -393,6 +409,12 @@ namespace infinit
     /// - deleted
     ELLE_ATTRIBUTE_RX(ReportAction, report_remote_action);
   };
+
+  namespace deprecated
+  {
+      boost::filesystem::path
+      storages_path();
+  }
 }
 
 #include <infinit/Infinit.hxx>

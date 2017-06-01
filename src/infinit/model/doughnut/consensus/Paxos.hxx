@@ -30,8 +30,7 @@ namespace infinit
                               [this] () { this->_rebalance(); })
         {}
 
-        static constexpr
-        std::chrono::system_clock::duration default_node_timeout =
+        static constexpr auto default_node_timeout =
           std::chrono::duration_cast<std::chrono::system_clock::duration>(
             std::chrono::minutes(10));
 

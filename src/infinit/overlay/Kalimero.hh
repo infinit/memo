@@ -29,9 +29,9 @@ namespace infinit
     | Lookup |
     `-------*/
     protected:
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       _allocate(model::Address address, int n) const override;
-      elle::reactor::Generator<WeakMember>
+      MemberGenerator
       _lookup(model::Address address, int n, bool fast) const override;
       Overlay::WeakMember
       _lookup_node(model::Address address) const override;

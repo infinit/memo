@@ -10,10 +10,4 @@ namespace infinit
     , password_hash(password_hash)
     , password(password)
   {}
-
-  // LoginCredentials::LoginCredentials(elle::serialization::SerializerIn& s)
-  //   : name(s.deserialize<std::string>("name"))
-  //   , password_hash(s.deserialize<std::string>("password_hash"))
-  //   , password(s.deserialize<std::string>("password"))
-  // {}
 }

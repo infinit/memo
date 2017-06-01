@@ -66,6 +66,15 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
+  /// Please Valgrind and don't use buffers from random memory.
+  template <int Size>
+  void
+  initialize(char (&buf)[Size])
+  {
+    for (int i = 0; i < Size; ++i)
+      buf[i] = i % 391;
+  }
+
   template<typename T>
   std::string
   serialize(T & t)
@@ -243,7 +252,7 @@ ELLE_TEST_SCHEDULED(write_unlink)
     BOOST_CHECK_NO_THROW(root_2->child("file")->stat(&st));
   ELLE_LOG("read on client 1")
   {
-    elle::Buffer b(5);
+    auto b = elle::Buffer(5);
     BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
     BOOST_CHECK_EQUAL(b, "data1");
   }
@@ -251,7 +260,7 @@ ELLE_TEST_SCHEDULED(write_unlink)
     root_2->child("file")->unlink();
   ELLE_LOG("read on client 1")
   {
-    elle::Buffer b(5);
+    auto b = elle::Buffer(5);
     BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
     BOOST_CHECK_EQUAL(b, "data1");
   }
@@ -261,7 +270,7 @@ ELLE_TEST_SCHEDULED(write_unlink)
     handle->fsync(true);
   ELLE_LOG("read on client 1")
   {
-    elle::Buffer b(5);
+    auto b = elle::Buffer(5);
     BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
     BOOST_CHECK_EQUAL(b, "data2");
   }
@@ -630,6 +639,7 @@ ELLE_TEST_SCHEDULED(create_excl)
     elle::reactor::filesystem::Error);
 }
 
+#if 0
 ELLE_TEST_SCHEDULED(multiple_writers)
 {
   infinit::storage::Memory::Blocks blocks;
@@ -638,10 +648,10 @@ ELLE_TEST_SCHEDULED(multiple_writers)
                with_cache = true,
                storage = std::make_unique<infinit::storage::Memory>(blocks));
   auto client = servers.client(false);
-  char buffer[1024], buffer2[1024];
-  for (int i=0; i<1024; ++i)
-    buffer[i] = i % 391;
+  char buffer[1024];
+  initialize(buffer);
   auto b = elle::WeakBuffer(buffer, 1024);
+  char buffer2[1024];
   auto b2 = elle::WeakBuffer(buffer2, 1024);
   {
     auto h1 = client.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
@@ -725,7 +735,6 @@ ELLE_TEST_SCHEDULED(multiple_writers)
     }
     BOOST_CHECK_LE(blocks.size(), 50);
   }
-
   client.fs->path("/file2")->create(O_RDWR|O_CREAT, 0644);
   auto random_write = [&] {
     for (int i=0; i<100; ++i)
@@ -754,6 +763,7 @@ ELLE_TEST_SCHEDULED(multiple_writers)
     }
   }
 }
+#endif
 
 ELLE_TEST_SCHEDULED(sparse_file)
 {
@@ -1099,6 +1109,7 @@ ELLE_TEST_SCHEDULED(basic)
   {
     auto h = fs->path("/tt")->create(O_RDWR|O_TRUNC|O_CREAT, 0666);
     char buffer[16384];
+    initialize(buffer);
     for (int i=0; i<100; ++i)
       h->write(elle::ConstWeakBuffer(buffer, 16384), 16384, 16384*i);
     h->close();
@@ -1561,7 +1572,7 @@ ELLE_TEST_SCHEDULED(group_description)
     BOOST_CHECK_EQUAL(get_description(owner), description);
     // Unset the description.
     set_description(owner, "");
-    BOOST_CHECK(!contains(group_list(admin), "description"));
+    BOOST_CHECK(!elle::contains(group_list(admin), "description"));
   }
 }
 
@@ -1671,7 +1682,7 @@ read_unlink_test(int64_t size)
   auto handle_2 = file()->open(O_RDWR, 0);
   ELLE_LOG("unlink");
   file()->unlink();
-  elle::Buffer buffer(size);
+  auto buffer = elle::Buffer(size);
   ELLE_LOG("read");
   BOOST_CHECK_EQUAL(handle_1->read(buffer, size, 0), size);
   BOOST_CHECK_EQUAL(buffer, data);
@@ -1695,7 +1706,7 @@ ELLE_TEST_SCHEDULED(block_size)
   auto content = std::string(1024 * kchunks, 'a');
   for (unsigned int i=0; i<content.size(); ++i)
     content[i] = i % 199;
-  auto check_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) -> bool {
+  auto check_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) {
     auto h = p->open(O_RDONLY, 0644);
     char buf[1024];
     for (int i=0; i<kchunks; ++i)
@@ -1719,20 +1730,25 @@ ELLE_TEST_SCHEDULED(block_size)
     }
     return true;
   };
-  auto write_file_h = [&](std::unique_ptr<elle::reactor::filesystem::Handle>& h) -> bool {
+  auto write_file_h = [&](std::unique_ptr<elle::reactor::filesystem::Handle>& h) {
     for (int i=0; i<kchunks; ++i)
     {
-      if (h->write(elle::ConstWeakBuffer(content.data() + i * 1024, 1024), 1024, i * 1024) != 1024)
+      if (h->write(elle::ConstWeakBuffer(content.data() + i * 1024, 1024),
+                   1024, i * 1024)
+          != 1024)
         return false;
     }
     return true;
   };
-  auto write_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) -> bool {
+  auto write_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) {
      auto h = p->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
-     if (!write_file_h(h))
+     if (write_file_h(h))
+     {
+       h->close();
+       return true;
+     }
+     else
        return false;
-     h->close();
-     return true;
   };
   elle::ConstWeakBuffer cc(content.data(), content.size());
   auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
@@ -1809,5 +1825,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(world_perm_mode), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(read_unlink_small), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(read_unlink_large), 0, valgrind(5));
-  suite.add(BOOST_TEST_CASE(block_size), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(block_size), 0, valgrind(10));
 }

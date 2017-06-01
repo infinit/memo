@@ -1,17 +1,24 @@
 #pragma once
 
 #include <infinit/storage/Storage.hh>
+
 namespace infinit
 {
   namespace storage
   {
-    /** Balance blocks on the list of specified backend storage.
-     * @warning: The same list must be passed each time, in the same order.
-    */
-    class Strip: public Storage
+    /// Balance blocks on the list of specified backend storages.
+    /// This is really sharding actually.
+    /// 
+    /// @warning The same list must be passed each time, in the same
+    /// order.
+    class Strip
+      : public Storage
     {
     public:
       Strip(std::vector<std::unique_ptr<Storage>> backend);
+      std::string
+      type() const override { return "strip"; }
+
     protected:
       elle::Buffer
       _get(Key k) const override;
@@ -22,7 +29,8 @@ namespace infinit
       std::vector<Key>
       _list() override;
       ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
-      int _disk_of(Key k) const ;
+      /// The storage holding k.
+      Storage& _storage_of(Key k) const;
     };
 
     struct StripStorageConfig

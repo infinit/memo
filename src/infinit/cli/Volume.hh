@@ -21,6 +21,7 @@ namespace infinit
       : public Object<Volume>
     {
     public:
+      using Self = Volume;
       Volume(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
@@ -38,7 +39,9 @@ namespace infinit
                                     cli::status,
                                     cli::stop,
 #endif
-                                    cli::update));
+                                    cli::update,
+                                    cli::syscall));
+
 
       using Strings = std::vector<std::string>;
       template <typename T>
@@ -48,53 +51,51 @@ namespace infinit
       | Create.  |
       `---------*/
 
-      Mode<Volume,
-           void (decltype(cli::name)::Formal<std::string const&>,
-                 decltype(cli::network)::Formal<std::string const&>,
-                 decltype(cli::description = boost::optional<std::string>()),
-                 decltype(cli::create_root = false),
-                 decltype(cli::push_volume = elle::defaulted(false)),
-                 decltype(cli::output = boost::optional<std::string>()),
-                 decltype(cli::default_permissions = boost::optional<std::string>()),
-                 decltype(cli::register_service = false),
-                 decltype(cli::allow_root_creation = false),
-                 decltype(cli::mountpoint = boost::optional<std::string>()),
-                 decltype(cli::readonly = elle::defaulted(false)),
+      MODE(create,
+           decltype(cli::name)::Formal<std::string const&>,
+           decltype(cli::network)::Formal<std::string const&>,
+           decltype(cli::description = boost::optional<std::string>()),
+           decltype(cli::create_root = false),
+           decltype(cli::push_volume = elle::defaulted(false)),
+           decltype(cli::output = boost::optional<std::string>()),
+           decltype(cli::default_permissions = boost::optional<std::string>()),
+           decltype(cli::register_service = false),
+           decltype(cli::allow_root_creation = false),
+           decltype(cli::mountpoint = boost::optional<std::string>()),
+           decltype(cli::readonly = elle::defaulted(false)),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                 decltype(cli::mount_name = boost::optional<std::string>()),
+           decltype(cli::mount_name = boost::optional<std::string>()),
 #endif
 #if defined INFINIT_MACOSX
-                 decltype(cli::mount_icon = boost::optional<std::string>()),
-                 decltype(cli::finder_sidebar = false),
+           decltype(cli::mount_icon = boost::optional<std::string>()),
+           decltype(cli::finder_sidebar = false),
 #endif
-                 decltype(cli::async = elle::defaulted(false)),
+           decltype(cli::async = elle::defaulted(false)),
 #if ! defined INFINIT_WINDOWS
-                 decltype(cli::daemon = false),
+           decltype(cli::daemon = false),
 #endif
-                 decltype(cli::monitoring = elle::defaulted(true)),
-                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
-                 decltype(cli::cache = elle::defaulted(false)),
-                 decltype(cli::cache_ram_size = boost::optional<int>()),
-                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
-                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
-                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
-                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
-                 decltype(cli::fetch = elle::defaulted(false)),
-                 decltype(cli::peer = elle::defaulted(Strings{})),
-                 decltype(cli::peers_file = boost::optional<std::string>()),
-                 decltype(cli::push_endpoints = elle::defaulted(false)),
-                 decltype(cli::push = elle::defaulted(false)),
-                 decltype(cli::publish = elle::defaulted(false)),
-                 decltype(cli::advertise_host = Strings{}),
-                 decltype(cli::endpoints_file = boost::optional<std::string>()),
-                 decltype(cli::port_file = boost::optional<std::string>()),
-                 decltype(cli::port = boost::optional<int>()),
-                 decltype(cli::listen = boost::optional<std::string>()),
-                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
-                 decltype(cli::input = boost::optional<std::string>()),
-                 decltype(cli::block_size = elle::defaulted<int>(1024 * 1024))),
-           decltype(modes::mode_create)>
-      create;
+           decltype(cli::monitoring = elle::defaulted(true)),
+           decltype(cli::fuse_option = elle::defaulted(Strings{})),
+           decltype(cli::cache = elle::defaulted(false)),
+           decltype(cli::cache_ram_size = boost::optional<int>()),
+           decltype(cli::cache_ram_ttl = boost::optional<int>()),
+           decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+           decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+           decltype(cli::fetch_endpoints = elle::defaulted(false)),
+           decltype(cli::fetch = elle::defaulted(false)),
+           decltype(cli::peer = elle::defaulted(Strings{})),
+           decltype(cli::peers_file = boost::optional<std::string>()),
+           decltype(cli::push_endpoints = elle::defaulted(false)),
+           decltype(cli::push = elle::defaulted(false)),
+           decltype(cli::publish = elle::defaulted(false)),
+           decltype(cli::advertise_host = Strings{}),
+           decltype(cli::endpoints_file = boost::optional<std::string>()),
+           decltype(cli::port_file = boost::optional<std::string>()),
+           decltype(cli::port = boost::optional<int>()),
+           decltype(cli::listen = boost::optional<std::string>()),
+           decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+           decltype(cli::input = boost::optional<std::string>()),
+           decltype(cli::block_size = elle::defaulted<int>(1024 * 1024)));
       void
       mode_create(std::string const& name,
                   std::string const& network,
@@ -255,7 +256,11 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::optional<std::string>())),
+                 decltype(cli::grpc = boost::optional<std::string>())
+#if INFINIT_ENABLE_PROMETHEUS
+                 , decltype(cli::prometheus = boost::optional<std::string>())
+#endif
+                 ),
            decltype(modes::mode_mount)>
       mount;
       void
@@ -300,7 +305,11 @@ namespace infinit
                  Defaulted<int> fetch_endpoints_interval = 300,
                  boost::optional<std::string> input = {},
                  bool disable_UTF_8_conversion = false,
-                 boost::optional<std::string> grpc = boost::none);
+                 boost::optional<std::string> grpc = boost::none
+#if INFINIT_ENABLE_PROMETHEUS
+                 , boost::optional<std::string> prometheus = {}
+#endif
+                 );
 
       /*-------------.
       | Mode: pull.  |
@@ -372,7 +381,11 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::optional<std::string>())),
+                 decltype(cli::grpc = boost::optional<std::string>())
+#if INFINIT_ENABLE_PROMETHEUS
+                 , decltype(cli::prometheus = boost::optional<std::string>())
+#endif
+                 ),
            decltype(modes::mode_run)>
       run;
       void
@@ -417,7 +430,11 @@ namespace infinit
                Defaulted<int> fetch_endpoints_interval = 300,
                boost::optional<std::string> input = {},
                bool disable_UTF_8_conversion = false,
-               boost::optional<std::string> grpc = boost::none);
+               boost::optional<std::string> grpc = {}
+#if INFINIT_ENABLE_PROMETHEUS
+               , boost::optional<std::string> prometheus = {}
+#endif
+               );
 
       /*--------------.
       | Mode: start.  |
@@ -618,6 +635,42 @@ namespace infinit
                   boost::optional<std::string> input = {},
                   boost::optional<std::string> user = {},
                   boost::optional<int> block_size = {});
+
+            using Objects = decltype(elle::meta::list(cli::syscall));
+
+      // Syscall.
+      class Syscall
+        : public Object<Syscall, Volume>
+      {
+      public:
+        using Super = Object<Syscall, Volume>;
+        using Modes = decltype(elle::meta::list(cli::getxattr,
+                                                cli::setxattr));
+        Syscall(Infinit& infinit);
+        // getxattr.
+        Mode<Syscall,
+             void (decltype(cli::path)::Formal<std::string const&>,
+                   decltype(cli::name)::Formal<std::string const&>),
+             decltype(modes::mode_get_xattr) >
+        getxattr;
+        void
+        mode_get_xattr(std::string const& path,
+                       std::string const& name);
+
+        // setxattr.
+        Mode<Syscall,
+             void (decltype(cli::path)::Formal<std::string const&>,
+                   decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::value)::Formal<std::string const&>),
+             decltype(modes::mode_set_xattr)>
+        setxattr;
+        void
+        mode_set_xattr(std::string const& path,
+                       std::string const& attribute,
+                       std::string const& value);
+
+        std::string const description = "Syscalls";
+      } syscall;
     };
   }
 }

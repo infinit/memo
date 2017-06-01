@@ -616,12 +616,12 @@ namespace infinit
       {
         static elle::Bench bench("bench.acb._validate", 10000_sec);
         elle::Bench::BenchScope scope(bench);
+        bool disable_signature = !this->doughnut()->encrypt_options().validate_signatures;
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate(model, writing)); else
             return res;
         if (this->_world_writable)
           return blocks::ValidationResult::success();
-        ELLE_ASSERT(this->data_signature() != elle::Buffer());
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
         bool is_group_entry = false;
@@ -655,41 +655,44 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("check author signature")
+        if (!disable_signature)
         {
-          if (is_group_entry)
-          { // fetch latest key for group
-            try
-            {
-              Group g(*this->doughnut(), entry->key);
-              auto pubkeys = g.group_public_keys();
-              if (group_index >= signed(this->_group_version.size()))
-                return blocks::ValidationResult::failure("group_version array too short");
-              auto key_index = this->_group_version[group_index];
-              if (key_index >= signed(pubkeys.size()))
-                return blocks::ValidationResult::failure("group key out of range");
-              auto& key = pubkeys[key_index];
-              ELLE_DEBUG("validating with group key %s: %s", key_index, key);
-              if (!key.verify(this->data_signature(), *this->_data_sign()))
+          ELLE_DEBUG("check author signature")
+          {
+            if (is_group_entry)
+            { // fetch latest key for group
+              try
               {
-                ELLE_DEBUG("%s: group author signature invalid", *this);
-                return blocks::ValidationResult::failure("invalid group key signature");
+                Group g(*this->doughnut(), entry->key);
+                auto pubkeys = g.group_public_keys();
+                if (group_index >= signed(this->_group_version.size()))
+                  return blocks::ValidationResult::failure("group_version array too short");
+                auto key_index = this->_group_version[group_index];
+                if (key_index >= signed(pubkeys.size()))
+                  return blocks::ValidationResult::failure("group key out of range");
+                auto& key = pubkeys[key_index];
+                ELLE_DEBUG("validating with group key %s: %s", key_index, key);
+                if (!key.verify(this->data_signature(), *this->_data_sign()))
+                {
+                  ELLE_DEBUG("%s: group author signature invalid", *this);
+                  return blocks::ValidationResult::failure("Invalid group key signature");
+                }
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("Error processing group entry: %s", e.what());
+                return blocks::ValidationResult::failure("Failed to access group");
               }
             }
-            catch (elle::Error const& e)
+            else
             {
-              ELLE_TRACE("Error processing group entry: %s", e.what());
-              return blocks::ValidationResult::failure("Failed to access group");
-            }
-          }
-          else
-          {
-            auto& key = entry ? entry->key : *this->owner_key();
-            if (!key.verify(this->data_signature(), *this->_data_sign()))
-            {
-              ELLE_DEBUG("%s: author signature invalid", *this);
-              return blocks::ValidationResult::failure
-                ("author signature invalid");
+              auto& key = entry ? entry->key : *this->owner_key();
+              if (!key.verify(this->data_signature(), *this->_data_sign()))
+              {
+                ELLE_DEBUG("%s: author signature invalid", *this);
+                return blocks::ValidationResult::failure
+                  ("author signature invalid");
+              }
             }
           }
         }
@@ -795,7 +798,7 @@ namespace infinit
           this->Super::_seal_version.reset();
         }
         std::shared_ptr<elle::cryptography::rsa::PrivateKey> sign_key;
-
+        bool disable_signature = !this->doughnut()->encrypt_options().validate_signatures;
         // enforce admin keys
         auto const& aks = this->doughnut()->admin_keys();
         for (auto const& k: aks.r)
@@ -979,16 +982,19 @@ namespace infinit
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("sign data");
-          this->_data_signature = std::make_shared<typename Super::SignFuture>(
-              sign_key->sign_async(
-                *this->_data_sign(), this->doughnut()->version()));
-          ELLE_DUMP("signature: %s",
-                    elle::lazy([&] { return this->_data_signature->value(); }));
+          if (!disable_signature)
+          {
+            this->_data_signature = std::make_shared<typename Super::SignFuture>(
+                sign_key->sign_async(
+                  *this->_data_sign(), this->doughnut()->version()));
+            ELLE_DUMP("signature: %s",
+                      elle::lazy([&] { return this->_data_signature->value(); }));
+          }
           this->_sign_key = sign_key;
 
         }
         // restart signature process in case we were restored from storage
-        if (!this->_data_signature->running()
+        if (!disable_signature && !this->_data_signature->running()
           && this->_data_signature->value() == elle::Buffer())
         {
           ELLE_ASSERT(_sign_key);
@@ -996,7 +1002,7 @@ namespace infinit
             _sign_key->sign_async(
               *this->_data_sign(), this->doughnut()->version()));
         }
-        if (!this->_signature->running()
+        if (!disable_signature && !this->_signature->running()
           && this->_signature->value() == elle::Buffer())
           this->_seal_okb({}, false);
       }

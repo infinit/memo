@@ -8,6 +8,19 @@
 
 ELLE_LOG_COMPONENT("infinit.storage.Memory");
 
+namespace
+{
+  // As an int, since that's the type of Storage::_usage.
+  template <typename Map>
+  int mapped_size(Map const& map)
+  {
+    int res = 0;
+    for (auto const& b: map)
+      res += b.second.size();
+    return res;
+  }
+}
+
 namespace infinit
 {
   namespace storage
@@ -18,28 +31,60 @@ namespace infinit
 
     Memory::Memory(Blocks& blocks)
       : _blocks(&blocks, [] (Blocks*) {})
-    {}
+    {
+      ELLE_ASSERT_EQ(this->_usage, 0);
+      ELLE_ASSERT_EQ(this->_block_count, 0);
+      this->_usage = mapped_size(*this->_blocks);
+      this->_block_count = int(this->_blocks->size());
+    }
 
-    elle::Buffer
-    Memory::_get(Key key) const
+    Memory::~Memory()
+    {
+      ELLE_LOG(__PRETTY_FUNCTION__);
+      _check_invariants();
+    }
+
+    auto
+    Memory::_check_invariants() const
+      -> void
+    {
+      ELLE_ASSERT_EQ(this->_block_count, int(this->_blocks->size()));
+      ELLE_ASSERT_EQ(this->_usage, mapped_size(*this->_blocks));
+    }
+
+    auto
+    Memory::_find(Key key)
+      -> typename Blocks::iterator
     {
       auto it = this->_blocks->find(key);
       if (it == this->_blocks->end())
         throw MissingKey(key);
       else
-      {
-        auto& buffer = it->second;
-        return elle::Buffer(buffer.contents(), buffer.size());
-      }
+        return it;
+    }
+
+    auto
+    Memory::_find(Key key) const
+      -> typename Blocks::const_iterator
+    {
+      auto it = this->_blocks->find(key);
+      if (it == this->_blocks->end())
+        throw MissingKey(key);
+      else
+        return it;
+    }
+
+    elle::Buffer
+    Memory::_get(Key key) const
+    {
+      return _find(key)->second;
     }
 
     std::size_t
     Memory::size() const
     {
-      std::size_t res = 0;
-      for (auto const& block: *this->_blocks)
-        res += block.second.size();
-      return res;
+      _check_invariants();
+      return this->_usage;
     }
 
     int
@@ -47,45 +92,44 @@ namespace infinit
     {
       if (insert)
       {
-        auto insertion =
-          this->_blocks->insert(std::make_pair(key, elle::Buffer()));
-        if (!insertion.second && !update)
+        auto p = this->_blocks->emplace(key, elle::Buffer());
+        if (!p.second && !update)
           throw Collision(key);
-        insertion.first->second = elle::Buffer(value.contents(), value.size());
-        if (insertion.second)
-          ELLE_DEBUG("%s: block inserted", *this);
-        else if (!insertion.second)
-          ELLE_DEBUG("%s: block updated: %s", *this,
-                     this->get(key));
+        auto prev_size = p.second ? 0 : p.first->second.size();
+        p.first->second = elle::Buffer(value.contents(), value.size());
+        if (p.second)
+        {
+          ELLE_DEBUG("%s: block inserted", this);
+          this->_block_count += 1;
+        }
+        else
+          ELLE_DEBUG("%s: block updated: %s", this, p.first->second);
+        return value.size() - prev_size;
       }
       else
       {
-        auto i = this->_blocks->find(key);
-        if (i == this->_blocks->end())
-          throw MissingKey(key);
-        else
-        {
-          ELLE_DEBUG("%s: block updated", *this);
-          i->second = elle::Buffer(value.contents(), value.size());
-        }
+        auto it = _find(key);
+        auto prev_size = it->second.size();
+        it->second = elle::Buffer(value.contents(), value.size());
+        ELLE_DEBUG("%s: block updated: %s", this, it->second);
+        return value.size() - prev_size;
       }
-      // FIXME: impl.
-      return 0;
     }
 
     int
     Memory::_erase(Key key)
     {
-      if (this->_blocks->erase(key) == 0)
-        throw MissingKey(key);
-      else
-        // FIXME: impl.
-        return 0;
+      auto it = _find(key);
+      auto prev_size = it->second.size();
+      this->_blocks->erase(it);
+      this->_block_count -= 1;
+      return - prev_size;
     }
 
     std::vector<Key>
     Memory::_list()
     {
+      _check_invariants();
       return elle::make_vector(*this->_blocks,
                                [](auto const& b)
                                {

@@ -1,26 +1,32 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <iostream>
 #include <fstream>
+
+#include <boost/filesystem.hpp>
+
 #include <elle/system/Process.hh>
 #include <infinit/storage/Adb.hh>
 
-static const char* tmpIn = "/tmp/adb_file_in";
-static const char* tmpOut = "/tmp/adb_file_out";
+namespace bfs = boost::filesystem;
+
+namespace
+{
+  // FIXME: not even a PID!  Does not respect $TMPDIR, etc.
+  auto const tmpIn = bfs::path("/tmp/adb_file_in");
+  auto const tmpOut = bfs::path("/tmp/adb_file_out");
+}
 
 namespace infinit
 {
   namespace storage
   {
     Adb::Adb(std::string const& root)
-    :_root(root)
+      :_root(root)
     {}
 
     namespace
     {
-      std::string remote(std::string const& root,
-                         Key const& key)
+      std::string
+      remote(std::string const& root, Key const& key)
       {
         return elle::sprintf("%s/%x", root, key);
       }
@@ -28,51 +34,63 @@ namespace infinit
       void
       system(std::initializer_list<std::string> args)
       {
-        elle::system::Process p(args);
+        auto&& p = elle::system::Process(args);
         p.wait();
+      }
+
+      int
+      adb_get_size(std::string const& root, Key const& key)
+      {
+        // FIXME: this is obviously inefficient, parsing the result of
+        // `shell ls` would be better.
+        system({"adb", "pull", remote(root, key), tmpIn.string()});
+        return file_size(tmpIn);
       }
     }
 
     elle::Buffer Adb::_get(Key key) const
     {
-      system({"adb", "pull", remote(_root, key), tmpIn});
-      struct stat st;
-      ::stat(tmpIn, &st);
-      std::ifstream ifs(tmpIn, std::ios::binary);
-      elle::Buffer res;
-      res.size(st.st_size);
-      ifs.read((char*)res.mutable_contents(), st.st_size);
-      unlink(tmpIn);
+      system({"adb", "pull", remote(_root, key), tmpIn.string()});
+      auto const size = file_size(tmpIn);
+      auto&& ifs = bfs::ifstream(tmpIn, std::ios::binary);
+      auto res = elle::Buffer{};
+      res.size(size);
+      ifs.read((char*)res.mutable_contents(), size);
+      remove(tmpIn);
       return res;
     }
 
     int
     Adb::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
-      std::ofstream ofs(tmpOut);
+      // FIXME: check collision, etc.
+      auto const size = adb_get_size(_root, key);
+      auto&& ofs = bfs::ofstream(tmpOut);
       ofs.write((char*)value.contents(), value.size());
       ofs.close();
-      system({"adb", "push", tmpOut, remote(_root, key)});
-      unlink(tmpOut);
-      return 0;
+      system({"adb", "push", tmpOut.string(), remote(_root, key)});
+      remove(tmpOut);
+      return value.size() - size;
     }
 
     int
     Adb::_erase(Key key)
     {
+      auto const size = adb_get_size(_root, key);
       system({"adb", "shell", "rm", remote(_root, key)});
-      return 0;
+      return - size;
     }
 
-    std::vector<Key> Adb::_list()
+    std::vector<Key>
+    Adb::_list()
     {
       system({
         "sh",
         "-c",
-        "adb shell ls " + _root + " > " + tmpOut
+        "adb shell ls " + _root + " > " + tmpOut.string()
       });
-      std::ifstream ifs(tmpOut);
-      std::vector<Key> res;
+      auto&& ifs = bfs::ifstream(tmpOut);
+      auto res = std::vector<Key>{};
       while (true)
       {
         std::string s;

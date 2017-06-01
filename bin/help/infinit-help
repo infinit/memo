@@ -1,0 +1,80 @@
+#! /usr/bin/env python3
+
+import argparse
+import re
+import subprocess
+
+objects = [
+    'acl',
+    'block',
+    'credentials',
+    'daemon',
+    'device',
+    'doctor',
+    'drive',
+    'journal',
+    'ldap',
+    'network',
+    'passport',
+    'silo',
+    'user',
+    'volume',
+    ]
+
+def getargs():
+    p = argparse.ArgumentParser()
+    p.add_argument('infinit',
+                   type=str, default='infinit',
+                    help='Infinit binary.')
+    p.add_argument('--base', default='',
+                   help='base name for output files')
+    p.add_argument('--legacy', action='store_true',
+                   help='whether running the legacy interface')
+    return p.parse_args()
+
+args = getargs()
+
+
+def mode_option(mode):
+    return '--{}'.format(mode) if args.legacy else mode
+
+
+def get_help(obj, mode=None):
+    m = mode_option(mode) if mode else ''
+    cmd = '{}-{} {} --help'.format(args.infinit, obj, m).split()
+    return subprocess.check_output(cmd).decode('utf-8')
+
+
+def get_modes(obj):
+    try:
+        modes = re.findall(r'^Modes:\n(.*?)\n\n',
+                           get_help(obj), re.DOTALL | re.MULTILINE)[0]
+        # Exactly two leading spaces, to avoid catching wrapped help messages.
+        return re.findall(r'^  {} '.format(mode_option(r'(\S+)')),
+                          modes, re.MULTILINE)
+    except:
+        raise RuntimeError('cannot read modes for {}'.format(obj))
+
+
+for obj in objects:
+    if obj == 'silo':
+        o = 'storage'
+    else:
+        o = obj
+    fn = '{}{}'.format(args.base, obj)
+    with open(fn, 'w') as out:
+        print(get_help(o), file=out)
+    for m in get_modes(o):
+        fn = '{}{}-{}'.format(args.base, obj, m)
+        with open(fn, 'w') as out:
+            print("{}: {}: {}".format(o, m, get_help(o, m)),
+                  file=out)
+
+
+# for i in bin/help/legacy/*
+#     do
+#       m=$(basename $i)
+#       gpr -w160 -S'|' -t -m =(fold -s $i) =(fold -s bin/help/revamp/$m)  > bin/help/diffs/$m
+#     done
+#
+#     where gpr is GNU pr.

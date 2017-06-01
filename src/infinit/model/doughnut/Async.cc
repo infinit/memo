@@ -68,8 +68,7 @@ namespace infinit
         Async::Async(std::unique_ptr<Consensus> backend,
                      bfs::path journal_dir,
                      int max_size)
-          : Consensus(backend->doughnut())
-          , _backend(std::move(backend))
+          : StackedConsensus(std::move(backend))
           , _operations()
           , _queue()
           , _next_index(1)
@@ -183,11 +182,10 @@ namespace infinit
         Async::make_local(
           boost::optional<int> port,
           boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<storage::Storage> storage,
-          Protocol p)
+          std::unique_ptr<storage::Storage> storage)
         {
           return this->_backend->make_local(
-            port, std::move(listen_address), std::move(storage), p);
+            port, std::move(listen_address), std::move(storage));
         }
 
         void

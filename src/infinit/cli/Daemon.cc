@@ -42,10 +42,12 @@ namespace infinit
       , disable_storage(*this,
                         "Disable storage on associated network",
                         cli::name)
+      // XXX[Storage]: Should we keep storage ?
       , enable_storage(*this,
                        "Enable storage on associated network",
                        cli::name,
                        cli::hold)
+      // XXX[Storage]: Should we keep storage ?
       , fetch(*this,
               "Fetch volume and its dependencies from {hub}",
               cli::name)
@@ -378,22 +380,25 @@ namespace infinit
               restart_volume(manager, volume);
               response.serialize("volume", volume);
             }
+            // XXX[Storage]: disable-silo?
             else if (op == "disable-storage")
             {
               auto volume = command.deserialize<std::string>("volume");
               ELLE_LOG("Disabling storage on %s", volume);
               auto opts = elle::json::Object {
-                {"no-storage", std::string{}},
+                {"no-silo", std::string{}},
               };
               manager.create_volume(volume, opts);
               restart_volume(manager, volume);
             }
+            // XXX[Storage]: enable-silo?
             else if (op == "enable-storage")
             {
               auto volume = command.deserialize<std::string>("volume");
               ELLE_LOG("Enabling storage on %s", volume);
+              // XXX[Storage]: silo / storage?
               auto opts = elle::json::Object {
-                {"storage", std::string{}},
+                {"silo", std::string{}},
               };
               manager.create_volume(volume, opts);
               restart_volume(manager, volume, true);
@@ -401,7 +406,7 @@ namespace infinit
                 on_end = [volume, &manager]() {
                   ELLE_LOG("Disabling storage on %s", volume);
                   auto opts = elle::json::Object {
-                    {"no-storage", std::string{}}
+                    {"no-silo", std::string{}}
                   };
                   manager.create_volume(volume, opts);
                   restart_volume(manager, volume);
@@ -669,7 +674,7 @@ namespace infinit
           });
         _server->register_route("/VolumeDriver.Remove", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
-            elle::err("use infinit-volume --delete to delete volumes");
+            elle::err("use infinit volume delete to delete volumes");
             // auto lock = this->_user.enter(this->_mutex);
             // // Reverse the Create process.
             // auto stream = elle::IOStream(data.istreambuf());
@@ -1119,26 +1124,26 @@ namespace infinit
           elle::err("Failed to acquire passport.");
         ELLE_TRACE("Passport found for user %s", user->name);
 
-        auto storage_config = [&] () -> std::unique_ptr<infinit::storage::StorageConfig> {
-          auto storagedesc = optional(options, "storage");
-          if (storagedesc && storagedesc->empty())
+        auto silo_config = [&] () -> std::unique_ptr<infinit::storage::StorageConfig> {
+          auto silodesc = optional(options, "silo");
+          if (silodesc && silodesc->empty())
           {
-            auto storagename = boost::replace_all_copy(name + "_storage", "/", "_");
-            ELLE_LOG("Creating local storage %s", storagename);
-            auto path = infinit::xdg_data_home() / "blocks" / storagename;
+            auto siloname = boost::replace_all_copy(name + "_silo", "/", "_");
+            ELLE_LOG("Creating local silo %s", siloname);
+            auto path = infinit::xdg_data_home() / "blocks" / siloname;
             return
               std::make_unique<infinit::storage::FilesystemStorageConfig>(
-                storagename, path.string(), boost::none, boost::none);
+                siloname, path.string(), boost::none, boost::none);
           }
-          else if (storagedesc)
+          else if (silodesc)
           {
             try
             {
-              return ifnt.storage_get(*storagedesc);
+              return ifnt.silo_get(*silodesc);
             }
             catch (infinit::MissingLocalResource const&)
             {
-              elle::err("storage specification for new storage not implemented");
+              elle::err("silo specification for new silo not implemented");
             }
           }
           else
@@ -1151,7 +1156,7 @@ namespace infinit
             infinit::model::Address::random(0), // FIXME
             std::move(desc.consensus),
             std::move(desc.overlay),
-            std::move(storage_config),
+            std::move(silo_config),
             user->keypair(),
             std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
             std::move(*passport),
@@ -1159,7 +1164,9 @@ namespace infinit
             boost::optional<int>(),
             desc.version,
             desc.admin_keys,
-            std::vector<infinit::model::Endpoints>()),
+            std::vector<infinit::model::Endpoints>(),
+            desc.tcp_heartbeat,
+            std::move(desc.encrypt_options)),
           boost::none);
         ifnt.network_save(*user, network, true);
         ifnt.network_save(std::move(network), true);

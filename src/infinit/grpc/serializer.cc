@@ -1,60 +1,56 @@
 #include <infinit/grpc/serializer.hh>
 
-#include <elle/serialization/json/MissingKey.hh>
+#include <elle/serialization/json/Error.hh> // serialization::MissingKey.
 #include <grpc++/grpc++.h>
 #include <google/protobuf/message.h>
 
 ELLE_LOG_COMPONENT("infinit.grpc.serialization");
+
+namespace
+{
+  std::string
+  uppercase_to_underscore(std::string const& src)
+  {
+    std::string res;
+    for (unsigned int i=0; i<src.size(); ++i)
+    {
+      auto c = src[i];
+      if (c == '.')
+        continue;
+      if (std::tolower(c) != c && i != 0)
+        res += "_";
+      res += std::tolower(c);
+    }
+    return res;
+  }
+
+  std::string
+  filter_field_name(std::string const& name)
+  {
+    std::string res;
+    for (auto c: name)
+    {
+      if (c == '.')
+        continue;
+      res += c;
+    }
+    return res;
+  }
+}
+
 namespace infinit
 {
   namespace grpc
   {
-
-    static
-    std::string
-    uppercase_to_underscore(std::string const& src)
-    {
-      std::string res;
-      for (unsigned int i=0; i<src.size(); ++i)
-      {
-        auto c = src[i];
-        if (c == '.')
-          continue;
-        if (std::tolower(c) != c && i != 0)
-          res += "_";
-        res += std::tolower(c);
-      }
-      return res;
-    }
-
-    static
-    std::string
-    filter_field_name(std::string const& name)
-    {
-      std::string res;
-      for (auto c: name)
-      {
-        if (c == '.')
-          continue;
-        res += c;
-      }
-      return res;
-    }
-
-    static
     std::string
     cxx_to_message_name(std::string name)
     {
-      /* Map a C++ type name to a valid message name.
-      * We take the first type seen without the namespace, with
-      * special handling of smart pointers.
-      */
       auto p = name.find_first_of('<');
       if (p != name.npos)
       {
         if (name.find("unique_ptr") != name.npos
           || name.find("shared_ptr") != name.npos)
-          name = name.substr(p+1);
+        name = name.substr(p+1);
         else
           name = name.substr(0, p);
       }

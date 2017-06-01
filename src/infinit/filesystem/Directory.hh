@@ -1,23 +1,25 @@
 #pragma once
 
 #include <elle/reactor/filesystem.hh>
+#include <elle/unordered_map.hh>
+
+#include <infinit/filesystem/FileHeader.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
-#include <infinit/filesystem/FileData.hh>
-#include <elle/unordered_map.hh>
 
 namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
     namespace rfs = elle::reactor::filesystem;
+
     using DirectoryPtr = std::shared_ptr<Directory>;
     using ACLBlock = infinit::model::blocks::ACLBlock;
 
     constexpr int DIRECTORY_MASK = 0040000;
     constexpr int SYMLINK_MASK = 0120000;
-    static const boost::posix_time::time_duration directory_cache_time
-      = boost::posix_time::seconds(2);
+    static auto const directory_cache_time = boost::posix_time::seconds(2);
 
     class Directory
       : public rfs::Path
@@ -35,10 +37,10 @@ namespace infinit
       void unlink() override { THROW_ISDIR(); }
       void mkdir(mode_t mode) override { THROW_EXIST(); }
       void rmdir() override;
-      void rename(boost::filesystem::path const& where) override;
-      boost::filesystem::path readlink() override  { THROW_ISDIR(); }
-      void symlink(boost::filesystem::path const& where) override { THROW_EXIST(); }
-      void link(boost::filesystem::path const& where) override { THROW_EXIST(); }
+      void rename(bfs::path const& where) override;
+      bfs::path readlink() override  { THROW_ISDIR(); }
+      void symlink(bfs::path const& where) override { THROW_EXIST(); }
+      void link(bfs::path const& where) override { THROW_EXIST(); }
       void chmod(mode_t mode) override;
       void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override;
@@ -78,8 +80,8 @@ namespace infinit
       void _commit(WriteTarget target) override;
       model::blocks::ACLBlock* _header_block(bool) override;
       FileHeader& _header() override;
-      void move_recurse(boost::filesystem::path const& current,
-          boost::filesystem::path const& where);
+      void move_recurse(bfs::path const& current,
+          bfs::path const& where);
       friend class Unknown;
       friend class File;
       friend class Symlink;
@@ -93,8 +95,8 @@ namespace infinit
       ELLE_ATTRIBUTE(std::unique_ptr<ACLBlock>, block);
     };
 
-    class DirectoryConflictResolver:
-      public model::ConflictResolver
+    class DirectoryConflictResolver
+      : public model::ConflictResolver
     {
     public:
       DirectoryConflictResolver(elle::serialization::SerializerIn& s,
@@ -126,7 +128,7 @@ namespace infinit
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
-                               boost::filesystem::path p,
+                               bfs::path p,
                                FileSystem& owner,
                                Operation op,
                                std::weak_ptr<Directory> wd,

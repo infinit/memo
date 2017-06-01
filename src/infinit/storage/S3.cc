@@ -5,7 +5,7 @@
 #include <elle/log.hh>
 #include <elle/bench.hh>
 #include <elle/serialization/json/SerializerIn.hh>
-#include <elle/serialization/json/MissingKey.hh>
+#include <elle/serialization/json/Error.hh> // serialization::MissingKey.
 #include <elle/service/aws/S3.hh>
 
 #include <infinit/model/Address.hh>

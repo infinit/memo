@@ -45,6 +45,66 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
 namespace
 {
+#if INFINIT_ENABLE_PROMETHEUS
+  /// A gauge to track the number of members of a DHT.
+  ///
+  /// May return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_member_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    /// The family of counters used to count the number of
+    /// connected members for this DHT.
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_overlay_peers",
+          "How many overlay peers this overlay member is connected to");
+    return infinit::prometheus::instance()
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});
+  }
+
+  /// A gauge to track the number of blocks in a silo.
+  ///
+  /// @return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_storage_blocks_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_storage_blocks",
+          "How many blocks this storage uses");
+    if (dht.local())
+      return infinit::prometheus::instance()
+        .make(family,
+            {
+              {"id", elle::sprintf("%f", dht.id())},
+              {"type", dht.local()->storage()->type()},
+            });
+    else
+      return nullptr;
+  }
+
+  /// A gauge to track the number of bytes in a silo.
+  ///
+  /// @return nullptr if set up failed.
+  infinit::prometheus::GaugePtr
+  make_storage_bytes_gauge(infinit::model::doughnut::Doughnut const& dht)
+  {
+    static auto* family
+      = infinit::prometheus::instance().make_gauge_family(
+          "infinit_storage_bytes",
+          "How many bytes this storage uses");
+    if (dht.local())
+      return infinit::prometheus::instance()
+        .make(family,
+            {
+              {"id", elle::sprintf("%f", dht.id())},
+              {"type", dht.local()->storage()->type()},
+            });
+    else
+      return nullptr;
+  }
+#endif
+
   std::chrono::milliseconds
   _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
@@ -146,6 +206,23 @@ namespace infinit
           }
       }
 
+      static
+      Protocol
+      deprecate_utp(Protocol const& p)
+      {
+        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        if (!utp_guard && p == Protocol::all)
+        {
+          ELLE_WARN(
+            "Not using UTP although network configuration selects 'all' "
+            "protocols. UTP has been temporarily deprecated. Force with "
+            "INFINIT_UTP=1.");
+          return Protocol::tcp;
+        }
+        else
+          return p;
+      }
+
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
         , _connect_timeout(
@@ -155,30 +232,52 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
+        , _protocol(deprecate_utp(init.protocol))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
         , _admin_keys(std::move(init.admin_keys))
+        , _encrypt_options(std::move(init.encrypt_options))
         , _consensus(init.consensus_builder(*this))
         , _local(
           init.storage
           ? this->_consensus->make_local(
             init.port,
             init.listen_address,
-            std::move(init.storage),
-            init.protocol)
+            std::move(init.storage))
           : nullptr)
         , _dock(*this,
                 init.protocol,
                 init.port,
                 init.listen_address,
-                std::move(init.rdv_host))
+                std::move(init.rdv_host),
+                init.tcp_heartbeat)
+#if INFINIT_ENABLE_PROMETHEUS
+          // To initialize before _overlay, which uses it.
+        , _member_gauge{make_member_gauge(*this)}
+          // To initialize after _local, it uses it.
+        , _blocks_gauge{make_storage_blocks_gauge(*this)}
+        , _bytes_gauge{make_storage_bytes_gauge(*this)}
+#endif
         , _overlay(init.overlay_builder(*this, this->_local))
         , _pool([this] { return std::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
         if (this->_local)
+        {
           this->_local->initialize();
+#if INFINIT_ENABLE_PROMETHEUS
+          if (auto* storage = this->_local->storage().get())
+            if (this->_blocks_gauge.get())
+            {
+              storage->register_notifier([this, storage]
+              {
+                this->_blocks_gauge.get()->Set(storage->block_count());
+                this->_bytes_gauge.get()->Set(storage->usage());
+              });
+            }
+#endif
+        }
         if (init.name)
         {
           auto check_user_blocks = [name = init.name.get(), this]
@@ -282,6 +381,12 @@ namespace infinit
           }
           this->_local.reset();
         }
+      }
+
+      void
+      Doughnut::resign()
+      {
+        this->consensus()->resign();
       }
 
       /*-----.
@@ -434,13 +539,6 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
-      }
-
-
-      Protocol const&
-      Doughnut::protocol() const
-      {
-        return this->_dock.protocol();
       }
 
       /*------------------.
@@ -613,7 +711,9 @@ namespace infinit
         boost::optional<int> port_,
         elle::Version version,
         AdminKeys admin_keys,
-        std::vector<Endpoints> peers)
+        std::vector<Endpoints> peers,
+        boost::optional<std::chrono::milliseconds> tcp_heartbeat_,
+        EncryptOptions encrypt_options)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -625,6 +725,8 @@ namespace infinit
         , port(std::move(port_))
         , admin_keys(std::move(admin_keys))
         , peers(std::move(peers))
+        , tcp_heartbeat(tcp_heartbeat_)
+        , encrypt_options(std::move(encrypt_options))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -655,6 +757,14 @@ namespace infinit
         catch (elle::serialization::Error const&)
         {
         }
+        s.serialize("tcp-heartbeat", this->tcp_heartbeat);
+        try
+        {
+          s.serialize("encrypt_options", this->encrypt_options);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       void
@@ -676,6 +786,14 @@ namespace infinit
         }
         catch (elle::serialization::Error const&)
         {}
+        s.serialize("tcp-heartbeat", this->tcp_heartbeat);
+        try
+        {
+          s.serialize("encrypt_options", this->encrypt_options);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -754,7 +872,9 @@ namespace infinit
           admin_keys,
           std::move(rdv_host),
           std::move(monitoring_socket_path),
-          this->overlay->rpc_protocol);
+          this->overlay->rpc_protocol,
+          doughnut::tcp_heartbeat = this->tcp_heartbeat,
+          doughnut::encrypt_options = this->encrypt_options);
       }
 
       std::string

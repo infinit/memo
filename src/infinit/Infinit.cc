@@ -7,6 +7,27 @@ ELLE_LOG_COMPONENT("infinit");
 
 namespace infinit
 {
+  // Deprecated locations for resources.
+  namespace deprecated
+  {
+    // Before 0.8.0, silos were named 'storages', hence, they were located under
+    // <home>/<storages>. Because we need to support legacy environments, we
+    // need to look for resources under their legacy location.
+    bfs::path
+    storages_path()
+    {
+      auto root = xdg_data_home() / "storages";
+      create_directories(root);
+      return root;
+    }
+    // See storages_path.
+    bfs::path
+    silo_path(std::string const& name)
+    {
+      return storages_path() / name;
+    }
+  }
+
   bool
   Infinit::is_qualified_name(std::string const& name)
   {
@@ -310,8 +331,9 @@ namespace infinit
       f, this->_network_descriptor_path(network.name),
       network.name, "network", overwrite);
     save(f, network);
-    this->report_local_action()(existed ? "updated" : "saved", "network",
-                                network.name);
+    this->report_local_action()(
+      existed ? "updated" : "saved", "network descriptor",
+      network.name);
   }
 
   void
@@ -321,7 +343,7 @@ namespace infinit
     bfs::ofstream f;
     bool existed = this->_open_write(f, this->_network_path(network.name, self),
                                      network.name, "network", overwrite);
-    this->report_local_action()(existed ? "updated" : "saved", "network",
+    this->report_local_action()(existed ? "updated linked" : "linked", "network",
                                 network.name);
     save(f, network);
   }
@@ -491,55 +513,85 @@ namespace infinit
     return this->_delete(this->_avatar_path(user.name), "avatar", user.name);
   }
 
-  std::unique_ptr<storage::StorageConfig>
-  Infinit::storage_get(std::string const& name)
+  Infinit::SiloConfigPtr
+  Infinit::silo_get(std::string const& name)
   {
     bfs::ifstream f;
-    this->_open_read(f, this->_storage_path(name), name, "storage");
-    return load<std::unique_ptr<storage::StorageConfig>>(f);
+    // Search for the silo configuration in the new location.
+    try
+    {
+      this->_open_read(f, this->_silo_path(name), name, "silo");
+    }
+    // Fallback in the deprecated silo location.
+    catch (MissingLocalResource const&)
+    {
+      this->_open_read(f, deprecated::storages_path() / name, name, "storage");
+    }
+    return load<SiloConfigPtr>(f);
   }
 
-  std::vector<std::unique_ptr<storage::StorageConfig>>
-  Infinit::storages_get()
+  Infinit::Silos
+  Infinit::silos_get()
   {
-    auto res = std::vector<std::unique_ptr<storage::StorageConfig>>{};
-    for (auto const& p
-           : bfs::recursive_directory_iterator(this->_storages_path()))
-      if (is_visible_file(p))
-        res.emplace_back(storage_get(p.path().filename().string()));
+    auto res = Infinit::Silos{};
+    auto get = [&] (bfs::path const& path)
+      {
+        for (auto const& p: bfs::recursive_directory_iterator(path))
+          if (is_visible_file(p))
+            res.emplace(silo_get(p.path().filename().string()));
+      };
+    // Search for silos configurations in the new location.
+    get(this->_silos_path());
+    // Search for silos in the deprecated directory. Because Silos is the
+    // flat_set, duplicates are ignored.
+    // N.B. It shouldn't be any, except if the user did a manual copy.
+    get(deprecated::storages_path());
     return res;
   }
 
   void
-  Infinit::storage_save(std::string const& name,
-                        std::unique_ptr<storage::StorageConfig> const& storage)
+  Infinit::silo_save(std::string const& name,
+                     SiloConfigPtr const& silo)
   {
     bfs::ofstream f;
-    bool existed = this->_open_write(f, this->_storage_path(name), name,
-                                     "storage", false);
+    bool existed = this->_open_write(f, this->_silo_path(name), name,
+                                     "silo", false);
     elle::serialization::json::SerializerOut s(f, false, true);
-    s.serialize_forward(storage);
+    s.serialize_forward(silo);
+    // Try to delete the old silo configuration so the system cleans up by it
+    // self.
+    existed |= this->_delete(deprecated::silo_path(name), "silo", name);
     this->report_local_action()(existed ? "updated" : "saved", "silo", name);
   }
 
   bool
-  Infinit::storage_delete(
-    std::unique_ptr<storage::StorageConfig> const& storage,
-    bool clear)
+  Infinit::silo_delete(SiloConfigPtr const& silo,
+                       bool clear)
   {
+    auto const& name = silo->name;
     if (clear)
     {
-      if (auto fs_storage =
-          dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
-        this->_delete_all(fs_storage->path, "silo content", storage->name);
+      if (auto fs_silo =
+          dynamic_cast<infinit::storage::FilesystemStorageConfig*>(silo.get()))
+        this->_delete_all(fs_silo->path, "silo content", name);
       else
-        elle::err("only filesystem storages can be cleared");
+        elle::err("only filesystem silos can be cleared");
     }
-    return this->_delete(this->_storage_path(storage->name), "silo", storage->name);
+    auto del = [this] (bfs::path const& p,
+                       std::string const& name)
+      {
+        return this->_delete(p, "silo", name);
+      };
+    // Try to delete the silo configuration from both possible location.
+    auto d = std::make_pair(
+      del(deprecated::silo_path(name), name),
+      del(this->_silo_path(name), name)
+    );
+    return d.first || d.second;
   }
 
   std::unordered_map<std::string, std::vector<std::string>>
-  Infinit::storage_networks(std::string const& storage_name)
+  Infinit::silo_networks(std::string const& silo_name)
   {
     std::unordered_map<std::string, std::vector<std::string>> res;
     for (auto const& u: this->users_get())
@@ -550,7 +602,7 @@ namespace infinit
       {
         auto* d =
           dynamic_cast<infinit::model::doughnut::Configuration*>(n.model.get());
-        if (d && d->storage && d->storage->name == storage_name)
+        if (d && d->storage && d->storage->name == silo_name)
         {
           if (res.count(n.name))
           {
@@ -826,17 +878,17 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_storages_path() const
+  Infinit::_silos_path() const
   {
-    auto root = xdg_data_home() / "storages";
+    auto root = xdg_data_home() / "silos";
     create_directories(root);
     return root;
   }
 
   bfs::path
-  Infinit::_storage_path(std::string const& name) const
+  Infinit::_silo_path(std::string const& name) const
   {
-    return _storages_path() / name;
+    return _silos_path() / name;
   }
 
   bfs::path
@@ -1004,8 +1056,9 @@ namespace infinit
   {
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
-    elle::reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                             elle::reactor::http::Method::POST, std::move(c));
+    auto r = elle::reactor::http::Request
+      (elle::sprintf("%s/users/%s/login", beyond(), name),
+       elle::reactor::http::Method::POST, std::move(c));
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
     if (r.status() != elle::reactor::http::StatusCode::OK)
@@ -1020,13 +1073,10 @@ namespace infinit
              std::string const& name,
              infinit::Headers const& extra_headers = {})
   {
-    infinit::Headers headers;
-    for (auto const& header: extra_headers)
-      headers[header.first] = header.second;
+    auto headers = extra_headers;
     elle::reactor::http::Request::Configuration c;
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-    auto r = elle::make_unique<elle::reactor::http::Request>(
+    c.header_add(headers);
+    auto r = std::make_unique<elle::reactor::http::Request>(
       url, elle::reactor::http::Method::GET, std::move(c));
     elle::reactor::wait(*r);
     if (r->status() == elle::reactor::http::StatusCode::OK)
@@ -1077,13 +1127,11 @@ namespace infinit
                              boost::optional<User const&> self,
                              Headers const& extra_headers) const
   {
-    Headers headers;
-    if (self)
-    {
-      headers = signature_headers(elle::reactor::http::Method::GET, where, self.get());
-    }
-    for (auto const& header: extra_headers)
-      headers[header.first] = header.second;
+    auto headers =
+      self
+      ? signature_headers(elle::reactor::http::Method::GET, where, self.get())
+      : Headers{};
+    headers.insert(extra_headers.begin(), extra_headers.end());
     return fetch_data(elle::sprintf("%s/%s", beyond(), where),
                       type,
                       name,
@@ -1109,12 +1157,10 @@ namespace infinit
                          bool ignore_missing,
                          bool purge) const
   {
-    elle::reactor::http::Request::Configuration c;
-    auto headers = signature_headers(elle::reactor::http::Method::DELETE,
-                                     where,
-                                     self);
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
+    auto c = elle::reactor::http::Request::Configuration{};
+    c.header_add(signature_headers(elle::reactor::http::Method::DELETE,
+                                   where,
+                                   self));
     auto url = elle::sprintf("%s/%s", beyond(), where);
     elle::reactor::http::Request::QueryDict query;
     if (purge)
@@ -1181,11 +1227,9 @@ namespace infinit
   {
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);
-    auto headers = signature_headers(
-      elle::reactor::http::Method::PUT, where, self, object);
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-    elle::reactor::http::Request r(
+    c.header_add(signature_headers(
+      elle::reactor::http::Method::PUT, where, self, object));
+    auto r = elle::reactor::http::Request(
       elle::sprintf("%s/%s", beyond(), where),
       elle::reactor::http::Method::PUT, std::move(c));
     r << object.string();

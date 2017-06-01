@@ -4,7 +4,7 @@
 
 #include <infinit/serialization.hh>
 #include <infinit/filesystem/filesystem.hh>
-#include <infinit/filesystem/FileData.hh>
+#include <infinit/filesystem/FileHeader.hh>
 #include <infinit/model/blocks/Block.hh>
 
 #ifdef INFINIT_WINDOWS
@@ -38,7 +38,7 @@ namespace infinit
       {
         this->_commit();
       }
-      boost::filesystem::path
+      bfs::path
       full_path();
     protected:
       Node(FileSystem& owner,
@@ -55,7 +55,7 @@ namespace infinit
 
     public:
       void
-      rename(boost::filesystem::path const& where);
+      rename(bfs::path const& where);
       void
       utimens(const struct timespec tv[2]);
       void

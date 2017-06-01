@@ -6,20 +6,11 @@ namespace infinit
   {
     namespace blocks
     {
-      MutableBlock::MutableBlock(Address address)
-        : Super(address)
-        , _data_changed(true)
-      {}
+      char const* MutableBlock::type = "mutable";
 
       MutableBlock::MutableBlock(Address address, elle::Buffer data)
         : Super(address, data)
         , _data_changed(true)
-      {}
-
-      MutableBlock::MutableBlock(MutableBlock const& other)
-        : Super(other)
-        , _data_changed(other._data_changed)
-        , _seal_version(other._seal_version)
       {}
 
       void

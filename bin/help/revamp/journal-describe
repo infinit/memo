@@ -1,0 +1,11 @@
+journal: describe: Usage: infinit-journal journal describe [OPTIONS]
+Describe asynchronous operation(s)
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: bob)
+  -N, --network arg         network to describe journal for
+  -O, --operation arg       operation to to describe (default: null)
+

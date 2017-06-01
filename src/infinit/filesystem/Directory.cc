@@ -36,7 +36,8 @@ namespace elle
 {
   namespace serialization
   {
-    template<> struct Serialize<infinit::filesystem::EntryType>
+    template<>
+    struct Serialize<infinit::filesystem::EntryType>
     {
       using Type = int;
       static int convert(infinit::filesystem::EntryType& et)
@@ -71,7 +72,7 @@ namespace infinit
     {
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
-       DirectoryData d({}, current, {true, true});
+       auto d = DirectoryData({}, current, {true, true});
        switch(op.type)
        {
        case OperationType::insert:
@@ -297,7 +298,7 @@ namespace infinit
 
     std::unique_ptr<model::blocks::ACLBlock> DirectoryData::null_block;
 
-    DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
+    DirectoryData::DirectoryData(bfs::path path, Address address)
       : _address{address}
       , _block_version{-1}
       , _inherit_auth{false}
@@ -306,7 +307,7 @@ namespace infinit
       , _path{path}
     {}
 
-    DirectoryData::DirectoryData(boost::filesystem::path path,
+    DirectoryData::DirectoryData(bfs::path path,
                                  model::blocks::Block& block,
                                  std::pair<bool, bool> perms)
       : DirectoryData{path,
@@ -607,6 +608,17 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
       static int prefetch_tasks = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_TASKS", "5"));
+      // Disable prefetching if we have no cache
+      static bool have_cache =
+        model::doughnut::consensus::StackedConsensus::find<
+          model::doughnut::consensus::Cache>(
+            dynamic_cast<model::doughnut::Doughnut&>(
+              *fs.block_store()).consensus().get());
+      if (prefetch_threads && !have_cache)
+      {
+        ELLE_TRACE("Disabling directory prefetching since cache is disabled.");
+        prefetch_threads = 0;
+      }
       int group_size = prefetch_group;
       int nthreads = prefetch_threads;
       if (this->_prefetching ||
@@ -836,7 +848,7 @@ namespace infinit
     }
 
     void
-    Directory::rename(boost::filesystem::path const& where)
+    Directory::rename(bfs::path const& where)
     {
       Node::rename(where);
     }

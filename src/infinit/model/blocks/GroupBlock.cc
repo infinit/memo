@@ -1,27 +1,20 @@
 #include <infinit/model/blocks/GroupBlock.hh>
 
-
 namespace infinit
 {
   namespace model
   {
     namespace blocks
     {
-      GroupBlock::GroupBlock(GroupBlock const& other)
-        : ACLBlock(other)
-      {}
-
-      GroupBlock::GroupBlock(Address a)
-        : ACLBlock(a)
-      {}
+      char const* GroupBlock::type = "group";
 
       GroupBlock::GroupBlock(Address a, elle::Buffer data)
-        : ACLBlock(a, data)
+        : Super(a, data)
       {}
 
       GroupBlock::GroupBlock(elle::serialization::Serializer& input,
                              elle::Version const& version)
-        : ACLBlock(input, version)
+        : Super(input, version)
       {}
 
       void

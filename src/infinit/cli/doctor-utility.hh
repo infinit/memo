@@ -2018,34 +2018,50 @@ namespace
     }
   }
 
-  template <typename T>
-  std::map<std::string, std::pair<T, bool>>
-  parse(std::vector<T> container)
+  namespace details
   {
-    auto res = std::map<std::string, std::pair<T, bool>>{};
-    for (auto& item: container)
+    template <typename Container>
+    auto
+    parse(Container&& container,
+           std::function<std::string (typename Container::value_type const& v)> f)
     {
-      auto name = item.name;
-      res.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(name),
-                  std::forward_as_tuple(std::move(item), false));
+      auto res = std::map<std::string,
+                          std::pair<typename Container::value_type, bool>>{};
+      for (auto& item: container)
+      {
+        auto name = f(item);
+        res.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(name),
+                    std::forward_as_tuple(std::move(item), false));
+      }
+      return res;
     }
-    return res;
   }
 
-  template <typename T>
-  std::map<std::string, std::pair<std::unique_ptr<T>, bool>>
-  parse(std::vector<std::unique_ptr<T>> container)
+  template <typename Container>
+  auto
+  parse(
+    Container container,
+    decltype(std::declval<typename Container::value_type>()->name)* = nullptr)
   {
-    auto res = std::map<std::string, std::pair<std::unique_ptr<T>, bool>>{};
-    for (auto& item: container)
-    {
-      auto name = item->name;
-      res.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(name),
-                  std::forward_as_tuple(std::move(item), false));
-    }
-    return res;
+    return details::parse(std::move(container),
+                          [] (typename Container::value_type const& v)
+                          {
+                            return v->name;
+                          });
+  }
+
+  template <typename Container>
+  auto
+  parse(
+    Container container,
+    decltype(std::declval<typename Container::value_type>().name)* = nullptr)
+  {
+    return details::parse(std::move(container),
+                          [] (typename Container::value_type const& v)
+                          {
+                            return v.name;
+                          });
   }
 
   template <typename ExpectedType>
@@ -2069,7 +2085,7 @@ namespace
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
     auto gcs_credentials = ifnt.credentials_gcs();
-    auto silos = parse(ifnt.storages_get());
+    auto silos = parse(ifnt.silos_get());
     auto drives = parse(ifnt.drives_get());
     auto volumes = parse(ifnt.volumes_get());
 
@@ -2106,7 +2122,7 @@ namespace
     ELLE_TRACE("verify silos")
       for (auto& elem: silos)
       {
-        auto& storage = elem.second.first;
+        auto& silo = elem.second.first;
         // We really need to update this field, as when we verify
         // volumes, we will skip those with broken silos.  Likewise
         // for the other items.
@@ -2114,7 +2130,7 @@ namespace
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
         INFINIT_ENTREPRISE(
         if (auto s3config = dynamic_cast<S3StorageConfig const*>(
-              storage.get()))
+              silo.get()))
         {
           status = any_of(aws_credentials,
               [&s3config] (auto const& credentials)
@@ -2122,22 +2138,22 @@ namespace
                 return COMPARE(access_key_id) && COMPARE(secret_access_key);
               });
         if (status)
-          store(results.silos, storage->name, status, "S3");
+          store(results.silos, silo->name, status, "S3");
         else
-          store(results.silos, storage->name, status, "S3",
+          store(results.silos, silo->name, status, "S3",
                 std::string("credentials are missing"));
         })
 #undef COMPARE
         if (auto fsconfig
-            = dynamic_cast<FilesystemStorageConfig const*>(storage.get()))
+            = dynamic_cast<FilesystemStorageConfig const*>(silo.get()))
         {
           auto perms = has_permission(fsconfig->path);
           status = perms.first;
-          store(results.silos, storage->name, status, "filesystem",
+          store(results.silos, silo->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
         INFINIT_ENTREPRISE(
-        if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
+        if (auto gcsconfig = dynamic_cast<GCSConfig const*>(silo.get()))
         {
           status = any_of(gcs_credentials,
               [&gcsconfig] (auto const& credentials)
@@ -2145,9 +2161,9 @@ namespace
                 return credentials->refresh_token == gcsconfig->refresh_token;
               });
           if (status)
-            store(results.silos, storage->name, status, "GCS");
+            store(results.silos, silo->name, status, "GCS");
           else
-            store(results.silos, storage->name, status, "GCS",
+            store(results.silos, silo->name, status, "GCS",
                   std::string{"credentials are missing"});
         })
       }
@@ -2157,21 +2173,21 @@ namespace
       {
         auto const& network = elem.second.first;
         auto& status = elem.second.second;
-        auto storage_names = std::vector<std::string>{};
+        auto silos_names = std::vector<std::string>{};
         bool linked = network.model != nullptr;
         if (linked && network.model->storage)
         {
           if (auto strip = dynamic_cast<StripStorageConfig*>(
                 network.model->storage.get()))
             for (auto const& s: strip->storage)
-              storage_names.emplace_back(s->name);
+              silos_names.emplace_back(s->name);
           else
-            storage_names.emplace_back(network.model->storage->name);
+            silos_names.emplace_back(network.model->storage->name);
         }
         auto faulty = ConfigurationIntegrityResults::NetworkResult
           ::FaultySilos::value_type{};
-        status = storage_names.empty()
-          || all_of(storage_names, [&] (std::string const& name) -> bool {
+        status = silos_names.empty()
+          || all_of(silos_names, [&] (std::string const& name) -> bool {
               auto it = boost::find_if(results.silos,
                                        [name] (auto const& t)
                                        {
@@ -2257,7 +2273,20 @@ namespace
       {
         return boost::starts_with(file.parent_path(), dir);
       };
-    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_data_home()))
+    auto do_not_recurse_deeper = [] (bfs::recursive_directory_iterator& it,
+                                     bfs::path const& path)
+    {
+      if (it->path() == path)
+        it.no_push();
+    };
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_data_home());
+         it != bfs::recursive_directory_iterator();
+         ++it)
+    {
+      // Do not explore recursively the following paths.
+      do_not_recurse_deeper(it, infinit::xdg_data_home() / "blocks");
+      do_not_recurse_deeper(it, infinit::xdg_data_home() / "ui");
+      auto p = *it;
       if (is_visible_file(p))
       {
         try
@@ -2275,14 +2304,12 @@ namespace
             load<infinit::Passport>(ifnt, p.path(), "passport");
           else if (is_parent_of(ifnt._users_path(), p.path()))
             load<infinit::User>(ifnt, p.path(), "users");
-          else if (is_parent_of(ifnt._storages_path(), p.path()))
+          else if (is_parent_of(ifnt._silos_path(), p.path()))
+            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "silo");
+          else if (is_parent_of(deprecated::storages_path(), p.path()))
             load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
           else if (is_parent_of(ifnt._credentials_path(), p.path()))
             load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
-          else if (is_parent_of(infinit::xdg_data_home() / "blocks", p.path()))
-            {}
-          else if (is_parent_of(infinit::xdg_data_home() / "ui", p.path()))
-            {}
           else
             store(leftovers, p.path().string());
         }
@@ -2290,8 +2317,11 @@ namespace
         {
           store(leftovers, p.path().string(), elle::exception_string());
         }
+        elle::reactor::yield();
       }
+    }
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_cache_home()))
+    {
       if (is_visible_file(p))
       {
         try
@@ -2305,15 +2335,20 @@ namespace
           store(leftovers, p.path().string(), elle::exception_string());
         }
       }
-    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_state_home()))
+      elle::reactor::yield();
+    }
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_state_home());
+         it != bfs::recursive_directory_iterator();
+         ++it)
+    {
+      do_not_recurse_deeper(it, infinit::xdg_state_home() / "cache");
+      auto p = *it;
       if (is_visible_file(p))
       {
         try
         {
-          // XXX: Factor.
-          if (is_parent_of(infinit::xdg_state_home() / "cache", p.path())
-              || p.path() == infinit::xdg_state_home() / "critical.log")
-            {}
+          if (p.path() == infinit::xdg_state_home() / "critical.log")
+          {}
           else if (p.path().filename() == "root_block")
           {
             // The root block path is:
@@ -2342,6 +2377,8 @@ namespace
           store(leftovers, p.path().string(), elle::exception_string());
         }
       }
+      elle::reactor::yield();
+    }
   }
 
   void

@@ -36,7 +36,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(cache_ram_invalidation, 0, "RAM block cache invalidation time in seconds (default: 15s)", false);
     ELLE_DAS_CLI_SYMBOL(cache_ram_size, 0, "maximum RAM block cache size in bytes (default: 64MB)", false);
     ELLE_DAS_CLI_SYMBOL(cache_ram_ttl, 0, "RAM block cache time-to-live in seconds (default: 5min)", false);
-    ELLE_DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
+    ELLE_DAS_CLI_SYMBOL(capacity, 'c', "limit silo capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
     ELLE_DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     ELLE_DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
     ELLE_DAS_CLI_SYMBOL(create, 'c', "create the {object}", false);
@@ -49,7 +49,10 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     ELLE_DAS_CLI_SYMBOL(description, '\0', "{object} description", false);
     ELLE_DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
+    ELLE_DAS_CLI_SYMBOL(disable_encrypt_at_rest, 0, "disable at-rest encryption", false);
+    ELLE_DAS_CLI_SYMBOL(disable_encrypt_rpc, 0, "disable RPC encryption", false);
     ELLE_DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
+    ELLE_DAS_CLI_SYMBOL(disable_signature, 0, "disable all block signature computation and validation", false);
     ELLE_DAS_CLI_SYMBOL(docker, 0, "Enable the Docker plugin", false);
     ELLE_DAS_CLI_SYMBOL(docker_descriptor_path, 0, "Path to add plugin descriptor", false);
     ELLE_DAS_CLI_SYMBOL(docker_home, 0, "Home directory to use for Docker user (default: /home/<docker-user>)", false);
@@ -81,6 +84,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
+    // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
     ELLE_DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
@@ -136,6 +140,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(permissions, 0, "set default user permissions to XXX", false);
     ELLE_DAS_CLI_SYMBOL(port, 0, "outbound port to use", false);
     ELLE_DAS_CLI_SYMBOL(port_file, 0, "write node listening port to file", false);
+    ELLE_DAS_CLI_SYMBOL(prometheus, 0, "start Prometheus server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(protocol, 0, "RPC protocol to use: tcp, utp, all (default: all)", false);
     ELLE_DAS_CLI_SYMBOL(publish, 0, "alias for --fetch-endpoints --push-endpoints" , false);
     ELLE_DAS_CLI_SYMBOL(pull, '\0', "pull {object} from {hub}", false);
@@ -168,15 +173,16 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
     ELLE_DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     ELLE_DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
-    ELLE_DAS_CLI_SYMBOL(storage, 'S', "storage to contribute (optional, data striped over multiple)", false);
-    ELLE_DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    ELLE_DAS_CLI_SYMBOL(silo, 'S', "silo to contribute (optional, data striped over multiple)", false);
+    ELLE_DAS_CLI_SYMBOL(silo_class, '\0', "silo class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    ELLE_DAS_CLI_SYMBOL(tcp_heartbeat, '\0', "tcp heartbeat period and timeout", false);
     ELLE_DAS_CLI_SYMBOL(tcp_port, 't', "port to perform tcp tests on", false);
     ELLE_DAS_CLI_SYMBOL(traverse, 't', "set read permission on parent directories", false);
     ELLE_DAS_CLI_SYMBOL(upnp_tcp_port, 0, "port to try to get an tcp upnp connection on", false);
     ELLE_DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     ELLE_DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(username_pattern, 'U', "Hub unique username to set (default: $(cn)%). Remove the '%' to disable unique username generator", false);
-    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
+    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1)", false);
     ELLE_DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     ELLE_DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     ELLE_DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
@@ -202,7 +208,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(enable_storage);
     ELLE_DAS_SYMBOL(filesystem);
     ELLE_DAS_SYMBOL(gcs);
-    ELLE_DAS_SYMBOL(get_xattr);
+    ELLE_DAS_SYMBOL(getxattr);
     ELLE_DAS_SYMBOL(google_drive);
     ELLE_DAS_SYMBOL(hash);
     ELLE_DAS_SYMBOL(import);
@@ -214,7 +220,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(link);
     ELLE_DAS_SYMBOL(list);
     ELLE_DAS_SYMBOL(list_services);
-    ELLE_DAS_SYMBOL(list_storage);
+    ELLE_DAS_SYMBOL(list_silos);
     ELLE_DAS_SYMBOL(login);
     ELLE_DAS_SYMBOL(manage_volumes);
     ELLE_DAS_SYMBOL(networking);
@@ -223,13 +229,12 @@ namespace infinit
     ELLE_DAS_SYMBOL(run);
     ELLE_DAS_SYMBOL(s3);
     ELLE_DAS_SYMBOL(set);
-    ELLE_DAS_SYMBOL(set_xattr);
+    ELLE_DAS_SYMBOL(setxattr);
     ELLE_DAS_SYMBOL(signup);
-    ELLE_DAS_SYMBOL(silo);
     ELLE_DAS_SYMBOL(start);
-    ELLE_DAS_SYMBOL(stats);
     ELLE_DAS_SYMBOL(status);
     ELLE_DAS_SYMBOL(stop);
+    ELLE_DAS_SYMBOL(syscall);
     ELLE_DAS_SYMBOL(system);
     ELLE_DAS_SYMBOL(transmit);
     ELLE_DAS_SYMBOL(unlink);
@@ -271,7 +276,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_link);
       ELLE_DAS_SYMBOL(mode_list);
       ELLE_DAS_SYMBOL(mode_list_services);
-      ELLE_DAS_SYMBOL(mode_list_storage);
+      ELLE_DAS_SYMBOL(mode_list_silos);
       ELLE_DAS_SYMBOL(mode_login);
       ELLE_DAS_SYMBOL(mode_manage_volumes);
       ELLE_DAS_SYMBOL(mode_mount);
@@ -289,7 +294,6 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_signup);
       ELLE_DAS_SYMBOL(mode_start);
       ELLE_DAS_SYMBOL(mode_stat);
-      ELLE_DAS_SYMBOL(mode_stats);
       ELLE_DAS_SYMBOL(mode_status);
       ELLE_DAS_SYMBOL(mode_stop);
       ELLE_DAS_SYMBOL(mode_system);

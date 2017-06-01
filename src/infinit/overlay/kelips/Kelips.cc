@@ -1,7 +1,6 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
 #include <algorithm>
-#include <random>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -10,6 +9,7 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/count_if.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/max_element.hpp>
@@ -20,6 +20,7 @@
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
+#include <elle/random.hh>
 #include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
@@ -238,7 +239,8 @@ namespace infinit
 
       namespace packet
       {
-        static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
+        static auto disable_compression
+          = elle::os::getenv("KELIPS_DISABLE_COMPRESSION", false);
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -521,30 +523,25 @@ namespace infinit
           NodeLocations locs;
           std::unordered_map<Address, int> loc_indexes;
           for (auto const& r: results)
-          {
             for (auto const& loc: r)
-            {
-              auto it = loc_indexes.find(loc.id());
-              if (it == loc_indexes.end())
+              if (!elle::contains(loc_indexes, loc.id()))
               {
                 locs.push_back(loc);
                 loc_indexes.emplace(loc.id(), locs.size() - 1);
               }
-            }
-          }
           // index results (int list)
-          std::map<std::vector<int>, int> res_indexes;
-          std::vector<std::vector<int>> output;
+          auto res_indexes = std::map<std::vector<int>, int>{};
+          auto output = std::vector<std::vector<int>>{};
           for (auto const& r: results)
           {
-            std::vector<int> o;
-            for (auto const& loc: r)
-            {
-              auto it = loc_indexes.find(loc.id());
-              ELLE_ASSERT(it != loc_indexes.end());
-              o.push_back(it->second);
-            }
-            std::sort(o.begin(), o.end());
+            auto o = elle::make_vector(r,
+                [&](auto const& loc)
+                {
+                  auto it = loc_indexes.find(loc.id());
+                  ELLE_ASSERT(it != loc_indexes.end());
+                  return it->second;
+                });
+            boost::sort(o);
             auto it = res_indexes.find(o);
             if (it == res_indexes.end())
             {
@@ -552,9 +549,7 @@ namespace infinit
               res_indexes.emplace(o, output.size()-1);
             }
             else
-            {
-              output.push_back({it->second * (-1) -1 }); //careful, 0 == -0
-            }
+              output.push_back({-1 * it->second - 1}); // Careful, 0 == -0.
           }
           s.serialize("result_endpoints", locs);
           s.serialize("result_indexes", output);
@@ -634,7 +629,6 @@ namespace infinit
           {
             serialize(input);
           }
-
 
           void
           serialize(elle::serialization::Serializer& s) override
@@ -809,54 +803,14 @@ namespace infinit
         Time startTime;
       };
 
-      template<typename C>
-      typename C::iterator
-      random_from(C& container, std::default_random_engine& gen)
+      namespace
       {
-        if (container.empty())
-          return container.end();
-        std::uniform_int_distribution<> random(0, container.size()-1);
-        int v = random(gen);
-        auto it = container.begin();
-        while (v--) ++it;
-        return it;
-      }
-
-      /* Pick one item at random that matches filter.
-       * Fallback to unfiltered pick if no element matches.
-       */
-      template<typename C, typename F>
-      typename C::iterator
-      random_from(C& container, F filter, std::default_random_engine& gen)
-      {
-        if (container.empty())
-          return container.end();
-        int ncandidates = std::count_if(container.begin(), container.end(),
-          [&filter](auto const& v) { return filter(v.second);});
-        if (!ncandidates)
-          return random_from(container, gen);
-        std::uniform_int_distribution<> random(0, ncandidates-1);
-        int v = random(gen);
-        auto it = container.begin();
-        while (!filter(it->second)) ++it;
-        while (v--)
+        bool
+        without_timeouts(typename Contacts::value_type const& c)
         {
-          ++it;
-          while (!filter(it->second))
-            ++it;
+          static auto disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
+          return disable || c.second.ping_timeouts == 0;
         }
-        return it;
-      }
-
-      static
-      bool
-      contact_without_timeouts(Contact const& c)
-      {
-        static bool disable = elle::os::inenv("INFINIT_KELIPS_NO_SNUB");
-        if (disable)
-          return true;
-        else
-          return c.ping_timeouts == 0;
       }
 
       template<typename C, typename G>
@@ -864,7 +818,7 @@ namespace infinit
       pick_n(C const& src, int count, G& generator)
       {
         C res;
-        std::uniform_int_distribution<> random(0, src.size()-1);
+        auto random = elle::uniform_index_distribution(src);
         for (int i=0; i<count; ++i)
         {
           int v;
@@ -884,11 +838,31 @@ namespace infinit
         C res(src);
         for (int i=0; i<count; ++i)
         {
-          std::uniform_int_distribution<> random(0, res.size()-1);
+          auto random = elle::uniform_index_distribution(res);
           int v = random(generator);
           std::swap(res[res.size()-1], res[v]);
           res.pop_back();
         }
+        return res;
+      }
+
+      template<typename Gen>
+      auto
+      random_indexes(int num, int size, Gen& gen)
+      {
+        // FIXME: inefficient.  See Fisher-Yates.
+        assert(num <= size);
+        auto random = std::uniform_int_distribution<>(0, size-1);
+        auto res = std::vector<int>{};
+        for (int i=0; i<num; ++i)
+        {
+          int v = random(gen);
+          if (any_of_equal(res, v))
+            --i;
+          else
+            res.push_back(v);
+        }
+        boost::sort(res);
         return res;
       }
 
@@ -903,9 +877,15 @@ namespace infinit
         , _dropped_puts(0)
         , _dropped_gets(0)
         , _failed_puts(0)
+        , _terminating(false)
       {
-        bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+        if (!doughnut->encrypt_options().encrypt_rpc)
+        {
+          _config.encrypt = false;
+          _config.accept_plain = true;
+        }
+        bool v4 = !elle::os::getenv("INFINIT_NO_IPV4", false);
+        bool v6 = !elle::os::getenv("INFINIT_NO_IPV6", false)
           && doughnut->version() >= elle::Version(0, 7, 0);
         this->_self = Address(this->doughnut()->id());
         if (!local)
@@ -913,14 +893,22 @@ namespace infinit
         start();
         if (auto l = local)
         {
-          l->on_fetch().connect(std::bind(&Node::fetch, this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
-          l->on_store().connect(std::bind(&Node::store, this,
-                                          std::placeholders::_1));
-          l->on_remove().connect(std::bind(&Node::remove, this,
-                                           std::placeholders::_1));
-
+          l->on_fetch().connect(
+            [this]
+            (Address a, std::unique_ptr<infinit::model::blocks::Block> & b)
+            {
+              this->fetch(a, b);
+            });
+          l->on_store().connect(
+            [this](infinit::model::blocks::Block const& b)
+            {
+              this->store(b);
+            });
+          l->on_remove().connect(
+            [this](Address a)
+            {
+              this->remove(a);
+            });
           l->on_connect().connect(
             [this](RPCServer& rpcs)
             {
@@ -937,7 +925,7 @@ namespace infinit
                   for (auto const& f: this->_state.files)
                     res.second.emplace_back(f.second.address, f.second.home_node);
                   // OH THE UGLY HACK, we need a place to store our own address
-                  res.second.push_back(std::make_pair(Address::null, _self));
+                  res.second.emplace_back(Address::null, _self);
                   return res;
                 });
               rpcs.add(
@@ -945,20 +933,19 @@ namespace infinit
                 [this] ()
                 {
                   SerState2 res;
-                  std::unordered_map<Address, int> index;
                   res.first.emplace_back(this->_self, to_endpoints(_local_endpoints));
-                  index[_self] = 0;
+                  auto index = Index{{_self, 0}};
                   for (auto const& contacts: this->_state.contacts)
                     for (auto const& c: contacts)
                     {
-                      index[c.second.address] = res.first.size();
+                      assert(index.emplace(c.second.address, res.first.size()).second);
                       res.first.emplace_back(c.second.address,
                                              to_endpoints(c.second.endpoints));
                     }
-                  std::multimap<Address, Address> ofiles; // ordered fileId -> owner
+                  auto ofiles = std::multimap<Address, Address>{}; // ordered fileId -> owner
                   for (auto const& f: this->_state.files)
                     ofiles.emplace(f.second.address, f.second.home_node);
-                  Address prev = Address::null;
+                  auto prev = Address::null;
                   for (auto const& f: ofiles)
                   {
                     auto faddr = f.first;
@@ -977,7 +964,7 @@ namespace infinit
                     }
                     else
                       idx = it->second;
-                    res.second.push_back(std::make_pair(daddr, idx));
+                    res.second.emplace_back(daddr, idx);
                     prev = faddr;
                   }
                   return res;
@@ -986,7 +973,7 @@ namespace infinit
           this->_port = l->server_endpoint().port();
           {
             using Filter = elle::network::Interface::Filter;
-            auto filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
+            auto const filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
             for (auto const& itf: elle::network::Interface::get_map(filter))
             {
               auto add = [this](auto const& addrs){
@@ -1023,9 +1010,11 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_terminating = true;
         this->doughnut()->dock().utp_server().socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
+        elle::reactor::wait(_in_use);
         this->_state.contacts.clear();
       }
 
@@ -1045,10 +1034,12 @@ namespace infinit
             elle::reactor::Waiter waiter = elle::reactor::waiter(conn->on_connection());
             for (int i=0; i< 50; ++i)
             {
-              if (elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
+              if (this->_terminating || elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
                 break;
             }
           }
+          if (this->_terminating)
+            elle::err("terminating");
           if (!conn->connected() && !conn->disconnected())
             throw elle::Error("connect timeout");
           ELLE_DEBUG("linking remote");
@@ -1081,10 +1072,10 @@ namespace infinit
             for (auto const& c: state.first)
               if (!c.second.empty())
                 res.first.insert(c);
-            Address prev = Address::null;
+            auto prev = Address::null;
             for (auto const& f: state.second)
             {
-              Address next = prev;
+              auto next = prev;
               ELLE_ASSERT(f.first.size() <= 32);
               memcpy(
                 const_cast<unsigned char*>(next.value() + 32 - f.first.size()),
@@ -1107,14 +1098,13 @@ namespace infinit
       void
       Node::onPacket(elle::ConstWeakBuffer nbuf, Endpoint source)
       {
+        auto lock = this->_in_use.lock();
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
-        elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
-        static bool async = getenv("INFINIT_KELIPS_ASYNC");
-        if (async)
-          new elle::reactor::Thread("process",
-                              [=] { this->process(buf, source);}, true);
-        else
-          process(buf, source);
+        auto buf = elle::Buffer(nbuf.contents()+8, nbuf.size()-8);
+        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC", false);
+        elle::reactor::run(async,
+                           "process",
+                           [=] { this->process(buf, source);});
       }
 
       void
@@ -1230,19 +1220,17 @@ namespace infinit
         if (!_observer)
           this->bootstrap();
         this->doughnut()->dock().utp_server().socket()->register_reader(
-          "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
-            std::placeholders::_2));
+          "KELIPSGS", [this](elle::ConstWeakBuffer nbuf, Endpoint source)
+          {
+            this->onPacket(nbuf, source);
+          });
         ELLE_LOG("%s: listening on %s",
           this, this->doughnut()->dock().utp_server().local_endpoint());
         this->_pinger_thread.reset(
-          new elle::reactor::Thread(
-            "pinger", std::bind(&Node::pinger, this)));
+          new elle::reactor::Thread("pinger", [this]{  this->pinger(); }));
         if (!_observer)
-        {
           this->_emitter_thread.reset(
-            new elle::reactor::Thread(
-              "emitter", std::bind(&Node::gossipEmitter, this)));
-        }
+            new elle::reactor::Thread("emitter", [this]{ this->gossipEmitter(); }));
         ELLE_DEBUG("contact group nodes")
           for (auto& c: _state.contacts[_group])
             this->send_bootstrap(
@@ -1285,7 +1273,8 @@ namespace infinit
         auto it = _keys.find(a);
         if (it != _keys.end())
           return std::make_pair(&it->second.first, it->second.second);
-        return std::make_pair(nullptr, false);
+        else
+          return std::make_pair(nullptr, false);
       }
 
       void
@@ -1392,7 +1381,7 @@ namespace infinit
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
         auto& sock = this->doughnut()->dock().utp_server().socket();
-        static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
+        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC_SEND", false);
         if (async)
         {
           auto sbuf = std::make_shared<elle::Buffer>(std::move(b));
@@ -1854,12 +1843,12 @@ namespace infinit
       std::unordered_multimap<Address, std::pair<Time, Address>>
       Node::pickFiles()
       {
+        using Res = std::unordered_multimap<Address, std::pair<Time, Address>>;
         static elle::Bench bencher("kelips.pickFiles", 10_sec);
         elle::Bench::BenchScope bench_scope(bencher);
         static elle::Bench bench_new_candidates("kelips.newCandidates", 10_sec);
         static elle::Bench bench_old_candidates("kelips.oldCandidates", 10_sec);
         auto current_time = now();
-        std::unordered_multimap<Address, std::pair<Time, Address>> res;
         int max_new = _config.gossip.files / 2;
         int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
         ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
@@ -1880,20 +1869,11 @@ namespace infinit
         }
         bench_new_candidates.add(new_candidates);
         bench_old_candidates.add(old_candidates);
+        auto res = Res{};
         if (new_candidates  >= max_new * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          std::uniform_int_distribution<> random(0, new_candidates-1);
-          std::vector<int> indexes;
-          for (int i=0; i<max_new; ++i)
-          {
-            int v = random(_gen);
-            if (any_of_equal(indexes, v))
-              --i;
-            else
-              indexes.push_back(v);
-          }
-          boost::sort(indexes);
+          auto indexes = random_indexes(max_new, new_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
@@ -1920,8 +1900,8 @@ namespace infinit
           for (auto const& f: _state.files)
           {
             if (f.second.gossip_count < _config.gossip.new_threshold)
-            new_files.push_back(std::make_pair(f.first,
-              std::make_pair(f.second.last_seen, f.second.home_node)));
+            new_files.emplace_back(f.first,
+              std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (signed(new_files.size()) > max_new)
           {
@@ -1938,17 +1918,7 @@ namespace infinit
         if (old_candidates >= max_old * 2)
         {
           // pick max_new indexes in 0..new_candidates
-          std::uniform_int_distribution<> random(0, old_candidates-1);
-          std::vector<int> indexes;
-          for (int i=0; i<max_old; ++i)
-          {
-            int v = random(_gen);
-            if (any_of_equal(indexes, v))
-              --i;
-            else
-              indexes.push_back(v);
-          }
-          boost::sort(indexes);
+          auto indexes = random_indexes(max_old, old_candidates, _gen);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
@@ -1977,7 +1947,7 @@ namespace infinit
             if (f.second.home_node == _self
               && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
               && !has(res, f.first, f.second.home_node))
-              old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
+              old_files.emplace_back(f.first, std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (signed(old_files.size()) > max_old)
           {
@@ -2000,7 +1970,7 @@ namespace infinit
           for (auto const& f: _state.files)
           {
             if (!has(res, f.first, f.second.home_node))
-              available.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
+              available.emplace_back(f.first, std::make_pair(f.second.last_seen, f.second.home_node));
           }
           if (available.size() > unsigned(n))
           {
@@ -2161,7 +2131,12 @@ namespace infinit
           {
             ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
             if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
-              target[c.first] = Contact{{}, c.second, c.first, Duration(), Time(), 0};
+            {
+              target[c.first] = Contact{{}, c.second, c.first,
+                                        Duration(), Time(), 0, {}, {}, true};
+              this->on_discovery()(NodeLocation(c.first, to_endpoints(c.second)),
+                                   false);
+            }
           }
           else
             endpoints_update(it->second.endpoints, c.second);
@@ -2214,20 +2189,22 @@ namespace infinit
         {
           NodeLocation peer(p->sender, {ep});
           elle::reactor::Thread::unique_ptr t(
-            new elle::reactor::Thread("reverse bootstraper",
-            [this, peer] {
-              try
-              {
-                SerState state = get_serstate(peer);
-                state.second.pop_back(); // pop remote address
-                ELLE_DEBUG("%s: inserting serstate from %s", *this, peer);
-                process_update(state);
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("Error processing bootstrap data: %s", e);
-              }
-            }, false));
+            new elle::reactor::Thread(
+              elle::sprintf("rbootstrap(%f->%f)", this->id(), p->sender),
+              [this, peer] {
+                auto lock = this->_in_use.lock();
+                try
+                {
+                  SerState state = get_serstate(peer);
+                  state.second.pop_back(); // pop remote address
+                  ELLE_DEBUG("%s: inserting serstate from %s", *this, peer);
+                  process_update(state);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("Error processing bootstrap data: %s", e);
+                }
+              }, false));
           auto ptr = t.get();
           _bootstraper_threads.emplace(ptr, std::move(t));
         }
@@ -2300,7 +2277,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::MultiGetFileRequest* p,
-        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+        elle::reactor::yielder<std::pair<Address, NodeLocation>> const* yield,
         std::vector<std::set<Address>>& result_sets)
       {
         ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
@@ -2323,7 +2300,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-                            elle::reactor::yielder<NodeLocation>::type const* yield)
+                            elle::reactor::yielder<NodeLocation> const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -2437,7 +2414,7 @@ namespace infinit
         ELLE_TRACE("%s: route %s", *this, p->ttl);
         p->ttl--;
         p->sender = _self;
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it != _state.contacts[fg].end())
           send(*p, it->second);
       }
@@ -2512,7 +2489,7 @@ namespace infinit
         }
         p->ttl--;
         p->sender = _self;
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it != _state.contacts[fg].end())
           send(*p, it->second);
       }
@@ -2649,9 +2626,9 @@ namespace infinit
           return;
         }
         // Forward the packet to an other node
-        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
         if (it == _state.contacts[fg].end())
-          it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+          it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
         if (it == _state.contacts[_group].end())
         {
           ELLE_ERR("%s: No contact founds", *this);
@@ -2725,9 +2702,9 @@ namespace infinit
           r->startTime = now();
           r->barrier.close();
           // Select target node
-          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+          auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+            it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             ELLE_TRACE("no contact to forward GET to");
@@ -2845,10 +2822,10 @@ namespace infinit
             r->startTime = now();
             r->barrier.close();
             // Select target node
-            auto it = random_from(_state.contacts[fg], contact_without_timeouts,
+            auto it = elle::pick_one(_state.contacts[fg], without_timeouts,
                                   _gen);
             if (it == _state.contacts[fg].end())
-              it = random_from(_state.contacts[_group], contact_without_timeouts,
+              it = elle::pick_one(_state.contacts[_group], without_timeouts,
                                _gen);
             if (it == _state.contacts[_group].end())
             {
@@ -2939,9 +2916,9 @@ namespace infinit
           r->barrier.close();
           elle::Buffer buf = serialize(req, *this->doughnut());
           // Select target node
-          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+          auto it = elle::pick_one(_state.contacts[fg], without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
+            it = elle::pick_one(_state.contacts[_group], without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             if (fg != this->_group || this->_observer)
@@ -3242,7 +3219,8 @@ namespace infinit
           else
             ++it;
         }
-        int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
+        int time_send_all
+          = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 4)
         {
@@ -3346,13 +3324,14 @@ namespace infinit
         return Overlay::WeakMember::own(w.lock());
       }
 
-      elle::reactor::Generator<std::pair<model::Address, Node::WeakMember>>
+      auto
       Node::_lookup(std::vector<infinit::model::Address> const& addresses,
                     int n) const
+        -> LocationGenerator
       {
         if (this->doughnut()->version() < elle::Version(0, 6, 0))
           return Overlay::_lookup(addresses, n);
-        std::vector<std::vector<model::Address>> grouped;
+        auto grouped = std::vector<std::vector<model::Address>>{};
         for (auto a: addresses)
         {
           int g = group_of(a);
@@ -3360,8 +3339,7 @@ namespace infinit
             grouped.resize(g+1);
           grouped[g].push_back(a);
         }
-        return elle::reactor::generator<std::pair<Address, Node::WeakMember>>(
-          [this, n, grouped] (elle::reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
+        return [this, n, grouped](LocationGenerator::yielder const& yield)
         {
           for (auto g: grouped)
             if (!g.empty())
@@ -3373,32 +3351,29 @@ namespace infinit
                                      elle::unconst(this)->make_peer(ap.second)));
               });
             }
-        });
+        };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
-      Node::_allocate(infinit::model::Address address,
-                      int n) const
+
+      auto
+      Node::_allocate(infinit::model::Address address, int n) const
+        -> MemberGenerator
       {
         BENCH("allocate");
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n](MemberGenerator::yielder const& yield)
           {
             for (auto r: elle::unconst(this)->kelipsPut(address, n))
               yield(elle::unconst(this)->make_peer(r));
-          });
+          };
       }
 
-      elle::reactor::Generator<Overlay::WeakMember>
+      auto
       Node::_lookup(infinit::model::Address address,
-                    int n,
-                    bool fast) const
+                    int n, bool fast) const
+        -> MemberGenerator
       {
         BENCH("lookup");
-        return elle::reactor::generator<Overlay::WeakMember>(
-          [this, address, n, fast]
-          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return [this, address, n, fast](MemberGenerator::yielder const& yield)
           {
             std::function<void(NodeLocation)> handle = [&](NodeLocation hosts)
               {
@@ -3406,7 +3381,7 @@ namespace infinit
               };
             elle::unconst(this)->kelipsGet(
               address, n, false, -1, false, fast, handle);
-          });
+          };
       }
 
       void
@@ -3457,56 +3432,53 @@ namespace infinit
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
-        {
-          if (c.first == _self)
-            continue;
-          int g = group_of(c.first);
-          Contacts& target = _state.contacts[g];
-          auto it = target.find(c.first);
-          if (it == target.end())
+          if (c.first != _self)
           {
-            if (g == this->_group ||
-                signed(target.size()) < this->_config.max_other_contacts)
+            int g = group_of(c.first);
+            Contacts& target = _state.contacts.at(g);
+            auto it = target.find(c.first);
+            if (it == target.end())
             {
-              auto contact =
-                Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+              if (g == this->_group ||
+                  signed(target.size()) < this->_config.max_other_contacts)
+              {
+                auto contact =
+                  Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+                for (auto const& ep: c.second)
+                  contact.endpoints.push_back(TimedEndpoint(ep, now()));
+                auto nl = NodeLocation(c.first, c.second);
+                ELLE_LOG("%s: register %f", this, contact);
+                target[c.first] = std::move(contact);
+                this->on_discovery()(nl, false);
+                notify_observers(nl);
+              }
+            }
+            else
+            {
               for (auto const& ep: c.second)
-                contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              auto nl = NodeLocation(c.first, c.second);
-              ELLE_LOG("%s: register %f", this, contact);
-              target[c.first] = std::move(contact);
-              this->on_discovery()(nl, false);
-              notify_observers(nl);
+                endpoints_update(it->second.endpoints, ep);
+              if (!it->second.discovered)
+              {
+                it->second.discovered = true;
+                auto nl =
+                  NodeLocation(it->first, to_endpoints(it->second.endpoints));
+                this->on_discovery()(nl, false);
+                notify_observers(nl);
+              }
             }
           }
-          else
-          {
-            for (auto const& ep: c.second)
-              endpoints_update(it->second.endpoints, ep);
-            if (!it->second.discovered)
-            {
-              it->second.discovered = true;
-              auto nl =
-                NodeLocation(it->first, to_endpoints(it->second.endpoints));
-              this->on_discovery()(nl, false);
-              notify_observers(nl);
-            }
-          }
-        }
         for (auto const& f: s.second)
-        {
-          if (group_of(f.first) != _group)
-            continue;
-          if (f.second == _self)
-            continue;
-          auto its = _state.files.equal_range(f.first);
-          auto it = boost::find_if(its, [&](auto const& i) {
-              return i.second.home_node == f.second;});
-          if (it == its.second)
-            _state.files.emplace(f.first,
-                                 File{f.first, f.second, now(), now(),
-                                     this->_config.gossip.new_threshold + 1});
-        }
+          if (group_of(f.first) == _group
+              && f.second != _self)
+          {
+            auto its = _state.files.equal_range(f.first);
+            auto it = boost::find_if(its, [&](auto const& i) {
+                return i.second.home_node == f.second;});
+            if (it == its.second)
+              _state.files.emplace(f.first,
+                                   File{f.first, f.second, now(), now(),
+                                       this->_config.gossip.new_threshold + 1});
+          }
       }
 
       void
@@ -3595,7 +3567,7 @@ namespace infinit
               // Change
               ELLE_TRACE("moving misplaced entry for %x to %s", address,
                 target == &_state.observers ? "observers" : "storage nodes");
-              target->insert(std::make_pair(address, std::move(it->second)));
+              target->emplace(address, std::move(it->second));
               ntarget->erase(address);
             }
             else
@@ -3608,7 +3580,7 @@ namespace infinit
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto nl = NodeLocation(address, endpoints);
-        auto inserted = target->insert(std::make_pair(address, std::move(c)));
+        auto inserted = target->emplace(address, std::move(c));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
           this->on_discovery()(nl, observer);
