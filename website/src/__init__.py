@@ -468,6 +468,7 @@ class Website(bottle.Bottle):
   @route('/images/<path:path>')
   @route('/js/<path:path>')
   @route('/json/<path:path>')
+  @route('/licenses/<path:path>')
   @route('/scripts/<path:path>')
   def images(self, path):
     d = bottle.request.urlparts.path.split('/')[1]
