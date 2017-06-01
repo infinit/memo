@@ -63,7 +63,7 @@ x86_64-centos6-gcc4:
     - centos6
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-ubuntu-gcc4:
   stage: build
@@ -105,7 +105,7 @@ x86_64-ubuntu-gcc4:
     - ubuntu
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-alpine-gcc:
   stage: build
@@ -146,7 +146,7 @@ x86_64-alpine-gcc:
     - alpine
     - gcc
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-jessie-gcc4:
   stage: build
@@ -180,7 +180,7 @@ x86_64-jessie-gcc4:
     - jessie
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-windows-mingw4:
   stage: build
@@ -215,7 +215,7 @@ x86_64-windows-mingw4:
     - windows
     - mingw4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-osx-clang:
   stage: build
@@ -250,7 +250,7 @@ x86_64-osx-clang:
     - osx
     - clang
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 website:
   stage: build
@@ -279,4 +279,4 @@ website:
     - ubuntu
     - gcc4
   only:
-    - feature/website
+    - /^.*feature.website.*$/
