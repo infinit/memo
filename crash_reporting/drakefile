@@ -86,6 +86,7 @@ def configure(cxx_toolkit = None,
   global lib_dynamic, lib_static, library
   global dump_syms_exe, rule_tools
 
+  # //tools: build the auxiliary tools.
   rule_tools = drake.Rule('tools')
 
   ## -------- ##
