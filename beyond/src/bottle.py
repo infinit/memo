@@ -1119,7 +1119,8 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       from base64 import b64decode
       from io import BytesIO
-      self.__beyond.crash_report_send(BytesIO(b64decode(json.get('dump', ''))),
+      dump = BytesIO(b64decode(json.get('dump', '')))
+      self.__beyond.crash_report_send(dump,
                                       json.get('platform', 'Unknown'),
                                       json.get('version', 'Unknown'))
     return {}
@@ -1202,7 +1203,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name == 'google' or name == 'gcs':
+    if name in ['google', 'gcs']:
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
