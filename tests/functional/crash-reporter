@@ -22,11 +22,11 @@ with TemporaryDirectory() as tmp, \
     try:
       bob.run(['tests/functional/bin/crasher',
                '--server', server, '--dumps', str(tmp), '--crash'])
-      assert False
-    except Exception as e:
-      from time import sleep
-      sleep(2)
+    except:
       pass
+    # Leave some time for the minidump to be written.
+    from time import sleep
+    sleep(2)
 
   def upload(server = server):
     bob.run(['tests/functional/bin/crasher',

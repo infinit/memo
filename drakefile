@@ -596,7 +596,8 @@ def configure(
       'debian').package
 
   if enable_crash_reporting:
-    # //debian-debug: generate the debug symbols for breakpad.
+    # //debian-debug: generate the debug symbols for breakpad,
+    # installed on Beyond.
     rule_debian_debug = drake.Rule('debian-debug')
     name = 'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description())
     debian_debug_package = crash_reporting.SymbolsPackager(
@@ -816,7 +817,7 @@ def configure(
             drake.node('tests/functional/bin/crasher.cc')
           ] + crash_test_libs,
           cxx_toolkit,
-          cli_cxx_config)
+          cxx_config_infinit)
       def functional_test(name, env = {}, binaries = []):
         t = {
           'name': name
@@ -948,6 +949,8 @@ def configure(
   cxx_config_tests.add_local_include_path('bin')
   cxx_config_tests.add_local_include_path('.')
   cxx_config_tests += grpc.grpc.cxx_config
+  if enable_crash_reporting:
+    cxx_config_tests.add_local_include_path('crash_reporting/src') # functional/bin/crasher
   if grpc.grpc_lib:
     cxx_config_tests.library_add(grpc_lib)
   if not windows:
