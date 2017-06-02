@@ -1494,14 +1494,8 @@ namespace infinit
                         b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
               for (auto peer: reached)
-                if (auto local =
-                    dynamic_cast<Paxos::LocalPeer*>(peer.get()))
-                  local->confirm(q, b->address(), PaxosClient::Proposal());
-                else if (auto remote =
-                    dynamic_cast<Paxos::RemotePeer*>(peer.get()))
-                  remote->confirm(q, b->address(), PaxosClient::Proposal());
-                else
-                  ELLE_ABORT("invalid paxos peer: %s", peer);
+                ELLE_ENFORCE(std::dynamic_pointer_cast<Paxos::Peer>(peer))
+                  ->confirm(q, b->address(), PaxosClient::Proposal());
           }
         }
 
