@@ -18,6 +18,7 @@ host_os = os.environ.get('OS', '')
 ## Binaries ##
 ## -------- ##
 
+# Don't generate crash reports on our Beyond server.
 os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
 
 def find_binaries():
@@ -31,7 +32,7 @@ def find_binaries():
     if not path.endswith('/'):
       path += '/'
     try:
-      subprocess.check_call([path + 'infinit-user' + exe_ext, '--version'])
+      subprocess.check_call([path + 'infinit' + exe_ext, '--version'])
       return path
     except FileNotFoundError:
       pass
@@ -39,7 +40,10 @@ def find_binaries():
       pass
   return None
 
+# Our bindir, with a trailing slash.
 binary_path = find_binaries()
+# The infinit executable (possibly infinit.exe).
+infinit_path = binary_path + 'infinit' + exe_ext
 
 # Email templates.
 templates = {
@@ -360,8 +364,7 @@ class Beyond:
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
-                  '--import', '-s']
+          args = [infinit_path, type, 'import', '-s']
           try:
             subprocess.check_output(
               args,
@@ -382,7 +385,7 @@ class Beyond:
             import_data('network', network.json())
             output = subprocess.check_output(
               [
-                binary_path + 'infinit-passport' + exe_ext, '--create',
+                infinit_path, 'passport', 'create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
