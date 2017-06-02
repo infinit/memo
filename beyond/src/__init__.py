@@ -18,6 +18,9 @@ host_os = os.environ.get('OS', '')
 ## Crash report ##
 ## ------------ ##
 
+# Where the symbol files are.
+symbols_path = '/opt/infinit/lib/debug/symbols/'
+
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
   symbolized if possible.  It is safe to use in_ == out.'''
@@ -26,7 +29,7 @@ def symbolize_dump(in_, out = None):
     out = in_
   try:
     with open(out + '.tmp', 'wb') as o:
-      p = subprocess.run(['minidump_stackwalk', in_], stdout=o)
+      p = subprocess.run(['minidump_stackwalk', in_, symbols_path], stdout=o)
       if p.returncode:
         print("symbolize: error: {}".format(p.stderr))
       else:
