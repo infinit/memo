@@ -364,40 +364,12 @@ def configure(
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
   if entreprise_edition:
     cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
-  # Ship libstdc++
-  additional_libs = []
-  if linux and cxx_toolkit.architecture is not drake.architecture.arm:
-    searched_for = {'libstdc++', 'libgcc_s'}
-    need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
-    try:
-      output = subprocess.check_output(['/sbin/ldconfig', '-p'])
-    except Exception:
-      output = ''.join([ (need_64 and 'x86-64 ' or '') + '/usr/lib/'+x+'.so\n' for x in searched_for]).encode('utf-8')
-    path = None
-    for line in output.decode('utf-8').split('\n'):
-      for searched in searched_for:
-        if searched in line:
-          if need_64 != ('x86-64' in line):
-            continue
-          path = drake.Path(line.split(' ')[-1])
-          additional_libs.append(
-            drake.copy(drake.cxx.DynLib(path), libdir, strip_prefix = True))
-          searched_for.remove(searched)
-          break
-      if not searched_for:
-        break
-    if searched_for:
-      raise Exception('Unable to find %s with ldconfig -p' %
-                      ', '.join(searched_for))
 
   # Whether to add infinit-daemon support.
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
   cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
   cli_cxx_config.define('INFINIT_WITH_LDAP', '1' if elle.elle.ldap else '0')
-  if enable_crash_reporting:
-    additional_libs.append(crash_reporter_lib)
-  additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   binaries = []
   global installed_binaries
   installed_binaries = []
