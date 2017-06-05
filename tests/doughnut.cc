@@ -1893,13 +1893,16 @@ namespace rebalancing
   }
 
   // Perform a full rotation, transferring a block to a quorum with none of the
-  // original owners. New owner used to not replicate immutable blocks.
-  ELLE_TEST_SCHEDULED(evict_chain)
+  // original owners. New owner used to not replicate immutable blocks. The
+  // expand version evicts a node and then introduce a new one, to check the
+  // block is expanded. The !expand version introduce a new node, then evicts
+  // one to check the block is rebalanced right away.
+  ELLE_TEST_SCHEDULED(evict_chain, (bool, expand))
   {
     std::vector<std::unique_ptr<DHT>> dhts;
     auto const make = [&] (int i)
       {
-        auto dht = make_dht(i);
+        auto dht = make_dht(i, expand);
         for (auto const& d: dhts)
           dht->overlay->connect(*d->overlay);
         auto const id = dht->dht->id();
@@ -1917,7 +1920,9 @@ namespace rebalancing
     for (auto i = 3; i < 32; ++i)
       ELLE_LOG("rotate to a new DHT")
       {
-        auto inserted = make(i);
+        decltype(make(i)) inserted;
+        if (!expand)
+          inserted = make(i);
         auto erased = [&]
           {
             auto it = *std::begin(elle::pick_n(1, dhts));
@@ -1926,7 +1931,14 @@ namespace rebalancing
             return id;
           }();
         auto& local = dynamic_cast<Local&>(*dhts[0]->dht->local());
+        auto not_rebalanced =
+          elle::reactor::waiter(local.under_replicated(), block->address(), 2);
         local.evict()();
+        if (expand)
+        {
+          elle::reactor::wait(not_rebalanced);
+          inserted = make(i);
+        }
         if (erased != inserted)
           elle::reactor::wait(local.rebalanced(), block->address());
         BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
@@ -2231,6 +2243,15 @@ ELLE_TEST_SUITE()
       auto resign_insist = &rebalancing::resign_insist;
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
     }
-    rebalancing->add(BOOST_TEST_CASE(evict_chain), 0, valgrind(5));
+    {
+      auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
+      rebalancing->add(evict_chain);
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, true), "expand"),
+        0, valgrind(5));
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, false), "rebalance"),
+        0, valgrind(5));
+    }
   }
 }
