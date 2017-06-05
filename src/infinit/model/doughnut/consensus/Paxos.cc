@@ -641,6 +641,7 @@ namespace infinit
         {
           ELLE_LOG_COMPONENT(
             "infinit.model.doughnut.consensus.Paxos.rebalance");
+          ELLE_TRACE_SCOPE("%s: evict node %f", this, lost_id);
           auto blocks = elle::make_vector(
             elle::as_range(
               this->_node_blocks.get<by_node>().equal_range(lost_id)),
@@ -766,7 +767,8 @@ namespace infinit
                   }
                   else
                     ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
-                  elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
+                  elle::With<elle::reactor::Scope>() <<
+                  [&] (elle::reactor::Scope& scope)
                   {
                     bool rebalanced = false;
                     for (auto peer: new_q)
@@ -774,9 +776,10 @@ namespace infinit
                       if (contains(q.quorum, peer))
                         continue;
                       scope.run_background(
-                        elle::sprintf("%s: duplicate to %f",
-                                      elle::reactor::scheduler().current()->name(),
-                                      peer),
+                        elle::sprintf(
+                          "%s: duplicate to %f",
+                          elle::reactor::scheduler().current()->name(),
+                          peer),
                         [&, peer]
                         {
                           if (auto p = this->doughnut().overlay()->
@@ -1032,6 +1035,7 @@ namespace infinit
           }
           else
           {
+            ELLE_DEBUG("confirm %f is stored on %f", address, peers);
             this->_cache(address, true, peers);
             if (this->_rebalance_auto_expand &&
                 signed(peers.size()) < this->_factor)
