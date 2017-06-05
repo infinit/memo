@@ -771,7 +771,6 @@ namespace infinit
                   elle::With<elle::reactor::Scope>() <<
                   [&] (elle::reactor::Scope& scope)
                   {
-                    bool rebalanced = false;
                     std::unordered_set<overlay::Overlay::Member> new_owners;
                     std::unordered_set<overlay::Overlay::Member> owners;
                     for (auto id: new_q)
@@ -793,7 +792,6 @@ namespace infinit
                           [&] (BlockRepartition& r)
                           { r.quorum.insert(peer->id()); });
                         this->_node_blocks.emplace(peer->id(), address);
-                        rebalanced = true;
                       });
                     elle::reactor::for_each_parallel(
                       owners,
@@ -803,8 +801,7 @@ namespace infinit
                           std::dynamic_pointer_cast<Paxos::Peer>(peer))
                           ->confirm(new_q, address, PaxosClient::Proposal());
                       });
-                    if (rebalanced)
-                      this->_rebalanced(address);
+                    this->_rebalanced(address);
                   };
                 }
               }
