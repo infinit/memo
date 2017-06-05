@@ -849,6 +849,10 @@ namespace infinit
                     auto b = this->_load(target.address);
                     ELLE_ASSERT(b.block);
                     peer->store(*b.block, STORE_INSERT);
+                    ELLE_ENFORCE(
+                      std::dynamic_pointer_cast<Paxos::Peer>(peer))
+                      ->confirm(target.quorum, target.address,
+                                PaxosClient::Proposal());
                     this->_quorums.modify(
                       this->_quorums.find(target.address),
                       [&] (BlockRepartition& r)
