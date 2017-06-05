@@ -771,40 +771,37 @@ namespace infinit
                   [&] (elle::reactor::Scope& scope)
                   {
                     bool rebalanced = false;
-                    for (auto peer: new_q)
-                    {
-                      if (contains(q.quorum, peer))
-                        continue;
-                      scope.run_background(
-                        elle::sprintf(
-                          "%s: duplicate to %f",
-                          elle::reactor::scheduler().current()->name(),
-                          peer),
-                        [&, peer]
+                    std::unordered_set<overlay::Overlay::Member> new_owners;
+                    std::unordered_set<overlay::Overlay::Member> owners;
+                    for (auto id: new_q)
+                      if (id != this->doughnut().id())
+                        if (auto peer = this->doughnut().overlay()->
+                            lookup_node(id).lock())
                         {
-                          if (auto p = this->doughnut().overlay()->
-                              lookup_node(peer).lock())
-                          {
-                            try
-                            {
-                              p->store(*block.block, STORE_INSERT);
-                              this->_quorums.modify(
-                                this->_quorums.find(address),
-                                [&] (BlockRepartition& r)
-                                {r.quorum.insert(peer);});
-                              this->_node_blocks.emplace(peer, address);
-                              rebalanced = true;
-                            }
-                            catch (elle::Error const& e)
-                            {
-                              ELLE_WARN(
-                                "immutable block duplication to %f failed: %s",
-                                p->id(), e.what());
-                            }
-                          }
-                        });
-                    }
-                    elle::reactor::wait(scope);
+                          owners.emplace(peer);
+                          if (!elle::find(q.quorum, peer->id()))
+                            new_owners.emplace(peer);
+                        };
+                    elle::reactor::for_each_parallel(
+                      new_owners,
+                      [&] (overlay::Overlay::Member peer)
+                      {
+                        peer->store(*block.block, STORE_INSERT);
+                        this->_quorums.modify(
+                          this->_quorums.find(address),
+                          [&] (BlockRepartition& r)
+                          { r.quorum.insert(peer->id()); });
+                        this->_node_blocks.emplace(peer->id(), address);
+                        rebalanced = true;
+                      });
+                    elle::reactor::for_each_parallel(
+                      owners,
+                      [&] (overlay::Overlay::Member peer)
+                      {
+                        ELLE_ENFORCE(
+                          std::dynamic_pointer_cast<Paxos::Peer>(peer))
+                          ->confirm(new_q, address, PaxosClient::Proposal());
+                      });
                     if (rebalanced)
                       this->_rebalanced(address);
                   };
