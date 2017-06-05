@@ -1,13 +1,13 @@
-#ifndef INFINIT_MODEL_MONITORING_SERVER_HH
+#pragma once
 
-# include <elle/json/json.hh>
-# include <elle/Printable.hh>
+#include <elle/json/json.hh>
+#include <elle/Printable.hh>
 
-# include <elle/reactor/network/server.hh>
-# include <elle/reactor/network/socket.hh>
+#include <elle/reactor/network/server.hh>
+#include <elle/reactor/network/socket.hh>
 
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/serialization.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -81,5 +81,3 @@ namespace infinit
     };
   }
 }
-
-#endif // INFINIT_MODEL_MONITORING_SERVER_HH
