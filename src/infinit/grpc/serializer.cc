@@ -1,8 +1,11 @@
 #include <infinit/grpc/serializer.hh>
 
-#include <elle/serialization/json/Error.hh> // serialization::MissingKey.
-#include <grpc++/grpc++.h>
 #include <google/protobuf/message.h>
+
+#include <elle/meta.hh>
+#include <elle/serialization/json/Error.hh> // serialization::MissingKey.
+
+#include <grpc++/grpc++.h>
 
 ELLE_LOG_COMPONENT("infinit.grpc.serialization");
 
@@ -29,11 +32,8 @@ namespace
   {
     std::string res;
     for (auto c: name)
-    {
-      if (c == '.')
-        continue;
-      res += c;
-    }
+      if (c != '.')
+        res += c;
     return res;
   }
 }
@@ -76,7 +76,7 @@ namespace infinit
     SerializerIn::_enter(std::string const& _name)
     {
       ELLE_DUMP("%s: enter %s %s", this, _name, _names);
-      std::string name = filter_field_name(_name);
+      auto const name = filter_field_name(_name);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -116,7 +116,7 @@ namespace infinit
     SerializerIn::_leave(std::string const& name)
     {
       ELLE_DUMP("%s: leave %s %s", this, name, _names);
-      if (_field != nullptr)
+      if (_field)
         _field = nullptr;
       else
         _message_stack.pop_back();
@@ -148,13 +148,27 @@ namespace infinit
       b = s;
     }
 
+    template<typename To, typename From>
+    void check_min(From v)
+    {
+      if (v < std::numeric_limits<To>::min())
+        elle::err<elle::serialization::Error>(
+          "underflow: %s does not fit in %s bytes or unsigned", v, sizeof(To));
+    }
+
+    template<typename To, typename From>
+    void check_max(From v)
+    {
+      if (std::numeric_limits<To>::max() < v)
+        elle::err<elle::serialization::Error>(
+          "overflow: %s does not fit in %s bytes", v, sizeof(To));
+    }
+
     template<typename T, typename E>
     T get_small_int(E v)
     {
-      if (v > std::numeric_limits<T>::max())
-        elle::err<elle::serialization::Error>("%s does not fit in %s bytes", v, sizeof(T));
-      if (v < std::numeric_limits<T>::min())
-        elle::err<elle::serialization::Error>("underflow: %s does not fit in %s bytes or unsigned", v, sizeof(T));
+      check_min<T>(v);
+      check_max<T>(v);
       return static_cast<T>(v);
     }
 
@@ -179,13 +193,13 @@ namespace infinit
       ELLE_DUMP("deserialized int: %s", v);
     }
 
-    void SerializerIn::_serialize(int8_t  & v) { _serialize_int(v);}
-    void SerializerIn::_serialize(uint8_t & v) { _serialize_int(v);}
-    void SerializerIn::_serialize(int16_t & v) { _serialize_int(v);}
-    void SerializerIn::_serialize(uint16_t& v) { _serialize_int(v);}
-    void SerializerIn::_serialize(int32_t & v) { _serialize_int(v);}
-    void SerializerIn::_serialize(uint32_t& v) { _serialize_int(v);}
-    void SerializerIn::_serialize(int64_t & v) { _serialize_int(v);}
+    void SerializerIn::_serialize(int8_t  & v) { _serialize_int(v); }
+    void SerializerIn::_serialize(uint8_t & v) { _serialize_int(v); }
+    void SerializerIn::_serialize(int16_t & v) { _serialize_int(v); }
+    void SerializerIn::_serialize(uint16_t& v) { _serialize_int(v); }
+    void SerializerIn::_serialize(int32_t & v) { _serialize_int(v); }
+    void SerializerIn::_serialize(uint32_t& v) { _serialize_int(v); }
+    void SerializerIn::_serialize(int64_t & v) { _serialize_int(v); }
 
     void
     SerializerIn::_serialize(uint64_t& v)
@@ -199,6 +213,25 @@ namespace infinit
         bigval = cur->GetReflection()->GetUInt64(*cur, _field);
       v = get_small_int<uint64_t>(bigval);
       _last_serialized_int = v;
+    }
+
+    void
+    SerializerIn::_serialize(ulong& v)
+    {
+      elle::meta::static_if<need_unsigned_long>
+        ([this](auto& v)
+         {
+           auto t = uint64_t{};
+           _serialize(t);
+           // Use a dependent type here.
+           check_max<std::decay_t<decltype(v)>>(t);
+           v = t;
+         },
+         [](auto& v)
+         {
+           elle::unreachable();
+         })
+        (v);
     }
 
     void
@@ -337,10 +370,11 @@ namespace infinit
 
     void
     SerializerOut::_field_check()
-    { // grpc can't handle raw value as output, only messages
-      // so if C++ outputs something that serializes as a value, we need
-      // to wrap it.
-      // Assume the field name is the lowercase version of the message name
+    {
+      // grpc can't handle raw value as output, only messages so if
+      // C++ outputs something that serializes as a value, we need to
+      // wrap it.  Assume the field name is the lowercase version of
+      // the message name
       if (!_field && _message_stack.size() == 1)
       {
         auto* cur = _message_stack.back();
@@ -348,10 +382,9 @@ namespace infinit
         ELLE_DEBUG("field check for %s", desc->name());
         _field = desc->FindFieldByName(uppercase_to_underscore(desc->name()));
         if (!_field)
-        { // Nice heuristic bearclaw, but the Message names are constrained
-          // by protobuf standards, just take the first field
+          // Nice heuristic bearclaw, but the Message names are constrained
+          // by protobuf standards, just take the first field.
           _field = desc->FindFieldByNumber(1);
-        }
       }
       ELLE_ASSERT(_field);
     }
@@ -360,7 +393,7 @@ namespace infinit
     SerializerOut::_enter(std::string const& _name)
     {
       ELLE_DUMP("enter %s %s", _name, _names);
-      std::string name = filter_field_name(_name);
+      auto const name = filter_field_name(_name);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -404,8 +437,8 @@ namespace infinit
     void
     SerializerOut::_leave(std::string const& name)
     {
-      ELLE_DUMP("leave %s %s", name, _names);
-      if (_field != nullptr)
+      ELLE_DUMP("%s: leave %s %s", this, name, _names);
+      if (_field)
         _field = nullptr;
       else
         _message_stack.pop_back();
@@ -430,7 +463,7 @@ namespace infinit
     void
     SerializerOut::_serialize(elle::Buffer& b)
     {
-      std::string s = b.string();
+      auto s = b.string();
       _serialize(s);
     }
 
@@ -448,13 +481,21 @@ namespace infinit
       _last_serialized_int = v;
     }
 
-    void SerializerOut::_serialize(int8_t  & v) { _serialize_int(v);}
-    void SerializerOut::_serialize(uint8_t & v) { _serialize_int(v);}
-    void SerializerOut::_serialize(int16_t & v) { _serialize_int(v);}
-    void SerializerOut::_serialize(uint16_t& v) { _serialize_int(v);}
-    void SerializerOut::_serialize(int32_t & v) { _serialize_int(v);}
-    void SerializerOut::_serialize(uint32_t& v) { _serialize_int(v);}
-    void SerializerOut::_serialize(int64_t & v) { _serialize_int(v);}
+    void SerializerOut::_serialize(int8_t  & v) { _serialize_int(v); }
+    void SerializerOut::_serialize(uint8_t & v) { _serialize_int(v); }
+    void SerializerOut::_serialize(int16_t & v) { _serialize_int(v); }
+    void SerializerOut::_serialize(uint16_t& v) { _serialize_int(v); }
+    void SerializerOut::_serialize(int32_t & v) { _serialize_int(v); }
+    void SerializerOut::_serialize(uint32_t& v) { _serialize_int(v); }
+    void SerializerOut::_serialize(int64_t & v) { _serialize_int(v); }
+
+    void SerializerOut::_serialize(ulong   & v)
+    {
+      elle::meta::static_if<need_unsigned_long>
+        ([this](auto& v) { _serialize_int(v); },
+         []    (auto&)   { elle::unreachable(); })
+        (v);
+    }
 
     void
     SerializerOut::_serialize(uint64_t& v)
@@ -482,7 +523,7 @@ namespace infinit
     void
     SerializerOut::_serialize(boost::posix_time::ptime& v)
     {
-      std::string s = boost::posix_time::to_iso_string(v);
+      auto s = boost::posix_time::to_iso_string(v);
       _serialize(s);
     }
 
@@ -545,11 +586,9 @@ namespace infinit
     void
     SerializerOut::_serialize_array(int count, std::function<void ()> const& f)
     {
-      std::string name;
-      if (!_names.empty())
-        name = _names.back();
+      auto const name = _names.empty() ? "" : _names.back();
       ELLE_DUMP("serialize_array count=%s name=%s field=%s", count,
-        _names.empty()? std::string("none") : _names.back(), !!_field);
+        name.empty() ? "none" : name, !!_field);
       if (_field)
       {
         auto* cur = _message_stack.back();
@@ -578,9 +617,8 @@ namespace infinit
     {
       ELLE_DUMP("serializing variant at %s with %s", index, names);
       ELLE_ASSERT_GT((signed)names.size(), index);
-      std::string name = names[index];
       this->serialize("type", names[index]);
-      name = cxx_to_message_name(name);
+      auto const name = cxx_to_message_name(names[index]);
       this->_enter(name);
       elle::SafeFinally leave([&] { this->_leave(name);});
       f(index);
