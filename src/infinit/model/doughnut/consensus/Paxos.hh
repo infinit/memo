@@ -321,6 +321,11 @@ namespace infinit
                            rebalancable);
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
+            /// Emitted when a block becomes under-replicated and cannot be
+            /// rebalanced. For tests purpose, not emitted in every single case
+            /// yet.
+            ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address, int)>,
+                             under_replicated);
             ELLE_ATTRIBUTE(elle::reactor::Thread, rebalance_thread);
             struct BlockRepartition
             {
