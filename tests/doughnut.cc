@@ -7,6 +7,7 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
+#include <elle/random.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
 #include <elle/Version.hh>
@@ -1650,6 +1651,13 @@ namespace rebalancing
     }
   }
 
+  auto const make_dht = [] (int n, bool rebalance_auto_expand = false)
+  {
+    return std::make_unique<DHT>(
+      id = special_id(n + 10),
+      dht::consensus_builder = instrument(3, rebalance_auto_expand));
+  };
+
   auto const make_resign_dht = [] (int n, bool rebalance_auto_expand = true)
   {
     return std::make_unique<DHT>(
@@ -1882,6 +1890,47 @@ namespace rebalancing
     dht_c.reset();
     BOOST_TEST(count > 16);
     elle::reactor::wait(rebalanced);
+  }
+
+  // Perform a full rotation, transferring a block to a quorum with none of the
+  // original owners. New owner used to not replicate immutable blocks.
+  ELLE_TEST_SCHEDULED(evict_chain)
+  {
+    std::vector<std::unique_ptr<DHT>> dhts;
+    auto const make = [&] (int i)
+      {
+        auto dht = make_dht(i);
+        for (auto const& d: dhts)
+          dht->overlay->connect(*d->overlay);
+        auto const id = dht->dht->id();
+        dhts.emplace_back(std::move(dht));
+        return id;
+      };
+    make(0);
+    make(1);
+    make(2);
+    auto block = dhts[0]->dht->make_block<blocks::ImmutableBlock>(
+      std::string("resign_chain"));
+    ELLE_LOG("write block")
+      dhts[0]->dht->seal_and_insert(*block);
+    BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+    for (auto i = 3; i < 32; ++i)
+      ELLE_LOG("rotate to a new DHT")
+      {
+        auto inserted = make(i);
+        auto erased = [&]
+          {
+            auto it = *std::begin(elle::pick_n(1, dhts));
+            auto id = (*it)->dht->id();
+            dhts.erase(it);
+            return id;
+          }();
+        auto& local = dynamic_cast<Local&>(*dhts[0]->dht->local());
+        local.evict()();
+        if (erased != inserted)
+          elle::reactor::wait(local.rebalanced(), block->address());
+        BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+      }
   }
 }
 
@@ -2182,5 +2231,6 @@ ELLE_TEST_SUITE()
       auto resign_insist = &rebalancing::resign_insist;
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
     }
+    rebalancing->add(BOOST_TEST_CASE(evict_chain), 0, valgrind(5));
   }
 }
