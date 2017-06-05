@@ -763,6 +763,7 @@ namespace infinit
                   if (new_q == q.quorum)
                   {
                     ELLE_DEBUG("unable to find any new owner for %f", address);
+                    this->_under_replicated(address, q.quorum.size());
                     continue;
                   }
                   else
