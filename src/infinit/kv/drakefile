@@ -3,24 +3,21 @@ import os
 import drake
 import drake.go
 
-kv_bin = None
+header = None
+library = None
+service_proto = None
 rule_build = None
-rule_check = None
-rule_tests = None
 
 def configure(
   go_toolkit,
   go_config,
   grpc,
-  infinit_cli,
 ):
-  global kv_bin, rule_build, rule_check, rule_tests
+  global header, library, service_proto, rule_build
 
   windows = go_toolkit.os == 'windows'
 
   rule_build = drake.Rule('build')
-  rule_check = drake.Rule('check')
-  rule_tests = drake.Rule('tests')
 
   local_config = drake.go.Config(go_config)
 
@@ -28,7 +25,8 @@ def configure(
                                 toolkit = go_toolkit)
   doughnut_grpc = drake.copy(gen_doughnut.targets(), 'src/doughnut',
                              strip_prefix = True)
-  gen_kv_service = grpc.GRPCGoGen(drake.node('protobuf/service.proto'),
+  service_proto = drake.node('protobuf/service.proto')
+  gen_kv_service = grpc.GRPCGoGen(service_proto,
                                   grpc.grpc.protoc,
                                   toolkit = go_toolkit)
   kv_grpc = drake.copy(gen_kv_service.targets(), 'src/kv/service',
@@ -45,8 +43,8 @@ def configure(
   # contains several dependencies - grpc, protobuf, etc.
   grpc_package_tgts = \
     [drake.node(t % (go_toolkit.path, go_toolkit.platform_str())) for t in [
-    # '%s/pkg/%s/github.com/golang/protobuf/proto.a',
-    # '%s/pkg/%s/github.com/golang/protobuf/ptypes/any.a',
+    '%s/pkg/%s/github.com/golang/protobuf/proto.a',
+    '%s/pkg/%s/github.com/golang/protobuf/ptypes/any.a',
     '%s/pkg/%s/golang.org/x/net/context.a',
     '%s/pkg/%s/golang.org/x/net/http2/hpack.a',
     '%s/pkg/%s/golang.org/x/net/http2.a',
@@ -83,33 +81,21 @@ def configure(
   source_include = drake.path_source() / drake.Drake.current.prefix
   local_config.add_include_path(source_include)
 
-  kv_bin = drake.go.Executable(
-    drake.go.Source('src/bin/key-value-store.go'),
-    go_toolkit, local_config,
-    target = 'bin/kv.exe' if windows else 'bin/kv',
-    sources = sources,
-  )
-  rule_build << kv_bin
-
-  # XXX: The key-value hangs registering the gRPC service (RegisterService)
-  # when running under wine. Works on Windows 10.
   if not windows:
-    grpc_test = drake.go.TestExecutable(
-      drake.go.Source('tests/functional/grpc_test.go'),
+    kv_lib_builder = drake.go.CDyLibBuilder(
+      drake.go.Source('src/lib/library.go'),
       go_toolkit, local_config,
-      target = 'tests/functional/grpc',
-      sources = kv_grpc,
-      build_host = True,
+      target = 'lib/libkv%s' % go_toolkit.dylib_ext(),
+      sources = sources,
     )
-    rule_tests << grpc_test
-    rule_tests << [kv_bin, infinit_cli]
-
-    grpc_test_env = {
-      "INFINIT_BIN": os.path.realpath(str(infinit_cli)),
-      "INFINIT_KV_BIN": os.path.realpath(str(kv_bin)),
-    }
-    runner = drake.Runner(exe = grpc_test,
-                          env = grpc_test_env,
-                          sources = [kv_bin, infinit_cli])
-    runner.reporting = drake.Runner.Reporting.on_failure
-    rule_check << runner.status
+  else:
+    kv_lib_builder = drake.go.CStaticLibBuilder(
+      drake.go.Source('src/lib/library.go'),
+      go_toolkit, local_config,
+      target = 'lib/libkv%s' % go_toolkit.staticlib_ext(),
+      sources = sources,
+    )
+  header = kv_lib_builder.header
+  library = kv_lib_builder.library
+  rule_build << header
+  rule_build << library

@@ -320,6 +320,17 @@ def configure(
     strip = windows)
   rule_build << infinit_lib
 
+  ## ---- ##
+  ## kv.  ##
+  ## ---- ##
+  kv = drake.include(
+    'src/infinit/kv',
+    go_toolkit = go_toolkit,
+    go_config = go_config,
+    grpc = grpc,
+  )
+  rule_build << kv.rule_build
+
   ## -------- ##
   ## Binaries ##
   ## -------- ##
@@ -500,19 +511,6 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
   rule_build << binaries
-
-  ## ---- ##
-  ## kv.  ##
-  ## ---- ##
-  kv = drake.include(
-    'src/infinit/kv',
-    go_toolkit = go_toolkit,
-    go_config = go_config,
-    grpc = grpc,
-    infinit_cli = infinit_cli,
-  )
-  rule_tests << kv.rule_tests
-  rule_check << kv.rule_check
 
   ## -------- ##
   ## Licenses ##
