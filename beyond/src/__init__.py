@@ -72,10 +72,8 @@ def find_binaries():
       pass
   return None
 
-# Our bindir, with a trailing slash.
+# Our bindir, with a trailing slash, or None if we can't find `infinit`.
 binary_path = find_binaries()
-# The infinit executable (possibly infinit.exe).
-infinit_path = binary_path + 'infinit' + exe_ext
 
 # Email templates.
 templates = {
@@ -381,6 +379,8 @@ class Beyond:
   def process_invitations(self, user, email, drives):
     if binary_path is None:
       raise NotImplementedError()
+    # The infinit executable (possibly infinit.exe).
+    infinit_path = binary_path + 'infinit' + exe_ext
     errors = []
     try:
       try:
