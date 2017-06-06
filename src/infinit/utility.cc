@@ -107,7 +107,7 @@ namespace infinit
   }
 
   bool
-  is_hidden_file(boost::filesystem::path const& path)
+  is_hidden_file(bfs::path const& path)
   {
     return
       path.filename().string().front() == '.'
@@ -115,7 +115,7 @@ namespace infinit
   }
 
   bool
-  is_visible_file(boost::filesystem::directory_entry const& e)
+  is_visible_file(bfs::directory_entry const& e)
   {
     return is_regular_file(e.status()) && !is_hidden_file(e);
   }
