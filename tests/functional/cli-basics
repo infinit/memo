@@ -36,3 +36,12 @@ with Infinit() as bob:
   xfail(['volume', 'create', 'name', '--network'],
         "./bin/infinit: command line error: option requires an argument: --network\n"
         "Try './bin/infinit volume create --help' for more information.\n")
+
+  # Regression: invalid trailing option, which used to be ignored.
+  xfail(['volume', 'run',
+         '--mountpoint', 'mountpoint',
+         '--cache',
+         '--name', 'name',
+         '--foobar'],
+        "./bin/infinit: command line error: unknown option: --foobar\n"
+        "Try './bin/infinit volume run --help' for more information.\n")
