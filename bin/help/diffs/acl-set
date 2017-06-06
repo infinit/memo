@@ -1,4 +1,4 @@
-acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USE acl: set: Usage: infinit-acl acl set [OPTIONS]
+acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USE acl: set: Usage: infinit acl set [OPTIONS]
 										Set ACLs
 Set ACL:
 										Options:

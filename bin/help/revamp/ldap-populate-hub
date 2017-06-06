@@ -1,4 +1,4 @@
-ldap: populate-hub: Usage: infinit-ldap ldap populate-hub [OPTIONS]
+ldap: populate-hub: Usage: infinit ldap populate-hub [OPTIONS]
 Register LDAP users on the Hub
 
 Options:

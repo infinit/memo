@@ -1,4 +1,4 @@
-volume: update: Usage: _build/macosx64/bin/infinit-volume --update --name VOLUM volume: update: Usage: infinit-volume volume update [OPTIONS]
+volume: update: Usage: _build/macosx64/bin/infinit-volume --update --name VOLUM volume: update: Usage: infinit volume update [OPTIONS]
 										Update a volume with default run options
 Update a volume with default run options:
 										Options:

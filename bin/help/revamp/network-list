@@ -1,4 +1,4 @@
-network: list: Usage: infinit-network network list [OPTIONS]
+network: list: Usage: infinit network list [OPTIONS]
 List networks
 
 Options:

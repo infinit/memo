@@ -1,4 +1,4 @@
-passport: fetch: Usage: _build/macosx64/bin/infinit-passport --fetch [--network passport: fetch: Usage: infinit-passport passport fetch [OPTIONS]
+passport: fetch: Usage: _build/macosx64/bin/infinit-passport --fetch [--network passport: fetch: Usage: infinit passport fetch [OPTIONS]
 										Fetch a user's network passport from the Hub
 Fetch a user's network passport from the Hub:
 										Options:

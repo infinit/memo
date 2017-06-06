@@ -1,4 +1,4 @@
-network: fetch: Usage: infinit-network network fetch [OPTIONS]
+network: fetch: Usage: infinit network fetch [OPTIONS]
 Fetch a network from the Hub
 
 Options:

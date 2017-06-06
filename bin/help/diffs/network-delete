@@ -1,4 +1,4 @@
-network: delete: Usage: _build/macosx64/bin/infinit-network --delete --name NET network: delete: Usage: infinit-network network delete [OPTIONS]
+network: delete: Usage: _build/macosx64/bin/infinit-network --delete --name NET network: delete: Usage: infinit network delete [OPTIONS]
 										Delete a network locally
 Delete a network locally:
 										Options:

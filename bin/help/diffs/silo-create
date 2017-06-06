@@ -1,4 +1,4 @@
-storage: create: Usage: _build/macosx64/bin/infinit-storage --create --name STO storage: create: Usage: infinit-storage create [MODE|--help]
+storage: create: Usage: _build/macosx64/bin/infinit-storage --create --name STO storage: create: Usage: infinit create [MODE|--help]
 										Infinit create management utility.
 Create a storage:
 										Modes:

@@ -1,4 +1,4 @@
-storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]	storage: list: Usage: infinit-storage silo list [OPTIONS]
+storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]	storage: list: Usage: infinit silo list [OPTIONS]
 										List local silos
 List storages:
 										Options:

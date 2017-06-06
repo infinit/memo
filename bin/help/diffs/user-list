@@ -1,4 +1,4 @@
-user: list: Usage: _build/macosx64/bin/infinit-user --list [OPTIONS...]		user: list: Usage: infinit-user user list [OPTIONS]
+user: list: Usage: _build/macosx64/bin/infinit-user --list [OPTIONS...]		user: list: Usage: infinit user list [OPTIONS]
 										List local users
 List users:
 										Options:

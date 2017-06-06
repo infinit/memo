@@ -1,4 +1,4 @@
-volume: create: Usage: _build/macosx64/bin/infinit-volume --create --name VOLUM volume: create: Usage: infinit-volume volume create [OPTIONS]
+volume: create: Usage: _build/macosx64/bin/infinit-volume --create --name VOLUM volume: create: Usage: infinit volume create [OPTIONS]
 										Create a volume
 Create a volume:
 										Options:

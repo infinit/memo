@@ -1,4 +1,4 @@
-user: push: Usage: infinit-user user push [OPTIONS]
+user: push: Usage: infinit user push [OPTIONS]
 Push a user from the Hub
 
 Options:

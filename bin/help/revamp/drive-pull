@@ -1,4 +1,4 @@
-drive: pull: Usage: infinit-drive drive pull [OPTIONS]
+drive: pull: Usage: infinit drive pull [OPTIONS]
 Remove a drive from the Hub
 
 Options:

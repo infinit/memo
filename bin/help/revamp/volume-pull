@@ -1,4 +1,4 @@
-volume: pull: Usage: infinit-volume volume pull [OPTIONS]
+volume: pull: Usage: infinit volume pull [OPTIONS]
 Remove a volume from the Hub
 
 Options:

@@ -1,4 +1,4 @@
-network: export: Usage: infinit-network network export [OPTIONS]
+network: export: Usage: infinit network export [OPTIONS]
 Export a network
 
 Options:

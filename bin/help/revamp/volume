@@ -1,4 +1,4 @@
-Usage: infinit-volume volume [MODE|--help]
+Usage: infinit volume [MODE|--help]
 Infinit volume management utility.
 
 Modes:

@@ -1,4 +1,4 @@
-volume: start: Usage: _build/macosx64/bin/infinit-volume --start --name VOLUME	volume: start: Usage: infinit-volume volume start [OPTIONS]
+volume: start: Usage: _build/macosx64/bin/infinit-volume --start --name VOLUME	volume: start: Usage: infinit volume start [OPTIONS]
 										Start a volume through the daemon
 Start a volume through the daemon.:
 										Options:

@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-device MODE [OPTIONS...]			Usage: infinit-device device [MODE|--help]
+Usage: _build/macosx64/bin/infinit-device MODE [OPTIONS...]			Usage: infinit device [MODE|--help]
 										Infinit device management utility.
 Infinit device utility:
 										Modes:

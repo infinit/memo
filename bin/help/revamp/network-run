@@ -1,4 +1,4 @@
-network: run: Usage: infinit-network network run [OPTIONS]
+network: run: Usage: infinit network run [OPTIONS]
 Run a network
 
 Options:

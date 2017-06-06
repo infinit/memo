@@ -1,4 +1,4 @@
-user: export: Usage: infinit-user user export [OPTIONS]
+user: export: Usage: infinit user export [OPTIONS]
 Export local user
 
 Options:

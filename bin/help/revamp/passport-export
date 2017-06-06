@@ -1,4 +1,4 @@
-passport: export: Usage: infinit-passport passport export [OPTIONS]
+passport: export: Usage: infinit passport export [OPTIONS]
 Export a user's network passport
 
 Options:

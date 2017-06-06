@@ -1,4 +1,4 @@
-drive: list: Usage: infinit-drive drive list [OPTIONS]
+drive: list: Usage: infinit drive list [OPTIONS]
 List drives
 
 Options:

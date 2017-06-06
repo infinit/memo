@@ -1,4 +1,4 @@
-journal: describe: Usage: infinit-journal journal describe [OPTIONS]
+journal: describe: Usage: infinit journal describe [OPTIONS]
 Describe asynchronous operation(s)
 
 Options:

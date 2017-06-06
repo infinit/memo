@@ -1,4 +1,4 @@
-journal: describe: Usage: _build/macosx64/bin/infinit-journal --describe --netw journal: describe: Usage: infinit-journal journal describe [OPTIONS]
+journal: describe: Usage: _build/macosx64/bin/infinit-journal --describe --netw journal: describe: Usage: infinit journal describe [OPTIONS]
 										Describe asynchronous operation(s)
 Describe asynchronous operation(s):
 										Options:

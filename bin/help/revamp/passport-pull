@@ -1,4 +1,4 @@
-passport: pull: Usage: infinit-passport passport pull [OPTIONS]
+passport: pull: Usage: infinit passport pull [OPTIONS]
 Remove a user's network passport from the Hub
 
 Options:

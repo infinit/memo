@@ -1,4 +1,4 @@
-device: receive: Usage: infinit-device device receive [OPTIONS]
+device: receive: Usage: infinit device receive [OPTIONS]
 Receive an object from another device using the Hub
 
 Options:

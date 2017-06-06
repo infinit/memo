@@ -1,4 +1,4 @@
-daemon: manage-volumes: Usage: infinit-daemon daemon manage-volumes [OPTIONS]
+daemon: manage-volumes: Usage: infinit daemon manage-volumes [OPTIONS]
 Manage daemon controlled volumes
 
 Options:

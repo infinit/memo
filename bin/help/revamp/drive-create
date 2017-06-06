@@ -1,4 +1,4 @@
-drive: create: Usage: infinit-drive drive create [OPTIONS]
+drive: create: Usage: infinit drive create [OPTIONS]
 Create a drive (a network and volume pair)
 
 Options:

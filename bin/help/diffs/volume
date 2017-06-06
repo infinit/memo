@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-volume MODE [OPTIONS...]			Usage: infinit-volume volume [MODE|--help]
+Usage: _build/macosx64/bin/infinit-volume MODE [OPTIONS...]			Usage: infinit volume [MODE|--help]
 										Infinit volume management utility.
 Infinit volume management utility:
 										Modes:

@@ -1,4 +1,4 @@
-network: unlink: Usage: infinit-network network unlink [OPTIONS]
+network: unlink: Usage: infinit network unlink [OPTIONS]
 Unlink this device from a network
 
 Options:

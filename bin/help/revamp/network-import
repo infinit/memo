@@ -1,4 +1,4 @@
-network: import: Usage: infinit-network network import [OPTIONS]
+network: import: Usage: infinit network import [OPTIONS]
 Fetch a network
 
 Options:

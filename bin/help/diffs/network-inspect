@@ -1,4 +1,4 @@
-network: inspect: Usage: _build/macosx64/bin/infinit-network --inspect --name N network: inspect: Usage: infinit-network network inspect [OPTIONS]
+network: inspect: Usage: _build/macosx64/bin/infinit-network --inspect --name N network: inspect: Usage: infinit network inspect [OPTIONS]
 										Get information about a running network
 Get information about a running network:
 										Options:

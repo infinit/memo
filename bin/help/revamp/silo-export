@@ -1,4 +1,4 @@
-storage: export: Usage: infinit-storage silo export [OPTIONS]
+storage: export: Usage: infinit silo export [OPTIONS]
 Export local silo
 
 Options:

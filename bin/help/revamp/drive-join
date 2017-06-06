@@ -1,4 +1,4 @@
-drive: join: Usage: infinit-drive drive join [OPTIONS]
+drive: join: Usage: infinit drive join [OPTIONS]
 Join a drive you were invited to (Hub operation)
 
 Options:

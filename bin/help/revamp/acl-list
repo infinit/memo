@@ -1,4 +1,4 @@
-acl: list: Usage: infinit-acl acl list [OPTIONS]
+acl: list: Usage: infinit acl list [OPTIONS]
 List ACLs
 
 Options:

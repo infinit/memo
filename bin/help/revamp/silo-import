@@ -1,4 +1,4 @@
-storage: import: Usage: infinit-storage silo import [OPTIONS]
+storage: import: Usage: infinit silo import [OPTIONS]
 Import local silo
 
 Options:

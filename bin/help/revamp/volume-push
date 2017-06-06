@@ -1,4 +1,4 @@
-volume: push: Usage: infinit-volume volume push [OPTIONS]
+volume: push: Usage: infinit volume push [OPTIONS]
 Push a volume to the Hub
 
 Options:

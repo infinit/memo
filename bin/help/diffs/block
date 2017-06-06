@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-block MODE [OPTIONS...]			Usage: infinit-block block [MODE|--help]
+Usage: _build/macosx64/bin/infinit-block MODE [OPTIONS...]			Usage: infinit block [MODE|--help]
 										Infinit block management utility.
 Infinit block debug utility:
 										Modes:

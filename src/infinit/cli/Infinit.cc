@@ -30,8 +30,11 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
-  /// argv[0], for error messages.
-  char const* argv_0 = "infinit";
+  /// argv[0], for error messages, possibly `/bin/infinit-user`.
+  auto argv_0 = std::string("infinit");
+
+  /// The path to `infinit`, not to `infinit-user`.
+  auto infinit_exe = std::string("infinit");
 }
 
 namespace infinit
@@ -304,7 +307,7 @@ namespace infinit
     void
     Infinit::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
+      s << "Usage: " << infinit_exe << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -521,9 +524,6 @@ namespace
   cli_error(std::string const& error, boost::optional<std::string> object = {})
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
-    // The path to `infinit`, not to `infinit-user`.
-    auto const infinit_exe
-      = (bfs::path(argv_0).parent_path() / "infinit").string();
     auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
@@ -536,6 +536,7 @@ int
 main(int argc, char** argv)
 {
   argv_0 = argv[0];
+  infinit_exe = (bfs::path(argv_0).parent_path() / "infinit").string();
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);

@@ -1,4 +1,4 @@
-network: link: Usage: _build/macosx64/bin/infinit-network --link --name NETWORK network: link: Usage: infinit-network network link [OPTIONS]
+network: link: Usage: _build/macosx64/bin/infinit-network --link --name NETWORK network: link: Usage: infinit network link [OPTIONS]
 										Link this device to a network
 Link this device to a network:
 										Options:

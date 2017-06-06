@@ -1,4 +1,4 @@
-volume: delete: Usage: _build/macosx64/bin/infinit-volume --delete --name VOLUM volume: delete: Usage: infinit-volume volume delete [OPTIONS]
+volume: delete: Usage: _build/macosx64/bin/infinit-volume --delete --name VOLUM volume: delete: Usage: infinit volume delete [OPTIONS]
 										Delete a volume locally
 Delete a volume locally:
 										Options:

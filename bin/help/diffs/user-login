@@ -1,4 +1,4 @@
-user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]	user: login: Usage: infinit-user user login [OPTIONS]
+user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]	user: login: Usage: infinit user login [OPTIONS]
 										Login user to the Hub
 Log the user to the Hub:
 										Options:

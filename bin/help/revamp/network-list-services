@@ -1,4 +1,4 @@
-network: list-services: Usage: infinit-network network list-services [OPTIONS]
+network: list-services: Usage: infinit network list-services [OPTIONS]
 List network registered services
 
 Options:

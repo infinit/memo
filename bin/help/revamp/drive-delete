@@ -1,4 +1,4 @@
-drive: delete: Usage: infinit-drive drive delete [OPTIONS]
+drive: delete: Usage: infinit drive delete [OPTIONS]
 Delete a drive locally
 
 Options:

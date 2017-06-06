@@ -1,4 +1,4 @@
-acl: group: Usage: infinit-acl acl group [OPTIONS]
+acl: group: Usage: infinit acl group [OPTIONS]
 Edit groups
 
 Options:

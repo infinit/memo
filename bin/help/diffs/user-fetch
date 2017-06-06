@@ -1,4 +1,4 @@
-user: fetch: Usage: _build/macosx64/bin/infinit-user --fetch [OPTIONS...]	user: fetch: Usage: infinit-user user fetch [OPTIONS]
+user: fetch: Usage: _build/macosx64/bin/infinit-user --fetch [OPTIONS...]	user: fetch: Usage: infinit user fetch [OPTIONS]
 										Fetch users from the Hub
 Fetch a user from the Hub:
 										Options:

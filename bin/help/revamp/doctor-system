@@ -1,4 +1,4 @@
-doctor: system: Usage: infinit-doctor doctor system [OPTIONS]
+doctor: system: Usage: infinit doctor system [OPTIONS]
 Perform sanity checks on your system
 
 Options:

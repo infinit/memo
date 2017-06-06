@@ -1,4 +1,4 @@
-passport: delete: Usage: _build/macosx64/bin/infinit-passport --delete --networ passport: delete: Usage: infinit-passport passport delete [OPTIONS]
+passport: delete: Usage: _build/macosx64/bin/infinit-passport --delete --networ passport: delete: Usage: infinit passport delete [OPTIONS]
 										Locally delete a passport
 Locally delete a passport:
 										Options:

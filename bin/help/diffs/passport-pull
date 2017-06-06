@@ -1,4 +1,4 @@
-passport: pull: Usage: _build/macosx64/bin/infinit-passport --pull --network NE passport: pull: Usage: infinit-passport passport pull [OPTIONS]
+passport: pull: Usage: _build/macosx64/bin/infinit-passport --pull --network NE passport: pull: Usage: infinit passport pull [OPTIONS]
 										Remove a user's network passport from the Hub
 Remove a user's network passport from the Hub:
 										Options:

@@ -1,4 +1,4 @@
-network: update: Usage: infinit-network network update [OPTIONS]
+network: update: Usage: infinit network update [OPTIONS]
 Update a network
 
 Options:

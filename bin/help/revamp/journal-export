@@ -1,4 +1,4 @@
-journal: export: Usage: infinit-journal journal export [OPTIONS]
+journal: export: Usage: infinit journal export [OPTIONS]
 Export an operation
 
 Options:

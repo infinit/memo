@@ -1,4 +1,4 @@
-drive: delete: Usage: _build/macosx64/bin/infinit-drive --delete --name NAME [O drive: delete: Usage: infinit-drive drive delete [OPTIONS]
+drive: delete: Usage: _build/macosx64/bin/infinit-drive --delete --name NAME [O drive: delete: Usage: infinit drive delete [OPTIONS]
 										Delete a drive locally
 Delete a drive locally:
 										Options:

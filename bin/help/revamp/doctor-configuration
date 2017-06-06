@@ -1,4 +1,4 @@
-doctor: configuration: Usage: infinit-doctor doctor configuration [OPTIONS]
+doctor: configuration: Usage: infinit doctor configuration [OPTIONS]
 Perform integrity checks on the Infinit configuration files
 
 Options:

@@ -1,4 +1,4 @@
-user: fetch: Usage: infinit-user user fetch [OPTIONS]
+user: fetch: Usage: infinit user fetch [OPTIONS]
 Fetch users from the Hub
 
 Options:

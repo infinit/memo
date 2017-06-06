@@ -1,4 +1,4 @@
-passport: create: Usage: infinit-passport passport create [OPTIONS]
+passport: create: Usage: infinit passport create [OPTIONS]
 Create a passport for a user to a network
 
 Options:

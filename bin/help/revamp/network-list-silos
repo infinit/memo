@@ -1,4 +1,4 @@
-network: list-silos: Usage: infinit-network network list-silos [OPTIONS]
+network: list-silos: Usage: infinit network list-silos [OPTIONS]
 List all silos contributed by this device to a network
 
 Options:

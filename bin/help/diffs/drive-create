@@ -1,4 +1,4 @@
-drive: create: Usage: _build/macosx64/bin/infinit-drive --create --name NAME -- drive: create: Usage: infinit-drive drive create [OPTIONS]
+drive: create: Usage: _build/macosx64/bin/infinit-drive --create --name NAME -- drive: create: Usage: infinit drive create [OPTIONS]
 										Create a drive (a network and volume pair)
 Create a drive (a network and volume pair):
 										Options:

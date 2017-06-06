@@ -1,4 +1,4 @@
-block: deserialize: Usage: _build/macosx64/bin/infinit-block --deserialize --pa block: deserialize: Usage: infinit-block block deserialize [OPTIONS]
+block: deserialize: Usage: _build/macosx64/bin/infinit-block --deserialize --pa block: deserialize: Usage: infinit block deserialize [OPTIONS]
 										Deserialized block
 Deserialized block:
 										Options:

@@ -1,4 +1,4 @@
-volume: run: Usage: _build/macosx64/bin/infinit-volume --run --name VOLUME [--m volume: run: Usage: infinit-volume volume run [OPTIONS]
+volume: run: Usage: _build/macosx64/bin/infinit-volume --run --name VOLUME [--m volume: run: Usage: infinit volume run [OPTIONS]
 										Run a volume
 Run a volume:
 										Options:

@@ -1,4 +1,4 @@
-volume: status: Usage: infinit-volume volume status [OPTIONS]
+volume: status: Usage: infinit volume status [OPTIONS]
 Get volume status
 
 Options:

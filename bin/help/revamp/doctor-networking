@@ -1,4 +1,4 @@
-doctor: networking: Usage: infinit-doctor doctor networking [OPTIONS]
+doctor: networking: Usage: infinit doctor networking [OPTIONS]
 Perform networking speed tests between nodes
 
 Options:

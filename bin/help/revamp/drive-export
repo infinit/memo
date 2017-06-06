@@ -1,4 +1,4 @@
-drive: export: Usage: infinit-drive drive export [OPTIONS]
+drive: export: Usage: infinit drive export [OPTIONS]
 Export a drive
 
 Options:

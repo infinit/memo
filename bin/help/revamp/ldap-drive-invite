@@ -1,4 +1,4 @@
-ldap: drive-invite: Usage: infinit-ldap ldap drive-invite [OPTIONS]
+ldap: drive-invite: Usage: infinit ldap drive-invite [OPTIONS]
 Invite LDAP users to a drive
 
 Options:

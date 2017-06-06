@@ -1,4 +1,4 @@
-doctor: connectivity: Usage: infinit-doctor doctor connectivity [OPTIONS]
+doctor: connectivity: Usage: infinit doctor connectivity [OPTIONS]
 Perform connectivity checks
 
 Options:

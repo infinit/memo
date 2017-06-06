@@ -1,4 +1,4 @@
-storage: export: Usage: _build/macosx64/bin/infinit-storage --export --name STO storage: export: Usage: infinit-storage silo export [OPTIONS]
+storage: export: Usage: _build/macosx64/bin/infinit-storage --export --name STO storage: export: Usage: infinit silo export [OPTIONS]
 										Export local silo
 Export storage information:
 										Options:

@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-network MODE [OPTIONS...]			Usage: infinit-network network [MODE|--help]
+Usage: _build/macosx64/bin/infinit-network MODE [OPTIONS...]			Usage: infinit network [MODE|--help]
 										Infinit network management utility.
 Infinit network management utility:
 										Modes:

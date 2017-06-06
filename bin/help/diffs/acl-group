@@ -1,4 +1,4 @@
-acl: group: Usage: _build/macosx64/bin/infinit-acl --group --name NAME --path P acl: group: Usage: infinit-acl acl group [OPTIONS]
+acl: group: Usage: _build/macosx64/bin/infinit-acl --group --name NAME --path P acl: group: Usage: infinit acl group [OPTIONS]
 										Edit groups
 Group control:
 										Options:

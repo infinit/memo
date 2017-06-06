@@ -1,4 +1,4 @@
-network: pull: Usage: _build/macosx64/bin/infinit-network --pull --name NETWORK network: pull: Usage: infinit-network network pull [OPTIONS]
+network: pull: Usage: _build/macosx64/bin/infinit-network --pull --name NETWORK network: pull: Usage: infinit network pull [OPTIONS]
 										Remove a network from the Hub
 Remove a network from the Hub:
 										Options:

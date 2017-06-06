@@ -1,4 +1,4 @@
-acl: set: Usage: infinit-acl acl set [OPTIONS]
+acl: set: Usage: infinit acl set [OPTIONS]
 Set ACLs
 
 Options:

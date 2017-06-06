@@ -1,4 +1,4 @@
-daemon: enable-storage: Usage: infinit-daemon daemon enable-storage [OPTIONS]
+daemon: enable-storage: Usage: infinit daemon enable-storage [OPTIONS]
 Enable storage on associated network
 
 Options:

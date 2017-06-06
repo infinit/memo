@@ -1,4 +1,4 @@
-drive: fetch: Usage: infinit-drive drive fetch [OPTIONS]
+drive: fetch: Usage: infinit drive fetch [OPTIONS]
 Fetch drive from the Hub
 
 Options:

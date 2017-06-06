@@ -1,4 +1,4 @@
-network: stat: Usage: infinit-network network stat [OPTIONS]
+network: stat: Usage: infinit network stat [OPTIONS]
 Fetch stats of a network on the Hub
 
 Options:

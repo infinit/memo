@@ -1,4 +1,4 @@
-network: delete: Usage: infinit-network network delete [OPTIONS]
+network: delete: Usage: infinit network delete [OPTIONS]
 Delete a network locally
 
 Options:

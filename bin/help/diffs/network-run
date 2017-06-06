@@ -1,4 +1,4 @@
-network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK [ network: run: Usage: infinit-network network run [OPTIONS]
+network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK [ network: run: Usage: infinit network run [OPTIONS]
 										Run a network
 Run a network:
 										Options:

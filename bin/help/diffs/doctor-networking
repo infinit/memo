@@ -1,4 +1,4 @@
-doctor: networking: Usage: _build/macosx64/bin/infinit-doctor --networking [OPT doctor: networking: Usage: infinit-doctor doctor networking [OPTIONS]
+doctor: networking: Usage: _build/macosx64/bin/infinit-doctor --networking [OPT doctor: networking: Usage: infinit doctor networking [OPTIONS]
 										Perform networking speed tests between nodes
 Perform networking speed tests between nodes:
 										Options:

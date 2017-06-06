@@ -1,4 +1,4 @@
-daemon: disable-storage: Usage: infinit-daemon daemon disable-storage [OPTIONS]
+daemon: disable-storage: Usage: infinit daemon disable-storage [OPTIONS]
 Disable storage on associated network
 
 Options:

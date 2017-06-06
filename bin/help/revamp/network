@@ -1,4 +1,4 @@
-Usage: infinit-network network [MODE|--help]
+Usage: infinit network [MODE|--help]
 Infinit network management utility.
 
 Modes:

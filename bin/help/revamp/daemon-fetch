@@ -1,4 +1,4 @@
-daemon: fetch: Usage: infinit-daemon daemon fetch [OPTIONS]
+daemon: fetch: Usage: infinit daemon fetch [OPTIONS]
 Fetch volume and its dependencies from the Hub
 
 Options:

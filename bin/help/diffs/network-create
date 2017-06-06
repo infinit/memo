@@ -1,4 +1,4 @@
-network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAM network: create: Usage: infinit-network network create [OPTIONS]
+network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAM network: create: Usage: infinit network create [OPTIONS]
 										Create a network
 Create a network:
 										Options:

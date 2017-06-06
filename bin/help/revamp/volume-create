@@ -1,4 +1,4 @@
-volume: create: Usage: infinit-volume volume create [OPTIONS]
+volume: create: Usage: infinit volume create [OPTIONS]
 Create a volume
 
 Options:

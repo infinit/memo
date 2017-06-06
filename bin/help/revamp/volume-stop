@@ -1,4 +1,4 @@
-volume: stop: Usage: infinit-volume volume stop [OPTIONS]
+volume: stop: Usage: infinit volume stop [OPTIONS]
 Stop a volume
 
 Options:

@@ -1,4 +1,4 @@
-volume: pull: Usage: _build/macosx64/bin/infinit-volume --pull --name VOLUME [O volume: pull: Usage: infinit-volume volume pull [OPTIONS]
+volume: pull: Usage: _build/macosx64/bin/infinit-volume --pull --name VOLUME [O volume: pull: Usage: infinit volume pull [OPTIONS]
 										Remove a volume from the Hub
 Remove a volume from the Hub:
 										Options:

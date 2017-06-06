@@ -1,4 +1,4 @@
-daemon: run: Usage: infinit-daemon daemon run [OPTIONS]
+daemon: run: Usage: infinit daemon run [OPTIONS]
 Run daemon in the foreground
 
 Options:

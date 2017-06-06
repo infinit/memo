@@ -1,4 +1,4 @@
-doctor: system: Usage: _build/macosx64/bin/infinit-doctor --system [OPTIONS...] doctor: system: Usage: infinit-doctor doctor system [OPTIONS]
+doctor: system: Usage: _build/macosx64/bin/infinit-doctor --system [OPTIONS...] doctor: system: Usage: infinit doctor system [OPTIONS]
 										Perform sanity checks on your system
 Perform sanity checks on your system:
 										Options:

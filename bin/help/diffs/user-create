@@ -1,4 +1,4 @@
-user: create: Usage: _build/macosx64/bin/infinit-user --create [OPTIONS...]	user: create: Usage: infinit-user user create [OPTIONS]
+user: create: Usage: _build/macosx64/bin/infinit-user --create [OPTIONS...]	user: create: Usage: infinit user create [OPTIONS]
 										Create a user
 Create a user:
 										Options:

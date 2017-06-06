@@ -1,4 +1,4 @@
-network: list: Usage: _build/macosx64/bin/infinit-network --list [OPTIONS...]	network: list: Usage: infinit-network network list [OPTIONS]
+network: list: Usage: _build/macosx64/bin/infinit-network --list [OPTIONS...]	network: list: Usage: infinit network list [OPTIONS]
 										List networks
 List networks:
 										Options:

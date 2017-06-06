@@ -1,4 +1,4 @@
-user: import: Usage: infinit-user user import [OPTIONS]
+user: import: Usage: infinit user import [OPTIONS]
 Import local user
 
 Options:

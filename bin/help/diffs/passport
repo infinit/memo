@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-passport MODE [OPTIONS...]			Usage: infinit-passport passport [MODE|--help]
+Usage: _build/macosx64/bin/infinit-passport MODE [OPTIONS...]			Usage: infinit passport [MODE|--help]
 										Infinit passport management utility.
 Infinit volume management utility:
 										Modes:

@@ -1,4 +1,4 @@
-user: import: Usage: _build/macosx64/bin/infinit-user --import [OPTIONS...]	user: import: Usage: infinit-user user import [OPTIONS]
+user: import: Usage: _build/macosx64/bin/infinit-user --import [OPTIONS...]	user: import: Usage: infinit user import [OPTIONS]
 										Import local user
 Import a user:
 										Options:

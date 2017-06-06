@@ -1,4 +1,4 @@
-user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]	user: export: Usage: infinit-user user export [OPTIONS]
+user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]	user: export: Usage: infinit user export [OPTIONS]
 										Export local user
 Export a user so that it may be imported elsewhere:
 										Options:

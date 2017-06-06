@@ -1,4 +1,4 @@
-journal: export: Usage: _build/macosx64/bin/infinit-journal --export --network	journal: export: Usage: infinit-journal journal export [OPTIONS]
+journal: export: Usage: _build/macosx64/bin/infinit-journal --export --network	journal: export: Usage: infinit journal export [OPTIONS]
 										Export an operation
 Export an operation:
 										Options:

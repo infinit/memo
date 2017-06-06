@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-daemon MODE [OPTIONS...]			Usage: infinit-daemon daemon [MODE|--help]
+Usage: _build/macosx64/bin/infinit-daemon MODE [OPTIONS...]			Usage: infinit daemon [MODE|--help]
 										Infinit daemon management utility.
 Infinit daemon:
 										Modes:

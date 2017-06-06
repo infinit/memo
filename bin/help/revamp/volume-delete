@@ -1,4 +1,4 @@
-volume: delete: Usage: infinit-volume volume delete [OPTIONS]
+volume: delete: Usage: infinit volume delete [OPTIONS]
 Delete a volume locally
 
 Options:

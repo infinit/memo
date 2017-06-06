@@ -1,4 +1,4 @@
-acl: register: Usage: _build/macosx64/bin/infinit-acl --register --user USER -- acl: register: Usage: infinit-acl acl register [OPTIONS]
+acl: register: Usage: _build/macosx64/bin/infinit-acl --register --user USER -- acl: register: Usage: infinit acl register [OPTIONS]
 										Register user's passport to the network
 Register user's passport to the network:
 										Options:

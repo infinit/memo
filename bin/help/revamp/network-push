@@ -1,4 +1,4 @@
-network: push: Usage: infinit-network network push [OPTIONS]
+network: push: Usage: infinit network push [OPTIONS]
 Push a network to the Hub
 
 Options:

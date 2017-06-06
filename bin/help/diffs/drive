@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-drive MODE [OPTIONS...]			Usage: infinit-drive drive [MODE|--help]
+Usage: _build/macosx64/bin/infinit-drive MODE [OPTIONS...]			Usage: infinit drive [MODE|--help]
 										Infinit drive management utility.
 Infinit drive management utility:
 										Modes:

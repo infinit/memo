@@ -1,4 +1,4 @@
-device: transmit: Usage: _build/macosx64/bin/infinit-device --transmit [OPTIONS device: transmit: Usage: infinit-device device transmit [OPTIONS]
+device: transmit: Usage: _build/macosx64/bin/infinit-device --transmit [OPTIONS device: transmit: Usage: infinit device transmit [OPTIONS]
 										transmit an object to another device using the Hub
 Transmit object to another device using the Hub:
 										Options:

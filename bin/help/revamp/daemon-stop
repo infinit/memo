@@ -1,4 +1,4 @@
-daemon: stop: Usage: infinit-daemon daemon stop [OPTIONS]
+daemon: stop: Usage: infinit daemon stop [OPTIONS]
 Stop daemon
 
 Options:

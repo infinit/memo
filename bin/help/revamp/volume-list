@@ -1,4 +1,4 @@
-volume: list: Usage: infinit-volume volume list [OPTIONS]
+volume: list: Usage: infinit volume list [OPTIONS]
 List volumes
 
 Options:

@@ -1,4 +1,4 @@
-volume: run: Usage: infinit-volume volume run [OPTIONS]
+volume: run: Usage: infinit volume run [OPTIONS]
 Run a volume
 
 Options:

@@ -1,4 +1,4 @@
-volume: syscall: Usage: infinit-volume syscall [MODE|--help]
+volume: syscall: Usage: infinit syscall [MODE|--help]
 Infinit syscall management utility.
 
 Modes:

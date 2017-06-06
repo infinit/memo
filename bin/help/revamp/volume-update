@@ -1,4 +1,4 @@
-volume: update: Usage: infinit-volume volume update [OPTIONS]
+volume: update: Usage: infinit volume update [OPTIONS]
 Update a volume with default run options
 
 Options:

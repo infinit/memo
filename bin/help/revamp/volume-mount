@@ -1,4 +1,4 @@
-volume: mount: Usage: infinit-volume volume mount [OPTIONS]
+volume: mount: Usage: infinit volume mount [OPTIONS]
 Mount a volume
 
 Options:

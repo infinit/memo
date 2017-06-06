@@ -1,4 +1,4 @@
-volume: export: Usage: infinit-volume volume export [OPTIONS]
+volume: export: Usage: infinit volume export [OPTIONS]
 Export a volume for someone else to import
 
 Options:

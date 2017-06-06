@@ -1,4 +1,4 @@
-network: create: Usage: infinit-network network create [OPTIONS]
+network: create: Usage: infinit network create [OPTIONS]
 Create a network
 
 Options:

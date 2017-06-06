@@ -1,4 +1,4 @@
-user: create: Usage: infinit-user user create [OPTIONS]
+user: create: Usage: infinit user create [OPTIONS]
 Create a user
 
 Options:

@@ -1,4 +1,4 @@
-daemon: start: Usage: infinit-daemon daemon start [OPTIONS]
+daemon: start: Usage: infinit daemon start [OPTIONS]
 Start daemon in the background
 
 Options:

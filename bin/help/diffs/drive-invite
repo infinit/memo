@@ -1,4 +1,4 @@
-drive: invite: Usage: _build/macosx64/bin/infinit-drive --invite --name DRIVE - drive: invite: Usage: infinit-drive drive invite [OPTIONS]
+drive: invite: Usage: _build/macosx64/bin/infinit-drive --invite --name DRIVE - drive: invite: Usage: infinit drive invite [OPTIONS]
 										Invite a user to join the drive
 Invite a user to join the drive:
 										Options:

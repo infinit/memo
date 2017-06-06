@@ -1,4 +1,4 @@
-user: signup: Usage: infinit-user user signup [OPTIONS]
+user: signup: Usage: infinit user signup [OPTIONS]
 Create and push a user to the Hub
 
 Options:

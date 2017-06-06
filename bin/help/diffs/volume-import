@@ -1,4 +1,4 @@
-volume: import: Usage: _build/macosx64/bin/infinit-volume --import [OPTIONS...] volume: import: Usage: infinit-volume volume import [OPTIONS]
+volume: import: Usage: _build/macosx64/bin/infinit-volume --import [OPTIONS...] volume: import: Usage: infinit volume import [OPTIONS]
 										Import a volume
 Import a volume:
 										Options:

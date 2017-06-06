@@ -1,4 +1,4 @@
-user: hash: Usage: infinit-user user hash [OPTIONS]
+user: hash: Usage: infinit user hash [OPTIONS]
 Get short hash of user's key
 
 Options:

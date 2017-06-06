@@ -29,7 +29,7 @@ Node churn intensive testing and rebalancing robustification.
   them so they can handle replication themselves.
 - Protect against concurrent updates to the same address via the GRPC
   interface.
-
+- Various minor issues in the command-line parsing.
 
 ## [0.8.0] 2017-05-22
 

@@ -1,4 +1,4 @@
-Usage: infinit-acl acl [MODE|--help]
+Usage: infinit acl [MODE|--help]
 Infinit acl management utility.
 
 Modes:
