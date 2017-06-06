@@ -521,10 +521,13 @@ namespace
   cli_error(std::string const& error, boost::optional<std::string> object = {})
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
-    auto obj = object ? " " + *object : "";
+    // The path to `infinit`, not to `infinit-user`.
+    auto const infinit_exe
+      = (bfs::path(argv_0).parent_path() / "infinit").string();
+    auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  argv_0, obj);
+                  infinit_exe, obj);
     return 2;
   }
 }

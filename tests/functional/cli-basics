@@ -5,8 +5,8 @@ import json
 import re
 
 with Infinit() as bob:
-  def xfail(command, message):
-    err = bob.run(['infinit'] + command, return_code = 2)[1]
+  def xfail(command, message, binary='infinit'):
+    err = bob.run([binary] + command, return_code = 2)[1]
     # Replace Window paths with Unix ones.
     err = re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', err)
     # Gee...  Maybe do this in assertEq?
@@ -45,3 +45,11 @@ with Infinit() as bob:
          '--foobar'],
         "./bin/infinit: command line error: unknown option: --foobar\n"
         "Try './bin/infinit volume run --help' for more information.\n")
+
+  # Regression: don't repeat volume here: `infinit-volume volume --help`.
+  xfail(['wrong'],
+        "[33;01;33m[cli] [main] infinit-volume is deprecated, please run: infinit volume wrong\n"
+        "[0m./bin/infinit-volume: command line error: unknown mode for object volume: wrong\n"
+        "Try './bin/infinit volume --help' for more information.\n",
+        binary='infinit-volume')
+  
