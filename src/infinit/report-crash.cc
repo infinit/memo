@@ -31,19 +31,34 @@ namespace infinit
   /// previous runs, saved on disk).
   ///
   /// This routine also creates the CrashReporter object which is in
-  /// charge to catching errors and generating the minidumps.  So be
+  /// charge of catching errors and generating the minidumps.  So be
   /// sure to always create this object early enough.
+  ///
+  /// It should never cause the program to fail, catch all errors.
   std::unique_ptr<elle::reactor::Thread>
   make_reporter_thread()
   {
     ELLE_DEBUG("enabled");
-    // Don't create the error handler within the thread, it might not
-    // like that, and might be created too late to catch very early crashes.
-    return std::make_unique<elle::reactor::Thread>("crash report",
+    try
+    {
+      // Don't create the error handler within the thread, it might not
+      // like that, and might be created too late to catch very early crashes.
+      return std::make_unique<elle::reactor::Thread>("crash report",
         [cr = make_reporter()]
         {
           cr->upload_existing();
         });
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_LOG("cannot set up crash-handler: %s", e);
+      return {};
+    }
+    catch (...)
+    {
+      ELLE_LOG("cannot set up crash-handler: %s", elle::exception_string());
+      return {};
+    }
   }
 }
 
