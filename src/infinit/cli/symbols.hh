@@ -83,6 +83,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(fuse_option, 0, "option to pass directly to FUSE" , false);
     ELLE_DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
+    ELLE_DAS_CLI_SYMBOL(grpc_port_file, 0, "write gRPC listening port to file", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
@@ -149,6 +150,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(push_drive, '\0', "push drive to {hub}", false);
     ELLE_DAS_CLI_SYMBOL(push_endpoints, 0, "push endpoints to {hub}" , false);
     ELLE_DAS_CLI_SYMBOL(push_invitations, '\0', "update remote drive descriptor and send invitations to {hub}", false);
+    ELLE_DAS_CLI_SYMBOL(push_key_value_store, 0, "push the key-value store to {hub}", false);
     ELLE_DAS_CLI_SYMBOL(push_network, 0, "push the network to {hub}", false);
     ELLE_DAS_CLI_SYMBOL(push_passport, 0, "push passport to {hub}", false);
     ELLE_DAS_CLI_SYMBOL(push_user, 0, "push user to {hub}", false);
@@ -217,6 +219,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(invite);
     ELLE_DAS_SYMBOL(join);
     ELLE_DAS_SYMBOL(journal);
+    ELLE_DAS_SYMBOL(key_value_store);
     ELLE_DAS_SYMBOL(ldap);
     ELLE_DAS_SYMBOL(link);
     ELLE_DAS_SYMBOL(list);

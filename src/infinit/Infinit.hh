@@ -7,6 +7,7 @@
 #include <elle/flat-set.hh>
 
 #include <infinit/Drive.hh>
+#include <infinit/KeyValueStore.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
 #include <infinit/User.hh>
@@ -158,6 +159,22 @@ namespace infinit
     volumes_get() const;
 
 
+    /*------------------.
+    | Key Value Store.  |
+    `------------------*/
+
+    bool
+    key_value_store_has(std::string const& name);
+    KeyValueStore
+    key_value_store_get(std::string const& name);
+    void
+    key_value_store_save(KeyValueStore const& kvs, bool overwrite = false);
+    bool
+    key_value_store_delete(KeyValueStore const& kvs);
+    std::vector<KeyValueStore>
+    key_value_stores_get() const;
+
+
     /*--------------.
     | Credentials.  |
     `--------------*/
@@ -245,6 +262,10 @@ namespace infinit
     _volumes_path() const;
     boost::filesystem::path
     _volume_path(std::string const& name) const;
+    boost::filesystem::path
+    _key_value_stores_path() const;
+    boost::filesystem::path
+    _key_value_store_path(std::string const& name) const;
     static
     void
     _open_read(boost::filesystem::ifstream& f,
@@ -300,6 +321,8 @@ namespace infinit
     user_passports_for_network(std::string const& network_name);
     std::vector<Volume>
     volumes_for_network(std::string const& network_name);
+    std::vector<KeyValueStore>
+    key_value_stores_for_network(std::string const& network_name);
     std::vector<Drive>
     drives_for_volume(std::string const& volume_name);
     // saving & loading

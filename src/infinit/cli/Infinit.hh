@@ -22,6 +22,7 @@
 #include <infinit/cli/Doctor.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
+#include <infinit/cli/KeyValueStore.hh>
 #if INFINIT_WITH_LDAP
 # include <infinit/cli/LDAP.hh>
 #endif
@@ -131,6 +132,7 @@ namespace infinit
       Doctor doctor = *this;
       Drive drive = *this;
       Journal journal = *this;
+      KeyValueStore key_value_store = *this;
 #if INFINIT_WITH_LDAP
       LDAP ldap = *this;
 #endif
@@ -150,6 +152,7 @@ namespace infinit
                                     cli::doctor,
                                     cli::drive,
                                     cli::journal,
+                                    cli::key_value_store,
 #if INFINIT_WITH_LDAP
                                     cli::ldap,
 #endif

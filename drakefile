@@ -171,6 +171,8 @@ def configure(
     'src/infinit/Infinit.cc',
     'src/infinit/Infinit.hh',
     'src/infinit/Infinit.hxx',
+    'src/infinit/KeyValueStore.cc',
+    'src/infinit/KeyValueStore.hh',
     'src/infinit/LoginCredentials.cc',
     'src/infinit/LoginCredentials.hh',
     'src/infinit/MountOptions.cc',
@@ -369,10 +371,12 @@ def configure(
     cli_cxx_config.lib('dbghelp')
     cli_cxx_config.lib('iphlpapi')
     cli_cxx_config.lib('crypt32')
+    cli_cxx_config.lib('winmm')
     cli_cxx_config.library_add(
       drake.copy(dokan_lib, libdir, True))
     cli_cxx_config.library_add(elle.boost.program_options_static)
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
+  cli_cxx_config.library_add(drake.copy(kv.library, libdir, True))
   if entreprise_edition:
     cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
 
@@ -408,6 +412,8 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
+    'src/infinit/cli/KeyValueStore.cc',
+    'src/infinit/cli/KeyValueStore.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
     'src/infinit/cli/Object.hh',
@@ -433,6 +439,7 @@ def configure(
       'doctor',
       'drive',
       'journal',
+      'key-value-store',
       'network',
       'passport',
       'silo',
@@ -461,7 +468,7 @@ def configure(
       infinit_cli_instantiate_config.define('ELLE_LOG_DISABLE', 1)
     infinit_cli_sources.append(
       drake.cxx.Object(
-        drake.node('src/infinit/cli/instantiate-%s.cc' % b),
+        drake.node('src/infinit/cli/instantiate-%s.cc' % b.replace('_', '-')),
         cxx_toolkit,
         infinit_cli_instantiate_config))
   infinit_cli_deps = [infinit_lib]
