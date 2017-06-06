@@ -18,7 +18,7 @@
 #include <infinit/filesystem/filesystem.hh>
 
 #include <infinit/grpc/fs.grpc.pb.h>
-#include <infinit/grpc/doughnut.grpc.pb.h>
+#include <infinit/grpc/memo.grpc.pb.h>
 
 #include <tests/grpc.grpc.pb.h>
 
@@ -660,7 +660,7 @@ ELLE_TEST_SCHEDULED(filesystem)
   });
 }
 
-ELLE_TEST_SCHEDULED(doughnut_parallel)
+ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 {
   // Test GRPC API with multiple concurrent clients
   auto make_kouncil = [](infinit::model::doughnut::Doughnut& dht,
@@ -706,15 +706,15 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
     auto chan = grpc::CreateChannel(
         elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
-    ::Block b;
+    ::memo::Block b;
     ELLE_TRACE("%s: create stup", id);
-    auto stub = Doughnut::NewStub(chan);
+    auto stub = /*memo::ValueStore*/::memo::ValueStore::NewStub(chan);
     ELLE_TRACE("%s: fetch block", id);
     // Fetch mutable_block
     {
       grpc::ClientContext context;
-      ::FetchResponse abs;
-      ::FetchRequest addr;
+      ::memo::FetchResponse abs;
+      ::memo::FetchRequest addr;
       addr.set_address(std::string((const char*)mutable_block->address().value(), 32));
       addr.set_decrypt_data(true);
       stub->Fetch(&context, addr, &abs);
@@ -733,8 +733,8 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
         payload[sid] = i;
         b.set_data_plain(elle::serialization::json::serialize(payload).string());
         grpc::ClientContext context;
-        ::UpdateResponse repl;
-        ::UpdateRequest update;
+        ::memo::UpdateResponse repl;
+        ::memo::UpdateRequest update;
         update.mutable_block()->CopyFrom(b);
         update.set_decrypt_data(true);
         auto res = stub->Update(&context, update, &repl);
@@ -766,7 +766,7 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
   auto nb = client->dht->fetch(mutable_block->address());
 }
 
-ELLE_TEST_SCHEDULED(doughnut)
+ELLE_TEST_SCHEDULED(memo_ValueStore)
 {
   DHTs dhts(3);
   auto client = dhts.client();
@@ -794,11 +794,11 @@ ELLE_TEST_SCHEDULED(doughnut)
     auto chan = grpc::CreateChannel(
         elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
-    auto stub = Doughnut::NewStub(chan);
+    auto stub = /*memo::ValueStore*/::memo::ValueStore::NewStub(chan);
     { // get missing block
       grpc::ClientContext context;
-      ::FetchRequest req;
-      ::FetchResponse repl;
+      ::memo::FetchRequest req;
+      ::memo::FetchResponse repl;
       req.set_address(
         std::string((const char*)infinit::model::Address::null.value(), 32));
       ELLE_LOG("call...");
@@ -808,17 +808,17 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
     { // malformed address
       grpc::ClientContext context;
-      ::FetchRequest req;
-      ::FetchResponse repl;
+      ::memo::FetchRequest req;
+      ::memo::FetchResponse repl;
       req.set_address("foobar");
       auto res = stub->Fetch(&context, req, &repl);
       BOOST_CHECK_EQUAL(res, ::grpc::INVALID_ARGUMENT);
     }
     // Basic CHB
-    ::Block chb;
+    ::memo::Block chb;
     { // make
       grpc::ClientContext context;
-      ::MakeImmutableBlockRequest data;
+      ::memo::MakeImmutableBlockRequest data;
       data.set_data("bok");
       stub->MakeImmutableBlock(&context, data, &chb);
       ELLE_LOG("addr: %s", chb.address());
@@ -829,8 +829,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
     { // store
       grpc::ClientContext context;
-      ::InsertResponse repl;
-      ::InsertRequest insert;
+      ::memo::InsertResponse repl;
+      ::memo::InsertRequest insert;
       insert.mutable_block()->CopyFrom(chb);
       ELLE_LOG("insert, type '%s'", insert.block().type());
       auto res = stub->Insert(&context, insert, &repl);
@@ -847,8 +847,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     BOOST_CHECK_EQUAL(data, "bok");
     { // fetch
       grpc::ClientContext context;
-      ::FetchResponse abs;
-      ::FetchRequest addr;
+      ::memo::FetchResponse abs;
+      ::memo::FetchRequest addr;
       addr.set_address(chb.address());
       stub->Fetch(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
@@ -857,10 +857,10 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
 
     // basic OKB
-    ::Block okb;
+    ::memo::Block okb;
     { // make
       grpc::ClientContext context;
-      ::MakeMutableBlockRequest arg;
+      ::memo::MakeMutableBlockRequest arg;
       stub->MakeMutableBlock(&context, arg, &okb);
       BOOST_CHECK_EQUAL(okb.address().size(), 32);
       BOOST_CHECK_EQUAL(okb.data(), "");
@@ -870,17 +870,17 @@ ELLE_TEST_SCHEDULED(doughnut)
     okb.set_data_plain("bokbok");
     { // store
       grpc::ClientContext context;
-      ::InsertRequest insert;
-      ::InsertResponse repl;
+      ::memo::InsertRequest insert;
+      ::memo::InsertResponse repl;
       insert.mutable_block()->CopyFrom(okb);
       ELLE_LOG("insert, type %s", insert.block().type());
       auto res = stub->Insert(&context, insert, &repl);
       BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
-    ::FetchResponse abs;
+    ::memo::FetchResponse abs;
     { // fetch
       grpc::ClientContext context;
-      ::FetchRequest fetch;
+      ::memo::FetchRequest fetch;
       fetch.set_address(okb.address());
       fetch.set_decrypt_data(true);
       stub->Fetch(&context, fetch, &abs);
@@ -892,16 +892,16 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data_plain("mooh");
       grpc::ClientContext context;
-      ::UpdateResponse repl;
-      ::UpdateRequest update;
+      ::memo::UpdateResponse repl;
+      ::memo::UpdateRequest update;
       update.mutable_block()->CopyFrom(abs.block());
       auto res = stub->Update(&context, update, &repl);
       BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
     { // fetch
-      ::FetchResponse abs; // use another message to be sure
+      ::memo::FetchResponse abs; // use another message to be sure
       grpc::ClientContext context;
-      ::FetchRequest fetch;
+      ::memo::FetchRequest fetch;
       fetch.set_address(okb.address());
       fetch.set_decrypt_data(true);
       stub->Fetch(&context, fetch, &abs);
@@ -913,24 +913,24 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data_plain("merow");
       grpc::ClientContext context;
-      ::UpdateResponse repl;
-      ::UpdateRequest update;
+      ::memo::UpdateResponse repl;
+      ::memo::UpdateRequest update;
       update.mutable_block()->CopyFrom(abs.block());
       auto res = stub->Update(&context, update, &repl);
       BOOST_CHECK(repl.has_current());
       // retry update
       {
         grpc::ClientContext context;
-        ::UpdateRequest update;
+        ::memo::UpdateRequest update;
         update.mutable_block()->CopyFrom(repl.current());
         update.mutable_block()->set_data_plain("merow");
         res = stub->Update(&context, update, &repl);
         BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
       }
       { // fetch
-        ::FetchResponse tabs;
+        ::memo::FetchResponse tabs;
         grpc::ClientContext context;
-        ::FetchRequest fetch;
+        ::memo::FetchRequest fetch;
         fetch.set_address(okb.address());
         fetch.set_decrypt_data(true);
         stub->Fetch(&context, fetch, &tabs);
@@ -941,10 +941,10 @@ ELLE_TEST_SCHEDULED(doughnut)
 
     // ACB
 #if 0
-    ::Block acb;
+    ::memo::Block acb;
     { // make
       grpc::ClientContext context;
-      ::Empty arg;
+      ::memo::Empty arg;
       stub->make_acl_block(&context, arg, &acb);
       BOOST_CHECK_EQUAL(acb.address().size(), 32);
       BOOST_CHECK_EQUAL(acb.data(), "");
@@ -954,15 +954,15 @@ ELLE_TEST_SCHEDULED(doughnut)
     acb.set_data("bokbok");
     { // store
       grpc::ClientContext context;
-      ::Block ab;
-      ::EmptyOrException repl;
+      ::memo::Block ab;
+      ::memo::EmptyOrException repl;
       ab.CopyFrom(acb);
       stub->insert(&context, ab, &repl);
       BOOST_CHECK_EQUAL(repl.has_exception(), false);
     }
     { // fetch
       grpc::ClientContext context;
-      ::Address addr;
+      ::memo::Address addr;
       addr.set_address(acb.address());
       stub->fetch(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
@@ -973,14 +973,14 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data("mooh");
       grpc::ClientContext context;
-      ::EmptyOrException repl;
+      ::memo::EmptyOrException repl;
       stub->update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.has_exception(), false);
     }
     { // fetch
-      ::BlockOrException abs; // use another message to be sure
+      ::memo::BlockOrException abs; // use another message to be sure
       grpc::ClientContext context;
-      ::Address addr;
+      ::memo::Address addr;
       addr.set_address(acb.address());
       stub->fetch(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
@@ -991,13 +991,13 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data("merow");
       grpc::ClientContext context;
-      ::EmptyOrException repl;
+      ::memo::EmptyOrException repl;
       stub->update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.has_exception(), false);
       { // fetch to get current version
-        ::BlockOrException tabs;
+        ::memo::BlockOrException tabs;
         grpc::ClientContext context;
-        ::Address addr;
+        ::memo::Address addr;
         addr.set_address(acb.address());
         stub->fetch(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
@@ -1009,13 +1009,13 @@ ELLE_TEST_SCHEDULED(doughnut)
       // retry update
       {
         grpc::ClientContext context;
-        ::EmptyOrException repl;
+        ::memo::EmptyOrException repl;
         stub->update(&context, abs.block(), &repl);
         BOOST_CHECK_EQUAL(repl.has_exception(), false);
       }
       { // fetch
         grpc::ClientContext context;
-        ::Address addr;
+        ::memo::Address addr;
         addr.set_address(acb.address());
         stub->fetch(&context, addr, &abs);
         BOOST_CHECK(abs.has_block());
@@ -1026,10 +1026,10 @@ ELLE_TEST_SCHEDULED(doughnut)
 
     // acls
 #if 0
-    ::KeyOrStatus kohs;
+    ::memo::KeyOrStatus kohs;
     {
       grpc::ClientContext context;
-      ::Bytes name;
+      ::memo::Bytes name;
       name.set_data("alice");
       stub->UserKey(&context, name, &kohs);
       BOOST_CHECK(kohs.has_key());
@@ -1040,7 +1040,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     acl->mutable_key_koh()->CopyFrom(kohs.key());
     {
        grpc::ClientContext context;
-       ::EmptyOrException status;
+       ::memo::EmptyOrException status;
        ELLE_TRACE("update with new world perms");
        stub->update(&context, abs.block(), &status);
        BOOST_CHECK_EQUAL(status.has_exception(), false);
@@ -1056,7 +1056,7 @@ ELLE_TEST_SCHEDULED(doughnut)
 #if 0
     {
       grpc::ClientContext context;
-      ::BytesOrStatus bos;
+      ::memo::BytesOrStatus bos;
       stub->UserName(&context, kohs.key(), &bos);
       BOOST_CHECK(bos.has_bytes());
       BOOST_CHECK_EQUAL(bos.bytes().data(), "alice");
@@ -1064,48 +1064,48 @@ ELLE_TEST_SCHEDULED(doughnut)
 #endif
 
     // NB
-    ::Block nb;
+    ::memo::Block nb;
     { // make
       grpc::ClientContext context;
-      ::MakeNamedBlockRequest str;
+      ::memo::MakeNamedBlockRequest str;
       str.set_key("uid");
       stub->MakeNamedBlock(&context, str, &nb);
     }
     { // insert
-      ::InsertRequest insert;
+      ::memo::InsertRequest insert;
       insert.mutable_block()->CopyFrom(nb);
       insert.mutable_block()->set_data("coin");
       grpc::ClientContext context;
-      ::InsertResponse status;
+      ::memo::InsertResponse status;
       auto res = stub->Insert(&context, insert, &status);
       BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
-    ::NamedBlockAddressResponse nba;
+    ::memo::NamedBlockAddressResponse nba;
     { // ask for address
       grpc::ClientContext context;
-      ::NamedBlockAddressRequest str;
+      ::memo::NamedBlockAddressRequest str;
       str.set_key("uid");
       stub->NamedBlockAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::FetchRequest fetch;
+      ::memo::FetchRequest fetch;
       fetch.set_address(nba.address());
-      ::FetchResponse ab;
+      ::memo::FetchResponse ab;
       stub->Fetch(&context, fetch, &ab);
       BOOST_CHECK(ab.has_block());
       BOOST_CHECK_EQUAL(ab.block().data(), "coin");
     }
     { // dummy address
       grpc::ClientContext context;
-      ::NamedBlockAddressRequest str;
+      ::memo::NamedBlockAddressRequest str;
       str.set_key("invalidid");
       stub->NamedBlockAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::FetchResponse ab;
-      ::FetchRequest fetch;
+      ::memo::FetchResponse ab;
+      ::memo::FetchRequest fetch;
       fetch.set_address(nba.address());
       auto res = stub->Fetch(&context, fetch, &ab);
       BOOST_CHECK_EQUAL(res, ::grpc::NOT_FOUND);
@@ -1119,8 +1119,8 @@ ELLE_TEST_SUITE()
   master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
   // Takes 13s on a laptop with Valgrind in Docker.  Otherwise less than a sec.
-  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(20));
-  master.add(BOOST_TEST_CASE(doughnut_parallel), 0, valgrind(60));
+  master.add(BOOST_TEST_CASE(memo_ValueStore), 0, valgrind(20));
+  master.add(BOOST_TEST_CASE(memo_ValueStore_parallel), 0, valgrind(60));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
 #ifndef INFINIT_WINDOWS
   // Test runs fine on native windows, but sometimes get stuck on wine

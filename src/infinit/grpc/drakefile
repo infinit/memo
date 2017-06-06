@@ -7,7 +7,8 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
-doughnut_proto = None
+memo_proto = None
+memo_json = None
 
 class GRPCGen(drake.Builder):
 
@@ -121,7 +122,7 @@ def configure(
     cxx_lib, # macOS's libc++, or None.
     git = None,
 ):
-  global doughnut_proto, grpc_lib, grpc, sources
+  global memo_proto, memo_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -133,9 +134,14 @@ def configure(
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',
       'GO_EXECUTABLE': go.go,
     })
-  doughnut_proto = drake.node('doughnut.proto')
+  import json
+  memo_json = drake.Node('memo.json')
+  with open(str(memo_json.path())) as f:
+    with drake.templating.Context(content = {'proto': json.load(f)}):
+      drake.node('memo.proto.tmpl')
+  memo_proto = drake.node('memo.proto')
   gendn = GRPCCxxGen(
-    doughnut_proto,
+    memo_proto,
     protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
   genfs = GRPCCxxGen(
@@ -143,7 +149,7 @@ def configure(
     protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
   srcs = genfs.targets() + gendn.targets() + drake.nodes(
-    'doughnut.cc',
+    'memo.cc',
     'grpc.cc',
     'filesystem.cc',
     'serializer.cc',
@@ -163,7 +169,7 @@ def configure(
 
   git = git or drake.git.Git()
 
-  grpcgen_py = GRPCPyGen(doughnut_proto,
+  grpcgen_py = GRPCPyGen(memo_proto,
                          protoc = grpc.protoc,
                          plugin = drake.node(grpc.grpc_python_plugin))
 
@@ -183,10 +189,10 @@ def configure(
                   '&& apk del build-deps ' \
                   '&& rm -rf /var/cache/apk/*')
   docker_file.env('PYTHONPATH', '/root')
-  docker_file.add(drake.copy([drake.node('doughnut.py')] + grpcgen_py.targets(),
+  docker_file.add(drake.copy([drake.node('memo.py')] + grpcgen_py.targets(),
                              docker_path, strip_prefix = True), '/root/')
   docker_file.entry_point(
-    ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
+    ['/usr/bin/env', 'python3', '-i', '-m', 'memo'])
   drake.docker.DockerBuilder(docker_image, docker_file)
 
 # Local Variables:

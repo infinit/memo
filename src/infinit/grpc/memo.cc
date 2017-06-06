@@ -3,7 +3,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/serialization/json.hh>
 
-#include <infinit/grpc/doughnut.grpc.pb.h>
+#include <infinit/grpc/memo.grpc.pb.h>
 #include <infinit/grpc/serializer.hh>
 
 # include <elle/athena/paxos/Client.hh>
@@ -29,9 +29,10 @@ namespace elle
     template<>
     struct Serialize<std::unique_ptr<infinit::model::blocks::MutableBlock >>
     {
-      static void serialize(
-        std::unique_ptr<infinit::model::blocks::MutableBlock> const& b,
-        SerializerOut&s)
+      static
+      void
+      serialize(std::unique_ptr<infinit::model::blocks::MutableBlock> const& b,
+                SerializerOut&s)
       {
         auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
         s.serialize_forward(ptr);
@@ -51,9 +52,10 @@ namespace elle
     template<>
     struct Serialize<std::unique_ptr<infinit::model::blocks::ImmutableBlock>>
     {
-      static void serialize(
-        std::unique_ptr<infinit::model::blocks::ImmutableBlock> const& b,
-        SerializerOut&s)
+      static
+      void
+      serialize(std::unique_ptr<infinit::model::blocks::ImmutableBlock> const& b,
+                SerializerOut&s)
       {
         auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
         s.serialize_forward(ptr);
@@ -76,28 +78,6 @@ namespace infinit
 {
   namespace grpc
   {
-
-    namespace
-    {
-      std::string
-      underscore_to_uppercase(std::string const& src)
-      {
-        std::string res;
-        bool upperize = true;
-        for (char c: src)
-        {
-          if (c == '_')
-          {
-            upperize = true;
-            continue;
-          }
-          res += upperize ? std::toupper(c) : c;
-          upperize = (c == '/');
-        }
-        return res;
-      }
-    }
-
     template <typename T>
     struct OptionFirst
     {};
@@ -107,12 +87,14 @@ namespace infinit
     {
       template <typename T>
       static
-      A* value(T& v, ::grpc::Status& err)
+      A*
+      value(T& v, ::grpc::Status& err)
       {
         if (v.template is<E>())
         {
           elle::err("unexpected exception: %s", v.template get<E>());
-          err = ::grpc::Status(::grpc::INTERNAL, elle::exception_string(v.template get<E>()));
+          err = ::grpc::Status(::grpc::INTERNAL,
+                               elle::exception_string(v.template get<E>()));
           return nullptr;
         }
         return &v.template get<A>();
@@ -128,46 +110,47 @@ namespace infinit
     {
       template <typename T>
       static
-      void value(SerializerOut& sout, T& v, ::grpc::Status& err,
-                 elle::Version const& version,
-                 bool is_void)
+      void
+      value(SerializerOut& sout, T& v, ::grpc::Status& err,
+            elle::Version const& version,
+            bool is_void)
       {
-         if (v.template is<E>())
-         {
-           ELLE_DEBUG("grpc call failed with exception %s",
-                      elle::exception_string(v.template get<E>()));
-           try
-           {
-             std::rethrow_exception(v.template get<E>());
-           }
-           catch (infinit::model::MissingBlock const& mb)
-           {
-             err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
-           }
-           catch (infinit::model::doughnut::ValidationFailed const& vf)
-           {
-             err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
-           }
-           catch (elle::athena::paxos::TooFewPeers const& tfp)
-           {
-             err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
-           }
-           catch (infinit::model::Conflict const& c)
-           {
-             elle::unconst(c).serialize(sout, version);
-           }
-           catch (elle::Error const& e)
-           {
-             err = ::grpc::Status(::grpc::INTERNAL, e.what());
-           }
-         }
-         else
-         {
-           if (!is_void)
-             sout.serialize(
-               cxx_to_message_name(elle::type_info<A>().name()),
-               v.template get<A>());
-         }
+        ELLE_DEBUG("grpc call failed with exception %s",
+                   elle::exception_string(v.template get<E>()));
+        if (v.template is<E>())
+        {
+          try
+          {
+            std::rethrow_exception(v.template get<E>());
+          }
+          catch (infinit::model::MissingBlock const& mb)
+          {
+            err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+          }
+          catch (infinit::model::doughnut::ValidationFailed const& vf)
+          {
+            err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
+          }
+          catch (elle::athena::paxos::TooFewPeers const& tfp)
+          {
+            err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
+          }
+          catch (infinit::model::Conflict const& c)
+          {
+            elle::unconst(c).serialize(sout, version);
+          }
+          catch (elle::Error const& e)
+          {
+            err = ::grpc::Status(::grpc::INTERNAL, e.what());
+          }
+        }
+        else
+        {
+          if (!is_void)
+            sout.serialize(
+              cxx_to_message_name(elle::type_info<A>().name()),
+              v.template get<A>());
+        }
       }
     };
 
@@ -186,26 +169,30 @@ namespace infinit
           try
           {
             ELLE_TRACE("invoking some method: %s -> %s",
-                       elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
+                       elle::type_info<REQ>().name(),
+                       elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
             code = ::grpc::INVALID_ARGUMENT;
             auto call = typename NF::Call(sin);
             code = ::grpc::INTERNAL;
             auto res = nf(std::move(call));
-            ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
+            ELLE_DUMP("adapter with %s",
+                      elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
             if (NOEXCEPT) // it will compile anyway no need for static switch
             {
-              auto* adapted = OptionFirst<typename NF::Result::Super>::value(res, status);
+              auto* adapted = OptionFirst<typename NF::Result::Super>::value(
+                res, status);
               if (status.ok() && !decltype(res)::is_void::value)
                 sout.serialize_forward(*adapted);
             }
             else
             {
               ExceptionExtracter<typename NF::Result::Super>::value(
-                sout, res, status, dht.version(), decltype(res)::is_void::value);
+                sout, res, status, dht.version(),
+                decltype(res)::is_void::value);
             }
           }
           catch (elle::Error const& e)
@@ -217,23 +204,39 @@ namespace infinit
       return status;
     }
 
-    class Service: public ::grpc::Service
+    class Service
+      : public ::grpc::Service
     {
     public:
+      /// Register a Remote Procedure Call.
+      ///
+      /// @tparam GArg The RPC argument type.
+      /// @tparam GRet The RPC return type.
+      /// @tparam NOEXCEPT Whether a failure will cause the method not to raise
+      ///                  an exception.
+      /// @tparam NF The type of the method bound.
+      /// @param nf The method to bind.
+      /// @param dht The Doughnut instance to call the bound method to.
+      /// @param name The route of the RPC.
+      ///
+      /// Note. The route can be found in the generated the .bp file.
+      ///       The format is (<package>.)<service>/<method>.
       template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
-      void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
+      void
+      AddMethod(NF& nf, model::doughnut::Doughnut& dht,
+                std::string const& route)
       {
         auto& sched = elle::reactor::scheduler();
-        _method_names.push_back(std::make_unique<std::string>(
-          underscore_to_uppercase(name)));
+        this->_method_names.push_back(std::make_unique<std::string>(route));
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
-          _method_names.back()->c_str(),
+          this->_method_names.back()->c_str(),
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             [&](Service*,
                 ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
-              return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
+              return invoke_named<NF, GArg, GRet, NOEXCEPT>(
+                sched, dht, nf, ctx, arg, ret);
             },
             this)));
       }
@@ -241,11 +244,13 @@ namespace infinit
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
 
-    using Update =
-      std::function<void(std::unique_ptr<infinit::model::blocks::Block>,
-         std::unique_ptr<infinit::model::ConflictResolver>, bool)>;
+    using Update = std::function<void (
+      std::unique_ptr<infinit::model::blocks::Block>,
+      std::unique_ptr<infinit::model::ConflictResolver>,
+      bool)>;
 
-    Update make_update_wrapper(Update f)
+    Update
+    make_update_wrapper(Update f)
     {
       // model's update() function does not handle parallel calls with the same
       // address, so wrap our call with a per-address mutex
@@ -253,7 +258,8 @@ namespace infinit
       using MutexWeak = std::weak_ptr<elle::reactor::Mutex>;
       using MutexMap = std::unordered_map<infinit::model::Address, MutexWeak>;
       auto map = std::make_shared<MutexMap>();
-      return [map, f] (std::unique_ptr<infinit::model::blocks::Block> block,
+      return [map, f] (
+        std::unique_ptr<infinit::model::blocks::Block> block,
         std::unique_ptr<infinit::model::ConflictResolver> resolver,
         bool decrypt_data)
       {
@@ -263,7 +269,10 @@ namespace infinit
         if (it == map->end())
         {
           mutex = MutexPtr(new elle::reactor::Mutex(),
-            [map_ptr=map.get(), addr](elle::reactor::Mutex* m) {map_ptr->erase(addr); delete m;});
+            [map_ptr=map.get(), addr](elle::reactor::Mutex* m)
+                           {
+                             map_ptr->erase(addr); delete m;
+                           });
           (*map)[addr] = mutex;
         }
         else
@@ -281,28 +290,29 @@ namespace infinit
       // We need to store our wrapper somewhere
       static std::vector<std::shared_ptr<UpdateNamed>> update_wrappers;
       auto ptr = std::make_unique<Service>();
-      ptr->AddMethod<::FetchRequest, ::FetchResponse>
-        (dht.fetch, dht, "/Doughnut/fetch");
-      ptr->AddMethod<::InsertRequest, ::InsertResponse>
-        (dht.insert, dht, "/Doughnut/insert");
+      ptr->AddMethod<::memo::FetchRequest, ::memo::FetchResponse>
+        (dht.fetch, dht, "/memo.ValueStore/Fetch");
+      ptr->AddMethod<::memo::InsertRequest, ::memo::InsertResponse>
+        (dht.insert, dht, "/memo.ValueStore/Insert");
       Update update = dht.update.function();
       update_wrappers.emplace_back(new UpdateNamed(
         make_update_wrapper(dht.update.function()),
         infinit::model::block,
         infinit::model::conflict_resolver = nullptr,
         infinit::model::decrypt_data = false));
-      ptr->AddMethod<::UpdateRequest, ::UpdateResponse>
-        (*update_wrappers.back(), dht, "/Doughnut/update");
-      ptr->AddMethod<::MakeMutableBlockRequest, ::Block, true>
-        (dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
-      ptr->AddMethod<::MakeImmutableBlockRequest, ::Block, true>
-        (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
-      ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
-        (dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse , true>
-        (dht.named_block_address, dht, "/Doughnut/named_block_address");
-      ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
-        (dht.remove, dht, "/Doughnut/remove");
+      ptr->AddMethod<::memo::UpdateRequest, ::memo::UpdateResponse>
+        (*update_wrappers.back(), dht, "/memo.ValueStore/Update");
+      ptr->AddMethod<::memo::MakeMutableBlockRequest, ::memo::Block, true>
+        (dht.make_mutable_block, dht, "/memo.ValueStore/MakeMutableBlock");
+      ptr->AddMethod<::memo::MakeImmutableBlockRequest, ::memo::Block, true>
+        (dht.make_immutable_block, dht,"/memo.ValueStore/MakeImmutableBlock");
+      ptr->AddMethod<::memo::MakeNamedBlockRequest, ::memo::Block, true>
+        (dht.make_named_block, dht, "/memo.ValueStore/MakeNamedBlock");
+      ptr->AddMethod<::memo::NamedBlockAddressRequest,
+                     ::memo::NamedBlockAddressResponse , true>
+        (dht.named_block_address, dht, "/memo.ValueStore/NamedBlockAddress");
+      ptr->AddMethod<::memo::RemoveRequest, ::memo::RemoveResponse>
+        (dht.remove, dht, "/memo.ValueStore/Remove");
       return std::move(ptr);
     }
   }
