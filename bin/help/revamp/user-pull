@@ -1,5 +1,5 @@
 user: pull: Usage: infinit-user user pull [OPTIONS]
-Pull a user from https://beyond.infinit.sh
+Pull a user from the Hub
 
 Options:
   -h, --help                show this help message

@@ -1,5 +1,5 @@
 passport: fetch: Usage: infinit-passport passport fetch [OPTIONS]
-Fetch a user's network passport from https://beyond.infinit.sh
+Fetch a user's network passport from the Hub
 
 Options:
   -h, --help                show this help message

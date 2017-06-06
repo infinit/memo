@@ -93,7 +93,7 @@ namespace infinit
     // FIXME: no static here, tests/kelips.cc changes this environment
     // variable. We should change the test and fix this.
     auto const res = elle::os::getenv("INFINIT_BEYOND", BEYOND_HOST);
-    if (help && res != BEYOND_HOST)
+    if (help && res == BEYOND_HOST)
       return "the Hub";
     else
       return res;

@@ -5,12 +5,12 @@ Modes:
   create     Create a volume
   delete     Delete a volume locally
   export     Export a volume for someone else to import
-  fetch      Fetch a volume from https://beyond.infinit.sh
+  fetch      Fetch a volume from the Hub
   import     Import a volume
   list       List volumes
   mount      Mount a volume
-  pull       Remove a volume from https://beyond.infinit.sh
-  push       Push a volume to https://beyond.infinit.sh
+  pull       Remove a volume from the Hub
+  push       Push a volume to the Hub
   run        Run a volume
   start      Start a volume through the daemon
   status     Get volume status

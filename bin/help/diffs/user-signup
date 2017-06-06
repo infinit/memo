@@ -1,5 +1,5 @@
 user: signup: Usage: _build/macosx64/bin/infinit-user --signup [OPTIONS...]	user: signup: Usage: infinit-user user signup [OPTIONS]
-										Create and push a user to https://beyond.infinit.sh
+										Create and push a user to the Hub
 Create and push a user to the Hub:
 										Options:
 Signup options:									  -h, --help		    show this help message
@@ -11,7 +11,7 @@ Signup options:									  -h, --help		    show this help message
   -k [ --key ] arg	  RSA key pair in PEM format - e.g. your SSH key	  -k, --key arg		    RSA key pair in PEM format - e.g. your SSH key (def
 			  (default: generate key pair)				  -e, --email arg	    user email (default: null)
   --full		  Include private key in order to facilitate device	      --fullname arg	    user full name (default: null)
-			  pairing and fetching lost keys			  -P, --password arg	    password to authenticate with https://beyond.infini
+			  pairing and fetching lost keys			  -P, --password arg	    password to authenticate with the Hub (default: nul
   --password arg	  Password to authenticate with the Hub. Used with	  -l, --ldap-name arg	    user LDAP distinguished name (default: null)
 			  --full (default: prompt for password)			      --full		    include private key (do not use unless you understa
   -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables

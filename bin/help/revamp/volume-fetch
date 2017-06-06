@@ -1,5 +1,5 @@
 volume: fetch: Usage: infinit-volume volume fetch [OPTIONS]
-Fetch a volume from https://beyond.infinit.sh
+Fetch a volume from the Hub
 
 Options:
   -h, --help                show this help message

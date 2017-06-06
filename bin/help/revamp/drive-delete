@@ -7,6 +7,6 @@ Options:
   -s, --script              suppress extraneous human friendly messages and use JSON output
   -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the drive to delete
-      --pull                pull drive from https://beyond.infinit.sh
+      --pull                pull drive from the Hub
       --purge               purge objects owned by the drive
 

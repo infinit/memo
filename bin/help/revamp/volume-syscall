@@ -1,0 +1,10 @@
+volume: syscall: Usage: infinit-volume syscall [MODE|--help]
+Infinit syscall management utility.
+
+Modes:
+  getxattr   Get an extended attribute value
+  setxattr   Set an extended attribute value
+
+Options:
+  -h, --help                show this help message
+

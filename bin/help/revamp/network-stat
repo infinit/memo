@@ -1,11 +1,10 @@
-drive: pull: Usage: infinit-drive drive pull [OPTIONS]
-Remove a drive from the Hub
+network: stat: Usage: infinit-network network stat [OPTIONS]
+Fetch stats of a network on the Hub
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
   -a, --as arg              user to run commands as (default: akim)
-  -n, --name arg            name of the drive to pull
-      --purge               purge objects owned by the drive
+  -n, --name arg            name of the network to stat
 

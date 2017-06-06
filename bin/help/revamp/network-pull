@@ -1,5 +1,5 @@
 network: pull: Usage: infinit-network network pull [OPTIONS]
-Remove a network from https://beyond.infinit.sh
+Remove a network from the Hub
 
 Options:
   -h, --help                show this help message

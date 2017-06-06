@@ -1,5 +1,5 @@
 user: fetch: Usage: infinit-user user fetch [OPTIONS]
-Fetch users from https://beyond.infinit.sh
+Fetch users from the Hub
 
 Options:
   -h, --help                show this help message

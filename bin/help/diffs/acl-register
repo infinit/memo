@@ -9,6 +9,6 @@ Register options:								  -h, --help		    show this help message
   --fetch		 Fetch users from the Hub if needed			      --path arg	    file whose acl to register
 										  -u, --user arg	    user to register acl for
 Hidden options:									  -N, --network arg	    network to register acl for
-  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	  -f, --fetch		    fetch acl from https://beyond.infinit.sh
+  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	  -f, --fetch		    fetch acl from the Hub
 			 not suppported						      --fallback-xattrs	    use fallback special file if extended attributes ar
 

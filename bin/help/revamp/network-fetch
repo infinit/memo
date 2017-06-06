@@ -1,5 +1,5 @@
 network: fetch: Usage: infinit-network network fetch [OPTIONS]
-Fetch a network from https://beyond.infinit.sh
+Fetch a network from the Hub
 
 Options:
   -h, --help                show this help message

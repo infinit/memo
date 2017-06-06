@@ -11,8 +11,8 @@ Options:
       --mount-root arg      Default root path for all mounts (default: null)
       --default-network arg  Default network for volume creation (default: null)
       --advertise-host arg  advertise extra endpoint using given host (default: [])
-  -f, --fetch               fetch daemon from https://beyond.infinit.sh
-  -p, --push                push daemon to https://beyond.infinit.sh
+  -f, --fetch               fetch daemon from the Hub
+  -p, --push                push daemon to the Hub
       --docker              Enable the Docker plugin
       --docker-user arg     System user to use for docker plugin (default: null)
       --docker-home arg     Home directory to use for Docker user (default: /home/<docker-user>) (default: null)

@@ -1,5 +1,5 @@
 drive: fetch: Usage: infinit-drive drive fetch [OPTIONS]
-Fetch drive from https://beyond.infinit.sh
+Fetch drive from the Hub
 
 Options:
   -h, --help                show this help message

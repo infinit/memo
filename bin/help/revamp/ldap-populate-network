@@ -9,7 +9,7 @@ Options:
       --server arg          connectivity server address (default = 192.241.139.66)
   -d, --domain arg          LDAP domain
   -u, --user arg            user to populate-network ldap for
-  -P, --password arg        password to authenticate with https://beyond.infinit.sh (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
   -N, --network arg         network to populate-network ldap for
   -b, --searchbase arg      search starting point (without domain)
   -f, --filter arg          raw LDAP query to use (default: objectClass=posixGroup) (default: null)

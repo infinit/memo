@@ -1,5 +1,5 @@
 user: signup: Usage: infinit-user user signup [OPTIONS]
-Create and push a user to https://beyond.infinit.sh
+Create and push a user to the Hub
 
 Options:
   -h, --help                show this help message
@@ -11,7 +11,7 @@ Options:
   -k, --key arg             RSA key pair in PEM format - e.g. your SSH key (default: null)
   -e, --email arg           user email (default: null)
       --fullname arg        user full name (default: null)
-  -P, --password arg        password to authenticate with https://beyond.infinit.sh (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
   -l, --ldap-name arg       user LDAP distinguished name (default: null)
       --full                include private key (do not use unless you understand the implications
 

@@ -7,7 +7,7 @@ Options:
   -s, --script              suppress extraneous human friendly messages and use JSON output
   -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the user to delete (default: akim)
-      --pull                pull user from https://beyond.infinit.sh
+      --pull                pull user from the Hub
       --purge               purge objects owned by the user
   -f, --force               do not ask for user confirmation
 

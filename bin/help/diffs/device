@@ -2,8 +2,8 @@ Usage: _build/macosx64/bin/infinit-device MODE [OPTIONS...]			Usage: infinit-dev
 										Infinit device management utility.
 Infinit device utility:
 										Modes:
-Modes:										  receive    Receive an object from another device using https://beyond.infinit
-  --transmit		       Transmit object to another device using the Hub	  transmit   transmit an object to another device using https://beyond.infinit.
+Modes:										  receive    Receive an object from another device using the Hub
+  --transmit		       Transmit object to another device using the Hub	  transmit   transmit an object to another device using the Hub
   --receive		       Receive an object from another device using the
 			       Hub						Options:
 										  -h, --help		    show this help message

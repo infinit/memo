@@ -5,7 +5,7 @@ Modes:
   create     Create a network
   delete     Delete a network locally
   export     Export a network
-  fetch      Fetch a network from https://beyond.infinit.sh
+  fetch      Fetch a network from the Hub
   import     Fetch a network
   inspect    Get information about a running network
   link       Link this device to a network
@@ -13,10 +13,10 @@ Modes:
   unlink     Unlink this device from a network
   list-services List network registered services
   list-silos List all silos contributed by this device to a network
-  pull       Remove a network from https://beyond.infinit.sh
-  push       Push a network to https://beyond.infinit.sh
+  pull       Remove a network from the Hub
+  push       Push a network to the Hub
   run        Run a network
-  stat       Fetch stats of a network on https://beyond.infinit.sh
+  stat       Fetch stats of a network on the Hub
   update     Update a network
 
 Options:

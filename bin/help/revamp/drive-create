@@ -11,6 +11,6 @@ Options:
   -N, --network arg         network to create drive for
   -V, --volume arg          associated volume name
   -i, --icon arg            path to an image to use as icon (default: null)
-      --push-drive          push drive to https://beyond.infinit.sh
-  -p, --push                push drive to https://beyond.infinit.sh
+      --push-drive          push drive to the Hub
+  -p, --push                push drive to the Hub
 

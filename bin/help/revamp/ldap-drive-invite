@@ -9,7 +9,7 @@ Options:
       --server arg          connectivity server address (default = 192.241.139.66)
   -d, --domain arg          LDAP domain
   -u, --user arg            user to drive-invite ldap for
-  -P, --password arg        password to authenticate with https://beyond.infinit.sh (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
       --drive arg         
       --root-permissions arg  volume root permissions to give (optional: r, w, rw) (default: rw)
       --create-home         create user home directory of the form home/<user>

@@ -1,5 +1,5 @@
 network: push: Usage: infinit-network network push [OPTIONS]
-Push a network to https://beyond.infinit.sh
+Push a network to the Hub
 
 Options:
   -h, --help                show this help message

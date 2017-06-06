@@ -11,11 +11,11 @@ Create options:									  -h, --help		    show this help message
   -p [ --push ]		  Alias for --push-user					  -k, --key arg		    RSA key pair in PEM format - e.g. your SSH key (def
   --email arg		  User email address (optional)				  -e, --email arg	    user email (default: null)
   --fullname arg	  Fullname of user (optional)				      --fullname arg	    user full name (default: null)
-  --full		  Include private key in order to facilitate device	  -P, --password arg	    password to authenticate with https://beyond.infini
+  --full		  Include private key in order to facilitate device	  -P, --password arg	    password to authenticate with the Hub (default: nul
 			  pairing and fetching lost keys			  -l, --ldap-name arg	    user LDAP distinguished name (default: null)
   --password arg	  Password to authenticate with the Hub. Used with	  -o, --output arg	    file to write the user to (default: null)
-			  --full (default: prompt for password)			      --push-user	    push user to https://beyond.infinit.sh
-  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables		  -p, --push		    push user to https://beyond.infinit.sh
+			  --full (default: prompt for password)			      --push-user	    push user to the Hub
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables		  -p, --push		    push user to the Hub
 			  authentication through LDAP				      --full		    include private key (do not use unless you understa
   -o [ --output ] arg	  File to write the user to
 			  (default: stdout)

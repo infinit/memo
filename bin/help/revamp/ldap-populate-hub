@@ -1,5 +1,5 @@
 ldap: populate-hub: Usage: infinit-ldap ldap populate-hub [OPTIONS]
-Register LDAP users on https://beyond.infinit.sh
+Register LDAP users on the Hub
 
 Options:
   -h, --help                show this help message
@@ -9,7 +9,7 @@ Options:
       --server arg          connectivity server address (default = 192.241.139.66)
   -d, --domain arg          LDAP domain
   -u, --user arg            user to populate-hub ldap for
-  -P, --password arg        password to authenticate with https://beyond.infinit.sh (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
   -b, --searchbase arg      search starting point (without domain)
   -f, --filter arg          raw LDAP query to use (default: objectClass=posixGroup) (default: null)
   -o, --object-class arg    filter results (default: posixGroup) (default: null)

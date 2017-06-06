@@ -3,7 +3,7 @@ Infinit ldap management utility.
 
 Modes:
   drive-invite Invite LDAP users to a drive
-  populate-hub Register LDAP users on https://beyond.infinit.sh
+  populate-hub Register LDAP users on the Hub
   populate-network Register LDAP users and groups to a network
 
 Options:

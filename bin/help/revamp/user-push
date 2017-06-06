@@ -1,5 +1,5 @@
 user: push: Usage: infinit-user user push [OPTIONS]
-Push a user from https://beyond.infinit.sh
+Push a user from the Hub
 
 Options:
   -h, --help                show this help message
@@ -9,7 +9,7 @@ Options:
   -n, --name arg            name of the user to push (default: akim)
   -e, --email arg           user email (default: null)
       --fullname arg        user full name (default: null)
-  -P, --password arg        password to authenticate with https://beyond.infinit.sh (default: null)
+  -P, --password arg        password to authenticate with the Hub (default: null)
       --avatar arg          path to an image to use as avatar (default: null)
       --full                include private key (do not use unless you understand the implications
 

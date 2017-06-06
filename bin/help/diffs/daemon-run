@@ -11,8 +11,8 @@ Run options:									  -h, --help		    show this help message
   --default-network arg		  Default network for volume creation		      --mount-root arg	    Default root path for all mounts (default: null)
   --advertise-host arg		  Advertise given hostname as an extra endpoint	      --default-network arg  Default network for volume creation (default: null
 				  when running volumes				      --advertise-host arg  advertise extra endpoint using given host (default:
-  -f [ --fetch ]		  Run volumes with --fetch			  -f, --fetch		    fetch daemon from https://beyond.infinit.sh
-  -p [ --push ]			  Run volumes with --push			  -p, --push		    push daemon to https://beyond.infinit.sh
+  -f [ --fetch ]		  Run volumes with --fetch			  -f, --fetch		    fetch daemon from the Hub
+  -p [ --push ]			  Run volumes with --push			  -p, --push		    push daemon to the Hub
   --publish			  Alias for --publish				      --docker		    Enable the Docker plugin
   --docker [=arg(=true)] (=true)  Enable the Docker plugin			      --docker-user arg	    System user to use for docker plugin (default: null
 				  (default: true)				      --docker-home arg	    Home directory to use for Docker user (default: /ho

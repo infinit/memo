@@ -7,12 +7,12 @@ Modes:
   export     Export local user
   hash       Get short hash of user's key
   import     Import local user
-  fetch      Fetch users from https://beyond.infinit.sh
+  fetch      Fetch users from the Hub
   list       List local users
-  login      Login user to https://beyond.infinit.sh
-  pull       Pull a user from https://beyond.infinit.sh
-  push       Push a user from https://beyond.infinit.sh
-  signup     Create and push a user to https://beyond.infinit.sh
+  login      Login user to the Hub
+  pull       Pull a user from the Hub
+  push       Push a user from the Hub
+  signup     Create and push a user to the Hub
 
 Options:
   -h, --help                show this help message

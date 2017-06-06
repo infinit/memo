@@ -21,6 +21,6 @@ Group options:									  -h, --help		    show this help message
   --verbose		 Verbose output						      --remove-admin arg    remove administrator from group (default: [])
   --fetch		 Fetch users from the Hub if needed			      --remove arg	    remove users, administrators and groups from group
 										  -v, --verbose		    use verbose output
-Hidden options:									  -f, --fetch		    fetch acl from https://beyond.infinit.sh
+Hidden options:									  -f, --fetch		    fetch acl from the Hub
   --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	      --fallback-xattrs	    use fallback special file if extended attributes ar
 			 not suppported

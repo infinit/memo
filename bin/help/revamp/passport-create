@@ -8,8 +8,8 @@ Options:
   -a, --as arg              user to run commands as (default: akim)
   -N, --network arg         network to create passport for
   -u, --user arg            user to create passport for
-      --push-passport       push passport to https://beyond.infinit.sh
-  -p, --push                push passport to https://beyond.infinit.sh
+      --push-passport       push passport to the Hub
+  -p, --push                push passport to the Hub
       --deny-write          deny user write access to the network
       --deny-storage        deny user ability to contribute storage to the network
       --allow-create-passport  allow user to create passports for network

@@ -16,6 +16,6 @@ Options:
   -R, --recursive           set acl recursively
   -t, --traverse            set read permission on parent directories
   -v, --verbose             use verbose output
-  -f, --fetch               fetch acl from https://beyond.infinit.sh
+  -f, --fetch               fetch acl from the Hub
       --fallback-xattrs     use fallback special file if extended attributes are not supported
 

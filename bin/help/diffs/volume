@@ -5,12 +5,12 @@ Infinit volume management utility:
 Modes:										  create     Create a volume
   --create		       Create a volume					  delete     Delete a volume locally
   --export		       Export a volume for someone else to import	  export     Export a volume for someone else to import
-  --fetch		       Fetch a volume from the Hub			  fetch	     Fetch a volume from https://beyond.infinit.sh
+  --fetch		       Fetch a volume from the Hub			  fetch	     Fetch a volume from the Hub
   --import		       Import a volume					  import     Import a volume
   --push		       Push a volume to the Hub				  list	     List volumes
   --run			       Run a volume					  mount	     Mount a volume
-  --mount		       Mount a volume					  pull	     Remove a volume from https://beyond.infinit.sh
-  --delete		       Delete a volume locally				  push	     Push a volume to https://beyond.infinit.sh
+  --mount		       Mount a volume					  pull	     Remove a volume from the Hub
+  --delete		       Delete a volume locally				  push	     Push a volume to the Hub
   --pull		       Remove a volume from the Hub			  run	     Run a volume
   --list		       List volumes					  start	     Start a volume through the daemon
   --update		       Update a volume with default run options		  status     Get volume status

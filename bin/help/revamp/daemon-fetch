@@ -1,5 +1,5 @@
 daemon: fetch: Usage: infinit-daemon daemon fetch [OPTIONS]
-Fetch volume and its dependencies from https://beyond.infinit.sh
+Fetch volume and its dependencies from the Hub
 
 Options:
   -h, --help                show this help message

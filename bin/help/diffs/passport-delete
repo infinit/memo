@@ -8,5 +8,5 @@ Delete options:									  -h, --help		    show this help message
   --pull		 Pull the passport if it is on the Hub			  -a, --as arg		    user to run commands as (default: akim)
 										  -N, --network arg	    network to delete passport for
 										  -u, --user arg	    user to delete passport for
-										      --pull		    pull passport from https://beyond.infinit.sh
+										      --pull		    pull passport from the Hub
 

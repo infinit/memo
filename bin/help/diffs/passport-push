@@ -1,5 +1,5 @@
 passport: push: Usage: _build/macosx64/bin/infinit-passport --push --network NE passport: push: Usage: infinit-passport passport push [OPTIONS]
-										Push a user's network passport to https://beyond.infinit.sh
+										Push a user's network passport to the Hub
 Push a user's network passport to the Hub:
 										Options:
 Push options:									  -h, --help		    show this help message

@@ -10,8 +10,8 @@ Options:
       --description arg     network description (default: null)
       --port arg            outbound port to use (default: null)
   -o, --output arg          file to write the network to (default: null)
-      --push-network        push the network to https://beyond.infinit.sh
-  -p, --push                push network to https://beyond.infinit.sh
+      --push-network        push the network to the Hub
+  -p, --push                push network to the Hub
       --admin-r arg         Set admin users that can read all data (default: [])
       --admin-rw arg        Set admin users that can read and write all data (default: [])
       --admin-remove arg    Remove given users from all admin lists (prefix: @<group>, requires mountpoint) (default: [])

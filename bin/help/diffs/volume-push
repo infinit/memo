@@ -1,5 +1,5 @@
 volume: push: Usage: _build/macosx64/bin/infinit-volume --push --name VOLUME [O volume: push: Usage: infinit-volume volume push [OPTIONS]
-										Push a volume to https://beyond.infinit.sh
+										Push a volume to the Hub
 Push a volume to the Hub:
 										Options:
 Push options:									  -h, --help		    show this help message

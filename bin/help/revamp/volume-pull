@@ -1,5 +1,5 @@
 volume: pull: Usage: infinit-volume volume pull [OPTIONS]
-Remove a volume from https://beyond.infinit.sh
+Remove a volume from the Hub
 
 Options:
   -h, --help                show this help message

@@ -10,7 +10,7 @@ Create options:									  -h, --help		    show this help message
   --push-volume [=arg(=true)]		Push the volume to the Hub		  -N, --network arg	    network to create volume for
   -o [ --output ] arg			File to write the volume to		      --description arg	    volume description (default: null)
 					(default: stdout)			  -R, --create-root	    create root directory
-  -d [ --default-permissions ] arg	Default permissions (optional: r,rw)	      --push-volume arg	    push the volume to https://beyond.infinit.sh (defau
+  -d [ --default-permissions ] arg	Default permissions (optional: r,rw)	      --push-volume arg	    push the volume to the Hub (default: false)
   -r [ --register-service ] [=arg(=true)]					  -o, --output arg	    file to write the volume to (default: null)
 					Register volume in the network		  -d, --default-permissions arg	 default permissions (optional: r,rw) (default:
   --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -r, --register-service    register volume in the network
@@ -29,12 +29,12 @@ Create options:									  -h, --help		    show this help message
   --cache-ram-ttl arg			RAM block cache time-to-live in seconds	      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5
 					(default: 5 minutes)			      --cache-ram-invalidation arg  RAM block cache invalidation time in second
   --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-disk-size arg  size of disk cache for immutable data in bytes (de
-					seconds (default: 15 seconds)		      --fetch-endpoints arg  fetch endpoints from https://beyond.infinit.sh (de
-  --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch arg	    fetch volume from https://beyond.infinit.sh (defaul
+					seconds (default: 15 seconds)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
+  --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch arg	    fetch volume from the Hub (default: false)
 					in bytes (default: 512 MB)		      --peer arg	    peer address or file with list of peer addresses (h
   --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		      --peers-file arg	    Periodically write list of known peers to given fil
-  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --push-endpoints arg  push endpoints to https://beyond.infinit.sh (defaul
-  --peer arg				Peer address or file with list of peer	  -p, --push arg	    push volume to https://beyond.infinit.sh (default:
+  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --push-endpoints arg  push endpoints to the Hub (default: false)
+  --peer arg				Peer address or file with list of peer	  -p, --push arg	    push volume to the Hub (default: false)
 					addresses (host:port)			      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
   --peers-file arg			Periodically write list of known peers	      --advertise-host arg  advertise extra endpoint using given host (default:
 					to given file				      --endpoints-file arg  write node listening endpoints to file (format: hos

@@ -1,5 +1,5 @@
 user: push: Usage: _build/macosx64/bin/infinit-user --push [OPTIONS...]		user: push: Usage: infinit-user user push [OPTIONS]
-										Push a user from https://beyond.infinit.sh
+										Push a user from the Hub
 Push a user to the Hub:
 										Options:
 Push options:									  -h, --help		    show this help message
@@ -9,7 +9,7 @@ Push options:									  -h, --help		    show this help message
   --avatar arg		 Path to an image to use as avatar			  -n, --name arg	    name of the user to push (default: akim)
   --full		 Include private key in order to facilitate device	  -e, --email arg	    user email (default: null)
 			 pairing and fetching lost keys				      --fullname arg	    user full name (default: null)
-  --password arg	 Password to authenticate with the Hub. Used with	  -P, --password arg	    password to authenticate with https://beyond.infini
+  --password arg	 Password to authenticate with the Hub. Used with	  -P, --password arg	    password to authenticate with the Hub (default: nul
 			 --full (default: prompt for password)			      --avatar arg	    path to an image to use as avatar (default: null)
 										      --full		    include private key (do not use unless you understa
 

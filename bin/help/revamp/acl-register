@@ -9,6 +9,6 @@ Options:
       --path arg            file whose acl to register
   -u, --user arg            user to register acl for
   -N, --network arg         network to register acl for
-  -f, --fetch               fetch acl from https://beyond.infinit.sh
+  -f, --fetch               fetch acl from the Hub
       --fallback-xattrs     use fallback special file if extended attributes are not supported
 
