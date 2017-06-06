@@ -411,6 +411,8 @@ with Beyond() as beyond, \
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  bob.run(['infinit', 'key-value-store', 'create', '--as', 'bob', 'k', '-N', 'n', '-p'])
+  assertEq(len(bob.run_json(['infinit', 'key-value-store', 'list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-network', '--delete', 'n', '--as', 'bob',
            '--purge', '--pull', '--unlink'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 0)
@@ -418,6 +420,7 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+  assertEq(len(bob.run_json(['infinit', 'key-value-store', 'list', '-s'])), 0)
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   assertEq(len(os.listdir('%s/bob/n/bob' % bob.state_path)), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
