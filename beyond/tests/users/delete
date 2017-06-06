@@ -54,6 +54,8 @@ class Test(unittest.TestCase):
       volume.put(beyond)
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
+      kvs = KeyValueStore(name = 'k', network = network)
+      kvs.put(beyond)
       beyond.delete('users/%s' % user['name'],
                     auth = user,
                     params = {'purge': 'true'})
@@ -64,6 +66,9 @@ class Test(unittest.TestCase):
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
+                                json = False),
              404)
 
   def test_purge_with_a_volume_on_a_network_we_do_not_own(self):
@@ -78,6 +83,8 @@ class Test(unittest.TestCase):
       volume.put(beyond)
       drive = Drive(name = 'd', volume = volume, owner = user)
       drive.put(beyond)
+      kvs = KeyValueStore(name = 'k', network = network, owner = user)
+      kvs.put(beyond)
       beyond.delete('users/%s' % user['name'],
                     auth = user,
                     params = {'purge': 'true'})
@@ -88,6 +95,9 @@ class Test(unittest.TestCase):
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
+                                json = False),
              404)
 
   # Ensure that only the user who does the purge has their objects removed.
@@ -107,6 +117,10 @@ class Test(unittest.TestCase):
       drive1.put(beyond)
       drive2 = Drive(name = 'd2', owner = user2, volume = volume2)
       drive2.put(beyond)
+      kvs1 = KeyValueStore(name = 'k1', owner = user1, network = network)
+      kvs1.put(beyond)
+      kvs2 = KeyValueStore(name = 'k2', owner = user2, network = network)
+      kvs2.put(beyond)
       beyond.delete('users/%s' % user1['name'],
                     auth = user1,
                     params = {'purge': 'true'})
@@ -118,8 +132,12 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
              404)
+      throws(lambda: beyond.get('key-value-stores/%s' % kvs1['name'],
+                                json = False),
+             404)
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
+      beyond.get('key-value-stores/%s' % kvs2['name'])
 
   def test_admin(self):
     with Beyond() as beyond:

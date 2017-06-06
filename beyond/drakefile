@@ -315,6 +315,9 @@ def configure(
       'drives/put',
       'drives/icons',
       'drives/invitations',
+      'key-value-stores/delete',
+      'key-value-stores/get',
+      'key-value-stores/put',
       # Higher level.
       'users/register_login',
       'credentials/oauth',
