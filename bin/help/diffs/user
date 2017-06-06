@@ -1,29 +1,26 @@
-Usage: _build/macosx64/bin/infinit-user MODE [OPTIONS...]		       |Usage: _build/macosx64/bin/infinit-user user [MODE|--help]
-									       |Infinit user management utility.
-Infinit user utility:							       |
-									       |Modes:
-Modes:									       |  create     Create a user
-  --create		       Create a user				       |  delete     Delete local user
-  --export		       Export a user so that it may be imported	       |  export     Export local user
-			       elsewhere				       |  hash	     Get short hash of user's key
-  --fetch		       Fetch a user from the Hub		       |  import     Import local user
-  --import		       Import a user				       |  fetch	     Fetch users from https://beyond.infinit.sh
-  --pull		       Remove a user from the Hub		       |  list	     List local users
-  --delete		       Delete a user locally			       |  login	     Login user to https://beyond.infinit.sh
-  --push		       Push a user to the Hub			       |  pull	     Pull a user from https://beyond.infinit.sh
-  --signup		       Create and push a user to the Hub	       |  push	     Push a user from https://beyond.infinit.sh
-  --login		       Log the user to the Hub			       |  signup     Create and push a user to https://beyond.infinit.sh
-  --list		       List users				       |
-									       |Options:
-Hidden Modes:								       |  -h, --help		    show this help message
-  --hash		       Get short hash of user's key		       |
-									       |
-Miscellaneous:								       |
-  -h [ --help ]		       Display the help				       |
-  -s [ --script ]	       Silence all extraneous human friendly messages  |
-  --compatibility-version arg  Force compatibility version		       |
-  -v [ --version ]	       Display version				       |
-  --critical-log	       Path to critical log file, none to disable      |
-  -a [ --as ] arg	       User to run commands as (default: system user)  |
-									       |
-									       |
+Usage: _build/macosx64/bin/infinit-user MODE [OPTIONS...]			Usage: infinit-user user [MODE|--help]
+										Infinit user management utility.
+Infinit user utility:
+										Modes:
+Modes:										  create     Create a user
+  --create		       Create a user					  delete     Delete local user
+  --export		       Export a user so that it may be imported		  export     Export local user
+			       elsewhere					  hash	     Get short hash of user's key
+  --fetch		       Fetch a user from the Hub			  import     Import local user
+  --import		       Import a user					  fetch	     Fetch users from https://beyond.infinit.sh
+  --pull		       Remove a user from the Hub			  list	     List local users
+  --delete		       Delete a user locally				  login	     Login user to https://beyond.infinit.sh
+  --push		       Push a user to the Hub				  pull	     Pull a user from https://beyond.infinit.sh
+  --signup		       Create and push a user to the Hub		  push	     Push a user from https://beyond.infinit.sh
+  --login		       Log the user to the Hub				  signup     Create and push a user to https://beyond.infinit.sh
+  --list		       List users
+										Options:
+Hidden Modes:									  -h, --help		    show this help message
+  --hash		       Get short hash of user's key
+Miscellaneous:
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

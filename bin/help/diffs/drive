@@ -1,0 +1,22 @@
+Usage: _build/macosx64/bin/infinit-drive MODE [OPTIONS...]			Usage: infinit-drive drive [MODE|--help]
+										Infinit drive management utility.
+Infinit drive management utility:
+										Modes:
+Modes:										  create     Create a drive (a network and volume pair)
+  --create		       Create a drive (a network and volume pair)	  delete     Delete a drive locally
+  --invite		       Invite a user to join the drive			  export     Export a drive
+  --join		       Join a drive you were invited to (Hub operation)	  fetch	     Fetch drive from https://beyond.infinit.sh
+  --export		       Export a drive					  invite     Invite a user to join the drive
+  --push		       Push a drive to the Hub				  join	     Join a drive you were invited to (Hub operation)
+  --fetch		       Fetch drive from the Hub				  list	     List drives
+  --list		       List drives					  pull	     Remove a drive from https://beyond.infinit.sh
+  --delete		       Delete a drive locally				  push	     Push a drive to https://beyond.infinit.sh
+  --pull		       Remove a drive from the Hub
+										Options:
+Miscellaneous:									  -h, --help		    show this help message
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

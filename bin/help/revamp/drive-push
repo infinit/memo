@@ -1,11 +1,11 @@
 drive: push: Usage: infinit-drive drive push [OPTIONS]
-Push a drive to the Hub
+Push a drive to https://beyond.infinit.sh
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the drive to push
   -i, --icon arg            path to an image to use as icon (default: null)
 

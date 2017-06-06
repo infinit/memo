@@ -1,29 +1,27 @@
-Usage: _build/macosx64/bin/infinit-volume MODE [OPTIONS...]		       |Usage: _build/macosx64/bin/infinit-volume volume [MODE|--help]
-									       |Infinit volume management utility.
-Infinit volume management utility:					       |
-									       |Modes:
-Modes:									       |  create     Create a volume
-  --create		       Create a volume				       |  delete     Delete a volume locally
-  --export		       Export a volume for someone else to import      |  export     Export a volume for someone else to import
-  --fetch		       Fetch a volume from the Hub		       |  fetch	     Fetch a volume from https://beyond.infinit.sh
-  --import		       Import a volume				       |  import     Import a volume
-  --push		       Push a volume to the Hub			       |  list	     List volumes
-  --run			       Run a volume				       |  mount	     Mount a volume
-  --mount		       Mount a volume				       |  pull	     Remove a volume from https://beyond.infinit.sh
-  --delete		       Delete a volume locally			       |  push	     Push a volume to https://beyond.infinit.sh
-  --pull		       Remove a volume from the Hub		       |  run	     Run a volume
-  --list		       List volumes				       |  start	     Start a volume through the daemon
-  --update		       Update a volume with default run options	       |  status     Get volume status
-  --start		       Start a volume through the daemon.	       |  stop	     Stop a volume
-  --stop		       Stop a volume				       |  update     Update a volume with default run options
-  --status		       Get volume status			       |
-									       |Options:
-Miscellaneous:								       |  -h, --help		    show this help message
-  -h [ --help ]		       Display the help				       |
-  -s [ --script ]	       Silence all extraneous human friendly messages  |
-  --compatibility-version arg  Force compatibility version		       |
-  -v [ --version ]	       Display version				       |
-  --critical-log	       Path to critical log file, none to disable      |
-  -a [ --as ] arg	       User to run commands as (default: system user)  |
-									       |
-									       |
+Usage: _build/macosx64/bin/infinit-volume MODE [OPTIONS...]			Usage: infinit-volume volume [MODE|--help]
+										Infinit volume management utility.
+Infinit volume management utility:
+										Modes:
+Modes:										  create     Create a volume
+  --create		       Create a volume					  delete     Delete a volume locally
+  --export		       Export a volume for someone else to import	  export     Export a volume for someone else to import
+  --fetch		       Fetch a volume from the Hub			  fetch	     Fetch a volume from https://beyond.infinit.sh
+  --import		       Import a volume					  import     Import a volume
+  --push		       Push a volume to the Hub				  list	     List volumes
+  --run			       Run a volume					  mount	     Mount a volume
+  --mount		       Mount a volume					  pull	     Remove a volume from https://beyond.infinit.sh
+  --delete		       Delete a volume locally				  push	     Push a volume to https://beyond.infinit.sh
+  --pull		       Remove a volume from the Hub			  run	     Run a volume
+  --list		       List volumes					  start	     Start a volume through the daemon
+  --update		       Update a volume with default run options		  status     Get volume status
+  --start		       Start a volume through the daemon.		  stop	     Stop a volume
+  --stop		       Stop a volume					  update     Update a volume with default run options
+  --status		       Get volume status				  syscall    Syscalls
+
+Miscellaneous:									Options:
+  -h [ --help ]		       Display the help					  -h, --help		    show this help message
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

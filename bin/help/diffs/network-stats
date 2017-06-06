@@ -1,0 +1,10 @@
+network: stats: Usage: _build/macosx64/bin/infinit-network --stats --name NETWO network: stats: Usage: infinit-network network stats [OPTIONS]
+										Fetch stats of a network on the Hub
+Fetch stats of a network on the Hub:
+										Options:
+Stats options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network name						      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: bob)
+										  -n, --name arg	    name of the network to stats
+

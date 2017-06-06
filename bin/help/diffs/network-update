@@ -1,0 +1,21 @@
+network: update: Usage: _build/macosx64/bin/infinit-network --update --name NAM network: update: Usage: infinit-network network update [OPTIONS]
+										Update a network
+Update a network:
+										Options:
+Update options:									  -h, --help		    show this help message
+  -n [ --name ] arg	   Network to update					      --compatibility-version arg  compatibility version to force
+  --description arg	   Description of network				  -s, --script		    suppress extraneous human friendly messages and use
+  --port arg		   Port to listen on (default: random)			  -a, --as arg		    user to run commands as (default: akim)
+  -o [ --output ] arg	   File to write the network to				  -n, --name arg	    name of the network to update
+			   (default: stdout)					      --description arg	    network description (default: null)
+  --push-network	   Push the updated network to the Hub			      --port arg	    outbound port to use (default: null)
+  -p [ --push ]		   Alias for --push-network				  -o, --output arg	    file to write the network to (default: null)
+  --admin-r arg		   Add an admin user that can read all data		      --push-network	    push the network to https://beyond.infinit.sh
+			   (prefix: @<group>, requires mountpoint)		  -p, --push		    push network to https://beyond.infinit.sh
+  --admin-rw arg	   Add an admin user that can read and write all data	      --admin-r arg	    Set admin users that can read all data (default: []
+			   (prefix: @<group>, requires mountpoint)		      --admin-rw arg	    Set admin users that can read and write all data (d
+  --admin-remove arg	   Remove given users from all admin lists		      --admin-remove arg    Remove given users from all admin lists (prefix: @<
+			   (prefix: @<group>, requires mountpoint)		  -m, --mountpoint arg	    where to mount the filesystem (default: null)
+  -m [ --mountpoint ] arg  Mountpoint of a volume using this network, required	      --peer arg	    peer address or file with list of peer addresses (h
+			   to add admin groups					      --protocol arg	    RPC protocol to use: tcp, utp, all (default: all) (
+  --peer arg		   List of known node endpoints

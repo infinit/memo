@@ -1,0 +1,21 @@
+Usage: _build/macosx64/bin/infinit-passport MODE [OPTIONS...]			Usage: infinit-passport passport [MODE|--help]
+										Infinit passport management utility.
+Infinit volume management utility:
+										Modes:
+Modes:										  create     Create a passport for a user to a network
+  --create		       Create a passport for a user to a network	  delete     Locally delete a passport
+  --export		       Export a user's network passport			  export     Export a user's network passport
+  --fetch		       Fetch a user's network passport from the Hub	  fetch	     Fetch a user's network passport from https://beyond.infinit.sh
+  --import		       Import a passport for a user to a network	  import     Import a passport for a user to a network
+  --push		       Push a user's network passport to the Hub	  list	     List all local passports
+  --pull		       Remove a user's network passport from the Hub	  pull	     Remove a user's network passport from https://beyond.infinit.sh
+  --list		       List all local passports				  push	     Push a user's network passport to https://beyond.infinit.sh
+  --delete		       Locally delete a passport
+										Options:
+Miscellaneous:									  -h, --help		    show this help message
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

@@ -1,0 +1,15 @@
+network: inspect: Usage: _build/macosx64/bin/infinit-network --inspect --name N network: inspect: Usage: infinit-network network inspect [OPTIONS]
+										Get information about a running network
+Get information about a running network:
+										Options:
+Inspect options:								  -h, --help		    show this help message
+  -n [ --name ] arg	 Network name						      --compatibility-version arg  compatibility version to force
+  --status		 Check if network is running				  -s, --script		    suppress extraneous human friendly messages and use
+  --peers		 List connected peers					  -a, --as arg		    user to run commands as (default: akim)
+  --all			 All informtation					  -n, --name arg	    name of the network to inspect
+  --redundancy		 Describe data redundancy				  -o, --output arg	    file to write the network to (default: null)
+										      --status
+										      --peers		    list connected peers
+										      --all		    all information
+										      --redundancy	    describe data redundancy
+

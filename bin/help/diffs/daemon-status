@@ -1,0 +1,9 @@
+daemon: status: Usage: _build/macosx64/bin/infinit-daemon --status [OPTIONS...] daemon: status: Usage: infinit-daemon daemon status [OPTIONS]
+										Query daemon status
+Query daemon status:
+										Options:
+										  -h, --help		    show this help message
+										      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+

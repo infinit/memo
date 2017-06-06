@@ -1,0 +1,15 @@
+doctor: all: Usage: _build/macosx64/bin/infinit-doctor --all [OPTIONS...]	doctor: all: Usage: infinit-doctor doctor all [OPTIONS]
+										Perform all possible checks
+Perform all possible checks:
+										Options:
+All options:									  -h, --help		    show this help message
+  --no-color		 Don't use colored output				      --compatibility-version arg  compatibility version to force
+  -v [ --verbose ]	 Output everything					  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										      --ignore-non-linked   do not consider problematic non-linked networks
+										      --upnp-tcp-port arg   port to try to get an tcp upnp connection on (defau
+										      --upnp-udt-port arg   port to try to get an udt upnp connection on (defau
+										      --server arg	    connectivity server address (default = 192.241.139.
+										      --no-color	    don't use colored output
+										  -v, --verbose		    use verbose output
+
