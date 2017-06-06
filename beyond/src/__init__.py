@@ -55,7 +55,7 @@ def symbolize_dump(in_, out = None):
 ## -------- ##
 
 # Don't generate crash reports on our Beyond server.
-os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
+os.environ['INFINIT_CRASH_REPORTER'] = '0'
 
 def find_binaries():
   for path in chain(
