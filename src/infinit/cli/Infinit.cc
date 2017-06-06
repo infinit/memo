@@ -75,9 +75,9 @@ namespace infinit
       check_broken_locale()
       {
 #if defined INFINIT_LINUX
-        // boost::filesystem uses the default locale, detect here if it
-        // cant be instantiated.
-        // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
+        // boost::filesystem uses the default locale, detect here if
+        // it can't be instantiated.  Not required on OS X, see
+        // boost/libs/filesystem/src/path.cpp:819.
         try
         {
           std::locale("");

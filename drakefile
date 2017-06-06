@@ -492,7 +492,8 @@ def configure(
     for f in installed_libraries | set(installed_binaries):
       sym = drake.node('%s.sym' % f.path())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       f, sym)
+                                       f, sym,
+                                       cxx_toolkit = cxx_toolkit)
       installed_symbols.append(sym)
     if prefix:
       symbols_dir = '%s/%s' % (prefix, git.version())

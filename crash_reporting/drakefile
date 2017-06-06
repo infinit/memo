@@ -22,10 +22,12 @@ class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
                binary,
-               output_file):
+               output_file,
+               cxx_toolkit):
     self.__dump_syms_tool = dump_syms_tool
     self.__binary = binary
     self.__output_file = output_file
+    self.__cxx_toolkit = cxx_toolkit
     super().__init__(
       [self.__dump_syms_tool, self.__binary],
       [self.__output_file],
@@ -41,15 +43,17 @@ class SymbolsGenerator(drake.Builder):
 
   def execute(self):
     out = self.__output_file
-    tmp = str(out.path()) + '.tmp'
+    if self.__cxx_toolkit.os is drake.os.macos:
+      self.cmd('Generating debug symbols for %s' % self.__binary,
+               ['dsymutil', self.binary_path],
+               throw = True)
+      args = ['-g', self.binary_path + '.dSYM']
+    else:
+      args = []
     self.cmd('Generating symbols file for %s' % self.__binary,
-             [self.dump_syms_cmd, self.binary_path],
-             redirect_stdout = tmp,
-             throw = True)
-    # There is no direct means to pass something via stdin with cmd.
-    self.cmd('C++filt symbols file for %s' % self.__binary,
-             ['sh', '-c', "c++filt <'{}'".format(tmp)],
+             [self.dump_syms_cmd] + args + [self.binary_path],
              redirect_stdout = out,
+             cut_stderr = True,
              throw = True)
     return True
 
