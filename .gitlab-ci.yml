@@ -33,6 +33,7 @@ x86_64-centos6-gcc4:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -73,6 +74,7 @@ x86_64-ubuntu-gcc4:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -115,6 +117,7 @@ x86_64-alpine-gcc:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -156,6 +159,7 @@ x86_64-jessie-gcc4:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -190,6 +194,7 @@ x86_64-windows-mingw4:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -260,6 +265,7 @@ website:
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR=${CI_PROJECT_DIR}
     - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
     - INSTALL_DIR=${SOURCE_DIR}/_install
