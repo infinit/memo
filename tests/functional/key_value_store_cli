@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+tests = SharedLogicCLITests('key-value-store')
+tests.run()
+
+import grpc
+import service_pb2_grpc
+import service_pb2 as kv
+
+class Infra():
+
+  def __init__(self, usr, uname = 'bob', kvname = 'kv'):
+    self.__usr = usr
+    self.__uname = uname
+    self.__kvname = kvname
+    self.__proc = None
+    self.__stub = None
+
+  @property
+  def usr(self):
+    return self.__usr
+
+  @property
+  def uname(self):
+    return self.__uname
+
+  @property
+  def kvname(self):
+    return self.__kvname
+
+  @property
+  def stub(self):
+    return self.__stub
+
+  def __enter__(self):
+    self.usr.run(['infinit', 'user', 'create',  self.uname])
+    self.usr.run(['infinit', 'silo', 'create', 'filesystem', 's'])
+    self.usr.run(['infinit', 'network', 'create', 'n', '-S', 's',
+                  '--as', self.uname])
+    self.usr.run(['infinit', 'key-value-store', 'create', self.kvname,
+                  '-N', 'n', '--as', self.uname])
+    port_file = '%s/port' % self.usr.dir
+    self.__proc = self.usr.spawn(
+      ['infinit', 'key-value-store', 'run', self.kvname, '--as', self.uname,
+       '--allow-root-creation',
+       '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
+    while not os.path.exists(port_file):
+      time.sleep(0.1)
+    ep = '127.0.0.1:'
+    with open(port_file, 'r') as f:
+      ep += f.readline().strip()
+    channel = grpc.insecure_channel(ep)
+    self.__stub = service_pb2_grpc.kvStub(channel)
+    return self
+
+  def __exit__(self, *args, **kwargs):
+    if self.__proc:
+      self.__proc.terminate()
+      out, err = self.__proc.communicate(timeout = 30)
+      if os.environ.get('OS') != 'windows':
+        try:
+          # SIGTERM is not caught on windows. Might be wine related.
+          assertEq(self.__proc.wait(), 0)
+        except:
+          print('STDOUT: %s' % out)
+          print('STDERR: %s' % err)
+          raise
+
+# Simple.
+with Infinit() as bob, Infra(bob) as i:
+
+  def throws_code(f, code):
+    try:
+      f()
+      assert False
+    except Exception as e:
+      assertEq(e.code(), code)
+
+  client = i.stub
+  key = 'some/key'
+  # Fetch value that doesn't exist.
+  throws_code(lambda: client.get(kv.GetRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+  # Remove value that doesn't exist.
+  throws_code(lambda: client.remove(kv.RemoveRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+  # Update value that doesn't exist.
+  throws_code(lambda: client.update(kv.UpdateRequest(
+                key = key, value = 'update'.encode('utf-8'))),
+              grpc.StatusCode.NOT_FOUND)
+  # Insert value that doesn't exist.
+  value1 = 'some data'
+  client.insert(kv.InsertRequest(key = key, value = value1.encode('utf-8')))
+  # Fetch value.
+  assertEq(client.get(kv.GetRequest(key = key)).value.decode('utf-8'), value1)
+  # Insert value that already exists.
+  throws_code(lambda: client.insert(kv.InsertRequest(
+                key = key, value = 'exists'.encode('utf-8'))),
+              grpc.StatusCode.ALREADY_EXISTS)
+  # Update value.
+  value2 = 'update data'
+  client.update(kv.UpdateRequest(key = key, value = value2.encode('utf-8')))
+  assertEq(client.get(kv.GetRequest(key = key)).value.decode('utf-8'), value2)
+  # Upsert value.
+  value3 = 'upsert data'
+  client.upsert(kv.UpsertRequest(key = key, value = value3.encode('utf-8')))
+  assertEq(client.get(kv.GetRequest(key = key)).value.decode('utf-8'), value3)
+  # Remove value.
+  client.remove(kv.RemoveRequest(key = key))
+  throws_code(lambda: client.get(kv.GetRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+
+# List.
+with Infinit() as bob, Infra(bob) as i:
+
+  def random_sequence(count = 100):
+    from random import SystemRandom
+    import string
+    return ''.join(SystemRandom().choice(
+      string.ascii_lowercase + string.digits) for _ in range(count))
+
+  client = i.stub
+  # Store tests data.
+  keys = list()
+  data = dict()
+  for j in range(0, 100):
+    prefix = 'dir_1/'
+    if j >= 50:
+      prefix = 'dir_2/'
+    if j % 2 == 0:
+      prefix += 'a'
+    else:
+      prefix += 'b'
+    k = '%s/%s' % (prefix, j)
+    keys.append(k)
+    v = random_sequence()
+    data[k] = v
+    client.insert(kv.InsertRequest(key = k, value = v.encode('utf-8')))
+  keys.sort()
+  # Check test data.
+  for k in keys:
+    assertEq(client.get(kv.GetRequest(key = k)).value.decode('utf8'), data[k])
+  # All.
+  assertEq(len(client.list(kv.ListRequest()).items), 100)
+  # 10.
+  l = client.list(kv.ListRequest(maxKeys = 10))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  for j in range (0, 10):
+    assertEq(l.items[j].key, keys[j])
+  # Next 10.
+  l = client.list(kv.ListRequest(maxKeys = 10, marker = l.items[-1].key))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  for j in range (0, 10):
+    assertEq(l.items[j].key, keys[j + 10])
+  # Prefix.
+  l = client.list(kv.ListRequest(prefix = 'dir_1'))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  # Prefix 10.
+  l = client.list(kv.ListRequest(prefix = 'dir_1', maxKeys = 10))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  # Prefix 50.
+  l = client.list(kv.ListRequest(prefix = 'dir_1', maxKeys = 50))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  # Delimiter.
+  l = client.list(kv.ListRequest(delimiter = '/'))
+  assertEq(len(l.items), 100)
+  assertEq(l.prefixes, ['dir_1/', 'dir_2/'])
+  # Delimiter prefix.
+  l = client.list(kv.ListRequest(delimiter = '/', prefix = 'dir_1/'))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  assertEq(l.prefixes, ['a/', 'b/'])
+
+# Concurrent.
+with Infinit() as bob, Infra(bob) as i:
+  import threading
+  client = i.stub
+
+  class Inserter(threading.Thread):
+
+    def __init__(self, key, value):
+      threading.Thread.__init__(self)
+      self.__key = key
+      self.__value = value
+
+    def run(self):
+      client.insert(kv.InsertRequest(key = self.__key,
+                                     value = self.__value.encode('utf-8')))
+
+  # Generate test data.
+  data = dict()
+  for k in range(0, 10):
+    v = str(k) * 1024 * 1024
+    data[str(k)] = v
+  # Store concurrently.
+  threads = list()
+  for k, v in data.items():
+    t = Inserter(k, v)
+    threads.append(t)
+  for t in threads:
+    t.start()
+    t.join()
+  # Check data.
+  for k, v in data.items():
+    # XXX: assertEq prints out two values making log files large.
+    assert client.get(kv.GetRequest(key = k)).value.decode('utf-8') == v

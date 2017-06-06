@@ -824,6 +824,11 @@ def configure(
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
       utils = drake.node('tests/functional/utils.py')
+      kv_grpc = drake.copy(
+        grpc.GRPCPyGen(kv.service_proto,
+                       grpc.grpc.protoc,
+                       drake.node(grpc.grpc.grpc_python_plugin)).targets(),
+        'tests/functional/lib', strip_prefix = True)
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -845,6 +850,10 @@ def configure(
               'user_cli',
               'volume_cli',
             ]))
+      if not windows:
+        # XXX: Hangs forever under wine, likely because of:
+        # https://bugs.winehq.org/show_bug.cgi?id=38272
+        tests.append(functional_test('key_value_store_cli'))
       doctor_configuration_test = functional_test(
         'doctor/configuration',
         env = {
@@ -887,6 +896,7 @@ def configure(
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(infinit_cli)
         test.dependency_add(drake.node('tests/functional/utils.py'))
+        test.dependencies_add(kv_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                              absolute = True))
         extra_path = [binaries_path]
@@ -899,6 +909,7 @@ def configure(
           'PYTHONPATH': ':'.join([
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
             str(drake.path_source('tests/functional')),
+            str(drake.path_build('tests/functional/lib')),
           ]),
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
