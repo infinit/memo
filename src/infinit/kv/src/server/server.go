@@ -29,12 +29,12 @@ func NewServer(vStore dht.DoughnutClient, name string, bootstrap bool) *kvServer
 		grpclog.Fatalf("unable to get named block address: %v\n", err)
 	}
 	if nb, err := vStore.Fetch(context.Background(), &dht.FetchRequest{Address: nbAddr.Address}); err == nil {
-    // Fetch root block.
-    s.rootAddress = nb.GetBlock().GetData()
-    if _, err := s.rootBlock(); err != nil {
-      grpclog.Fatalf("unable to fetch root block: %v\n", err)
-    }
-  } else { // Named block does not exist.
+		// Fetch root block.
+		s.rootAddress = nb.GetBlock().GetData()
+		if _, err := s.rootBlock(); err != nil {
+			grpclog.Fatalf("unable to fetch root block: %v\n", err)
+		}
+	} else { // Named block does not exist.
 		if bootstrap == false {
 			grpclog.Fatalf("unable to find named block: %v\n", err)
 		}
