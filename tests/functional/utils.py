@@ -473,3 +473,70 @@ class User():
 
   def fail(self, cli, **kargs):
     self.infinit.run(cli.split(' '), return_code = 1, **kargs)
+
+class SharedLogicCLITests():
+
+  def __init__(self, entity):
+    self.__entity = entity
+
+  def random_sequence(self, count = 10):
+    from random import SystemRandom
+    import string
+    return ''.join(SystemRandom().choice(
+      string.ascii_lowercase + string.digits) for _ in range(count))
+
+  def run(self):
+    entity = self.__entity
+    # Creating and deleting entity.
+    with Infinit() as bob:
+      e_name = self.random_sequence()
+      bob.run(['infinit', 'user', 'create',  'bob'])
+      bob.run(['infinit', 'network', 'create', 'network', '--as', 'bob'])
+      bob.run(['infinit', entity, 'create', e_name, '-N', 'network',
+               '--as', 'bob'])
+      bob.run(['infinit', entity, 'export', 'bob/%s' % e_name, '--as', 'bob'])
+      bob.run(['infinit', entity, 'delete', e_name, '--as', 'bob'])
+
+    # Push to the hub.
+    with Beyond() as beyond, \
+        Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
+      e_name = self.random_sequence()
+      bob.run(['infinit', 'user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+      bob.run(['infinit', 'network', 'create', 'network', '--as', 'bob',
+               '--push'])
+      bob.run(['infinit', entity, 'create', e_name, '-N', 'network',
+               '--description', 'something', '--as', 'bob', '--push'])
+      try:
+        bob.run(['infinit', entity, '--push', '--name', e_name])
+        unreachable()
+      except Exception as e:
+        pass
+      alice.run(['infinit', 'user', 'signup', 'alice',
+                 '--email', 'a@infinit.sh'])
+      alice.run(['infinit', entity, 'fetch', 'bob/%s' % e_name,
+                 '--as', 'alice'])
+      e = alice.run_json(['infinit', entity, 'export', 'bob/%s' % e_name,
+                          '--as', 'alice'])
+      assertEq(e['description'], 'something')
+
+    # Pull and delete.
+    with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+      e_name = self.random_sequence()
+      e_name2 = e_name
+      while e_name2 == e_name:
+        e_name2 = self.random_sequence()
+      bob.run(['infinit', 'user', 'signup', 'bob', '--email', 'b@infinit.io'])
+      bob.run(['infinit', 'network', 'create', '--as', 'bob', 'n', '--push'])
+      # Local and Beyond.
+      bob.run(['infinit', entity, 'create', '--as', 'bob', e_name,
+               '-N', 'n', '--push'])
+      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 1)
+      bob.run(['infinit', entity, 'delete', '--as', 'bob', e_name, '--pull'])
+      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 0)
+      bob.run(['infinit', entity, 'fetch', '--as', 'bob', e_name],
+              return_code = 1)
+      # Local only.
+      bob.run(['infinit', entity, 'create', '--as', 'bob', e_name2, '-N', 'n'])
+      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 1)
+      bob.run(['infinit', entity, 'delete', '--as', 'bob', e_name2, '--pull'])
+      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 0)
