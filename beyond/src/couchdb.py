@@ -145,6 +145,14 @@ class CouchDBDatastore:
                     ('per_network_id', self.__drives_per_network_id_map),
                     ('per_volume_id', self.__drives_per_volume_id_map),
                   ])
+    self.__design('key-value-stores',
+                  updates = [('update', self.__key_value_store_update)],
+                  views = [
+                    ('per_network_id',
+                     self.__key_value_stores_per_network_id_map),
+                    ('per_owner_key',
+                     self.__key_value_stores_per_owner_map),
+                  ])
 
   def __create(self, name):
     try:
@@ -436,6 +444,17 @@ class CouchDBDatastore:
             self.__couchdb['volumes'].view(
               'beyond/per_owner_key', key = user.public_key))
 
+  def networks_key_value_stores_fetch(self, networks):
+    return (doc.value for doc in
+            self.__couchdb['key-value-stores'].view(
+              'beyond/per_network_id',
+              keys = list(map(lambda n: n.id, networks))))
+
+  def user_key_value_stores_fetch(self, user):
+    return (doc.value for doc in
+            self.__couchdb['key-value-stores'].view(
+              'beyond/per_owner_key', key = user.public_key))
+
   def __network_update(network, req):
     if network is None:
       return [
@@ -632,3 +651,50 @@ class CouchDBDatastore:
 
   def __drives_per_volume_id_map(drive):
     yield drive['volume'], drive
+
+  ## --------------- ##
+  ## Key Value Store ##
+  ## --------------- ##
+
+  def key_value_store_insert(self, kvs):
+    json = kvs.json()
+    json['_id'] = kvs.name
+    try:
+      self.__couchdb['key-value-stores'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.KeyValueStore.Duplicate()
+
+  def key_value_store_fetch(self, owner, name):
+    try:
+      json = self.__couchdb['key-value-stores']['%s/%s' % (owner, name)]
+      return json
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.KeyValueStore.NotFound()
+
+  def key_value_store_delete(self, owner, name):
+    try:
+      json = self.__couchdb['key-value-stores']['%s/%s' % (owner, name)]
+      self.__couchdb['key-value-stores'].delete(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.KeyValueStore.Duplicate()
+
+  def __key_value_store_update(kvs, req):
+    if kvs is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    return [kvs, {'json': json.dumps(update)}]
+
+  def __key_value_stores_per_network_id_map(kvs):
+    yield kvs['network'], kvs
+
+  def __key_value_stores_per_owner_map(kvs):
+    yield kvs.get('owner', None), kvs
