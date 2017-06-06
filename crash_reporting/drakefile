@@ -41,8 +41,14 @@ class SymbolsGenerator(drake.Builder):
 
   def execute(self):
     out = self.__output_file
+    tmp = str(out.path()) + '.tmp'
     self.cmd('Generating symbols file for %s' % self.__binary,
              [self.dump_syms_cmd, self.binary_path],
+             redirect_stdout = tmp,
+             throw = True)
+    # There is no direct means to pass something via stdin with cmd.
+    self.cmd('C++filt symbols file for %s' % self.__binary,
+             ['sh', '-c', "c++filt <'{}'".format(tmp)],
              redirect_stdout = out,
              throw = True)
     return True
