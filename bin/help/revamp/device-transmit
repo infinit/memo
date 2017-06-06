@@ -1,12 +1,12 @@
 device: transmit: Usage: infinit-device device transmit [OPTIONS]
-transmit an object to another device using the Hub
+transmit an object to another device using https://beyond.infinit.sh
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
-  -u, --user                to transmit user identity to another device using the Hub
+  -a, --as arg              user to run commands as (default: akim)
+  -u, --user                to transmit user identity to another device using https://beyond.infinit.sh
       --passphrase arg      passphrase to secure identity (default: prompt for passphrase) (default: null)
       --no-countdown        do not show countdown timer
 

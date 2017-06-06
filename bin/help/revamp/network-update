@@ -5,13 +5,13 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the network to update
       --description arg     network description (default: null)
       --port arg            outbound port to use (default: null)
   -o, --output arg          file to write the network to (default: null)
-      --push-network        push the network to the Hub
-  -p, --push                push network to the Hub
+      --push-network        push the network to https://beyond.infinit.sh
+  -p, --push                push network to https://beyond.infinit.sh
       --admin-r arg         Set admin users that can read all data (default: [])
       --admin-rw arg        Set admin users that can read and write all data (default: [])
       --admin-remove arg    Remove given users from all admin lists (prefix: @<group>, requires mountpoint) (default: [])

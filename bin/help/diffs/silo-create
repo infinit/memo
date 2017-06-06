@@ -1,0 +1,32 @@
+storage: create: Usage: _build/macosx64/bin/infinit-storage --create --name STO storage: create: Usage: infinit-storage create [MODE|--help]
+										Infinit create management utility.
+Create a storage:
+										Modes:
+Create options:									  filesystem Store blocks on local filesystem
+  -n [ --name ] arg	 Created storage name					  dropbox    Store blocks on Dropbox
+  --description arg	 Description of storage					  gcs	     Store blocks on Google Cloud Storage
+  -c [ --capacity ] arg	 Limit the storage capacity				  google-drive Store blocks on Google Drive
+			 use: B,kB,kiB,GB,GiB,TB,TiB (optional)			  s3	     Store blocks on AWS S3
+  -o [ --output ] arg	 File to write the storage to
+			 (default: stdout)					Options:
+  --path arg		 Folder where blocks are stored (default:		  -h, --help		    show this help message
+			   filesystem: "/Users/akim/.local/share/infinit/filesy
+			 stem/blocks/<name>"
+			   GCS: <name>_blocks
+			   S3: <name>_blocks)
+Storage types:
+  --filesystem		 Store data on a local filesystem (default)
+  --gcs			 Store data using Google Cloud Storage
+  --s3			 Store data using Amazon S3
+Cloud storage options:
+  --account arg		 Account name to use
+  --bucket arg		 Bucket to use
+Amazon S3 storage options:
+  --storage-class arg	 Storage class to use: STANDARD, STANDARD_IA,
+			 REDUCED_REDUNDANCY (default: bucket default)
+  --region arg		 AWS region to use
+  --endpoint arg	 S3 compatible endpoint to use (default: amazonaws.com)
+Hidden storage types:
+  --dropbox		 Store data in a Dropbox
+  --google-drive	 Store data in a Google Drive
+  --ssh			 Store data over SSH

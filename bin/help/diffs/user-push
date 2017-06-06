@@ -1,18 +1,15 @@
-user: push: Usage: _build/macosx64/bin/infinit-user --push [OPTIONS...]	       |user: push: Usage: _build/macosx64/bin/infinit-user user push [OPTIONS]
-									       |Push a user from https://beyond.infinit.sh
-Push a user to the Hub:							       |
-									       |Options:
-Push options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	 User to push (default: system user)		       |      --compatibility-version arg  compatibility version to force
-  --email arg		 Optional email address				       |  -s, --script		    suppress extraneous human friendly messages and use
-  --fullname arg	 Fullname of user (optional)			       |JSON output
-  --avatar arg		 Path to an image to use as avatar		       |  -a, --as arg		    user to run commands as (default: akim)
-  --full		 Include private key in order to facilitate device     |  -n, --name arg	    name of the user to push (default: akim)
-			 pairing and fetching lost keys			       |  -e, --email arg	    user email
-  --password arg	 Password to authenticate with the Hub. Used with      |      --fullname arg	    user full name
-			 --full (default: prompt for password)		       |  -P, --password arg	    password to authenticate with
-									       |https://beyond.infinit.sh
-									       |      --avatar arg	    path to an image to use as avatar
-									       |      --full		    include private key (do not use unless you
-									       |understand the implications
-									       |
+user: push: Usage: _build/macosx64/bin/infinit-user --push [OPTIONS...]		user: push: Usage: infinit-user user push [OPTIONS]
+										Push a user from https://beyond.infinit.sh
+Push a user to the Hub:
+										Options:
+Push options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 User to push (default: system user)			      --compatibility-version arg  compatibility version to force
+  --email arg		 Optional email address					  -s, --script		    suppress extraneous human friendly messages and use
+  --fullname arg	 Fullname of user (optional)				  -a, --as arg		    user to run commands as (default: akim)
+  --avatar arg		 Path to an image to use as avatar			  -n, --name arg	    name of the user to push (default: akim)
+  --full		 Include private key in order to facilitate device	  -e, --email arg	    user email (default: null)
+			 pairing and fetching lost keys				      --fullname arg	    user full name (default: null)
+  --password arg	 Password to authenticate with the Hub. Used with	  -P, --password arg	    password to authenticate with https://beyond.infini
+			 --full (default: prompt for password)			      --avatar arg	    path to an image to use as avatar (default: null)
+										      --full		    include private key (do not use unless you understa
+

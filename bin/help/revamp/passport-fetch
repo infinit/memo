@@ -1,11 +1,11 @@
 passport: fetch: Usage: infinit-passport passport fetch [OPTIONS]
-Fetch a user's network passport from the Hub
+Fetch a user's network passport from https://beyond.infinit.sh
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -N, --network arg         network to fetch passport for (default: null)
   -u, --user arg            user to fetch passport for (default: null)
 

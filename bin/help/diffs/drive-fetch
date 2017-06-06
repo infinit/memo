@@ -1,0 +1,11 @@
+drive: fetch: Usage: _build/macosx64/bin/infinit-drive --fetch [OPTIONS...]	drive: fetch: Usage: infinit-drive drive fetch [OPTIONS]
+										Fetch drive from https://beyond.infinit.sh
+Fetch drive from the Hub:
+										Options:
+Fetch options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Drive to fetch (optional)				      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the drive to fetch (default: null)
+										  -i, --icon arg	    path to an image to use as icon (default: null)
+

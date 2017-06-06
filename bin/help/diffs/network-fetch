@@ -1,0 +1,10 @@
+network: fetch: Usage: _build/macosx64/bin/infinit-network --fetch [OPTIONS...] network: fetch: Usage: infinit-network network fetch [OPTIONS]
+										Fetch a network from https://beyond.infinit.sh
+Fetch a network from the Hub:
+										Options:
+Fetch options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network to fetch (optional)				      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the network to fetch (default: null)
+

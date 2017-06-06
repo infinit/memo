@@ -1,10 +1,10 @@
 daemon: fetch: Usage: infinit-daemon daemon fetch [OPTIONS]
-Fetch volume and its dependencies from the Hub
+Fetch volume and its dependencies from https://beyond.infinit.sh
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the daemon to fetch
 

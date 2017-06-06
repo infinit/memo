@@ -1,0 +1,13 @@
+network: delete: Usage: _build/macosx64/bin/infinit-network --delete --name NET network: delete: Usage: infinit-network network delete [OPTIONS]
+										Delete a network locally
+Delete a network locally:
+										Options:
+Delete options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network to delete					      --compatibility-version arg  compatibility version to force
+  --pull		 Pull the network if it is on the Hub			  -s, --script		    suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the network		  -a, --as arg		    user to run commands as (default: akim)
+  --unlink		 Automatically unlink network if linked			  -n, --name arg	    name of the network to delete
+										      --pull		    pull network from https://beyond.infinit.sh
+										      --purge		    purge objects owned by the network
+										      --unlink
+

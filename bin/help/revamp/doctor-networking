@@ -5,17 +5,17 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -m, --mode arg            access mode to networking: r, w, rw, none (default: null)
       --protocol arg        RPC protocol to use: tcp, utp, all (default: all) (default: null)
   -s, --packet-size arg     size of the packet to send (client only) (default: null)
   -n, --packets-count arg   number of packets to exchange (client only) (default: null)
-      --host arg            SSH host (default: null)
-      --port arg            outbound port to use (default: null)
+      --host arg            The host to connect to (default: null)
+      --port arg            The host's port to connect to (default: null)
   -t, --tcp-port arg        port to perform tcp tests on (default: null)
-  -u, --utp-port arg        port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1) (default: null)
+  -u, --utp-port arg        port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1) (default: null)
   -x, --xored-utp-port arg  port to perform xored utp tests on (default: null)
-  -X, --xored arg           performs test applying a 0xFF xor on the utp traffic, value=yes,no,both (default: null)
+  -X, --xored arg           performs test applying a 0xFF xor on the utp traffic, value=yes,no,both (default: both)
       --no-color            don't use colored output
   -v, --verbose             use verbose output
 

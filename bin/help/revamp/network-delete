@@ -5,9 +5,9 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the network to delete
-      --pull                pull network from the Hub
+      --pull                pull network from https://beyond.infinit.sh
       --purge               purge objects owned by the network
       --unlink            
 
