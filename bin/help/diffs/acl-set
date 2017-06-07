@@ -5,7 +5,7 @@ Set ACL:
 Set options:									  -h, --help		    show this help message
   -p [ --path ] arg	    Paths						      --compatibility-version arg  compatibility version to force
   -u [ --user ] arg	    Users and groups (prefix: @<group>)			  -s, --script		    suppress extraneous human friendly messages and use
-  -g [ --group ] arg	    Groups						  -a, --as arg		    user to run commands as (default: akim)
+  -g [ --group ] arg	    Groups						  -a, --as arg		    user to run commands as (default: john-doe)
   -m [ --mode ] arg	    Access mode: r,w,rw,none				      --path arg	    file whose acl to set
   -o [ --others-mode ] arg  Access mode for other network users: r,w,rw,none	  -u, --user arg	    user to set acl for
   -i [ --enable-inherit ]   New files/folders inherit from their parent		  -g, --group arg	    group to set acl for

@@ -5,7 +5,7 @@ Perform networking speed tests between nodes:
 Networking options:								  -h, --help		    show this help message
   -m [ --mode ] arg	       Mode to use: upload,download,all (default: all)	      --compatibility-version arg  compatibility version to force
 			       (client only)					  -s, --script		    suppress extraneous human friendly messages and use
-  --protocol arg	       RPC protocol to use: tcp,utp,all (default: all)	  -a, --as arg		    user to run commands as (default: akim)
+  --protocol arg	       RPC protocol to use: tcp,utp,all (default: all)	  -a, --as arg		    user to run commands as (default: john-doe)
   -s [ --packet_size ] arg     Size of the packet to send (client only)		  -m, --mode arg	    access mode to networking: r, w, rw, none (default:
   -n [ --packets_count ] arg   Number of packets to exchange (client only)	      --protocol arg	    RPC protocol to use: tcp, utp, all (default: all) (
   -H [ --host ] arg	       The host to connect to (if not specified, you	  -s, --packet-size arg	    size of the packet to send (client only) (default:

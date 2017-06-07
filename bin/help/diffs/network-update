@@ -5,7 +5,7 @@ Update a network:
 Update options:									  -h, --help		    show this help message
   -n [ --name ] arg	   Network to update					      --compatibility-version arg  compatibility version to force
   --description arg	   Description of network				  -s, --script		    suppress extraneous human friendly messages and use
-  --port arg		   Port to listen on (default: random)			  -a, --as arg		    user to run commands as (default: akim)
+  --port arg		   Port to listen on (default: random)			  -a, --as arg		    user to run commands as (default: john-doe)
   -o [ --output ] arg	   File to write the network to				  -n, --name arg	    name of the network to update
 			   (default: stdout)					      --description arg	    network description (default: null)
   --push-network	   Push the updated network to the Hub			      --port arg	    outbound port to use (default: null)

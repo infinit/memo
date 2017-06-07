@@ -5,7 +5,7 @@ Update a volume with default run options:
 Update options:									  -h, --help		    show this help message
   --name arg				Volume name				      --compatibility-version arg  compatibility version to force
   --description arg			Description of volume			  -s, --script		    suppress extraneous human friendly messages and use
-  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -a, --as arg		    user to run commands as (default: akim)
+  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -a, --as arg		    user to run commands as (default: john-doe)
   -m [ --mountpoint ] arg		Where to mount the filesystem		  -n, --name arg	    name of the volume to update
   --readonly [=arg(=true)]		Mount as readonly			      --description arg	    volume description (default: null)
   --mount-name arg			Name of mounted volume			      --allow-root-creation  create the filesystem root if not found
@@ -26,20 +26,20 @@ Update options:									  -h, --help		    show this help message
 					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
   --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from the Hub (default: false)
   -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --peer arg	    peer address or file with list of peer addresses (h
-  --peer arg				Peer address or file with list of peer	      --peers-file arg	    Periodically write list of known peers to given fil
-					addresses (host:port)			      --push-endpoints arg  push endpoints to the Hub (default: false)
-  --peers-file arg			Periodically write list of known peers	  -p, --push arg	    push volume to the Hub (default: false)
-					to given file				      --map-other-permissions  allow chmod to set world permissions
-  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
-  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --advertise-host arg  advertise extra endpoint using given host (default:
-  --map-other-permissions [=arg(=true)] (=true)					      --endpoints-file arg  write node listening endpoints to file (format: hos
-					Allow chmod to set world permissions	      --port-file arg	    write node listening port to file (default: null)
-  --publish [=arg(=true)]		Alias for --fetch-endpoints		      --port arg	    outbound port to use (default: null)
-					--push-endpoints			      --listen arg	    specify which IP address to listen on (default: all
-  --advertise-host arg			Advertise extra endpoint using given	      --fetch-endpoints-interval arg  period for repolling endpoints from the H
-					host					  -i, --input arg	    file to read volume from (default: null)
-  --endpoints-file arg			Write node listening endpoints to file	  -u, --user arg	    user to update volume for (default: null)
-					(format: host:port\n)			      --block-size arg	    volume block size (default: null)
+  --peer arg				Peer address or file with list of peer	      --push-endpoints arg  push endpoints to the Hub (default: false)
+					addresses (host:port)			  -p, --push arg	    push volume to the Hub (default: false)
+  --peers-file arg			Periodically write list of known peers	      --map-other-permissions  allow chmod to set world permissions
+					to given file				      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --advertise-host arg  advertise extra endpoint using given host (default:
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --endpoints-file arg  write node listening endpoints to file (format: hos
+  --map-other-permissions [=arg(=true)] (=true)					      --port-file arg	    write node listening port to file (default: null)
+					Allow chmod to set world permissions	      --port arg	    outbound port to use (default: null)
+  --publish [=arg(=true)]		Alias for --fetch-endpoints		      --listen arg	    specify which IP address to listen on (default: all
+					--push-endpoints			      --fetch-endpoints-interval arg  period for repolling endpoints from the H
+  --advertise-host arg			Advertise extra endpoint using given	  -i, --input arg	    file to read volume from (default: null)
+					host					  -u, --user arg	    user to update volume for (default: null)
+  --endpoints-file arg			Write node listening endpoints to file	      --block-size arg	    volume block size (default: null)
+					(format: host:port\n)
   --port-file arg			Write node listening port to file
   --port arg				Outbound port to use
   --listen arg				Specify which IP address to listen on

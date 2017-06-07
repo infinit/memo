@@ -5,7 +5,7 @@ Fetch a user from the Hub:
 Fetch options:									  -h, --help		    show this help message
   -n [ --name ] arg	 User with name or hash to fetch			      --compatibility-version arg  compatibility version to force
   --no-avatar		 Do not fetch user avatar				  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
-										  -n, --name arg	    name of the user to fetch (default: [akim])
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -n, --name arg	    name of the user to fetch (default: [john-doe])
 										      --no-avatar	    do not to fetch avatars
 

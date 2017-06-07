@@ -5,7 +5,7 @@ Fetch a volume from the Hub:
 Fetch options:									  -h, --help		    show this help message
   -n [ --name ] arg	   Volume to fetch (optional)				      --compatibility-version arg  compatibility version to force
   --network arg		   Network to fetch all volumes for (optional)		  -s, --script		    suppress extraneous human friendly messages and use
-  --service [=arg(=true)]  Fetch volume from the network, not beyond		  -a, --as arg		    user to run commands as (default: akim)
+  --service [=arg(=true)]  Fetch volume from the network, not beyond		  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the volume to fetch (default: null)
 										  -N, --network arg	    network to fetch volume for (default: null)
 										      --service		    fetch volume from the network, not beyond

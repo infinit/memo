@@ -5,7 +5,7 @@ Create a network:
 Create options:									  -h, --help		    show this help message
   -n [ --name ] arg		   Created network name				      --compatibility-version arg  compatibility version to force
   --description arg		   Description of network			  -s, --script		    suppress extraneous human friendly messages and use
-  -S [ --storage ] arg		   Storage to contribute (optional, data	  -a, --as arg		    user to run commands as (default: akim)
+  -S [ --storage ] arg		   Storage to contribute (optional, data	  -a, --as arg		    user to run commands as (default: john-doe)
 				   striped over multiple)			  -n, --name arg	    name of the network to create
   --port arg			   Port to listen on (default: random)		      --description arg	    network description (default: null)
   -r [ --replication-factor ] arg  Data replication factor (default: 1)		  -S, --silo arg	    silo to contribute (optional, data striped over mul

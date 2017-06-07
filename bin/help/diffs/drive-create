@@ -5,7 +5,7 @@ Create a drive (a network and volume pair):
 Create options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Created drive name					      --compatibility-version arg  compatibility version to force
   --description arg	 Description of drive					  -s, --script		    suppress extraneous human friendly messages and use
-  -N [ --network ] arg	 Associated network name				  -a, --as arg		    user to run commands as (default: akim)
+  -N [ --network ] arg	 Associated network name				  -a, --as arg		    user to run commands as (default: john-doe)
   -V [ --volume ] arg	 Associated volume name					  -n, --name arg	    name of the drive to create
   -i [ --icon ] arg	 Path to an image to use as icon			      --description arg	    drive description (default: null)
   --push-drive		 Push the created drive to the Hub			  -N, --network arg	    network to create drive for
