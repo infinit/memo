@@ -1,14 +1,14 @@
-acl: register: Usage: infinit-acl acl register [OPTIONS]
+acl: register: Usage: infinit acl register [OPTIONS]
 Register user's passport to the network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
       --path arg            file whose acl to register
   -u, --user arg            user to register acl for
   -N, --network arg         network to register acl for
-  -f, --fetch               fetch acl from https://beyond.infinit.sh
+  -f, --fetch               fetch acl from the Hub
       --fallback-xattrs     use fallback special file if extended attributes are not supported
 

@@ -1,15 +1,15 @@
-passport: create: Usage: infinit-passport passport create [OPTIONS]
+passport: create: Usage: infinit passport create [OPTIONS]
 Create a passport for a user to a network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -N, --network arg         network to create passport for
   -u, --user arg            user to create passport for
-      --push-passport       push passport to https://beyond.infinit.sh
-  -p, --push                push passport to https://beyond.infinit.sh
+      --push-passport       push passport to the Hub
+  -p, --push                push passport to the Hub
       --deny-write          deny user write access to the network
       --deny-storage        deny user ability to contribute storage to the network
       --allow-create-passport  allow user to create passports for network

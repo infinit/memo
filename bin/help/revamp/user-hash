@@ -1,10 +1,10 @@
-user: hash: Usage: infinit-user user hash [OPTIONS]
+user: hash: Usage: infinit user hash [OPTIONS]
 Get short hash of user's key
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
-  -n, --name arg            name of the user to hash (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
+  -n, --name arg            name of the user to hash (default: john-doe)
 

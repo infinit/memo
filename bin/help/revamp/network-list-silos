@@ -1,11 +1,10 @@
-user: fetch: Usage: infinit user fetch [OPTIONS]
-Fetch users from the Hub
+network: list-silos: Usage: infinit network list-silos [OPTIONS]
+List all silos contributed by this device to a network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
   -a, --as arg              user to run commands as (default: john-doe)
-  -n, --name arg            name of the user to fetch (default: [john-doe])
-      --no-avatar           do not to fetch avatars
+  -n, --name arg            name of the network to list-silos
 

@@ -1,10 +1,10 @@
-passport: import: Usage: infinit-passport passport import [OPTIONS]
+passport: import: Usage: infinit passport import [OPTIONS]
 Import a passport for a user to a network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -i, --input arg           file to read passport from (default: null)
 

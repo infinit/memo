@@ -1,10 +1,10 @@
-Usage: infinit-daemon daemon [MODE|--help]
+Usage: infinit daemon [MODE|--help]
 Infinit daemon management utility.
 
 Modes:
   disable-storage Disable storage on associated network
   enable-storage Enable storage on associated network
-  fetch      Fetch volume and its dependencies from https://beyond.infinit.sh
+  fetch      Fetch volume and its dependencies from the Hub
   run        Run daemon in the foreground
   start      Start daemon in the background
   status     Query daemon status

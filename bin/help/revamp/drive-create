@@ -1,16 +1,16 @@
-drive: create: Usage: infinit-drive drive create [OPTIONS]
+drive: create: Usage: infinit drive create [OPTIONS]
 Create a drive (a network and volume pair)
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the drive to create
       --description arg     drive description (default: null)
   -N, --network arg         network to create drive for
   -V, --volume arg          associated volume name
   -i, --icon arg            path to an image to use as icon (default: null)
-      --push-drive          push drive to https://beyond.infinit.sh
-  -p, --push                push drive to https://beyond.infinit.sh
+      --push-drive          push drive to the Hub
+  -p, --push                push drive to the Hub
 

@@ -1,11 +1,11 @@
-journal: export: Usage: infinit-journal journal export [OPTIONS]
+journal: export: Usage: infinit journal export [OPTIONS]
 Export an operation
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -N, --network arg         network to export journal for
   -O, --operation arg       operation to to export
 

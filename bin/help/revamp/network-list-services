@@ -1,11 +1,11 @@
-network: list-services: Usage: infinit-network network list-services [OPTIONS]
+network: list-services: Usage: infinit network list-services [OPTIONS]
 List network registered services
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the network to list-services
       --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
       --async               use asynchronous write operations
@@ -14,10 +14,10 @@ Options:
       --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5min) (default: null)
       --cache-ram-invalidation arg  RAM block cache invalidation time in seconds (default: 15s) (default: null)
       --cache-disk-size arg  size of disk cache for immutable data in bytes (default: 512MB) (default: null)
-      --fetch-endpoints     fetch endpoints from https://beyond.infinit.sh
-  -f, --fetch               fetch network from https://beyond.infinit.sh
-      --push-endpoints      push endpoints to https://beyond.infinit.sh
-  -p, --push                push network to https://beyond.infinit.sh
+      --fetch-endpoints     fetch endpoints from the Hub
+  -f, --fetch               fetch network from the Hub
+      --push-endpoints      push endpoints to the Hub
+  -p, --push                push network to the Hub
       --publish             alias for --fetch-endpoints --push-endpoints
       --endpoints-file arg  write node listening endpoints to file (format: host:port) (default: null)
       --port-file arg       write node listening port to file (default: null)

@@ -1,11 +1,11 @@
-acl: group: Usage: infinit-acl acl group [OPTIONS]
+acl: group: Usage: infinit acl group [OPTIONS]
 Edit groups
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
       --path arg            file whose acl to group
   -n, --name arg            name of the acl to group
   -c, --create              create the acl
@@ -21,6 +21,6 @@ Options:
       --remove-admin arg    remove administrator from group (default: [])
       --remove arg          remove users, administrators and groups from group (prefix: @<group>, ^<admin> (default: [])
   -v, --verbose             use verbose output
-  -f, --fetch               fetch acl from https://beyond.infinit.sh
+  -f, --fetch               fetch acl from the Hub
       --fallback-xattrs     use fallback special file if extended attributes are not supported
 

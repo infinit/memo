@@ -1,11 +1,11 @@
-volume: run: Usage: infinit-volume volume run [OPTIONS]
+volume: run: Usage: infinit volume run [OPTIONS]
 Run a volume
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the volume to run
       --allow-root-creation  create the filesystem root if not found
   -m, --mountpoint arg      where to mount the filesystem (default: null)
@@ -22,15 +22,15 @@ Options:
       --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5min) (default: null)
       --cache-ram-invalidation arg  RAM block cache invalidation time in seconds (default: 15s) (default: null)
       --cache-disk-size arg  size of disk cache for immutable data in bytes (default: 512MB) (default: null)
-      --fetch-endpoints arg  fetch endpoints from https://beyond.infinit.sh (default: false)
-  -f, --fetch arg           fetch volume from https://beyond.infinit.sh (default: false)
+      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
+  -f, --fetch arg           fetch volume from the Hub (default: false)
       --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
       --peers-file arg      Periodically write list of known peers to given file (default: null)
-      --push-endpoints arg  push endpoints to https://beyond.infinit.sh (default: false)
+      --push-endpoints arg  push endpoints to the Hub (default: false)
   -r, --register-service    register volume in the network
       --no-local-endpoints  Disable automatic detection of local endpoints
       --no-public-endpoints  Disable automatic detection of public endpoints
-  -p, --push arg            push volume to https://beyond.infinit.sh (default: false)
+  -p, --push arg            push volume to the Hub (default: false)
       --map-other-permissions  allow chmod to set world permissions
       --publish arg         alias for --fetch-endpoints --push-endpoints (default: false)
       --advertise-host arg  advertise extra endpoint using given host (default: [])

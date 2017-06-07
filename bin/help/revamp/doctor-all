@@ -1,11 +1,11 @@
-doctor: all: Usage: infinit-doctor doctor all [OPTIONS]
+doctor: all: Usage: infinit doctor all [OPTIONS]
 Perform all possible checks
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
       --ignore-non-linked   do not consider problematic non-linked networks
       --upnp-tcp-port arg   port to try to get an tcp upnp connection on (default: null)
       --upnp-udt-port arg   port to try to get an udt upnp connection on (default: null)
