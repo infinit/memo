@@ -232,88 +232,85 @@ run_nodes(bfs::path const& where,
   return res;
 }
 
-static
-std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
-make_observer(std::shared_ptr<imd::Doughnut>& root_node,
-              bfs::path const& where,
-              elle::cryptography::rsa::KeyPair const& kp,
-              int groups,
-              int replication_factor,
-              bool cache, bool async,
-              bool paxos_lenient,
-              int beyond_port = 0)
-{
-  ELLE_LOG_SCOPE("building observer");
-  iok::Configuration config;
-  config.k = groups;
-  config.encrypt = true;
-  config.accept_plain = false;
-  config.query_get_retries = 3;
-  config.ping_timeout_ms = valgrind(500, 20);
-  auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
-  auto consensus =
-    [&] (infinit::model::doughnut::Doughnut& dht)
-    {
-      auto backend =
-        std::unique_ptr<imd::consensus::Consensus>{
-          std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient)
-        };
-      if (async)
-        backend = std::make_unique<
-          infinit::model::doughnut::consensus::Async>(std::move(backend),
-            where / bfs::unique_path());
-      if (cache)
-        backend = std::make_unique<imd::consensus::Cache>(
-          std::move(backend));
-      return backend;
-    };
-  auto overlay =
-    [&] (infinit::model::doughnut::Doughnut& dht,
-         std::shared_ptr<infinit::model::doughnut::Local> local)
-    {
-      auto res = config.make(local, &dht);
-      res->discover(endpoints);
-      return res;
-    };
-  auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-    infinit::model::Address::random(0), // FIXME
-    std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
-    kp.public_key(),
-    passport,
-    consensus,
-    overlay,
-    boost::optional<int>(),
-    boost::optional<boost::asio::ip::address>(),
-    std::unique_ptr<infinit::silo::Silo>());
-  auto ops = std::make_unique<ifs::FileSystem>(
-    "volume", dn, ifs::allow_root_creation = true);
-  auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
-    std::move(ops), true);
-  elle::reactor::Thread::unique_ptr tptr;
-  if (beyond_port)
-  {
-    infinit::overlay::NodeLocations locs;
-    tptr = net.make_poll_beyond_thread(*dn, locs, 1);
-  }
-  while (true)
-  {
-    auto stats = dn->overlay()->query("stats", {});
-    auto ostats = boost::any_cast<elle::json::Object>(stats);
-    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
-    if (!cts.empty())
-    {
-      auto c = boost::any_cast<elle::json::Object>(cts.front());
-      if (boost::any_cast<bool>(c.at("discovered")))
-        break;
-    }
-    elle::reactor::sleep(50_ms);
-  }
-  ELLE_LOG("Returning observer");
-  return std::make_pair(std::move(fs), std::move(tptr));
-}
-
 namespace
 {
+  std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
+  make_observer(bfs::path const& where,
+                elle::cryptography::rsa::KeyPair const& kp,
+                int groups,
+                int replication_factor,
+                bool cache, bool async,
+                bool paxos_lenient,
+                int beyond_port = 0)
+  {
+    ELLE_LOG_SCOPE("building observer");
+    iok::Configuration config;
+    config.k = groups;
+    config.encrypt = true;
+    config.accept_plain = false;
+    config.query_get_retries = 3;
+    config.ping_timeout_ms = valgrind(500, 20);
+    auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
+    auto make_consensus =
+      [&] (infinit::model::doughnut::Doughnut& dht)
+      {
+        auto res =
+          std::unique_ptr<imd::consensus::Consensus>{
+            std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient)
+          };
+        if (async)
+          res = std::make_unique<
+            infinit::model::doughnut::consensus::Async>(std::move(res),
+              where / bfs::unique_path());
+        if (cache)
+          res = std::make_unique<imd::consensus::Cache>(std::move(res));
+        return res;
+      };
+    auto make_overlay =
+      [&] (infinit::model::doughnut::Doughnut& dht,
+           std::shared_ptr<infinit::model::doughnut::Local> local)
+      {
+        auto res = config.make(local, &dht);
+        res->discover(endpoints);
+        return res;
+      };
+    auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
+      infinit::model::Address::random(0), // FIXME
+      std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
+      kp.public_key(),
+      passport,
+      make_consensus,
+      make_overlay,
+      boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
+      std::unique_ptr<infinit::silo::Silo>());
+    auto ops = std::make_unique<ifs::FileSystem>(
+      "volume", dn, ifs::allow_root_creation = true);
+    auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
+      std::move(ops), true);
+    elle::reactor::Thread::unique_ptr tptr;
+    if (beyond_port)
+    {
+      infinit::overlay::NodeLocations locs;
+      tptr = net.make_poll_beyond_thread(*dn, locs, 1);
+    }
+    while (true)
+    {
+      auto stats = dn->overlay()->query("stats", {});
+      auto ostats = boost::any_cast<elle::json::Object>(stats);
+      auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
+      if (!cts.empty())
+      {
+        auto c = boost::any_cast<elle::json::Object>(cts.front());
+        if (boost::any_cast<bool>(c.at("discovered")))
+          break;
+      }
+      elle::reactor::sleep(50_ms);
+    }
+    ELLE_LOG("Returning observer");
+    return std::make_pair(std::move(fs), std::move(tptr));
+  }
+
   std::vector<std::unique_ptr<rfs::FileSystem>>
   node_to_fs(Nodes const& nodes)
   {
@@ -375,7 +372,7 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
-    auto fsp = make_observer(nodes.front().first, tmp, kp, 1, 3, false, false, false);
+    auto fsp = make_observer(tmp, kp, 1, 3, false, false, false);
     auto& fs = fsp.first;
     writefile(*fs, "test1", "foo");
     writefile(*fs, "test2", std::string(32000, 'a'));
@@ -385,7 +382,7 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("read files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
-    auto fs = make_observer(nodes.front().first, tmp, kp, 1, 3, false, false, false);
+    auto fs = make_observer(tmp, kp, 1, 3, false, false, false);
     BOOST_CHECK_EQUAL(readfile(*fs.first, "test1"), "foo");
     BOOST_CHECK_EQUAL(readfile(*fs.first, "test2"), std::string(32000, 'a'));
   }
@@ -425,10 +422,10 @@ namespace
     elle::os::setenv("INFINIT_HOME", tmp.string());
     auto kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
-    auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, false, false);
-    auto fsc =     make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, false, false);
-    auto fsca =    make_observer(nodes.front().first, tmp, kp, 1, replication_factor, true, true, false);
-    auto fsa =     make_observer(nodes.front().first, tmp, kp, 1, replication_factor, false, true, false);
+    auto fswrite = make_observer(tmp, kp, 1, replication_factor, true, false, false);
+    auto fsc =     make_observer(tmp, kp, 1, replication_factor, true, false, false);
+    auto fsca =    make_observer(tmp, kp, 1, replication_factor, true, true, false);
+    auto fsa =     make_observer(tmp, kp, 1, replication_factor, false, true, false);
 
     ELLE_TRACE("write");
     make_files(*fswrite.first, "50", 50);
@@ -489,7 +486,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //   fss.reserve(3);
 //   for (int i=0; i<3; ++i)
 //   {
-//     fss.push_back(make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false));
+//     fss.push_back(make_observer(tmp, kp, 1, 3, false, false, false));
 //     if (i == 0)
 //       writefile(*fss.front(), "foo", "bar");
 //     elle::reactor::sleep(100_ms);
@@ -523,7 +520,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     });
 //   auto kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, node_count, k, replication, lenient);
-//   auto fs = make_observer(nodes.front(), tmp, kp, k, replication, false, false, lenient);
+//   auto fs = make_observer(tmp, kp, k, replication, false, false, lenient);
 //   ELLE_LOG("initial file write");
 //   for (int i=0; i<file_count; ++i)
 //     writefile(*fs, "foo" + std::to_string(i), "foo");
@@ -565,7 +562,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //   nodes.clear();
 //   ELLE_LOG("reinitialize");
 //   nodes = run_nodes(tmp, kp, node_count - kill, 1, replication); // dont reload the last node
-//   fs = make_observer(nodes.front(), tmp, kp, 1, replication, false, false, lenient);
+//   fs = make_observer(tmp, kp, 1, replication, false, false, lenient);
 //   if (overwrite_while_down)
 //   {
 //     ELLE_LOG("overwrite");
@@ -609,8 +606,8 @@ ELLE_TEST_SCHEDULED(conflicts)
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 1);
-    auto fs1p = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
-    auto fs2p = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
+    auto fs1p = make_observer(tmp, kp, 1, 1, true, false, false);
+    auto fs2p = make_observer(tmp, kp, 1, 1, true, false, false);
     auto& fs1 = fs1p.first;
     auto& fs2 = fs2p.first;
     auto cache1 =
@@ -686,8 +683,7 @@ ELLE_TEST_SCHEDULED(times)
   elle::os::setenv("INFINIT_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
-  auto fsp
-    = make_observer(nodes.front().first, tmp, kp, 1, 1, false, false, false);
+  auto fsp = make_observer(tmp, kp, 1, 1, false, false, false);
   auto& fs = fsp.first;
   struct stat st;
   // We only have second resolution, so test in batches to avoid too
@@ -775,7 +771,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
   auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
+  auto const nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
   elle::reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
@@ -837,7 +833,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   elle::filesystem::TemporaryDirectory d;
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
-  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
+  auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
@@ -873,7 +869,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   elle::filesystem::TemporaryDirectory d;
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
-  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
+  auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
@@ -896,7 +892,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   elle::filesystem::TemporaryDirectory d;
   auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
-  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 1, false, false, false, beyond.port());
+  auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
   auto files = std::vector<std::string>{};
   for (int i=0; i<20; ++i)
