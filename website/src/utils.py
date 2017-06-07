@@ -23,10 +23,8 @@ def url(url):
     host += '/'
   return host + url
 
-def find_route(name, **params):
-  for route in bottle.request.app.routes:
-    if route.name == name:
-      return route.rule
+def find_route(id, **parameters):
+  return bottle.request.app.reverse(id, **parameters)
 
 def detect_os():
   agent = bottle.request.environ.get('HTTP_USER_AGENT')
