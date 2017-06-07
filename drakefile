@@ -128,7 +128,6 @@ def configure(
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
 
-
   ## --------------- ##
   ## Infinit library ##
   ## --------------- ##
@@ -325,13 +324,19 @@ def configure(
   ## ---- ##
   ## kv.  ##
   ## ---- ##
-  kv = drake.include(
-    'src/infinit/kv',
-    go_toolkit = go_toolkit,
-    go_config = go_config,
-    grpc = grpc,
-  )
-  rule_build << kv.rule_build
+
+  # XXX: Go cross compiling requires go > 1.6 (tested with 1.8.3).
+  # XXX: Re-enable key-value store for Windows when the build farm has been
+  # XXX: updated.
+  with_kvs = not windows
+
+  if with_kvs:
+    kv = drake.include(
+      'src/infinit/kv',
+      go_toolkit = go_toolkit,
+      go_config = go_config,
+      grpc = grpc,
+    )
 
   ## -------- ##
   ## Binaries ##
@@ -376,7 +381,8 @@ def configure(
       drake.copy(dokan_lib, libdir, True))
     cli_cxx_config.library_add(elle.boost.program_options_static)
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
-  cli_cxx_config.library_add(drake.copy(kv.library, libdir, True))
+  if with_kvs:
+    cli_cxx_config.library_add(drake.copy(kv.library, libdir, True))
   if entreprise_edition:
     cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
 
@@ -385,6 +391,7 @@ def configure(
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
   cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
   cli_cxx_config.define('INFINIT_WITH_LDAP', '1' if elle.elle.ldap else '0')
+  cli_cxx_config.define('INFINIT_WITH_KEY_VALUE_STORE', '1' if with_kvs else '0')
   binaries = []
   global installed_binaries
   installed_binaries = []
@@ -412,8 +419,6 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
-    'src/infinit/cli/KeyValueStore.cc',
-    'src/infinit/cli/KeyValueStore.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
     'src/infinit/cli/Object.hh',
@@ -439,13 +444,18 @@ def configure(
       'doctor',
       'drive',
       'journal',
-      'key-value-store',
       'network',
       'passport',
       'silo',
       'user',
       'volume',
   ]
+  if with_kvs:
+    infinit_cli_sources += drake.nodes(
+      'src/infinit/cli/KeyValueStore.cc',
+      'src/infinit/cli/KeyValueStore.hh',
+    )
+    infinit_modes.append('key-value-store')
   if with_daemon:
     infinit_modes.append('daemon')
     infinit_cli_sources += drake.nodes(
@@ -824,11 +834,12 @@ def configure(
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
       utils = drake.node('tests/functional/utils.py')
-      kv_grpc = drake.copy(
-        grpc.GRPCPyGen(kv.service_proto,
-                       grpc.grpc.protoc,
-                       drake.node(grpc.grpc.grpc_python_plugin)).targets(),
-        'tests/functional/lib', strip_prefix = True)
+      if with_kvs:
+        kv_grpc = drake.copy(
+          grpc.GRPCPyGen(kv.service_proto,
+                         grpc.grpc.protoc,
+                         drake.node(grpc.grpc.grpc_python_plugin)).targets(),
+          'tests/functional/lib', strip_prefix = True)
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -896,7 +907,8 @@ def configure(
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(infinit_cli)
         test.dependency_add(drake.node('tests/functional/utils.py'))
-        test.dependencies_add(kv_grpc)
+        if with_kvs:
+          test.dependencies_add(kv_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                              absolute = True))
         extra_path = [binaries_path]
@@ -914,7 +926,8 @@ def configure(
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'INFINIT_BINARIES': str(binaries_path)
+          'INFINIT_BINARIES': str(binaries_path),
+          'INFINIT_WITH_KEY_VALUE_STORE': str(with_kvs),
         }
         env.update(t.get('env', {}))
         if windows:
