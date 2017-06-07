@@ -537,6 +537,8 @@ main(int argc, char** argv)
 {
   argv_0 = argv[0];
   infinit_exe = (bfs::path(argv_0).parent_path() / "infinit").string();
+  if (boost::algorithm::ends_with(argv_0, ".exe"))
+    infinit_exe += ".exe";
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);

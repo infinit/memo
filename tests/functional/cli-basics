@@ -7,7 +7,7 @@ import re
 with Infinit() as bob:
   def slashify(s):
     '''Replace Window paths with Unix ones.'''
-    return re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', s)
+    return re.sub(r'Z:.*?\\(infinit(?:-\w+)?).exe', r'./bin/\1', s)
 
   def xfail(command, message, binary='infinit'):
     err = bob.run([binary] + command, return_code = 2)[1]
