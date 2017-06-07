@@ -383,9 +383,9 @@ namespace infinit
 
     void
     Infinit::report_action(std::string const& action,
-                            std::string const& type,
-                            std::string const& name,
-                            std::string const& where)
+                           std::string const& type,
+                           std::string const& name,
+                           std::string const& where)
     {
       if (where.empty())
         report("%s %s \"\%s\"", action, type, name);
@@ -438,10 +438,10 @@ namespace infinit
 #else
         struct termios tty;
         tcgetattr(STDIN_FILENO, &tty);
-        if(!enable)
-          tty.c_lflag &= ~ECHO;
-        else
+        if (enable)
           tty.c_lflag |= ECHO;
+        else
+          tty.c_lflag &= ~ECHO;
         (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
       }
@@ -461,7 +461,6 @@ namespace infinit
         std::cout << std::endl;
         return res;
       }
-
     }
 
     std::string
