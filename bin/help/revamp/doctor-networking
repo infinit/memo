@@ -5,7 +5,7 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -m, --mode arg            access mode to networking: r, w, rw, none (default: null)
       --protocol arg        RPC protocol to use: tcp, utp, all (default: all) (default: null)
   -s, --packet-size arg     size of the packet to send (client only) (default: null)

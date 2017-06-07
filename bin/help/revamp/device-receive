@@ -5,8 +5,8 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -u, --user                to receive user identity to another device using the Hub
-  -n, --name arg            name of the device to receive (default: akim)
+  -n, --name arg            name of the device to receive (default: john-doe)
       --passphrase arg      passphrase to secure identity (default: prompt for passphrase) (default: null)
 

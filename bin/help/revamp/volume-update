@@ -5,7 +5,7 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the volume to update
       --description arg     volume description (default: null)
       --allow-root-creation  create the filesystem root if not found
