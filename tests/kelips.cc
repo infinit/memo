@@ -368,7 +368,7 @@ ELLE_TEST_SCHEDULED(basic)
   auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
@@ -420,7 +420,7 @@ namespace
     elle::filesystem::TemporaryDirectory d;
     auto tmp = d.path();
     elle::os::setenv("INFINIT_HOME", tmp.string());
-    auto kp = elle::cryptography::rsa::keypair::generate(512);
+    auto const kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
     auto fswrite = make_observer(tmp, kp, 1, replication_factor, true, false, false);
     auto fsc =     make_observer(tmp, kp, 1, replication_factor, true, false, false);
@@ -479,7 +479,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     {
 //       bfs::remove_all(tmp);
 //     });
-//   auto kp = elle::cryptography::rsa::keypair::generate(2048);
+//   auto const kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, 3, 1, 3, false);
 //   std::vector<elle::reactor::Thread::unique_ptr> v;
 //   std::vector<std::unique_ptr<rfs::FileSystem>> fss;
@@ -518,7 +518,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     {
 //       bfs::remove_all(tmp);
 //     });
-//   auto kp = elle::cryptography::rsa::keypair::generate(2048);
+//   auto const kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, node_count, k, replication, lenient);
 //   auto fs = make_observer(tmp, kp, k, replication, false, false, lenient);
 //   ELLE_LOG("initial file write");
@@ -602,7 +602,7 @@ ELLE_TEST_SCHEDULED(conflicts)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 1);
@@ -678,11 +678,11 @@ ELLE_TEST_SCHEDULED(conflicts)
 
 ELLE_TEST_SCHEDULED(times)
 {
-  elle::filesystem::TemporaryDirectory d;
+  auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 1);
+  auto const nodes = run_nodes(tmp, kp, 1);
   auto fsp = make_observer(tmp, kp, 1, 1, false, false, false);
   auto& fs = fsp.first;
   struct stat st;
@@ -730,11 +730,11 @@ ELLE_TEST_SCHEDULED(times)
 try { exp} catch (std::exception const& e) { ELLE_WARN("%s", e.what());  throw;}
 ELLE_TEST_SCHEDULED(clients_parallel)
 {
-  elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
+  auto const d = elle::filesystem::TemporaryDirectory{};
+  auto const tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
   elle::reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
@@ -743,7 +743,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
       CHECKED(fs->path("/" + p)->mkdir(0666);)
       CHECKED(fs->path("/" + p + "/0")->mkdir(0666);)
     });
-  for(auto const& n: fss)
+  for (auto const& n: fss)
   {
     std::vector<std::string> items;
     n->path("/")->list_directory([&] (std::string const& n, struct stat* stbuf)
@@ -765,21 +765,20 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 
 ELLE_TEST_SCHEDULED(many_conflicts)
 {
-  static const int node_count = 4;
-  static const int iter_count = 50;
+  constexpr auto node_count = 4;
+  constexpr auto iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
   elle::reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
     {
       for (int i=0; i<iter_count; ++i)
-      {
-        fs->path("/" + std::to_string(i) + "_" + std::to_string((uint64_t)&fs))->mkdir(0666);
-      }
+        fs->path("/" + std::to_string(i) + "_" + std::to_string((uint64_t)&fs))
+          ->mkdir(0666);
   });
   for (int j=0; j<node_count; ++j)
   {
@@ -794,12 +793,12 @@ ELLE_TEST_SCHEDULED(many_conflicts)
 
 ELLE_TEST_SCHEDULED(remove_conflicts)
 {
-  elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
+  auto const d = elle::filesystem::TemporaryDirectory{};
+  auto const tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string());
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
-  auto fss = node_to_fs(nodes);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
+  auto const fss = node_to_fs(nodes);
   fss.front()->path("/");
   // Don't try to simplify, of all those runs only two
   // trigger an edit conflict
@@ -831,7 +830,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
 {
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
@@ -866,8 +865,8 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
 ELLE_TEST_SCHEDULED(beyond_observer_2)
 {
   Beyond beyond;
-  elle::filesystem::TemporaryDirectory d;
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const d = elle::filesystem::TemporaryDirectory{};
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
@@ -890,7 +889,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   // test reconnection between storages
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
   auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
