@@ -5,10 +5,13 @@ import json
 import re
 
 with Infinit() as bob:
-  def xfail(command, message):
-    err = bob.run(['infinit'] + command, return_code = 2)[1]
-    # Replace Window paths with Unix ones.
-    err = re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', err)
+  def slashify(s):
+    '''Replace Window paths with Unix ones.'''
+    return re.sub(r'Z:.*?\\infinit.exe', './bin/infinit', s)
+
+  def xfail(command, message, binary='infinit'):
+    err = bob.run([binary] + command, return_code = 2)[1]
+    err = slashify(err)
     # Gee...  Maybe do this in assertEq?
     err = err.replace('\r\n', '\n')
     assertEq(message, err)
@@ -45,3 +48,31 @@ with Infinit() as bob:
          '--foobar'],
         "./bin/infinit: command line error: unknown option: --foobar\n"
         "Try './bin/infinit volume run --help' for more information.\n")
+
+  # Regression: don't repeat volume here: `infinit-volume volume --help`.
+  xfail(['wrong'],
+        "[33;01;33m[cli] [main] infinit-volume is deprecated, please run: infinit volume wrong\n"
+        "[0m./bin/infinit-volume: command line error: unknown mode for object volume: wrong\n"
+        "Try './bin/infinit volume --help' for more information.\n",
+        binary='infinit-volume')
+
+  # Regression: check that "the Hub" is properly displayed, and that
+  # we display `infinit passport` not `infinit-passport passport`.  It
+  # exercised code different from the above test case.
+  out = slashify(bob.run(['infinit-passport', '--help'])[0])
+  assertEq(out,
+           "Usage: ./bin/infinit passport [MODE|--help]\n"
+           "Infinit passport management utility.\n"
+           "\n"
+           "Modes:\n"
+           "  create     Create a passport for a user to a network\n"
+           "  delete     Locally delete a passport\n"
+           "  export     Export a user's network passport\n"
+           "  fetch      Fetch a user's network passport from the Hub\n"
+           "  import     Import a passport for a user to a network\n"
+           "  list       List all local passports\n"
+           "  pull       Remove a user's network passport from the Hub\n"
+           "  push       Push a user's network passport to the Hub\n"
+           "\n"
+           "Options:\n"
+           "  -h, --help                show this help message\n")

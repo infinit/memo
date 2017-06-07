@@ -1,7 +1,8 @@
 import base64
+import os
 import requests
 import subprocess
-import os
+import sys
 
 import infinit.beyond.version
 
@@ -10,9 +11,11 @@ from infinit.beyond import validation, emailer
 from copy import deepcopy
 from itertools import chain
 
-
 exe_ext = os.environ.get('EXE_EXT', '')
 host_os = os.environ.get('OS', '')
+
+def log(fmt, *args):
+  print('beyond:', fmt.format(*args), file=sys.stderr)
 
 ## ------------ ##
 ## Crash report ##
@@ -31,19 +34,19 @@ def symbolize_dump(in_, out = None):
     with open(out + '.tmp', 'wb') as o:
       p = subprocess.run(['minidump_stackwalk', in_, symbols_path], stdout=o)
       if p.returncode:
-        print("symbolize: error: {}".format(p.stderr))
+        log("symbolize: error: {}", p.stderr)
       else:
-        print("symbolize: success")
+        log("symbolize: success")
         os.rename(out + '.tmp', out)
         return
   except Exception as e:
-    print("symbolize: fatal: {}".format(e))
+    log("symbolize: fatal: {}", e)
 
   # Worst case: return the input file.
   try:
     os.rename(in_, out)
   except Exception as e:
-    print("symbolizer: cannot rename dump file: {}".format(e))
+    log("symbolizer: cannot rename dump file: {}", e)
 
 
 ## -------- ##
@@ -51,7 +54,7 @@ def symbolize_dump(in_, out = None):
 ## -------- ##
 
 # Don't generate crash reports on our Beyond server.
-os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
+os.environ['INFINIT_CRASH_REPORTER'] = '0'
 
 def find_binaries():
   for path in chain(
@@ -64,12 +67,15 @@ def find_binaries():
     if not path.endswith('/'):
       path += '/'
     try:
-      subprocess.check_call([path + 'infinit' + exe_ext, '--version'])
+      args = [path + 'infinit' + exe_ext, '--version']
+      subprocess.check_call(args)
+      log('find_binaries: {} works', args)
       return path
     except FileNotFoundError:
-      pass
-    except subprocess.CalledProcessError:
-      pass
+      log('find_binaries: {} does not exist', args)
+    except subprocess.CalledProcessError as e:
+      log('find_binaries: {} failed: {}', args, e)
+  log('find_binaries: could not find `infinit`')
   return None
 
 # Our bindir, with a trailing slash, or None if we can't find `infinit`.

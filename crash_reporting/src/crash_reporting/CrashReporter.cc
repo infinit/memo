@@ -102,7 +102,7 @@ namespace crash_reporting
                                                      true,
                                                      nullptr);
 #endif
-    ELLE_TRACE("crash handler started");
+      ELLE_TRACE("crash handler started");
     }
   }
 

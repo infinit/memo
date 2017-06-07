@@ -488,9 +488,9 @@ namespace infinit
   bfs::path
   Infinit::_avatars_path() const
   {
-    auto root = xdg_cache_home() / "avatars";
-    create_directories(root);
-    return root;
+    auto res = xdg_cache_home() / "avatars";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -845,17 +845,17 @@ namespace infinit
   bfs::path
   Infinit::_credentials_path() const
   {
-    auto root = xdg_data_home() / "credentials";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "credentials";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
   Infinit::_credentials_path(std::string const& service) const
   {
-    auto root = this->_credentials_path() / service;
-    create_directories(root);
-    return root;
+    auto res = this->_credentials_path() / service;
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -867,9 +867,9 @@ namespace infinit
   bfs::path
   Infinit::_network_descriptors_path() const
   {
-    auto root = xdg_data_home() / "networks";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "networks";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -881,19 +881,19 @@ namespace infinit
   bfs::path
   Infinit::_networks_path(bool create_dir) const
   {
-    auto root = xdg_data_home() / "linked_networks";
+    auto res = xdg_data_home() / "linked_networks";
     if (create_dir)
-      create_directories(root);
-    return root;
+      create_directories(res);
+    return res;
   }
 
   bfs::path
   Infinit::_networks_path(User const& user, bool create_dir) const
   {
-    auto root = _networks_path(create_dir) / user.name;
+    auto res = _networks_path(create_dir) / user.name;
     if (create_dir)
-      create_directories(root);
-    return root;
+      create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -908,9 +908,9 @@ namespace infinit
   bfs::path
   Infinit::_passports_path() const
   {
-    auto root = xdg_data_home() / "passports";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "passports";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -923,9 +923,9 @@ namespace infinit
   bfs::path
   Infinit::_silos_path() const
   {
-    auto root = xdg_data_home() / "silos";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "silos";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -937,9 +937,9 @@ namespace infinit
   bfs::path
   Infinit::_users_path() const
   {
-    auto root = xdg_data_home() / "users";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "users";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -951,9 +951,9 @@ namespace infinit
   bfs::path
   Infinit::_volumes_path() const
   {
-    auto root = xdg_data_home() / "volumes";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "volumes";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -1012,9 +1012,9 @@ namespace infinit
   bfs::path
   Infinit::_drives_path() const
   {
-    auto root = xdg_data_home() / "drives";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "drives";
+    create_directories(res);
+    return res;
   }
 
   bfs::path

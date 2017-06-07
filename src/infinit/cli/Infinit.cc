@@ -30,8 +30,11 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
-  /// argv[0], for error messages.
-  char const* argv_0 = "infinit";
+  /// argv[0], for error messages, possibly `/bin/infinit-user`.
+  auto argv_0 = std::string("infinit");
+
+  /// The path to `infinit`, not to `infinit-user`.
+  auto infinit_exe = std::string("infinit");
 }
 
 namespace infinit
@@ -72,9 +75,9 @@ namespace infinit
       check_broken_locale()
       {
 #if defined INFINIT_LINUX
-        // boost::filesystem uses the default locale, detect here if it
-        // cant be instantiated.
-        // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
+        // boost::filesystem uses the default locale, detect here if
+        // it can't be instantiated.  Not required on OS X, see
+        // boost/libs/filesystem/src/path.cpp:819.
         try
         {
           std::locale("");
@@ -306,7 +309,7 @@ namespace infinit
     void
     Infinit::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
+      s << "Usage: " << infinit_exe << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -523,10 +526,10 @@ namespace
   cli_error(std::string const& error, boost::optional<std::string> object = {})
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
-    auto obj = object ? " " + *object : "";
+    auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  argv_0, obj);
+                  infinit_exe, obj);
     return 2;
   }
 }
@@ -535,6 +538,7 @@ int
 main(int argc, char** argv)
 {
   argv_0 = argv[0];
+  infinit_exe = (bfs::path(argv_0).parent_path() / "infinit").string();
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);

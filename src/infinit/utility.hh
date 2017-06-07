@@ -16,6 +16,8 @@
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
+
   elle::Version
   version();
 
@@ -90,20 +92,20 @@ namespace infinit
   };
 
   inline
-  boost::filesystem::path
-  canonical_folder(boost::filesystem::path const& path)
+  bfs::path
+  canonical_folder(bfs::path const& path)
   {
     if (exists(path) && !is_directory(path))
       elle::err("not a directory: %s", path);
     create_directories(path);
     boost::system::error_code erc;
     permissions(
-      path, boost::filesystem::add_perms | boost::filesystem::owner_write, erc);
+      path, bfs::add_perms | bfs::owner_write, erc);
     return canonical(path);
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   home()
   {
     auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
@@ -111,21 +113,21 @@ namespace infinit
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   _xdg(std::string const& type,
-       boost::filesystem::path const& def)
+       bfs::path const& def)
   {
     auto const infinit = elle::os::getenv("INFINIT_" + type, "");
     auto const xdg = elle::os::getenv("XDG_" + type, "");
     auto const dir =
       !infinit.empty() ? infinit :
-      !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/filesystem" :
+      !xdg.empty() ? bfs::path(xdg) / "infinit/filesystem" :
       def;
     try
     {
       return canonical_folder(dir);
     }
-    catch (boost::filesystem::filesystem_error& e)
+    catch (bfs::filesystem_error& e)
     {
       ELLE_LOG_COMPONENT("xdg");
       std::string env =
@@ -137,43 +139,43 @@ namespace infinit
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   _xdg_home(std::string const& type,
-            boost::filesystem::path const& def)
+            bfs::path const& def)
   {
     return _xdg(type + "_HOME", home() / def / "infinit/filesystem");
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   xdg_cache_home()
   {
     return _xdg_home("CACHE", ".cache");
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   xdg_config_home()
   {
     return _xdg_home("CONFIG", ".config");
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   xdg_data_home()
   {
     return _xdg_home("DATA", ".local/share");
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   tmpdir()
   {
     return elle::os::getenv("TMPDIR", "/tmp");;
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   xdg_runtime_dir(boost::optional<std::string> fallback = {})
   {
     return _xdg(
@@ -184,7 +186,7 @@ namespace infinit
   }
 
   inline
-  boost::filesystem::path
+  bfs::path
   xdg_state_home()
   {
     return _xdg_home("STATE", ".local/state");
@@ -194,11 +196,11 @@ namespace infinit
 
   /// Whether this path's filename starts with `.` or ends with `~`.
   bool
-  is_hidden_file(boost::filesystem::path const& path);
+  is_hidden_file(bfs::path const& path);
 
   /// Whether this entry is a non-hidden regular file.
   bool
-  is_visible_file(boost::filesystem::directory_entry const& e);
+  is_visible_file(bfs::directory_entry const& e);
 
   bool
   validate_email(std::string const& candidate);

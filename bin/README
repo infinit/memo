@@ -3,3 +3,17 @@ directory allow for this.
 
 Once a mode has been checked, it should be removed from the list. Once all modes
 have been checked, this directory can be removed.
+
+To update, from the source tree
+
+    PATH=$PWD/_build/macosx64/bin:$PATH python3 bin/help/infinit-help infinit --base=bin/help/revamp/
+
+The trailing / is important.
+
+And then, still from the source tree
+
+    for i in bin/help/legacy/*
+    do
+      m=$(basename $i)
+      pr -w160 -t -m $i bin/help/revamp/$m  > bin/help/diffs/$m
+    done
