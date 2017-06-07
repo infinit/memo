@@ -59,7 +59,7 @@ with Infinit() as bob:
   # Regression: check that "the Hub" is properly displayed, and that
   # we display `infinit passport` not `infinit-passport passport`.  It
   # exercised code different from the above test case.
-  out, _ = slashify(bob.run(['infinit-passport', '--help']))
+  out = slashify(bob.run(['infinit-passport', '--help'])[0])
   assertEq(out,
            "Usage: ./bin/infinit passport [MODE|--help]\n"
            "Infinit passport management utility.\n"
