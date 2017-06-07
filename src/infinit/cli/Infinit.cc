@@ -21,6 +21,7 @@
 
 #include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/environ.hh>
 #include <infinit/report-crash.hh>
 #include <infinit/utility.hh>
 
@@ -294,6 +295,7 @@ namespace infinit
       {
         auto report_thread = make_reporter_thread();
         check_broken_locale();
+        check_environment();
         main_impl(args);
         if (report_thread)
           elle::reactor::wait(*report_thread);
