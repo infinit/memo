@@ -1,11 +1,11 @@
-ldap: drive-invite: Usage: infinit-ldap ldap drive-invite [OPTIONS]
+ldap: drive-invite: Usage: infinit ldap drive-invite [OPTIONS]
 Invite LDAP users to a drive
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
       --server arg          connectivity server address (default = 192.241.139.66)
   -d, --domain arg          LDAP domain
   -u, --user arg            user to drive-invite ldap for

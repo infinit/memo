@@ -1,0 +1,9 @@
+storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]	storage: list: Usage: infinit silo list [OPTIONS]
+										List local silos
+List storages:
+										Options:
+										  -h, --help		    show this help message
+										      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+

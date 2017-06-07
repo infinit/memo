@@ -1,11 +1,11 @@
-daemon: run: Usage: infinit-daemon daemon run [OPTIONS]
+daemon: run: Usage: infinit daemon run [OPTIONS]
 Run daemon in the foreground
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
       --login-user arg      Login with selected user(s), of form 'user:password' (default: [])
       --mount arg           mount given volumes on startup, keep trying on error (default: [])
       --mount-root arg      Default root path for all mounts (default: null)

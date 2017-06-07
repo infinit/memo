@@ -1,0 +1,20 @@
+Usage: _build/macosx64/bin/infinit-acl MODE [OPTIONS...]			Usage: infinit acl [MODE|--help]
+										Infinit acl management utility.
+Infinit access control list utility:
+										Modes:
+Modes:										  group	     Edit groups
+  --list		       List current ACL					  list	     List ACLs
+  --set			       Set ACL						  register   Register user's passport to the network
+  --group		       Group control					  set	     Set ACLs
+  --register		       Register user's passport to the network
+										Options:
+Hidden Modes:									  -h, --help		    show this help message
+  --set-xattr		       Set an extended attribute
+  --get-xattr		       Get an extended attribute
+Miscellaneous:
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

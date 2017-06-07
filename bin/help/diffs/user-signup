@@ -1,20 +1,18 @@
-user: signup: Usage: _build/macosx64/bin/infinit-user --signup [OPTIONS...]    |user: signup: Usage: _build/macosx64/bin/infinit-user user signup [OPTIONS]
-									       |Create and push a user to https://beyond.infinit.sh
-Create and push a user to the Hub:					       |
-									       |Options:
-Signup options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	  User name (default: system user)		       |      --compatibility-version arg  compatibility version to force
-  --description arg	  Description of user				       |  -s, --script		    suppress extraneous human friendly messages and use
-  --email arg		  Optional email address			       |JSON output
-  --fullname arg	  Fullname of user (optional)			       |  -a, --as arg		    user to run commands as (default: akim)
-  --avatar arg		  Path to an image to use as avatar		       |  -n, --name arg	    name of the user to signup (default: akim)
-  -k [ --key ] arg	  RSA key pair in PEM format - e.g. your SSH key       |      --description arg	    user description
-			  (default: generate key pair)			       |  -k, --key arg		    RSA key pair in PEM format - e.g. your SSH key
-  --full		  Include private key in order to facilitate device    |  -e, --email arg	    user email
-			  pairing and fetching lost keys		       |      --fullname arg	    user full name
-  --password arg	  Password to authenticate with the Hub. Used with     |  -P, --password arg	    password to authenticate with
-			  --full (default: prompt for password)		       |https://beyond.infinit.sh
-  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables	       |  -l, --ldap-name arg	    user LDAP distinguished name
-			  authentication through LDAP			       |      --full		    include private key (do not use unless you
-									       |understand the implications
-									       |
+user: signup: Usage: _build/macosx64/bin/infinit-user --signup [OPTIONS...]	user: signup: Usage: infinit user signup [OPTIONS]
+										Create and push a user to the Hub
+Create and push a user to the Hub:
+										Options:
+Signup options:									  -h, --help		    show this help message
+  -n [ --name ] arg	  User name (default: system user)			      --compatibility-version arg  compatibility version to force
+  --description arg	  Description of user					  -s, --script		    suppress extraneous human friendly messages and use
+  --email arg		  Optional email address				  -a, --as arg		    user to run commands as (default: akim)
+  --fullname arg	  Fullname of user (optional)				  -n, --name arg	    name of the user to signup (default: akim)
+  --avatar arg		  Path to an image to use as avatar			      --description arg	    user description (default: null)
+  -k [ --key ] arg	  RSA key pair in PEM format - e.g. your SSH key	  -k, --key arg		    RSA key pair in PEM format - e.g. your SSH key (def
+			  (default: generate key pair)				  -e, --email arg	    user email (default: null)
+  --full		  Include private key in order to facilitate device	      --fullname arg	    user full name (default: null)
+			  pairing and fetching lost keys			  -P, --password arg	    password to authenticate with the Hub (default: nul
+  --password arg	  Password to authenticate with the Hub. Used with	  -l, --ldap-name arg	    user LDAP distinguished name (default: null)
+			  --full (default: prompt for password)			      --full		    include private key (do not use unless you understa
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables
+			  authentication through LDAP

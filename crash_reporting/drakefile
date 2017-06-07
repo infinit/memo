@@ -8,6 +8,7 @@ lib_static = None
 library = None
 
 dump_syms_exe = None
+minidump_stackwalk_exe = None
 rule_tools = None
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
@@ -21,10 +22,12 @@ class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
                binary,
-               output_file):
+               output_file,
+               cxx_toolkit):
     self.__dump_syms_tool = dump_syms_tool
     self.__binary = binary
     self.__output_file = output_file
+    self.__cxx_toolkit = cxx_toolkit
     super().__init__(
       [self.__dump_syms_tool, self.__binary],
       [self.__output_file],
@@ -40,9 +43,17 @@ class SymbolsGenerator(drake.Builder):
 
   def execute(self):
     out = self.__output_file
+    if self.__cxx_toolkit.os is drake.os.macos:
+      self.cmd('Generating debug symbols for %s' % self.__binary,
+               ['dsymutil', self.binary_path],
+               throw = True)
+      args = ['-g', self.binary_path + '.dSYM']
+    else:
+      args = []
     self.cmd('Generating symbols file for %s' % self.__binary,
-             [self.dump_syms_cmd, self.binary_path],
+             [self.dump_syms_cmd] + args + [self.binary_path],
              redirect_stdout = out,
+             cut_stderr = True,
              throw = True)
     return True
 
@@ -86,6 +97,7 @@ def configure(cxx_toolkit = None,
   global lib_dynamic, lib_static, library
   global dump_syms_exe, rule_tools
 
+  # //tools: build the auxiliary tools.
   rule_tools = drake.Rule('tools')
 
   ## -------- ##
@@ -140,7 +152,7 @@ def configure(cxx_toolkit = None,
       'common/linux/safe_readlink.h',
     ]
     breakpad_sources = \
-      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, sources)))
+      drake.nodes(*['breakpad/src/%s' % f for f in sources])
     # File is not in repo unless you use Google's tools.
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',
@@ -253,8 +265,10 @@ def configure(cxx_toolkit = None,
     'CC=%s' % cxx_toolkit.c,
     'CXX=%s' % cxx_toolkit.cxx,
   ]
+  global minidump_stackwalk_exe
+  minidump_stackwalk_exe = drake.cxx.Executable('breakpad/bin/minidump_stackwalk')
   breakpad_targets = [
-    drake.cxx.Executable('breakpad/bin/minidump_stackwalk'),
+    minidump_stackwalk_exe,
     drake.cxx.Executable('breakpad/bin/minidump_dump'),
     drake.cxx.Executable('breakpad/bin/microdump_stackwalk'),
   ]

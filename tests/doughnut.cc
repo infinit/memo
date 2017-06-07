@@ -7,6 +7,7 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
+#include <elle/random.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
 #include <elle/Version.hh>
@@ -1650,6 +1651,13 @@ namespace rebalancing
     }
   }
 
+  auto const make_dht = [] (int n, bool rebalance_auto_expand = false)
+  {
+    return std::make_unique<DHT>(
+      id = special_id(n + 10),
+      dht::consensus_builder = instrument(3, rebalance_auto_expand));
+  };
+
   auto const make_resign_dht = [] (int n, bool rebalance_auto_expand = true)
   {
     return std::make_unique<DHT>(
@@ -1853,6 +1861,89 @@ namespace rebalancing
     }
     confirm.open();
   }
+
+  ELLE_TEST_SCHEDULED(resign_insist)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resign_insist"));
+    ELLE_LOG("write block")
+      dht_a->dht->seal_and_insert(*block);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    int count = 0;
+    for (auto l: {&local_a, &local_b})
+      l->proposing().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          if (++count <= 16)
+            throw elle::athena::paxos::Unavailable();
+        });
+    auto rebalanced =
+      elle::reactor::waiter(local_c.rebalanced(), block->address());
+    dht_c.reset();
+    BOOST_TEST(count > 16);
+    elle::reactor::wait(rebalanced);
+  }
+
+  // Perform a full rotation, transferring a block to a quorum with none of the
+  // original owners. New owner used to not replicate immutable blocks. The
+  // expand version evicts a node and then introduce a new one, to check the
+  // block is expanded. The !expand version introduce a new node, then evicts
+  // one to check the block is rebalanced right away.
+  ELLE_TEST_SCHEDULED(evict_chain, (bool, expand))
+  {
+    std::vector<std::unique_ptr<DHT>> dhts;
+    auto const make = [&] (int i)
+      {
+        auto dht = make_dht(i, expand);
+        for (auto const& d: dhts)
+          dht->overlay->connect(*d->overlay);
+        auto const id = dht->dht->id();
+        dhts.emplace_back(std::move(dht));
+        return id;
+      };
+    make(0);
+    make(1);
+    make(2);
+    auto block = dhts[0]->dht->make_block<blocks::ImmutableBlock>(
+      std::string("resign_chain"));
+    ELLE_LOG("write block")
+      dhts[0]->dht->seal_and_insert(*block);
+    BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+    for (auto i = 3; i < 32; ++i)
+      ELLE_LOG("rotate to a new DHT")
+      {
+        decltype(make(i)) inserted;
+        if (!expand)
+          inserted = make(i);
+        auto erased = [&]
+          {
+            auto it = *std::begin(elle::pick_n(1, dhts));
+            auto id = (*it)->dht->id();
+            dhts.erase(it);
+            return id;
+          }();
+        auto& local = dynamic_cast<Local&>(*dhts[0]->dht->local());
+        auto not_rebalanced =
+          elle::reactor::waiter(local.under_replicated(), block->address(), 2);
+        local.evict()();
+        if (expand)
+        {
+          elle::reactor::wait(not_rebalanced);
+          inserted = make(i);
+        }
+        if (erased != inserted)
+          elle::reactor::wait(local.rebalanced(), block->address());
+        BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+      }
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -1961,7 +2052,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   b3 = client.dht->make_block<blocks::ACLBlock>();
   b3->data(std::string("baz"));
   BOOST_CHECK_NO_THROW(client.dht->seal_and_insert(*b3));
-
   // check admin can actually read the block
   auto cadm = DHT(storage = nullptr, keys=admin, owner=owner_key);
   cadm.dht->admin_keys().r.push_back(admin.K());
@@ -1972,7 +2062,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto b0a = cadm.dht->fetch(b0->address());
   no_cheating(cadm.dht.get(), b0a);
   BOOST_CHECK_THROW(b0a->data(), std::exception);
-
   // do some stuff with blocks owned by admin
   auto ba = cadm.dht->make_block<blocks::ACLBlock>();
   ba->data(std::string("foo"));
@@ -1991,7 +2080,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto ba4 = cadm.dht->fetch(ba->address());
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
-
   // try to change admin user's permissions
   auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
   b_perm->data(std::string("admin user data"));
@@ -2003,7 +2091,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
     b_perm->set_permissions(
       *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
     false, false), elle::Error);
-
   // check group admin key
   auto gadmin = elle::cryptography::rsa::keypair::generate(512);
   auto cadmg = DHT(storage = nullptr, keys=gadmin, owner=owner_key);
@@ -2020,13 +2107,11 @@ ELLE_TEST_SCHEDULED(admin_keys)
     g_K.reset(
       new elle::cryptography::rsa::PublicKey(g.public_control_key()));
   }
-
   auto bg = client.dht->make_block<blocks::ACLBlock>();
   bg->data(std::string("baz"));
   client.dht->seal_and_insert(*bg);
   auto bg2 = cadmg.dht->fetch(bg->address());
   BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
-
   // try to change admin group's permissions
   auto bg_perm = cadmg.dht->fetch(bg->address());
   // no_cheating(cadmg.dht.get(), bg_perm);
@@ -2035,7 +2120,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
       *cadmg.dht->make_user(elle::serialization::json::serialize(g_K)),
     false, false), elle::Error);
 }
-
 
 ELLE_TEST_SCHEDULED(disabled_crypto)
 {
@@ -2156,6 +2240,18 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(conflict_quorum), 0, valgrind(3));
       auto missing_block = &rebalancing::missing_block;
       rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
+      auto resign_insist = &rebalancing::resign_insist;
+      rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
+    }
+    {
+      auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
+      rebalancing->add(evict_chain);
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, true), "expand"),
+        0, valgrind(5));
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, false), "rebalance"),
+        0, valgrind(5));
     }
   }
 }

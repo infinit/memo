@@ -1,0 +1,11 @@
+passport: fetch: Usage: _build/macosx64/bin/infinit-passport --fetch [--network passport: fetch: Usage: infinit passport fetch [OPTIONS]
+										Fetch a user's network passport from the Hub
+Fetch a user's network passport from the Hub:
+										Options:
+Fetch options:									  -h, --help		    show this help message
+  -N [ --network ] arg	 Network to fetch the passport for (optional)		      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	 User to fetch passports for (optional)			  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -N, --network arg	    network to fetch passport for (default: null)
+										  -u, --user arg	    user to fetch passport for (default: null)
+

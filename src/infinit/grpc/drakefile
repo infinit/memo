@@ -119,7 +119,7 @@ class GRPCPyGen(GRPCGen):
 def configure(
     cxx_toolkit,
     cxx_config,
-    cxx_lib, # macOS's libc++, or None.
+    cxx_lib = None,
     git = None,
 ):
   global memo_proto, memo_json, grpc_lib, grpc, sources

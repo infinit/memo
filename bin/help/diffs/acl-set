@@ -1,0 +1,22 @@
+acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USE acl: set: Usage: infinit acl set [OPTIONS]
+										Set ACLs
+Set ACL:
+										Options:
+Set options:									  -h, --help		    show this help message
+  -p [ --path ] arg	    Paths						      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	    Users and groups (prefix: @<group>)			  -s, --script		    suppress extraneous human friendly messages and use
+  -g [ --group ] arg	    Groups						  -a, --as arg		    user to run commands as (default: akim)
+  -m [ --mode ] arg	    Access mode: r,w,rw,none				      --path arg	    file whose acl to set
+  -o [ --others-mode ] arg  Access mode for other network users: r,w,rw,none	  -u, --user arg	    user to set acl for
+  -i [ --enable-inherit ]   New files/folders inherit from their parent		  -g, --group arg	    group to set acl for
+			    directory						  -m, --mode arg	    access mode to set: r, w, rw, none (default: null)
+  --disable-inherit	    New files/folders do not inherit from their parent	  -o, --others-mode arg	    access mode to set for other users: r, w, rw, none
+			    directory						  -i, --enable-inherit	    make new files and directories inherit permissions
+  -R [ --recursive ]	    Apply recursively					      --disable-inherit	    make new files and directories not inherit permissi
+  --traverse		    Add read permissions to parent directories		  -R, --recursive	    set acl recursively
+  --verbose		    Verbose output					  -t, --traverse	    set read permission on parent directories
+  --fetch		    Fetch users from the Hub if needed			  -v, --verbose		    use verbose output
+										  -f, --fetch		    fetch acl from the Hub
+Hidden options:									      --fallback-xattrs	    use fallback special file if extended attributes ar
+  --fallback-xattrs	    Fallback to alternate xattr mode if system xattrs
+			    are not suppported

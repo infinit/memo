@@ -1,11 +1,11 @@
-acl: group: Usage: infinit-acl acl group [OPTIONS]
+acl: group: Usage: infinit acl group [OPTIONS]
 Edit groups
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
       --path arg            file whose acl to group
   -n, --name arg            name of the acl to group
   -c, --create              create the acl

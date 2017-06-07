@@ -1,0 +1,12 @@
+drive: delete: Usage: _build/macosx64/bin/infinit-drive --delete --name NAME [O drive: delete: Usage: infinit drive delete [OPTIONS]
+										Delete a drive locally
+Delete a drive locally:
+										Options:
+Delete options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Drive to delete					      --compatibility-version arg  compatibility version to force
+  --pull		 Pull the drive if it is on the Hub			  -s, --script		    suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the drive		  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the drive to delete
+										      --pull		    pull drive from the Hub
+										      --purge		    purge objects owned by the drive
+

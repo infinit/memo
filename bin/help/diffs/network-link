@@ -1,0 +1,13 @@
+network: link: Usage: _build/macosx64/bin/infinit-network --link --name NETWORK network: link: Usage: infinit network link [OPTIONS]
+										Link this device to a network
+Link this device to a network:
+										Options:
+Link options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network to link to					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+Hidden options:									  -a, --as arg		    user to run commands as (default: akim)
+  -S [ --storage ] arg	 Storage to contribute (optional)			  -n, --name arg	    name of the network to link
+  -o [ --output ] arg	 File to write the network to				  -S, --silo arg	    silo to contribute (optional, data striped over mul
+			 (default: stdout)					  -o, --output arg	    file to write the network to (default: null)
+										      --node-id arg	    node ID (default: null)
+

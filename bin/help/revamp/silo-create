@@ -1,4 +1,4 @@
-storage: create: Usage: infinit-storage create [MODE|--help]
+storage: create: Usage: infinit create [MODE|--help]
 Infinit create management utility.
 
 Modes:

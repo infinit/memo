@@ -147,7 +147,8 @@ Protogen::protogen()
 }
 
 
-namespace grpc {
+namespace grpc
+{
   std::ostream& operator << (std::ostream& o, ::grpc::Status const& s)
   {
     return o << s.error_code() << ": " << s.error_message();
@@ -168,8 +169,8 @@ public:
   template <typename ... Args>
   DHTs(int count)
    : DHTs(count, {})
-  {
-  }
+  {}
+
   template <typename ... Args>
   DHTs(int count,
        boost::optional<elle::cryptography::rsa::KeyPair> kp,

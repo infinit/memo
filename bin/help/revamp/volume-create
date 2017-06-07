@@ -1,47 +1,47 @@
-volume: create: Usage: infinit-volume volume create [OPTIONS]
+volume: create: Usage: infinit volume create [OPTIONS]
 Create a volume
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the volume to create
   -N, --network arg         network to create volume for
       --description arg     volume description (default: null)
   -R, --create-root         create root directory
-      --push-volume arg     push the volume to the Hub (default: false (default))
+      --push-volume arg     push the volume to the Hub (default: false)
   -o, --output arg          file to write the volume to (default: null)
   -d, --default-permissions arg  default permissions (optional: r,rw) (default: null)
   -r, --register-service    register volume in the network
       --allow-root-creation  create the filesystem root if not found
   -m, --mountpoint arg      where to mount the filesystem (default: null)
-      --readonly arg        mount as readonly (default: false (default))
+      --readonly arg        mount as readonly (default: false)
       --mount-name arg      name of mounted volume (default: null)
       --mount-icon arg      path to an icon for mounted volume (default: null)
       --finder-sidebar      show volume in Finder sidebar
-      --async arg           use asynchronous write operations (default: false (default))
+      --async arg           use asynchronous write operations (default: false)
   -d, --daemon              run as a background daemon
-      --monitoring arg      enable monitoring (default: true (default))
-      --fuse-option arg     option to pass directly to FUSE (default: [] (default))
-      --cache arg           enable caching with default values (default: false (default))
+      --monitoring arg      enable monitoring (default: true)
+      --fuse-option arg     option to pass directly to FUSE (default: [])
+      --cache arg           enable caching with default values (default: false)
       --cache-ram-size arg  maximum RAM block cache size in bytes (default: 64MB) (default: null)
       --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5min) (default: null)
       --cache-ram-invalidation arg  RAM block cache invalidation time in seconds (default: 15s) (default: null)
       --cache-disk-size arg  size of disk cache for immutable data in bytes (default: 512MB) (default: null)
-      --fetch-endpoints arg  fetch endpoints from the Hub (default: false (default))
-  -f, --fetch arg           fetch volume from the Hub (default: false (default))
-      --peer arg            peer address or file with list of peer addresses (host:port) (default: [] (default))
+      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
+  -f, --fetch arg           fetch volume from the Hub (default: false)
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
       --peers-file arg      Periodically write list of known peers to given file (default: null)
-      --push-endpoints arg  push endpoints to the Hub (default: false (default))
-  -p, --push arg            push volume to the Hub (default: false (default))
-      --publish arg         alias for --fetch-endpoints --push-endpoints (default: false (default))
+      --push-endpoints arg  push endpoints to the Hub (default: false)
+  -p, --push arg            push volume to the Hub (default: false)
+      --publish arg         alias for --fetch-endpoints --push-endpoints (default: false)
       --advertise-host arg  advertise extra endpoint using given host (default: [])
       --endpoints-file arg  write node listening endpoints to file (format: host:port) (default: null)
       --port-file arg       write node listening port to file (default: null)
       --port arg            outbound port to use (default: null)
       --listen arg          specify which IP address to listen on (default: all) (default: null)
-      --fetch-endpoints-interval arg  period for repolling endpoints from the Hub in seconds (default: 300 (default))
+      --fetch-endpoints-interval arg  period for repolling endpoints from the Hub in seconds (default: 300)
   -i, --input arg           file to read volume from (default: null)
-      --block-size arg      volume block size (default: 1048576 (default))
+      --block-size arg      volume block size (default: 1048576)
 

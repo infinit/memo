@@ -5,10 +5,13 @@ import json
 import re
 
 with Infinit() as bob:
-  def xfail(command, message):
-    err = bob.run(['memo'] + command, return_code = 2)[1]
-    # Replace Window paths with Unix ones.
-    err = re.sub(r'Z:.*?\\memo.exe', './bin/memo', err)
+  def slashify(s):
+    '''Replace Window paths with Unix ones.'''
+    return re.sub(r'Z:.*?\\memo.exe', './bin/memo', s)
+
+  def xfail(command, message, binary='memo'):
+    err = bob.run([binary] + command, return_code = 2)[1]
+    err = slashify(err)
     # Gee...  Maybe do this in assertEq?
     err = err.replace('\r\n', '\n')
     assertEq(message, err)
@@ -29,6 +32,11 @@ with Infinit() as bob:
         "./bin/memo: command line error: unknown option: --foo\n"
         "Try './bin/memo network --help' for more information.\n")
 
+  # Regression: invalid trailing option, which used to be ignored.
   xfail(['network', 'list', '--foo'],
         "./bin/memo: command line error: unknown option: --foo\n"
         "Try './bin/memo network list --help' for more information.\n")
+
+  xfail(['user', 'create','--name'],
+        "./bin/memo: command line error: option requires an argument: --name\n"
+        "Try './bin/memo user create --help' for more information.\n")

@@ -1,0 +1,11 @@
+passport: push: Usage: _build/macosx64/bin/infinit-passport --push --network NE passport: push: Usage: infinit passport push [OPTIONS]
+										Push a user's network passport to the Hub
+Push a user's network passport to the Hub:
+										Options:
+Push options:									  -h, --help		    show this help message
+  -N [ --network ] arg	 Network name						      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	 User name						  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -N, --network arg	    network to push passport for
+										  -u, --user arg	    user to push passport for
+

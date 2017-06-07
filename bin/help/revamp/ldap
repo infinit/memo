@@ -1,4 +1,4 @@
-Usage: infinit-ldap ldap [MODE|--help]
+Usage: infinit ldap [MODE|--help]
 Infinit ldap management utility.
 
 Modes:

@@ -1,13 +1,37 @@
 # Change Log
 
-### [0.8.1]
+
+## [0.9.0]
+
+Node churn intensive testing and rebalancing robustification.
+
+### Added
+
+- Add `--resign-on-shutdown` option to rebalance all blocks to other
+  nodes on exit.
+- Prometheus gauges for reachable blocks and under-replicated blocks.
+- Add centralized crash reporting.
 
 ### Changed
 
 - Avoid useless conflicts on blocks that have been rebalanced.
 
+### Fixed
 
-## [0.8.0]
+- Fix Koordinate overlay cleanup that did not cleanup underlying
+  overlays.
+- Handle consecutive rebalancing.
+- Rebalance blocks when a peer evicts itself from the quorum.
+- Propagate block value if several nodes conflicted during
+  rebalancing.
+- When reading, be resilient to a minority of node missing a block.
+- Transmit immutable block ownership information to new node holding
+  them so they can handle replication themselves.
+- Protect against concurrent updates to the same address via the GRPC
+  interface.
+- Various minor issues in the command-line parsing.
+
+## [0.8.0] 2017-05-22
 
 Kouncil improvements and completion, GRPC interface for the KV store,
 basic prometheus monitoring.

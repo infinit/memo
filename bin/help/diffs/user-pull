@@ -1,12 +1,11 @@
-user: pull: Usage: _build/macosx64/bin/infinit-user --pull [OPTIONS...]	       |user: pull: Usage: _build/macosx64/bin/infinit-user user pull [OPTIONS]
-									       |Pull a user from https://beyond.infinit.sh
-Remove a user from the Hub:						       |
-									       |Options:
-Pull options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	 User to remove (default: system user)		       |      --compatibility-version arg  compatibility version to force
-  --purge		 Remove objects owned by the user		       |  -s, --script		    suppress extraneous human friendly messages and use
-									       |JSON output
-									       |  -a, --as arg		    user to run commands as (default: akim)
-									       |  -n, --name arg	    name of the user to pull (default: akim)
-									       |      --purge		    purge objects owned by the user
-									       |
+user: pull: Usage: _build/macosx64/bin/infinit-user --pull [OPTIONS...]		user: pull: Usage: infinit user pull [OPTIONS]
+										Pull a user from the Hub
+Remove a user from the Hub:
+										Options:
+Pull options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 User to remove (default: system user)			      --compatibility-version arg  compatibility version to force
+  --purge		 Remove objects owned by the user			  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the user to pull (default: akim)
+										      --purge		    purge objects owned by the user
+

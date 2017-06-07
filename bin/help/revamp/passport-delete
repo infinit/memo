@@ -1,11 +1,11 @@
-passport: delete: Usage: infinit-passport passport delete [OPTIONS]
+passport: delete: Usage: infinit passport delete [OPTIONS]
 Locally delete a passport
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -N, --network arg         network to delete passport for
   -u, --user arg            user to delete passport for
       --pull                pull passport from the Hub

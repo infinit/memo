@@ -1,14 +1,12 @@
-volume: delete: Usage: _build/macosx64/bin/infinit-volume --delete --name      |volume: delete: Usage: _build/macosx64/bin/infinit-volume volume delete
-VOLUME [OPTIONS...]							       |[OPTIONS]
-									       |Delete a volume locally
-Delete a volume locally:						       |
-									       |Options:
-Delete options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	 Volume to delete				       |      --compatibility-version arg  compatibility version to force
-  --pull		 Pull the volume if it is on the Hub		       |  -s, --script		    suppress extraneous human friendly messages and use
-  --purge		 Remove objects that depend on the volume	       |JSON output
-									       |  -a, --as arg		    user to run commands as (default: akim)
-									       |  -n, --name arg	    name of the volume to delete
-									       |      --pull		    pull volume from https://beyond.infinit.sh
-									       |      --purge		    purge objects owned by the volume
-									       |
+volume: delete: Usage: _build/macosx64/bin/infinit-volume --delete --name VOLUM volume: delete: Usage: infinit volume delete [OPTIONS]
+										Delete a volume locally
+Delete a volume locally:
+										Options:
+Delete options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Volume to delete					      --compatibility-version arg  compatibility version to force
+  --pull		 Pull the volume if it is on the Hub			  -s, --script		    suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the volume		  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the volume to delete
+										      --pull		    pull volume from the Hub
+										      --purge		    purge objects owned by the volume
+

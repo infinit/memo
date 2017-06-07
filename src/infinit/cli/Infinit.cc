@@ -6,10 +6,6 @@
 #include <type_traits>
 #include <vector>
 
-#if INFINIT_ENABLE_CRASH_REPORTER
-# include <crash_reporting/CrashReporter.hh>
-#endif
-
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -25,6 +21,7 @@
 
 #include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/report-crash.hh>
 #include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("cli");
@@ -39,8 +36,9 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
-  /// argv[0], for error messages.
-  char const* argv_0 = BIN;
+  /// The path to `memo`.
+  auto memo_exe = std::string(BIN);
+  auto argv_0 = std::string(BIN);
 }
 
 namespace infinit
@@ -49,13 +47,6 @@ namespace infinit
   {
     namespace
     {
-      bool constexpr production_build
-#ifdef INFINIT_PRODUCTION_BUILD
-      = true;
-#else
-      = false;
-#endif
-
       void
       install_signal_handlers(Memo& cli)
       {
@@ -84,47 +75,13 @@ namespace infinit
         }
       }
 
-#if INFINIT_ENABLE_CRASH_REPORTER
-      /// Crash reporter.
-      std::shared_ptr<crash_reporting::CrashReporter>
-      make_crash_reporter()
-      {
-        if (elle::os::getenv("INFINIT_CRASH_REPORTER", production_build))
-        {
-          auto const host = elle::os::getenv("INFINIT_CRASH_REPORT_HOST",
-                                             beyond());
-          auto const url = elle::sprintf("%s/crash/report", host);
-          auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-          ELLE_DEBUG("dump to %s", dumps_path);
-          return std::make_shared<crash_reporting::CrashReporter>(url, dumps_path,
-                                                                  version_describe());
-        }
-        else
-          return {};
-      }
-
-      /// Thread to send the crash reports (some might be pending from
-      /// previous runs, saved on disk).
-      std::unique_ptr<elle::reactor::Thread>
-      make_crash_reporter_thread()
-      {
-        return std::make_unique<elle::reactor::Thread>
-          ("crash report",
-           [cr = make_crash_reporter()]
-           {
-             if (cr)
-               cr->upload_existing();
-           });
-      }
-#endif
-
       void
       check_broken_locale()
       {
 #if defined INFINIT_LINUX
-        // boost::filesystem uses the default locale, detect here if it
-        // cant be instantiated.
-        // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
+        // boost::filesystem uses the default locale, detect here if
+        // it can't be instantiated.  Not required on OS X, see
+        // boost/libs/filesystem/src/path.cpp:819.
         try
         {
           std::locale("");
@@ -279,25 +236,11 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
-#if INFINIT_ENABLE_CRASH_REPORTER
-        auto report_thread = make_crash_reporter_thread();
-        auto report_upload = [&report_thread] {
-          if (report_thread)
-            elle::reactor::wait(*report_thread);
-        };
-#else
-        auto report_upload = []{};
-#endif
-        try
-        {
-          check_broken_locale();
-          main_impl(args);
-        }
-        catch (...)
-        {
-          report_upload();
-          throw;
-        }
+        auto report_thread = make_reporter_thread();
+        check_broken_locale();
+        main_impl(args);
+        if (report_thread)
+          elle::reactor::wait(*report_thread);
       }
     }
 
@@ -308,7 +251,7 @@ namespace infinit
     void
     Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
+      s << "Usage: " << memo_exe << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -525,10 +468,10 @@ namespace
   cli_error(std::string const& error, boost::optional<std::string> object = {})
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
-    auto obj = object ? " " + *object : "";
+    auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  argv_0, obj);
+                  memo_exe, obj);
     return 2;
   }
 }
@@ -537,6 +480,7 @@ int
 main(int argc, char** argv)
 {
   argv_0 = argv[0];
+  memo_exe = (bfs::path(argv_0).parent_path() / "memo").string();
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);
@@ -555,7 +499,7 @@ main(int argc, char** argv)
   catch (elle::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-    if (elle::os::inenv("INFINIT_BACKTRACE"))
+    if (elle::os::getenv("INFINIT_BACKTRACE", false))
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }

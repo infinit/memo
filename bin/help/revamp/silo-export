@@ -1,11 +1,11 @@
-storage: export: Usage: infinit-storage silo export [OPTIONS]
+storage: export: Usage: infinit silo export [OPTIONS]
 Export local silo
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the silo to export
   -o, --output arg          file to write the silo to (default: null)
 

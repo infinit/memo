@@ -1,0 +1,10 @@
+drive: export: Usage: _build/macosx64/bin/infinit-drive --export --name DRIVE [ drive: export: Usage: infinit drive export [OPTIONS]
+										Export a drive
+Export a drive:
+										Options:
+Export options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Drive to export					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the drive to export
+

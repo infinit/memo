@@ -1,0 +1,40 @@
+network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAM network: create: Usage: infinit network create [OPTIONS]
+										Create a network
+Create a network:
+										Options:
+Create options:									  -h, --help		    show this help message
+  -n [ --name ] arg		   Created network name				      --compatibility-version arg  compatibility version to force
+  --description arg		   Description of network			  -s, --script		    suppress extraneous human friendly messages and use
+  -S [ --storage ] arg		   Storage to contribute (optional, data	  -a, --as arg		    user to run commands as (default: akim)
+				   striped over multiple)			  -n, --name arg	    name of the network to create
+  --port arg			   Port to listen on (default: random)		      --description arg	    network description (default: null)
+  -r [ --replication-factor ] arg  Data replication factor (default: 1)		  -S, --silo arg	    silo to contribute (optional, data striped over mul
+  -e [ --eviction-delay ] arg	   Missing servers eviction delay		      --port arg	    outbound port to use (default: null)
+				   (default: 10 min)				  -r, --replication-factor arg	data replication factor (default: 1) (default:
+  -o [ --output ] arg		   File to write the network to			  -e, --eviction-delay arg  missing servers eviction delay (default: 10min) (de
+				   (default: stdout)				  -o, --output arg	    file to write the network to (default: null)
+  --push-network		   Push the network to the Hub			      --push-network	    push the network to the Hub
+  -p [ --push ]			   Alias for --push-network			  -p, --push		    push network to the Hub
+  --admin-r arg			   Set admin users that can read all data	      --admin-r arg	    Set admin users that can read all data (default: []
+  --admin-rw arg		   Set admin users that can read and write all	      --admin-rw arg	    Set admin users that can read and write all data (d
+				   data						      --peer arg	    peer address or file with list of peer addresses (h
+  --peer arg			   List of known node endpoints			      --paxos		    use Paxos consensus algorithm (default)
+										      --no-consensus	    use no consensus algorithm
+Consensus types:								      --kelips		    use a Kelips overlay network (default)
+  --paxos			   Use Paxos consensus algorithm (default)	      --kalimero	    use a Kalimero overlay network. Used for local test
+  --no-consensus		   Use no consensus algorithm			      --kouncil		    use a Kouncil overlay network
+										      --nodes arg	    estimate of the total number of nodes (default: nul
+Overlay types:									      --k arg		    number of groups (default: 1) (default: null)
+  --kelips			   Use a Kelips overlay network (default)	      --kelips-contact-timeout arg  ping timeout before considering a peer lost
+  --kalimero			   Use a Kalimero overlay network.		      --encrypt arg	    use encryption: no, lazy, yes (default: yes) (defau
+				   Used for local testing			      --protocol arg	    RPC protocol to use: tcp, utp, all (default: all) (
+  --kouncil			   Use a Kouncil overlay network		      --tcp-heartbeat arg   tcp heartbeat period and timeout (default: null)
+										      --disable-encrypt-at-rest	 disable at-rest encryption
+Kelips options:									      --disable-encrypt-rpc  disable RPC encryption
+  --nodes arg			   Estimate of the total number of nodes	      --disable-signature   disable all block signature computation and validat
+  --k arg			   Number of groups (default: 1)
+  --kelips-contact-timeout arg	   Ping timeout before considering a peer lost
+				   (default: 2 min)
+  --encrypt arg			   Use encryption: no,lazy,yes (default: yes)
+  --protocol arg		   RPC protocol to use: tcp,utp,all
+				   (default: all)

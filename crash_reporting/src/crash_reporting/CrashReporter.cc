@@ -3,6 +3,7 @@
 #include <elle/format/base64.hh>
 #include <elle/json/json.hh>
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/system/platform.hh>
 #include <elle/system/user_paths.hh>
 
@@ -12,9 +13,9 @@
 #include <elle/reactor/http/exceptions.hh>
 #include <elle/reactor/http/Request.hh>
 
-#ifdef INFINIT_LINUX
+#if defined INFINIT_LINUX
 # include <client/linux/handler/exception_handler.h>
-#elif defined(INFINIT_MACOSX)
+#elif defined INFINIT_MACOSX
 # include <crash_reporting/gcc_fix.hh>
 // FIXME: Adding `pragma GCC diagnostic ignored "-Wdeprecated"` does not work
 // for removing #import warnings.
@@ -51,6 +52,12 @@ namespace crash_reporting
       return bfs::is_regular_file(path) && path.extension().string() == ".dmp";
     }
 
+    bool
+    _is_crash_report(bfs::directory_entry const& p)
+    {
+      return _is_crash_report(p.path());
+    }
+
     void
     _remove_file(bfs::path const& path)
     {
@@ -59,50 +66,59 @@ namespace crash_reporting
       if (erc)
         ELLE_WARN("unable to remove crash dump (%s): %s", path, erc.message());
     }
+
+    bool constexpr production_build
+#ifdef INFINIT_PRODUCTION_BUILD
+      = true;
+#else
+      = false;
+#endif
   }
 
   CrashReporter::CrashReporter(std::string crash_url,
                                bfs::path dumps_path,
                                std::string version)
     : _crash_url(std::move(crash_url))
-    , _enabled(true)
     , _dumps_path(std::move(dumps_path))
     , _version(std::move(version))
   {
+    if (elle::os::getenv("INFINIT_CRASH_REPORTER", production_build))
+    {
 #if defined INFINIT_LINUX
-    breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
-    this->_exception_handler =
-      std::make_unique<breakpad::ExceptionHandler>(descriptor,
-                                                   nullptr,
-                                                   dump_callback,
-                                                   nullptr,
-                                                   true,
-                                                   -1);
+      breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
+      this->_exception_handler =
+        std::make_unique<breakpad::ExceptionHandler>(descriptor,
+                                                     nullptr,
+                                                     dump_callback,
+                                                     nullptr,
+                                                     true,
+                                                     -1);
 #elif defined INFINIT_MACOSX
-    this->_exception_handler =
-      std::make_unique<breakpad::ExceptionHandler>(this->_dumps_path.string(),
-                                                   nullptr,
-                                                   dump_callback,
-                                                   nullptr,
-                                                   true,
-                                                   nullptr);
+      this->_exception_handler =
+        std::make_unique<breakpad::ExceptionHandler>(this->_dumps_path.string(),
+                                                     nullptr,
+                                                     dump_callback,
+                                                     nullptr,
+                                                     true,
+                                                     nullptr);
 #endif
-    ELLE_TRACE("crash reporter started");
+      ELLE_TRACE("crash handler started");
+    }
   }
 
   CrashReporter::~CrashReporter() = default;
 
-  int32_t
-  CrashReporter::crashes_pending_upload()
+  int
+  CrashReporter::crashes_pending_upload() const
   {
-    int32_t res =
+    auto res =
       boost::count_if(bfs::directory_iterator(this->_dumps_path),
                       [](auto const& p)
                       {
-                        return _is_crash_report(p.path());
+                        return _is_crash_report(p);
                       });
     ELLE_DEBUG("%s: %s %s awaiting upload",
-               *this, res, (res == 1 ? "crash" : "crashes"));
+               this, res, (res == 1 ? "crash" : "crashes"));
     return res;
   }
 
@@ -112,13 +128,9 @@ namespace crash_reporting
     auto&& f = bfs::ifstream(path, std::ios_base::in | std::ios_base::binary);
     if (!f.good())
     {
-      ELLE_ERR("%s: unable to read crash dump: %s", *this, path);
+      ELLE_ERR("%s: unable to read crash dump: %s", this, path);
       return;
     }
-    ELLE_DEBUG("%s: uploading: %s", *this, path);
-    auto r = elle::reactor::http::Request(this->_crash_url,
-                                          elle::reactor::http::Method::PUT,
-                                          "application/json");
     // The content of `path`, in base 64.
     auto const minidump = [&f]
       {
@@ -136,13 +148,19 @@ namespace crash_reporting
         }
         return buf.string();
       }();
+    // There is no reason for the version sending the report to be the
+    // same as the one that generated the crash.
     auto content = elle::json::Object
       {
         {"dump", minidump},
         {"platform", elle::system::platform::os_description()},
         {"version", this->_version},
       };
-    ELLE_DUMP("%s: content to upload: %s", *this, content);
+    ELLE_DEBUG("%s: uploading: %s", this, path);
+    ELLE_DUMP("%s: content to upload: %s", this, content);
+    auto r = elle::reactor::http::Request(this->_crash_url,
+                                          elle::reactor::http::Method::PUT,
+                                          "application/json");
     elle::json::write(r, content);
     if (r.status() == elle::reactor::http::StatusCode::OK)
     {
@@ -158,21 +176,17 @@ namespace crash_reporting
   void
   CrashReporter::upload_existing() const
   {
-    if (this->_enabled)
-      for (auto const& p: bfs::directory_iterator(this->_dumps_path))
-      {
-        auto const& path = p.path();
-        if (_is_crash_report(path))
-          try
-          {
-            _upload(path);
-          }
-          catch (elle::reactor::http::RequestError const& e)
-          {
-            ELLE_TRACE("%s: unable to complete upload of %s: %s", *this, path, e);
-          }
-        else
-          ELLE_DUMP("%s: file is not crash dump: %s", *this, path);
-      }
+    for (auto const& p: bfs::directory_iterator(this->_dumps_path))
+      if (_is_crash_report(p))
+        try
+        {
+          _upload(p.path());
+        }
+        catch (elle::reactor::http::RequestError const& e)
+        {
+          ELLE_TRACE("%s: unable to complete upload of %s: %s", this, p.path(), e);
+        }
+      else
+        ELLE_DUMP("%s: file is not crash dump: %s", this, p.path());
   }
 }

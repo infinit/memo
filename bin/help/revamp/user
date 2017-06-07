@@ -1,4 +1,4 @@
-Usage: infinit-user user [MODE|--help]
+Usage: infinit user [MODE|--help]
 Infinit user management utility.
 
 Modes:

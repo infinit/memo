@@ -1,4 +1,4 @@
-Usage: infinit-daemon daemon [MODE|--help]
+Usage: infinit daemon [MODE|--help]
 Infinit daemon management utility.
 
 Modes:

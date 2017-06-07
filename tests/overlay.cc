@@ -1983,7 +1983,7 @@ ELLE_TEST_SUITE()
       return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
   auto const kouncil_config
-    = TestConfiguration{make_kouncil, elle::Version(0, 8, 0)};
+    = TestConfiguration{make_kouncil, infinit::version()};
   auto const kouncil_0_7_config
     = TestConfiguration{make_kouncil, elle::Version(0, 7, 0)};
 

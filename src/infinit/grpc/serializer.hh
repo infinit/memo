@@ -29,22 +29,15 @@ namespace infinit
       void
       _serialize_array(int size, // -1 for in(), array size for out()
                        std::function<void ()> const& f) override;
-      void
-      _serialize(int64_t& v) override;
-      void
-      _serialize(uint64_t& v) override;
-      void
-      _serialize(int32_t& v) override;
-      void
-      _serialize(uint32_t& v) override;
-      void
-      _serialize(int16_t& v) override;
-      void
-      _serialize(uint16_t& v) override;
-      void
-      _serialize(int8_t& v) override;
-      void
-      _serialize(uint8_t& v) override;
+      void _serialize(int64_t& v) override;
+      void _serialize(uint64_t& v) override;
+      void _serialize(int32_t& v) override;
+      void _serialize(uint32_t& v) override;
+      void _serialize(int16_t& v) override;
+      void _serialize(uint16_t& v) override;
+      void _serialize(int8_t& v) override;
+      void _serialize(uint8_t& v) override;
+      void _serialize(ulong& v) override;
       void
       _serialize(double& v) override;
       void
@@ -95,22 +88,15 @@ namespace infinit
       void
       _serialize_array(int size, // -1 for in(), array size for out()
                        std::function<void ()> const& f) override;
-      void
-      _serialize(int64_t& v) override;
-      void
-      _serialize(uint64_t& v) override;
-      void
-      _serialize(int32_t& v) override;
-      void
-      _serialize(uint32_t& v) override;
-      void
-      _serialize(int16_t& v) override;
-      void
-      _serialize(uint16_t& v) override;
-      void
-      _serialize(int8_t& v) override;
-      void
-      _serialize(uint8_t& v) override;
+      void _serialize(int64_t& v) override;
+      void _serialize(uint64_t& v) override;
+      void _serialize(int32_t& v) override;
+      void _serialize(uint32_t& v) override;
+      void _serialize(int16_t& v) override;
+      void _serialize(uint16_t& v) override;
+      void _serialize(int8_t& v) override;
+      void _serialize(uint8_t& v) override;
+      void _serialize(ulong& v) override;
       void
       _serialize(double& v) override;
       void
@@ -147,15 +133,15 @@ namespace infinit
       int _index;
       std::vector<google::protobuf::Message*> _message_stack;
       const google::protobuf::FieldDescriptor* _field;
-      // name path we are currently handling arrays for
+      /// Name path we are currently handling arrays for.
       std::vector<std::string> _array_handler;
       int _last_serialized_int;
     };
 
-    /** Map a C++ type name to a valid message name.
-    * We take the first type seen without the namespace, with
-    * special handling of smart pointers.
-    */
+    /// Map a C++ type name to a valid message name.
+    ///
+    /// We take the first type seen without the namespace, with
+    /// special handling of smart pointers.
     std::string
     cxx_to_message_name(std::string name);
   }

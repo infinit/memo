@@ -1,4 +1,4 @@
-Usage: infinit-device device [MODE|--help]
+Usage: infinit device [MODE|--help]
 Infinit device management utility.
 
 Modes:

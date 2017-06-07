@@ -1,9 +1,9 @@
-drive: list: Usage: infinit-drive drive list [OPTIONS]
+drive: list: Usage: infinit drive list [OPTIONS]
 List drives
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
 

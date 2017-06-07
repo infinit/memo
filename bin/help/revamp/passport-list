@@ -1,10 +1,10 @@
-passport: list: Usage: infinit-passport passport list [OPTIONS]
+passport: list: Usage: infinit passport list [OPTIONS]
 List all local passports
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -N, --network arg         network to list passport for (default: null)
 

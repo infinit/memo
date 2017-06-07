@@ -1,0 +1,53 @@
+network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK [ network: run: Usage: infinit network run [OPTIONS]
+										Run a network
+Run a network:
+										Options:
+Run options:									  -h, --help		    show this help message
+  -i [ --input ] arg			File to read the commands from		      --compatibility-version arg  compatibility version to force
+					(default: stdin)			  -s, --script		    suppress extraneous human friendly messages and use
+  -d [ --daemon ]			Run as a background daemon		  -a, --as arg		    user to run commands as (default: akim)
+  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)	  -n, --name arg	    name of the network to run
+  -n [ --name ] arg			Network to run				  -i, --input arg	    file to read network from (default: null)
+  --peer arg				Peer address or file with list of peer	  -d, --daemon		    run as a background daemon
+					addresses (host:port)			      --monitoring	    enable monitoring
+  --async				Use asynchronous operations		      --peer arg	    peer address or file with list of peer addresses (h
+  --cache [=arg(=true)]			Enable caching with default values	      --async		    use asynchronous write operations
+  --cache-ram-size arg			Maximum RAM block cache size in bytes	      --cache		    enable caching with default values
+					(default: 64 MB)			      --cache-ram-size arg  maximum RAM block cache size in bytes (default: 64M
+  --cache-ram-ttl arg			RAM block cache time-to-live in seconds	      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5
+					(default: 5 minutes)			      --cache-ram-invalidation arg  RAM block cache invalidation time in second
+  --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-disk-size arg  size of disk cache for immutable data in bytes (de
+					seconds (default: 15 seconds)		      --fetch-endpoints	    fetch endpoints from the Hub
+  --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch		    fetch network from the Hub
+					in bytes (default: 512 MB)		      --push-endpoints	    push endpoints to the Hub
+  --fetch-endpoints			Fetch endpoints from the Hub		  -p, --push		    push network to the Hub
+  -f [ --fetch ]			Alias for --fetch-endpoints		      --publish		    alias for --fetch-endpoints --push-endpoints
+  --push-endpoints			Push endpoints to the Hub		      --endpoints-file arg  write node listening endpoints to file (format: hos
+  -p [ --push ]				Alias for --push-endpoints		      --port-file arg	    write node listening port to file (default: null)
+  --publish				Alias for --fetch-endpoints		      --port arg	    outbound port to use (default: null)
+					--push-endpoints			      --peers-file arg	    Periodically write list of known peers to given fil
+  --endpoints-file arg			Write node listening endpoints to file	      --listen arg	    specify which IP address to listen on (default: all
+					(format: host:port\n)			      --fetch-endpoints-interval arg  period for repolling endpoints from the H
+  --port-file arg			Write node listening port to file	      --no-local-endpoints  Disable automatic detection of local endpoints
+  --port arg				Outbound port to use			      --no-public-endpoints  Disable automatic detection of public endpoints
+  --peers-file arg			File to write peers to periodically	      --advertise-host arg  advertise extra endpoint using given host (default:
+  --listen arg				Specify which IP address to listen on	      --grpc arg	    start grpc server on given endpoint (default: null)
+					(default: all)				      --prometheus arg	    start Prometheus server on given endpoint (default:
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the	      --paxos-rebalancing-auto-expand arg  whether to automatically rebalance u
+					Hub in seconds (default: 300s)		      --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup
+  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --resign-on-shutdown arg	rebalance blocks out when shutting down (defaul
+					endpoints
+  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public
+					endpoints
+  --advertise-host arg			Advertise extra endpoint using given
+					host
+Deprecated options:
+  --cache-size arg			Use "--cache-ram-size" instead
+  --cache-ttl arg			Use "--cache-ram-ttl" instead
+  --cache-invalidation arg		Use "--cache-ram-invalidation" instead
+  --disk-cache-size arg			Use "--cache-disk-size" instead
+Hidden options:
+  --paxos-rebalancing-auto-expand arg	Whether to automatically rebalance
+					under-replicated blocks
+  --paxos-rebalancing-inspect arg	Whether to inspect all blocks on
+					startup and trigger rebalancing

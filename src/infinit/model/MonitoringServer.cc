@@ -21,36 +21,36 @@ namespace infinit
     | Monitor Query |
     `--------------*/
 
-    static
-    std::string
-    query_str(MonitoringServer::MonitorQuery::Query query)
+    namespace
     {
-      using Query = MonitoringServer::MonitorQuery::Query;
-      switch (query)
+      std::string
+      query_str(MonitoringServer::MonitorQuery::Query query)
       {
-        case Query::Stats:
-          return "stats";
-        case Query::Status:
-          return "status";
+        using Query = MonitoringServer::MonitorQuery::Query;
+        switch (query)
+        {
+          case Query::Stats:
+            return "stats";
+          case Query::Status:
+            return "status";
+        }
+        elle::unreachable();
       }
-      elle::unreachable();
+
+      MonitoringServer::MonitorQuery::Query
+      query_val(std::string const& query_str)
+      {
+        using Query = MonitoringServer::MonitorQuery::Query;
+        if (query_str == "stats")
+          return Query::Stats;
+        else if (query_str == "status")
+          return Query::Status;
+        else
+          elle::err("unknown query: %s", query_str);
+      }
     }
 
-    static
-    MonitoringServer::MonitorQuery::Query
-    query_val(std::string const& query_str)
-    {
-      using Query = MonitoringServer::MonitorQuery::Query;
-      if (query_str == "stats")
-        return Query::Stats;
-      else if (query_str == "status")
-        return Query::Status;
-      else
-        elle::err("unknown query: %s", query_str);
-    }
-
-    MonitoringServer::MonitorQuery::MonitorQuery(
-      MonitoringServer::MonitorQuery::Query query)
+    MonitoringServer::MonitorQuery::MonitorQuery(Query query)
       : query(query)
     {}
 
@@ -63,7 +63,7 @@ namespace infinit
     MonitoringServer::MonitorQuery::serialize(
       elle::serialization::Serializer& s)
     {
-      std::string temp = s.out() ? query_str(this->query) : "";
+      auto temp = s.out() ? query_str(this->query) : "";
       s.serialize("query", temp);
       this->query = query_val(temp);
     }
@@ -90,22 +90,22 @@ namespace infinit
     MonitoringServer::MonitorResponse::MonitorResponse(
       elle::json::Object response)
       : success(boost::any_cast<bool>(response["success"]))
-      , error(boost::none)
-      , result(boost::none)
     {
       if (response.count("error"))
         this->error = boost::any_cast<std::string>(response["error"]);
       response.erase("success");
       response.erase("error");
-      if (response.size())
+      if (!response.empty())
         this->result = std::move(response);
     }
 
     elle::json::Object
     MonitoringServer::MonitorResponse::as_object() const
     {
-      elle::json::Object res;
-      res["success"] = this->success;
+      auto res = elle::json::Object
+        {
+          {"success", this->success},
+        };
       if (this->error)
         res["error"] = this->error.get();
       if (this->result)
@@ -120,7 +120,7 @@ namespace infinit
       stream << "MonitorResponse(" << (this->success ? "success" : "fail");
       if (this->error)
         stream << ", error: " << this->error.get();
-      stream << ")";
+      stream << ')';
     }
 
     /*-------------.
@@ -131,16 +131,16 @@ namespace infinit
       std::unique_ptr<elle::reactor::network::Server> server,
       doughnut::Doughnut& owner)
       : _server(std::move(server))
-      , _accepter()
       , _owner(owner)
     {
-      ELLE_ASSERT_NEQ(this->_server, nullptr);
+      ELLE_ASSERT(this->_server);
       ELLE_DEBUG("listening on: %s", *this->_server);
-      this->_accepter.reset(
-        new elle::reactor::Thread(*elle::reactor::Scheduler::scheduler(),
-                            "accepter",
-                            std::bind(&MonitoringServer::_accept,
-                                      std::ref(*this))));
+      this->_accepter
+        = std::make_unique<elle::reactor::Thread>("accepter",
+                                                  [this]
+                                                  {
+                                                    this->_accept();
+                                                  });
     }
 
     MonitoringServer::~MonitoringServer()
@@ -160,11 +160,11 @@ namespace infinit
       {
         while (true)
         {
-          std::shared_ptr<elle::reactor::network::Socket> socket{
-            this->_server->accept().release()};
+          auto socket =
+            std::shared_ptr<elle::reactor::network::Socket>{
+              this->_server->accept().release()};
           ELLE_DEBUG("accept connection from %s", *socket);
-          scope.run_background(
-            elle::sprintf("request %s", *socket),
+          scope.run_background(elle::sprintf("request %s", *socket),
             [this, socket]
             {
               try
@@ -201,12 +201,13 @@ namespace infinit
           {
             auto command =
               elle::serialization::json::deserialize<
-                MonitoringServer::MonitorQuery>(*socket, false);
+                MonitorQuery>(*socket, false);
             ELLE_TRACE("%s: got command: %s", this, query_str(command.query));
-            using Query = MonitoringServer::MonitorQuery::Query;
-            std::unique_ptr<MonitoringServer::MonitorResponse> response;
-            switch (command.query)
+            using Query = MonitorQuery::Query;
+            auto const response = [&]
             {
+              switch (command.query)
+              {
               case Query::Stats:
               {
                 auto res = elle::json::Object{
@@ -216,14 +217,14 @@ namespace infinit
                   {"protocol", elle::sprintf("%s", this->_owner.protocol())},
                   {"redundancy", this->_owner.consensus()->redundancy()},
                 };
-                response.reset(new MonitoringServer::MonitorResponse(
-                  true, {}, res));
-                break;
+                return std::make_unique<MonitorResponse>(true, boost::none, res);
               }
               case Query::Status:
-                response.reset(new MonitoringServer::MonitorResponse(true));
-                break;
-            }
+                return std::make_unique<MonitorResponse>(true);
+              default:
+                return std::unique_ptr<MonitorResponse>{nullptr};
+              }
+            }();
             if (response)
               elle::json::write(*socket, response->as_object());
           }
@@ -233,8 +234,7 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            MonitoringServer::MonitorResponse response(
-              false, std::string(e.what()));
+            auto response = MonitorResponse(false, std::string(e.what()));
             elle::json::write(*socket, response.as_object());
           }
         }

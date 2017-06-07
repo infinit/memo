@@ -1,0 +1,10 @@
+network: push: Usage: _build/macosx64/bin/infinit-network --push --name NETWORK network: push: Usage: infinit network push [OPTIONS]
+										Push a network to the Hub
+Push a network to the Hub:
+										Options:
+Push options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network to push					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: akim)
+										  -n, --name arg	    name of the network to push
+

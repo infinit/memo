@@ -1,0 +1,13 @@
+acl: list: Usage: _build/macosx64/bin/infinit-acl --list --path PATHS [OPTIONS. acl: list: Usage: infinit acl list [OPTIONS]
+										List ACLs
+List current ACL:
+										Options:
+List options:									  -h, --help		    show this help message
+  -p [ --path ] arg	 Paths							      --compatibility-version arg  compatibility version to force
+  -R [ --recursive ]	 List recursively					  -s, --script		    suppress extraneous human friendly messages and use
+  --verbose		 Verbose output						  -a, --as arg		    user to run commands as (default: akim)
+										      --path arg	    file whose acl to list
+Hidden options:									  -R, --recursive	    list acl recursively
+  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	  -v, --verbose		    use verbose output
+			 not suppported						      --fallback-xattrs	    use fallback special file if extended attributes ar
+

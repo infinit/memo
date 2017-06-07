@@ -13,6 +13,27 @@ install = None
 tests = None
 package = None
 
+gcs_login = '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif' \
+            '@developer.gserviceaccount.com'
+gcs_key = '''-----BEGIN PRIVATE KEY-----
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxx=
+-----END PRIVATE KEY-----
+'''
+sendwithus_api_key = 'live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
@@ -25,20 +46,18 @@ def configure(
     sendwithus,
     PatchAndInstall,
     prefix = drake.Path('/usr'),
-    dropbox_app_key = None,
-    dropbox_app_secret = None,
-    google_app_key = None,
-    google_app_secret = None,
-    gcs_app_key = None,
-    gcs_app_secret = None,
-    gcs_login = None,
-    gcs_key = None,
+    dropbox_app_key = 'xxxxxxxxxxxxxxx',
+    dropbox_app_secret = 'xxxxxxxxxxxxxxx',
+    google_app_key = '798530033299-jiqlihdquc70r08ucthm3o1omp594ihm',
+    google_app_secret = 'xxxxxxxxxxxxxxxxxxxxxxxx',
+    gcs_app_key = '798530033299-phph23et2sptd7auhsif2d75hcqel4lg',
+    gcs_app_secret = 'xxxxxxxxxxxxxxxxxxxxxxxx',
     description_regex = '^.{0,2048}$',
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
     delegate_user = 'hub',
-    sendwithus_api_key = None,
-    backend = []
+    backend = [],
+    minidump_stackwalk = None,
 ):
 
   global build, install, package, rule_check, tests
@@ -229,6 +248,11 @@ def configure(
   debian_nodes = chain(
     debian_nodes,
     drake.copy(
+      [minidump_stackwalk] if minidump_stackwalk else [],
+      'debian/bin',
+      strip_prefix = True
+    ),
+    drake.copy(
       drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
     ),
@@ -303,7 +327,7 @@ def configure(
       'PYTHONPATH': str(path),
     }
     import os
-    if len(binaries):
+    if binaries:
       env['PATH'] = ':'.join([
         str(drake.path_build(binaries[0].path(True).dirname(),
                              absolute = True)),
@@ -389,8 +413,8 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(install_nodes(docker_path, how = drake.copy,
-                                 python_version = drake.Version(3, 5)), '/usr/')
-  binaries = drake.copy(binaries, docker_path / 'bin/couille',
+                                python_version = drake.Version(3, 5)), '/usr/')
+  binaries = drake.copy(binaries, docker_path / 'bin/stage',
                         strip_prefix = 'bin',
                         follow_symlinks = False)
   docker_file.add(binaries, '/usr/')

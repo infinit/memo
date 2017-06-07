@@ -1,11 +1,11 @@
-drive: invite: Usage: infinit-drive drive invite [OPTIONS]
+drive: invite: Usage: infinit drive invite [OPTIONS]
 Invite a user to join the drive
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: akim)
   -n, --name arg            name of the drive to invite
   -u, --user arg            user to invite drive for
   -e, --email arg           user email

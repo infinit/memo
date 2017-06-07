@@ -1,4 +1,4 @@
-Usage: infinit-block block [MODE|--help]
+Usage: infinit block [MODE|--help]
 Infinit block management utility.
 
 Modes:
