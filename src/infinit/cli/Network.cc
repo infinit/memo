@@ -926,12 +926,10 @@ namespace infinit
         elle::reactor::Thread::unique_ptr grpc_thread;
         if (grpc)
         {
-          auto const eps = model::Endpoints{*grpc};
-          auto const ep = *eps.begin();
           int grpc_port = -1;
           grpc_thread.reset(new elle::reactor::Thread("grpc",
-            [dht=dht.get(), ep, &grpc_port] {
-              infinit::grpc::serve_grpc(*dht, boost::none, ep, &grpc_port);
+            [dht=dht.get(), grpc, &grpc_port] {
+              infinit::grpc::serve_grpc(*dht, boost::none, *grpc, &grpc_port);
           }));
           if (grpc_port_file)
           {

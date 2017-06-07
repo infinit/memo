@@ -17,7 +17,7 @@ namespace infinit
     void
     serve_grpc(infinit::model::Model& dht,
                boost::optional<elle::reactor::filesystem::FileSystem&> fs,
-               model::Endpoint ep,
+               std::string const& ep,
                int* effective_port = nullptr);
     std::unique_ptr<::grpc::Service>
     filesystem_service(elle::reactor::filesystem::FileSystem& fs);

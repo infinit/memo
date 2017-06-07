@@ -20,22 +20,22 @@ namespace infinit
   {
     void serve_grpc(infinit::model::Model& dht,
                     boost::optional<elle::reactor::filesystem::FileSystem&> fs,
-                    model::Endpoint ep,
+                    std::string const& ep,
                     int* effective_port)
     {
-      ELLE_TRACE("serving grpc on %s", ep);
       std::unique_ptr< ::grpc::Service> fs_service;
       if (fs)
         fs_service = filesystem_service(*fs);
       auto ds = doughnut_service(dht);
       ::grpc::ServerBuilder builder;
-      auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
-      builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials(),
+      builder.AddListeningPort(ep, ::grpc::InsecureServerCredentials(),
         effective_port);
       builder.RegisterService(ds.get());
       if (fs_service)
         builder.RegisterService(fs_service.get());
       auto server = builder.BuildAndStart();
+       ELLE_TRACE("serving grpc on %s (effective %s)", ep,
+         effective_port ? *effective_port : 0);
       elle::reactor::sleep();
     }
   }

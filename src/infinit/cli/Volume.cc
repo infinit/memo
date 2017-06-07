@@ -1104,9 +1104,8 @@ namespace infinit
                              );
         if (grpc)
         {
-          auto const ep = *model::Endpoints(*grpc).begin();
-          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), ep] {
-              infinit::grpc::serve_grpc(dht, *fs, ep);
+          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), grpc] {
+              infinit::grpc::serve_grpc(dht, *fs, *grpc);
           });
         }
 #if INFINIT_ENABLE_PROMETHEUS
