@@ -25,8 +25,17 @@
 
 ELLE_LOG_COMPONENT("test");
 
-#ifdef INFINIT_WINDOWS
+#if defined INFINIT_WINDOWS
 # undef stat
+# define IF_WINDOWS(Then, Else) (Then)
+#else
+# define IF_WINDOWS(Then, Else) (Else)
+#endif
+
+#if defined INFINIT_MACOSX
+# define IF_MACOS(Then, Else) (Then)
+#else
+# define IF_MACOS(Then, Else) (Else)
 #endif
 
 namespace ifs = infinit::filesystem;
@@ -93,7 +102,8 @@ class Beyond: public elle::reactor::network::HttpServer
 public:
   Beyond()
   {
-    register_route("/networks/bob/network/endpoints", elle::reactor::http::Method::GET,
+    register_route("/networks/bob/network/endpoints",
+                   elle::reactor::http::Method::GET,
       [&] (Headers const&, Cookies const&, Parameters const&, elle::Buffer const&)
       {
         auto res = elle::serialization::json::serialize(_endpoints, false).string();
@@ -122,7 +132,7 @@ public:
 
   void push(infinit::model::doughnut::Doughnut& d)
   {
-    Endpoints eps {
+    auto eps = Endpoints{
       {
         boost::asio::ip::address::from_string("127.0.0.1"),
         d.local()->server_endpoint().port(),
@@ -172,12 +182,7 @@ run_nodes(bfs::path const& where,
   config.k = groups;
   config.encrypt = true;
   config.accept_plain = false;
-  int factor =
-#ifdef INFINIT_WINDOWS
-    5;
-#else
-    1;
-#endif
+  int factor = IF_WINDOWS(5, 1);
   config.contact_timeout_ms = factor * valgrind(2000,20);
   config.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
   config.ping_timeout_ms = factor * valgrind(500, 20);
@@ -687,8 +692,11 @@ ELLE_TEST_SCHEDULED(times)
   auto& fs = fsp.first;
   struct stat st;
   // We only have second resolution, so test in batches to avoid too
-  // much sleeping.
-  auto const delta = valgrind(1, 5);
+  // much sleeping.  The native filesystem on macOS itself has
+  // one-second resolution, so make it two seconds (we did observe 2s
+  // instead of 1s when the machine is loaded).
+  auto const delta = IF_MACOS(2, valgrind(1, 5));
+  ELLE_DEBUG("resolution is delta = %s", delta);
   fs->path("/dir")->mkdir(0600);
   fs->path("/dir2")->mkdir(0600);
   writefile(*fs, "dir/file", "foo");
