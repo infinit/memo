@@ -369,7 +369,7 @@ def configure(
   installed_symbols = []
   debian_debug_dir = 'debian-debug'
   debian_syms_dir = \
-    drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
+    drake.path_build('%s/opt/memp/lib/memo/debug' % debian_debug_dir)
   installed_libraries = set()
   # CLI
   memo_cli_sources = drake.nodes(
@@ -601,6 +601,7 @@ def configure(
                                          'el6', 'x86_64',
                                          drake.path_build('redhat'),
                                          redhat_nodes).package
+  print(redhat_package)
   redhat_rule << redhat_package
 
   redhat_repo_version = '0.1'
@@ -648,15 +649,15 @@ def configure(
   docker_file.run('apt-get update && apt-get install -y python3')
   docker_file.add(install_nodes(docker_path), '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-static.sh'),
+    drake.copy(drake.node('share/memo/docker/memo-static.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-service-runner.py'),
+    drake.copy(drake.node('share/memo/docker/memo-service-runner.py'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-context.sh'),
+    drake.copy(drake.node('share/memo/docker/memo-context.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   drake.docker.DockerBuilder(docker_image, docker_file)
@@ -674,15 +675,15 @@ def configure(
     })
   docker_file.add(install_nodes(docker_path), '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-static.sh'),
+    drake.copy(drake.node('share/memo/docker/memo-static.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-service-runner.py'),
+    drake.copy(drake.node('share/memo/docker/memo-service-runner.py'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-context.sh'),
+    drake.copy(drake.node('share/memo/docker/memo-context.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
@@ -701,7 +702,7 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(
-    drake.copy(drake.node('share/memo/docker/infinit-deploy/entry.sh'),
+    drake.copy(drake.node('share/memo/docker/memo-deploy/entry.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip && pip install awscli && apk --purge -v del py-pip && rm -rf /var/cache/apk/*')
