@@ -108,6 +108,8 @@ namespace infinit
                      PaxosClient::State const& version);
           Paxos::PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
+          void
+          _resign() override;
 
         private:
           PaxosClient::Peers
@@ -125,7 +127,7 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
-                     std::unique_ptr<storage::Storage> storage) override;
+                     std::unique_ptr<silo::Silo> storage) override;
 
           using AcceptedOrError
             = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
@@ -278,6 +280,8 @@ namespace infinit
               int chosen;
               PaxosServer paxos;
             };
+            bool
+            rebalance(PaxosClient& client, Address address);
           protected:
             std::unique_ptr<blocks::Block>
             _fetch(Address address,
@@ -310,11 +314,18 @@ namespace infinit
             _disappeared_evict(Address id);
           private:
             void
+            _propagate(PaxosServer& paxos, Address a, PaxosServer::Quorum q);
+            void
             _rebalance();
             ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
                            rebalancable);
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
+            /// Emitted when a block becomes under-replicated and cannot be
+            /// rebalanced. For tests purpose, not emitted in every single case
+            /// yet.
+            ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address, int)>,
+                             under_replicated);
             ELLE_ATTRIBUTE(elle::reactor::Thread, rebalance_thread);
             struct BlockRepartition
             {
@@ -385,9 +396,7 @@ namespace infinit
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 
-          typedef
-            std::unordered_map<Address, int>
-            Transfers;
+          using Transfers = std::unordered_map<Address, int>;
           ELLE_ATTRIBUTE(Transfers, transfers);
 
         /*-----.

@@ -1,12 +1,14 @@
 import drake
 import drake.cxx
 import drake.debian
+import os
 
 lib_dynamic = None
 lib_static = None
 library = None
 
 dump_syms_exe = None
+minidump_stackwalk_exe = None
 rule_tools = None
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
@@ -20,10 +22,12 @@ class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
                binary,
-               output_file):
+               output_file,
+               cxx_toolkit):
     self.__dump_syms_tool = dump_syms_tool
     self.__binary = binary
     self.__output_file = output_file
+    self.__cxx_toolkit = cxx_toolkit
     super().__init__(
       [self.__dump_syms_tool, self.__binary],
       [self.__output_file],
@@ -39,9 +43,17 @@ class SymbolsGenerator(drake.Builder):
 
   def execute(self):
     out = self.__output_file
+    if self.__cxx_toolkit.os is drake.os.macos:
+      self.cmd('Generating debug symbols for %s' % self.__binary,
+               ['dsymutil', self.binary_path],
+               throw = True)
+      args = ['-g', self.binary_path + '.dSYM']
+    else:
+      args = []
     self.cmd('Generating symbols file for %s' % self.__binary,
-             [self.dump_syms_cmd, self.binary_path],
+             [self.dump_syms_cmd] + args + [self.binary_path],
              redirect_stdout = out,
+             cut_stderr = True,
              throw = True)
     return True
 
@@ -65,14 +77,12 @@ class SymbolsPackager(drake.debian.Packager):
       name = line.split(' ')[4].strip()
       res = '%s/opt/infinit/lib/debug/symbols/%s/%s' % (self.path, name, uid)
       # Make directories if they don't exist.
-      import os
       os.makedirs(res, exist_ok = True)
     assert res is not None
     return res
 
   def execute(self):
     # Clean existing symbols
-    import os
     import shutil
     dest = '%s/opt' % self.path
     if os.path.exists(dest):
@@ -87,6 +97,7 @@ def configure(cxx_toolkit = None,
   global lib_dynamic, lib_static, library
   global dump_syms_exe, rule_tools
 
+  # //tools: build the auxiliary tools.
   rule_tools = drake.Rule('tools')
 
   ## -------- ##
@@ -95,17 +106,18 @@ def configure(cxx_toolkit = None,
 
   local_cxx_config = drake.cxx.Config(cxx_config)
   local_cxx_config.add_local_include_path('breakpad/src')
-  breakpad_sources = [
+  sources = [
     'client/minidump_file_writer.cc',
-    'minidump_file_writer.h',
+    'common/convert_UTF.h',
     'common/md5.cc',
     'common/md5.h',
     'common/string_conversion.cc',
     'common/string_conversion.h',
+    'minidump_file_writer.h',
   ]
   breakpad_configure_args = []
   if cxx_toolkit.os is drake.os.linux:
-    breakpad_sources += [
+    sources += [
       'client/linux/crash_generation/crash_generation_client.cc',
       'client/linux/crash_generation/crash_generation_client.h',
       'client/linux/dump_writer_common/thread_info.cc',
@@ -140,20 +152,18 @@ def configure(cxx_toolkit = None,
       'common/linux/safe_readlink.h',
     ]
     breakpad_sources = \
-      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, breakpad_sources)))
+      drake.nodes(*['breakpad/src/%s' % f for f in sources])
     # File is not in repo unless you use Google's tools.
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',
     )
-    import os
     breakpad_include = (drake.Path(os.getcwd()) / drake.path_source('src')).canonize()
     breakpad_configure_args += [
-      'CFLAGS=-I%s' % breakpad_include,
-      'CXXFLAGS=-I%s' % breakpad_include,
+      'CPPFLAGS=-I%s' % breakpad_include,
     ]
     dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
   elif cxx_toolkit.os is drake.os.macos:
-    breakpad_sources += [
+    sources += [
       'client/mac/crash_generation/crash_generation_client.cc',
       'client/mac/crash_generation/crash_generation_client.h',
       'client/mac/handler/breakpad_nlist_64.cc',
@@ -166,12 +176,12 @@ def configure(cxx_toolkit = None,
       'client/mac/handler/minidump_generator.h',
       'client/mac/handler/protected_memory_allocator.cc',
       'client/mac/handler/protected_memory_allocator.h',
+      'common/mac/MachIPC.h',
+      'common/mac/MachIPC.mm',
       'common/mac/bootstrap_compat.cc',
       'common/mac/bootstrap_compat.h',
       'common/mac/file_id.cc',
       'common/mac/file_id.h',
-      'common/mac/MachIPC.mm',
-      'common/mac/MachIPC.h',
       'common/mac/macho_id.cc',
       'common/mac/macho_id.h',
       'common/mac/macho_utilities.cc',
@@ -184,7 +194,7 @@ def configure(cxx_toolkit = None,
     local_cxx_config.framework_add('CoreFoundation')
     local_cxx_config.framework_add('CoreServices')
     breakpad_sources = \
-      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, breakpad_sources)))
+      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, sources)))
     # Fix build with GCC.
     if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.gcc:
       local_cxx_config.flag('-include')
@@ -192,6 +202,12 @@ def configure(cxx_toolkit = None,
 
     # The dump_syms tool is built with Xcode on Mac. Rather do it manually.
     dump_syms_sources = [
+      'common/dwarf/bytereader.cc',
+      'common/dwarf/bytereader.h',
+      'common/dwarf/dwarf2diehandler.cc',
+      'common/dwarf/dwarf2diehandler.h',
+      'common/dwarf/dwarf2reader.cc',
+      'common/dwarf/dwarf2reader.h',
       'common/dwarf_cfi_to_module.cc',
       'common/dwarf_cfi_to_module.h',
       'common/dwarf_cu_to_module.cc',
@@ -200,20 +216,6 @@ def configure(cxx_toolkit = None,
       'common/dwarf_line_to_module.h',
       'common/language.cc',
       'common/language.h',
-      'common/md5.cc',
-      'common/md5.h',
-      'common/module.cc',
-      'common/module.h',
-      'common/stabs_reader.cc',
-      'common/stabs_reader.h',
-      'common/stabs_to_module.cc',
-      'common/stabs_to_module.h',
-      'common/dwarf/bytereader.cc',
-      'common/dwarf/bytereader.h',
-      'common/dwarf/dwarf2diehandler.cc',
-      'common/dwarf/dwarf2diehandler.h',
-      'common/dwarf/dwarf2reader.cc',
-      'common/dwarf/dwarf2reader.h',
       'common/mac/arch_utilities.cc',
       'common/mac/arch_utilities.h',
       'common/mac/dump_syms.cc',
@@ -228,12 +230,20 @@ def configure(cxx_toolkit = None,
       'common/mac/macho_utilities.h',
       'common/mac/macho_walker.cc',
       'common/mac/macho_walker.h',
+      'common/md5.cc',
+      'common/md5.h',
+      'common/module.cc',
+      'common/module.h',
+      'common/stabs_reader.cc',
+      'common/stabs_reader.h',
+      'common/stabs_to_module.cc',
+      'common/stabs_to_module.h',
       'tools/mac/dump_syms/dump_syms_tool.cc',
     ]
     dump_syms_sources = \
       drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, dump_syms_sources)))
     dump_syms_cxx_config = drake.cxx.Config(cxx_config)
-    dump_syms_cxx_config.flag('-DHAVE_MACH_O_NLIST_H')
+    dump_syms_cxx_config.define('HAVE_MACH_O_NLIST_H')
     dump_syms_cxx_config.framework_add('CoreFoundation')
     dump_syms_cxx_config.add_local_include_path('breakpad/src')
     dump_syms_exe = drake.cxx.Executable(
@@ -243,10 +253,10 @@ def configure(cxx_toolkit = None,
       dump_syms_cxx_config,
     )
 
-  # Use our own UTF conversion file which adds guards for C++.
   breakpad_sources += drake.nodes(
+    # The default *.c extension makes Drake use a C compiler, which
+    # does not like -std=c++14.
     'src/common/convert_UTF.cc',
-    'src/common/convert_UTF.h',
   )
 
   breakpad_configure = drake.node('breakpad/configure')
@@ -255,8 +265,10 @@ def configure(cxx_toolkit = None,
     'CC=%s' % cxx_toolkit.c,
     'CXX=%s' % cxx_toolkit.cxx,
   ]
+  global minidump_stackwalk_exe
+  minidump_stackwalk_exe = drake.cxx.Executable('breakpad/bin/minidump_stackwalk')
   breakpad_targets = [
-    drake.cxx.Executable('breakpad/bin/minidump_stackwalk'),
+    minidump_stackwalk_exe,
     drake.cxx.Executable('breakpad/bin/minidump_dump'),
     drake.cxx.Executable('breakpad/bin/microdump_stackwalk'),
   ]
@@ -303,3 +315,7 @@ def configure(cxx_toolkit = None,
     library = lib_static
   else:
     library = lib_dynamic
+
+# Local Variables:
+# mode: python
+# End:

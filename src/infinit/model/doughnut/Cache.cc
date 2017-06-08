@@ -137,7 +137,7 @@ namespace infinit
         Cache::make_local(
           boost::optional<int> port,
           boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<storage::Storage> storage)
+          std::unique_ptr<silo::Silo> storage)
         {
           return this->_backend->make_local(
             std::move(port), std::move(listen_address), std::move(storage));
@@ -225,11 +225,11 @@ namespace infinit
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
             elle::err("invalid block");
           }
-          static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+          static bool decode = !elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", false);
           if (decode)
             try
             {
-              static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
+              static elle::Bench bench("bench.cache.preempt_decode", std::chrono::seconds(10000));
               elle::Bench::BenchScope bs(bench);
               b.data();
             }
@@ -252,9 +252,9 @@ namespace infinit
                             bool cache_only)
         {
           cache_hit = false;
-          static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
-          static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
-          static elle::Bench bench("bench.cache._fetch", 10000_sec);
+          static elle::Bench bench_hit("bench.cache.ram.hit", std::chrono::seconds(1000));
+          static elle::Bench bench_disk_hit("bench.cache.disk.hit", std::chrono::seconds(1000));
+          static elle::Bench bench("bench.cache._fetch", std::chrono::seconds(10000));
           elle::Bench::BenchScope bs(bench);
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
@@ -308,7 +308,7 @@ namespace infinit
             auto it = this->_pending.find(address);
             if (it != this->_pending.end())
             {
-              static elle::Bench bench("bench.cache.pending_wait", 10000_sec);
+              static elle::Bench bench("bench.cache.pending_wait", std::chrono::seconds(10000));
               elle::Bench::BenchScope bs(bench);
               ELLE_TRACE("%s: fetch on %f pending", this, address);
               auto b = it->second;
@@ -363,13 +363,13 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          static elle::Bench bench("bench.cache.store", 10000_sec);
+          static elle::Bench bench("bench.cache.store", std::chrono::seconds(10000));
           elle::Bench::BenchScope bs(bench);
           ELLE_TRACE_SCOPE("%s: store %f", this, block->address());
           auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
           std::unique_ptr<blocks::Block> cloned;
           {
-            static elle::Bench bench("bench.cache.store.clone", 10000_sec);
+            static elle::Bench bench("bench.cache.store.clone", std::chrono::seconds(10000));
             elle::Bench::BenchScope bs(bench);
             // Block was necessarily validated on its way up, or generated
             // locally.
@@ -378,7 +378,7 @@ namespace infinit
             cloned = block->clone();
           }
           {
-            static elle::Bench bench("bench.cache.store.store", 10000_sec);
+            static elle::Bench bench("bench.cache.store.store", std::chrono::seconds(10000));
             elle::Bench::BenchScope bs(bench);
             this->_backend->store(
               std::move(block), mode,
@@ -466,7 +466,7 @@ namespace infinit
           while (true)
           {
             {
-              static elle::Bench bench("bench.cache.cleanup", 10000_sec);
+              static elle::Bench bench("bench.cache.cleanup", std::chrono::seconds(10000));
               elle::Bench::BenchScope bs(bench);
               auto const now = consensus::now();
               ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
@@ -504,8 +504,8 @@ namespace infinit
                     break;
                   }
                 }
-                static const int batch_size = std::stoi(
-                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", "20"));
+                static const int batch_size =
+                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", 20);
                 for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
                 {
                   std::vector<Model::AddressVersion> batch;

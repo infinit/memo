@@ -1,4 +1,4 @@
-Usage: infinit-volume volume [MODE|--help]
+Usage: infinit volume [MODE|--help]
 Infinit volume management utility.
 
 Modes:
@@ -16,6 +16,7 @@ Modes:
   status     Get volume status
   stop       Stop a volume
   update     Update a volume with default run options
+  syscall    Syscalls
 
 Options:
   -h, --help                show this help message

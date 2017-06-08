@@ -1,12 +1,12 @@
-user: delete: Usage: infinit-user user delete [OPTIONS]
+user: delete: Usage: infinit user delete [OPTIONS]
 Delete local user
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
-  -n, --name arg            name of the user to delete (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
+  -n, --name arg            name of the user to delete (default: john-doe)
       --pull                pull user from the Hub
       --purge               purge objects owned by the user
   -f, --force               do not ask for user confirmation

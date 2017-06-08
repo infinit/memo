@@ -1,14 +1,12 @@
-user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]    |user: export: Usage: _build/macosx64/bin/infinit-user user export [OPTIONS]
-									       |Export local user
-Export a user so that it may be imported elsewhere:			       |
-									       |Options:
-Export options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	 User to export (default: system user)		       |      --compatibility-version arg  compatibility version to force
-  --full		 Include private key (do not use this unless you       |  -s, --script		    suppress extraneous human friendly messages and use
-			 understand the implications)			       |JSON output
-  -o [ --output ] arg	 File to write the user to			       |  -a, --as arg		    user to run commands as (default: akim)
-			 (default: stdout)				       |  -n, --name arg	    name of the user to export (default: akim)
-									       |      --full		    include private key (do not use unless you
-									       |understand the implications
-									       |  -o, --output arg	    file to write the user to
-									       |
+user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]	user: export: Usage: infinit user export [OPTIONS]
+										Export local user
+Export a user so that it may be imported elsewhere:
+										Options:
+Export options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 User to export (default: system user)			      --compatibility-version arg  compatibility version to force
+  --full		 Include private key (do not use this unless you	  -s, --script		    suppress extraneous human friendly messages and use
+			 understand the implications)				  -a, --as arg		    user to run commands as (default: john-doe)
+  -o [ --output ] arg	 File to write the user to				  -n, --name arg	    name of the user to export (default: john-doe)
+			 (default: stdout)					      --full		    include private key (do not use unless you understa
+										  -o, --output arg	    file to write the user to (default: null)
+

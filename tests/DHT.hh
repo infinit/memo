@@ -9,7 +9,7 @@
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/storage/Memory.hh>
+#include <infinit/silo/Memory.hh>
 
 namespace dht = infinit::model::doughnut;
 namespace blocks = infinit::model::blocks;
@@ -54,6 +54,12 @@ public:
   }
 
   ~Overlay()
+  {
+    this->disconnect_all();
+  }
+
+  void
+  _cleanup() override
   {
     this->disconnect_all();
   }
@@ -178,7 +184,7 @@ protected:
           {
             if (count == 0)
               return;
-            if (peer->local())
+            if (peer->local() && peer->storing())
             {
               yield(peer->local());
               --count;
@@ -224,7 +230,6 @@ ELLE_DAS_SYMBOL(id);
 ELLE_DAS_SYMBOL(node_timeout);
 ELLE_DAS_SYMBOL(storage);
 ELLE_DAS_SYMBOL(make_overlay);
-ELLE_DAS_SYMBOL(make_consensus);
 ELLE_DAS_SYMBOL(version);
 ELLE_DAS_SYMBOL(with_cache);
 ELLE_DAS_SYMBOL(user_name);
@@ -253,10 +258,6 @@ class DHT
 {
   ELLE_LOG_COMPONENT("tests.DHT");
 public:
-  using make_consensus_t
-    = std::function<std::unique_ptr<dht::consensus::Consensus>
-                    (std::unique_ptr<dht::consensus::Consensus>)>;
-
   using make_overlay_t
     = std::function<std::unique_ptr<infinit::overlay::Overlay>
                     (infinit::model::doughnut::Doughnut& d,
@@ -273,34 +274,31 @@ public:
       owner = boost::optional<elle::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
       storage = elle::factory(
-        [] { return std::make_unique<infinit::storage::Memory>(); }),
+        [] { return std::make_unique<infinit::silo::Memory>(); }),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
-      make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
-        -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return c;
-      },
+      dht::consensus_builder = dht::Doughnut::ConsensusBuilder(),
       dht::consensus::rebalance_auto_expand = true,
       dht::consensus::node_timeout = std::chrono::minutes(10),
       with_cache = false,
       user_name = "",
       yielding_overlay = false,
-      protocol = dht::Protocol::all,
+      protocol = dht::Protocol::tcp,
       port = boost::none,
       dht::connect_timeout =
         elle::defaulted(std::chrono::milliseconds(5000)),
       dht::soft_fail_timeout =
         elle::defaulted(std::chrono::milliseconds(20000)),
-      dht::soft_fail_running = elle::defaulted(false)
+      dht::soft_fail_running = elle::defaulted(false),
+      dht::resign_on_shutdown = false
       ).call([this] (bool paxos,
                      elle::cryptography::rsa::KeyPair keys,
                      boost::optional<elle::cryptography::rsa::KeyPair> owner,
                      infinit::model::Address id,
-                     std::unique_ptr<infinit::storage::Storage> storage,
+                     std::unique_ptr<infinit::silo::Silo> storage,
                      boost::optional<elle::Version> version,
                      make_overlay_t make_overlay,
-                     make_consensus_t make_consensus,
+                     dht::Doughnut::ConsensusBuilder consensus_builder,
                      bool rebalance_auto_expand,
                      std::chrono::system_clock::duration node_timeout,
                      bool with_cache,
@@ -310,7 +308,8 @@ public:
                      boost::optional<int> port,
                      elle::Defaulted<std::chrono::milliseconds> connect_timeout,
                      elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
-                     elle::Defaulted<bool> soft_fail_running)
+                     elle::Defaulted<bool> soft_fail_running,
+                     bool resign_on_shutdown)
              {
                this->init(paxos,
                           keys,
@@ -318,7 +317,7 @@ public:
                           id,
                           std::move(storage),
                           version,
-                          std::move(make_consensus),
+                          std::move(consensus_builder),
                           std::move(make_overlay),
                           rebalance_auto_expand,
                           node_timeout,
@@ -329,8 +328,8 @@ public:
                           port,
                           connect_timeout,
                           soft_fail_timeout,
-                          soft_fail_running
-                 );
+                          soft_fail_running,
+                          resign_on_shutdown);
               }, std::forward<Args>(args)...);
   }
 
@@ -368,9 +367,9 @@ private:
        elle::cryptography::rsa::KeyPair keys_,
        elle::cryptography::rsa::KeyPair owner,
        infinit::model::Address id,
-       std::unique_ptr<infinit::storage::Storage> storage,
+       std::unique_ptr<infinit::silo::Silo> storage,
        boost::optional<elle::Version> version,
-       make_consensus_t make_consensus,
+       dht::Doughnut::ConsensusBuilder consensus_builder,
        make_overlay_t make_overlay,
        bool rebalance_auto_expand,
        std::chrono::system_clock::duration node_timeout,
@@ -381,30 +380,36 @@ private:
        boost::optional<int> port,
        elle::Defaulted<std::chrono::milliseconds> connect_timeout,
        elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
-       elle::Defaulted<bool> soft_fail_running
-    )
+       elle::Defaulted<bool> soft_fail_running,
+       bool resign_on_shutdown)
   {
     auto keys =
       std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_));
     auto consensus = [&]() -> dht::Doughnut::ConsensusBuilder
       {
-        if (paxos)
+        if (consensus_builder)
+          return [&] (dht::Doughnut& dht)
+          {
+            return add_cache(with_cache, consensus_builder(dht));
+          };
+        else if (paxos)
           return
             [&] (dht::Doughnut& dht)
             {
-              return add_cache(with_cache, make_consensus(
+              return add_cache(
+                with_cache,
                 std::make_unique<dht::consensus::Paxos>(
                   dht::consensus::doughnut = dht,
                   dht::consensus::replication_factor = 3,
                   dht::consensus::rebalance_auto_expand = rebalance_auto_expand,
-                  dht::consensus::node_timeout = node_timeout)));
+                  dht::consensus::node_timeout = node_timeout));
             };
         else
           return
             [&] (dht::Doughnut& dht)
             {
-              return add_cache(with_cache, make_consensus(
-                std::make_unique<dht::consensus::Consensus>(dht)));
+              return add_cache(
+                with_cache, std::make_unique<dht::consensus::Consensus>(dht));
             };
       }();
     auto passport = dht::Passport(keys->K(), "network-name", owner);
@@ -424,14 +429,15 @@ private:
         dht::owner = owner.public_key(),
         dht::passport = passport,
         dht::consensus_builder = consensus,
-        dht::overlay_builder = infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
+        dht::overlay_builder = overlay_builder,
         dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
         dht::protocol = p,
         dht::connect_timeout = connect_timeout,
         dht::soft_fail_timeout = soft_fail_timeout,
-        dht::soft_fail_running = soft_fail_running);
+        dht::soft_fail_running = soft_fail_running,
+        dht::resign_on_shutdown = resign_on_shutdown);
     else
       this->dht = std::make_shared<dht::Doughnut>(
         dht::name = user_name,
@@ -440,14 +446,15 @@ private:
         dht::owner = owner.public_key(),
         dht::passport = passport,
         dht::consensus_builder = consensus,
-        dht::overlay_builder = infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
+        dht::overlay_builder = overlay_builder,
         dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
         dht::protocol = p,
         dht::connect_timeout = connect_timeout,
         dht::soft_fail_timeout = soft_fail_timeout,
-        dht::soft_fail_running = soft_fail_running);
+        dht::soft_fail_running = soft_fail_running,
+        dht::resign_on_shutdown = resign_on_shutdown);
   }
 };
 
@@ -465,7 +472,7 @@ protected:
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
-             std::unique_ptr<infinit::storage::Storage> storage) override
+             std::unique_ptr<infinit::silo::Silo> storage) override
   {
     return _backend->make_local(port, listen, std::move(storage));
   }
@@ -520,10 +527,20 @@ protected:
   std::unique_ptr<Super> _backend;
 };
 
-std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
-no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+dht::Doughnut::ConsensusBuilder
+no_cheat_consensus(bool paxos = true)
 {
-  return std::make_unique<NoCheatConsensus>(std::move(c));
+  return [paxos] (dht::Doughnut& dht)
+  {
+    std::unique_ptr<dht::consensus::Consensus> c;
+    if (paxos)
+      c = std::make_unique<dht::consensus::Paxos>(
+        dht::consensus::doughnut = dht,
+        dht::consensus::replication_factor = 3);
+    else
+      c = std::make_unique<dht::consensus::Consensus>(dht);
+    return std::make_unique<NoCheatConsensus>(std::move(c));
+  };
 }
 
 /// The Kelips node in this client.

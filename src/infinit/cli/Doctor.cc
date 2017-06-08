@@ -30,16 +30,16 @@
 #include <elle/reactor/http/exceptions.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/storage/Dropbox.hh>
-#include <infinit/storage/Filesystem.hh>
-#include <infinit/storage/GCS.hh>
-#include <infinit/storage/GoogleDrive.hh>
-#include <infinit/storage/Strip.hh>
+#include <infinit/silo/Dropbox.hh>
+#include <infinit/silo/Filesystem.hh>
+#include <infinit/silo/GCS.hh>
+#include <infinit/silo/GoogleDrive.hh>
+#include <infinit/silo/Strip.hh>
 #include <elle/cryptography/random.hh>
 #ifndef INFINIT_WINDOWS
-# include <infinit/storage/sftp.hh>
+# include <infinit/silo/sftp.hh>
 #endif
-#include <infinit/storage/S3.hh>
+#include <infinit/silo/S3.hh>
 
 ELLE_LOG_COMPONENT("cli.doctor");
 

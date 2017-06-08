@@ -1,13 +1,11 @@
-Usage: infinit-acl acl [MODE|--help]
+Usage: infinit acl [MODE|--help]
 Infinit acl management utility.
 
 Modes:
-  get-xattr  Get an extended attribute value
   group      Edit groups
   list       List ACLs
   register   Register user's passport to the network
   set        Set ACLs
-  set-xattr  Set an extended attribute value
 
 Options:
   -h, --help                show this help message

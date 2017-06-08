@@ -1,0 +1,10 @@
+storage: import: Usage: _build/macosx64/bin/infinit-storage --import --name STO storage: import: Usage: infinit silo import [OPTIONS]
+										Import local silo
+Import storage information:
+										Options:
+Import options:									  -h, --help		    show this help message
+  -i [ --input ] arg	 File to read the storage from (default: stdin)		      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -i, --input arg	    file to read silo from (default: null)
+

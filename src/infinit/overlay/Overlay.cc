@@ -12,6 +12,40 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
+namespace
+{
+#if INFINIT_ENABLE_PROMETHEUS
+
+#define MAKE_GAUGE_BUILDER(gauge_name, gauge_desc)                          \
+  infinit::prometheus::GaugePtr                                             \
+  make_##gauge_name##_gauge(infinit::model::doughnut::Doughnut const& dht)  \
+  {                                                                         \
+    static auto* family                                                     \
+      = infinit::prometheus::instance().make_gauge_family(                  \
+          "infinit_"  #gauge_name,                                          \
+          gauge_desc);                                                      \
+    return infinit::prometheus::instance()                                  \
+      .make(family, {{"id", elle::sprintf("%f", dht.id())}});               \
+  }
+
+  /// A set of gauges to track the number of reachable blocks.
+  MAKE_GAUGE_BUILDER(reachable_blocks,
+    "How many blocks are reachable by this peer")
+  MAKE_GAUGE_BUILDER(reachable_mutable_blocks,
+    "How many mutable blocks are reachable by this peer")
+  MAKE_GAUGE_BUILDER(reachable_immutable_blocks,
+    "How many immutable blocks are reachable by this peer")
+  MAKE_GAUGE_BUILDER(underreplicated_immutable_blocks,
+    "How many immutable blocks are underreplicated")
+  MAKE_GAUGE_BUILDER(overreplicated_immutable_blocks,
+    "How many immutable blocks are overreplicated")
+  MAKE_GAUGE_BUILDER(underreplicated_mutable_blocks,
+    "How many mutable blocks are underreplicated")
+  MAKE_GAUGE_BUILDER(under_quorum_mutable_blocks,
+    "How many mutable blocks are not accessible (under quorum)")
+#endif
+}
+
 namespace infinit
 {
   namespace overlay
@@ -25,8 +59,26 @@ namespace infinit
       : _doughnut(dht)
       , _local(local)
       , _storing(true)
+      , _reachable_max_update_period(10_sec)
+      , _reachable_blocks_thread(new elle::reactor::Thread("reachable", [&] {
+        this->_reachable_blocks_loop();
+      }))
+      , _reachable_blocks{0,0,0,0,0,0,0}
     {
 #if INFINIT_ENABLE_PROMETHEUS
+      this->_reachable_blocks_gauge = make_reachable_blocks_gauge(*dht);
+      this->_reachable_mutable_blocks_gauge
+        = make_reachable_mutable_blocks_gauge(*dht);
+      this->_reachable_immutable_blocks_gauge
+        = make_reachable_immutable_blocks_gauge(*dht);
+      this->_underreplicated_immutable_blocks_gauge
+        = make_underreplicated_immutable_blocks_gauge(*dht);
+      this->_overreplicated_immutable_blocks_gauge
+        = make_overreplicated_immutable_blocks_gauge(*dht);
+      this->_underreplicated_mutable_blocks_gauge
+        = make_underreplicated_mutable_blocks_gauge(*dht);
+      this->_under_quorum_mutable_blocks_gauge
+        = make_under_quorum_mutable_blocks_gauge(*dht);
       if (auto* g = _doughnut->member_gauge().get())
       {
         ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
@@ -66,11 +118,31 @@ namespace infinit
     Overlay::cleanup()
     {
       ELLE_TRACE_SCOPE("%s: cleanup", this);
+      this->_reachable_blocks_thread->terminate_now();
       this->_cleanup();
     }
 
     void
     Overlay::_cleanup()
+    {}
+
+    /*-----------.
+    | Properties |
+    `-----------*/
+
+    void
+    Overlay::storing(bool storing)
+    {
+      if (storing != this->storing())
+      {
+        ELLE_TRACE_SCOPE("%f: {?resume:stop} storing", this, storing);
+        this->_storing = storing;
+        this->_store(storing);
+      }
+    }
+
+    void
+    Overlay::_store(bool storing)
     {}
 
     /*------.
@@ -171,6 +243,56 @@ namespace infinit
             for (auto res: this->_lookup(a, n, false))
               yield(std::make_pair(a, res));
         };
+    }
+
+    void
+    Overlay::_update_reachable_blocks()
+    {
+      this->_reachable_blocks_barrier.open();
+    }
+
+    void
+    Overlay::_reachable_blocks_loop()
+    {
+      while (true)
+      {
+        elle::reactor::wait(this->_reachable_blocks_barrier);
+        this->_reachable_blocks_barrier.close();
+        this->_reachable_blocks = this->_compute_reachable_blocks();
+        this->_reachable_blocks_updated.signal();
+#if INFINIT_ENABLE_PROMETHEUS
+        if (this->_reachable_blocks_gauge.get())
+          this->_reachable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.total_blocks);
+        if (this->_reachable_mutable_blocks_gauge.get())
+          this->_reachable_mutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.mutable_blocks);
+        if (this->_reachable_immutable_blocks_gauge.get())
+          this->_reachable_immutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.immutable_blocks);
+        if (this->_underreplicated_immutable_blocks_gauge.get())
+          this->_underreplicated_immutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.underreplicated_immutable_blocks);
+        if (this->_overreplicated_immutable_blocks_gauge.get())
+          this->_overreplicated_immutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.overreplicated_immutable_blocks);
+        if (this->_underreplicated_mutable_blocks_gauge.get())
+          this->_underreplicated_mutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.underreplicated_mutable_blocks);
+        if (this->_under_quorum_mutable_blocks_gauge.get())
+          this->_under_quorum_mutable_blocks_gauge.get()->Set(
+            this->_reachable_blocks.under_quorum_mutable_blocks);
+#endif
+        elle::reactor::sleep(this->_reachable_max_update_period);
+      }
+    }
+
+    Overlay::ReachableBlocks
+    Overlay::_compute_reachable_blocks() const
+    {
+      // We need to provide a default inmplementation in Overlay to avoid
+      // pure virtual method call at destruction time.
+      return ReachableBlocks{0,0,0,0,0,0,0};
     }
 
     Configuration::Configuration(elle::serialization::SerializerIn& input)

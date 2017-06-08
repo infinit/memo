@@ -1,13 +1,13 @@
-network: link: Usage: infinit-network network link [OPTIONS]
+network: link: Usage: infinit network link [OPTIONS]
 Link this device to a network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the network to link
-  -S, --storage arg         storage to contribute (optional, data striped over multiple) (default: [])
+  -S, --silo arg            silo to contribute (optional, data striped over multiple) (default: [])
   -o, --output arg          file to write the network to (default: null)
       --node-id arg         node ID (default: null)
 

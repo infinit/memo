@@ -279,7 +279,7 @@ namespace infinit
                     reinterpret_cast<void const*>(this));
     }
 
-    ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,
+    ModelConfig::ModelConfig(std::unique_ptr<silo::SiloConfig> storage_,
                              elle::Version version_)
       : storage(std::move(storage_))
       , version(std::move(version_))

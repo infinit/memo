@@ -82,8 +82,7 @@ namespace infinit
       | Printable |
       `----------*/
       public:
-        /// Print pretty representation to \a stream.
-
+        /// Print pretty representation to @a stream.
         void
         print(std::ostream& stream) const override;
       };

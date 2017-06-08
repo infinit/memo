@@ -1,13 +1,12 @@
-volume: fetch: Usage: _build/macosx64/bin/infinit-volume --fetch [OPTIONS...]  |volume: fetch: Usage: _build/macosx64/bin/infinit-volume volume fetch [OPTIONS]
-									       |Fetch a volume from https://beyond.infinit.sh
-Fetch a volume from the Hub:						       |
-									       |Options:
-Fetch options:								       |  -h, --help		    show this help message
-  -n [ --name ] arg	   Volume to fetch (optional)			       |      --compatibility-version arg  compatibility version to force
-  --network arg		   Network to fetch all volumes for (optional)	       |  -s, --script		    suppress extraneous human friendly messages and use
-  --service [=arg(=true)]  Fetch volume from the network, not beyond	       |JSON output
-									       |  -a, --as arg		    user to run commands as (default: akim)
-									       |  -n, --name arg	    name of the volume to fetch
-									       |  -N, --network arg	    network to fetch volume for
-									       |      --service		    fetch volume from the network, not beyond
-									       |
+volume: fetch: Usage: _build/macosx64/bin/infinit-volume --fetch [OPTIONS...]	volume: fetch: Usage: infinit volume fetch [OPTIONS]
+										Fetch a volume from the Hub
+Fetch a volume from the Hub:
+										Options:
+Fetch options:									  -h, --help		    show this help message
+  -n [ --name ] arg	   Volume to fetch (optional)				      --compatibility-version arg  compatibility version to force
+  --network arg		   Network to fetch all volumes for (optional)		  -s, --script		    suppress extraneous human friendly messages and use
+  --service [=arg(=true)]  Fetch volume from the network, not beyond		  -a, --as arg		    user to run commands as (default: john-doe)
+										  -n, --name arg	    name of the volume to fetch (default: null)
+										  -N, --network arg	    network to fetch volume for (default: null)
+										      --service		    fetch volume from the network, not beyond
+

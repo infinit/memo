@@ -1,11 +1,11 @@
-volume: import: Usage: infinit-volume volume import [OPTIONS]
+volume: import: Usage: infinit volume import [OPTIONS]
 Import a volume
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -i, --input arg           file to read volume from (default: null)
   -m, --mountpoint arg      where to mount the filesystem (default: null)
 

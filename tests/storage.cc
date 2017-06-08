@@ -2,24 +2,24 @@
 #include <elle/serialization/json.hh>
 #include <elle/test.hh>
 
-#include <infinit/storage/Collision.hh>
-#include <infinit/storage/Filesystem.hh>
-#include <infinit/storage/Memory.hh>
-#include <infinit/storage/MissingKey.hh>
-#include <infinit/storage/S3.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Collision.hh>
+#include <infinit/silo/Filesystem.hh>
+#include <infinit/silo/Memory.hh>
+#include <infinit/silo/MissingKey.hh>
+#include <infinit/silo/S3.hh>
+#include <infinit/silo/Silo.hh>
 
 ELLE_LOG_COMPONENT("tests.storage");
 
 static
 void
-tests(infinit::storage::Storage& storage)
+tests(infinit::silo::Silo& storage)
 {
-  infinit::storage::Key::Value v1 = {
+  infinit::silo::Key::Value v1 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
   };
-  infinit::storage::Key k1(&v1[0]);
+  infinit::silo::Key k1(&v1[0]);
   char const* data1 = "the grey";
   storage.set(k1, elle::Buffer(data1, strlen(data1)));
   BOOST_CHECK_EQUAL(storage.get(k1), data1);
@@ -27,30 +27,30 @@ tests(infinit::storage::Storage& storage)
   storage.set(k1, elle::Buffer(data2, strlen(data2)), false, true);
   BOOST_CHECK_EQUAL(storage.get(k1), data2);
   BOOST_CHECK_THROW(storage.set(k1, elle::Buffer()),
-                    infinit::storage::Collision);
+                    infinit::silo::Collision);
   BOOST_CHECK_EQUAL(storage.get(k1), data2);
-  infinit::storage::Key::Value v2 = {
+  infinit::silo::Key::Value v2 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2
   };
-  infinit::storage::Key k2(&v2[0]);
-  BOOST_CHECK_THROW(storage.get(k2), infinit::storage::MissingKey);
+  infinit::silo::Key k2(&v2[0]);
+  BOOST_CHECK_THROW(storage.get(k2), infinit::silo::MissingKey);
   BOOST_CHECK_THROW(storage.set(k2, elle::Buffer(), false, true),
-                    infinit::storage::MissingKey);
-  BOOST_CHECK_THROW(storage.erase(k2), infinit::storage::MissingKey);
+                    infinit::silo::MissingKey);
+  BOOST_CHECK_THROW(storage.erase(k2), infinit::silo::MissingKey);
   storage.erase(k1);
-  BOOST_CHECK_THROW(storage.get(k1), infinit::storage::MissingKey);
+  BOOST_CHECK_THROW(storage.get(k1), infinit::silo::MissingKey);
 }
 
 static
 void
-tests_capacity(infinit::storage::Storage& storage, int64_t capacity)
+tests_capacity(infinit::silo::Silo& storage, int64_t capacity)
 {
-  infinit::storage::Key::Value v1 = {
+  infinit::silo::Key::Value v1 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
   };
-  infinit::storage::Key k1(&v1[0]);
+  infinit::silo::Key k1(&v1[0]);
   BOOST_CHECK_EQUAL(storage.capacity(), capacity);
   BOOST_CHECK_EQUAL(storage.usage(), 0);
 
@@ -82,7 +82,7 @@ static
 void
 memory()
 {
-  infinit::storage::Memory storage;
+  infinit::silo::Memory storage;
   tests(storage);
 }
 
@@ -92,7 +92,7 @@ void
 filesystem()
 {
   elle::filesystem::TemporaryDirectory d;
-  infinit::storage::Filesystem storage(d.path());
+  infinit::silo::Filesystem storage(d.path());
   tests(storage);
 }
 
@@ -103,7 +103,7 @@ filesystem_small_capacity()
   ELLE_TRACE("starting filesystem_small_capacity");
   elle::filesystem::TemporaryDirectory d;
   int64_t size = 2 << 16;
-  infinit::storage::Filesystem storage(d.path(), size);
+  infinit::silo::Filesystem storage(d.path(), size);
   tests_capacity(storage, size);
 }
 
@@ -114,7 +114,7 @@ filesystem_large_capacity()
   ELLE_TRACE("starting filesystem_large_capacity");
   elle::filesystem::TemporaryDirectory d;
   int64_t size = 2 << 18;
-  infinit::storage::Filesystem storage(d.path(), size);
+  infinit::silo::Filesystem storage(d.path(), size);
   tests_capacity(storage, size);
 }
 
@@ -130,7 +130,7 @@ s3_storage_class_backward(bool reduced)
   std::stringstream ss(reduced ? zero_five_four_s3_storage_reduced
                                : zero_five_four_s3_storage_default);
   using elle::serialization::json::deserialize;
-  auto config = deserialize<infinit::storage::S3StorageConfig>(ss, false);
+  auto config = deserialize<infinit::silo::S3SiloConfig>(ss, false);
   BOOST_CHECK_EQUAL(
     static_cast<int>(config.storage_class),
     static_cast<int>(reduced ? elle::service::aws::S3::StorageClass::ReducedRedundancy

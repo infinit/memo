@@ -232,7 +232,7 @@ namespace infinit
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
-      catch (infinit::storage::InsufficientSpace const& e)
+      catch (infinit::silo::InsufficientSpace const& e)
       {
         ELLE_TRACE("store_or_die: %s", e.what());
         THROW_ENOSPC();
@@ -706,7 +706,8 @@ namespace infinit
         return std::shared_ptr<rfs::Path>(new Symlink(*this, address, d, name));
       case EntryType::file:
         {
-          static elle::Bench bench_hit("bench.filesystem.filecache.hit", 1000_sec);
+          static auto bench =
+            elle::Bench("bench.filesystem.filecache.hit", std::chrono::seconds(1000));
           ELLE_DEBUG("fetching %f from file cache", address);
           auto fit = _file_cache.find(address);
           boost::optional<int> version;
@@ -737,7 +738,7 @@ namespace infinit
           }
           fit = _file_cache.find(address);
           std::shared_ptr<FileData> fd;
-          bench_hit.add(block ? 0 : 1);
+          bench.add(block ? 0 : 1);
           std::pair<bool, bool> perms;
           if (block)
             perms = get_permissions(*_block_store, *block);
@@ -793,7 +794,8 @@ namespace infinit
     FileSystem::get(bfs::path path, model::Address address)
     {
       ELLE_DEBUG_SCOPE("%s: get directory at %f", this, address);
-      static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);
+      static auto bench =
+         elle::Bench("bench.filesystem.dircache.hit", std::chrono::seconds(1000));
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())
@@ -805,13 +807,13 @@ namespace infinit
         perms = get_permissions(*_block_store, *block);
       if (!block)
       {
-        bench_hit.add(1);
+        bench.add(1);
         ELLE_ASSERT(it != _directory_cache.end());
         _directory_cache.modify(it,
           [](std::shared_ptr<DirectoryData>& d) {d->_last_used = now();});
         return *it;
       }
-      bench_hit.add(0);
+      bench.add(0);
       if (it != _directory_cache.end())
       {
         _directory_cache.modify(it,

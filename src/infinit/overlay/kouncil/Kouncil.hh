@@ -144,9 +144,8 @@ namespace infinit
       | Properties |
       `-----------*/
       protected:
-        using Overlay::storing;
         void
-        storing(bool v) override;
+        _store(bool v) override;
 
       /*-------------.
       | Address book |
@@ -156,7 +155,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All peers we are currently connected to.
         ELLE_ATTRIBUTE_R(Peers, peers);
-        ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
+
       private:
         void
         _broadcast();
@@ -329,6 +328,9 @@ namespace infinit
         elle::json::Object
         stats() const override;
 
+      protected:
+        ReachableBlocks
+        _compute_reachable_blocks() const override;
       public:
         elle::json::Json
         query(std::string const& k,

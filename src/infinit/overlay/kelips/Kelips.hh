@@ -15,7 +15,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/overlay/Overlay.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace std
 {
@@ -224,6 +224,10 @@ namespace infinit
         elle::json::Object
         stats() const override;
 
+      protected:
+        ReachableBlocks
+        _compute_reachable_blocks() const override;
+
       private:
         using Local = infinit::model::doughnut::Local;
         using Overlay = infinit::overlay::Overlay;
@@ -348,7 +352,6 @@ namespace infinit
         elle::reactor::Thread::unique_ptr
           _emitter_thread, _pinger_thread,
           _rereplicator_thread;
-        std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;
         /// Addresses for which we accepted a put.

@@ -1,11 +1,11 @@
-storage: delete: Usage: infinit-storage silo delete [OPTIONS]
+storage: delete: Usage: infinit silo delete [OPTIONS]
 Delete local silo
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the silo to delete
       --clear-content       remove all blocks from disk (filesystem storage only)
       --purge               purge objects owned by the silo

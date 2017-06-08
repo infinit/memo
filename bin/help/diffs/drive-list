@@ -1,0 +1,9 @@
+drive: list: Usage: _build/macosx64/bin/infinit-drive --list [OPTIONS...]	drive: list: Usage: infinit drive list [OPTIONS]
+										List drives
+List drives:
+										Options:
+										  -h, --help		    show this help message
+										      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+

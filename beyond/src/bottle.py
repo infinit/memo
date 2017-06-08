@@ -32,6 +32,7 @@ def str2bool(v):
 ## ------ ##
 
 ADMINS = [
+  'akim.demaille@infinit.sh',
   'antony.mechin@infinit.sh',
   'christopher.crone@infinit.sh',
   'gaetan.rochel@infinit.sh',
@@ -1109,6 +1110,7 @@ class Bottle(bottle.Bottle):
   ## ------------ ##
   ## Crash Report ##
   ## ------------ ##
+
   def crash_report_put(self):
     content_type = bottle.request.headers.get('Content-Type')
     # Old crash reports only contained dump data.
@@ -1117,8 +1119,8 @@ class Bottle(bottle.Bottle):
     elif content_type == 'application/json':
       json = bottle.request.json
       from base64 import b64decode
-      from io import BytesIO
-      self.__beyond.crash_report_send(BytesIO(b64decode(json.get('dump', ''))),
+      dump = b64decode(json.get('dump', ''))
+      self.__beyond.crash_report_send(dump,
                                       json.get('platform', 'Unknown'),
                                       json.get('version', 'Unknown'))
     return {}
@@ -1201,7 +1203,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name == 'google' or name == 'gcs':
+    if name in ['google', 'gcs']:
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)

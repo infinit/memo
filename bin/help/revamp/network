@@ -1,4 +1,4 @@
-Usage: infinit-network network [MODE|--help]
+Usage: infinit network [MODE|--help]
 Infinit network management utility.
 
 Modes:
@@ -12,11 +12,11 @@ Modes:
   list       List networks
   unlink     Unlink this device from a network
   list-services List network registered services
-  list-storage List all storage contributed by this device to a network
+  list-silos List all silos contributed by this device to a network
   pull       Remove a network from the Hub
   push       Push a network to the Hub
   run        Run a network
-  stats      Fetch stats of a network on the Hub
+  stat       Fetch stats of a network on the Hub
   update     Update a network
 
 Options:

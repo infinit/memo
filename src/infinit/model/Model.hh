@@ -15,7 +15,7 @@
 #include <infinit/model/blocks/fwd.hh>
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/serialization.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {
@@ -298,9 +298,9 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<ModelConfig, false>
     {
       static constexpr char const* virtually_serializable_key = "type";
-      std::unique_ptr<infinit::storage::StorageConfig> storage;
+      std::unique_ptr<infinit::silo::SiloConfig> storage;
       elle::Version version;
-      ModelConfig(std::unique_ptr<storage::StorageConfig> storage,
+      ModelConfig(std::unique_ptr<infinit::silo::SiloConfig> storage,
                   elle::Version version);
       ModelConfig(elle::serialization::SerializerIn& s);
       void

@@ -65,7 +65,7 @@ class DeterministicPublicKey
   : public elle::cryptography::rsa::PublicKey
 {
 public:
-  typedef elle::cryptography::rsa::PublicKey Super;
+  using Super = elle::cryptography::rsa::PublicKey;
   using Super::Super;
 
   DeterministicPublicKey(Super const& model)
@@ -104,7 +104,7 @@ class DeterministicPrivateKey
   : public elle::cryptography::rsa::PrivateKey
 {
 public:
-  typedef elle::cryptography::rsa::PrivateKey Super;
+  using Super = elle::cryptography::rsa::PrivateKey;
   using Super::Super;
 
   virtual
@@ -121,7 +121,7 @@ class DeterministicSecretKey
   : public elle::cryptography::SecretKey
 {
 public:
-  typedef elle::cryptography::SecretKey Super;
+  using Super = elle::cryptography::SecretKey;
   using Super::Super;
 
   virtual
@@ -212,7 +212,7 @@ struct TestSet
 struct TestSetConflictResolver
 {
   TestSetConflictResolver(std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
-          boost::optional<elle::Version> v)
+                          boost::optional<elle::Version> v)
   : dht(keys, v)
   , dir(new fs::DirectoryConflictResolver(dht,
       fs::Operation{fs::OperationType::insert, "foo", fs::EntryType::directory, {}},

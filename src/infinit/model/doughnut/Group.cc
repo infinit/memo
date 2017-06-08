@@ -2,6 +2,7 @@
 
 #include <elle/algorithm.hh>
 #include <elle/cast.hh>
+#include <elle/find.hh>
 
 #include <elle/cryptography/hash.hh>
 #include <elle/cryptography/rsa/KeyPair.hh>
@@ -112,38 +113,35 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: create", this->_name);
         infinit::filesystem::umbrella([&] {
-            try
-            {
-              auto block =
-                this->_dht.fetch(UB::hash_address(_name, this->_dht));
-              if (block)
-                elle::err("Group %s already exists", _name);
-            }
-            catch (MissingBlock const&)
-            {}
-            auto block = _dht.make_block<blocks::GroupBlock>();
-            auto gb = elle::cast<GB>::runtime(block);
-            ELLE_TRACE("New group block address: %x, key %s",
-                       gb->address(), gb->owner_key());
-            auto ub = std::make_unique<UB>(&_dht, _name,
-              *gb->owner_key());
-            auto rub = std::make_unique<UB>(&_dht, "@"+_name,
-              *gb->owner_key(), true);
-            auto hub = std::make_unique<UB>(
-              &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
-            // FIXME
-            _dht.insert(std::move(hub),
-                        std::make_unique<UserBlockUpserter>(
-                          elle::sprintf("@%s", this->_name)));
-            _dht.insert(std::move(ub),
-                        std::make_unique<UserBlockUpserter>(
-                          elle::sprintf("@%s", this->_name)));
-            _dht.insert(std::move(rub),
-                        std::make_unique<ReverseUserBlockUpserter>(
-                          elle::sprintf("@%s", this->_name)));
-            _dht.insert(std::move(gb),
-                        std::make_unique<GroupBlockInserter>(
-                          elle::sprintf("@%s", this->_name)));
+          try
+          {
+            auto block =
+              this->_dht.fetch(UB::hash_address(_name, this->_dht));
+            if (block)
+              elle::err("Group %s already exists", _name);
+          }
+          catch (MissingBlock const&)
+          {}
+          auto block = _dht.make_block<blocks::GroupBlock>();
+          auto gb = elle::cast<GB>::runtime(block);
+          ELLE_TRACE("New group block address: %x, key %s",
+                     gb->address(), gb->owner_key());
+          auto ub = std::make_unique<UB>(&_dht, _name,
+            *gb->owner_key());
+          auto rub = std::make_unique<UB>(&_dht, "@"+_name,
+            *gb->owner_key(), true);
+          auto hub = std::make_unique<UB>(
+            &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
+          // FIXME
+          auto const name = elle::sprintf("@%s", this->_name);
+          _dht.insert(std::move(hub),
+                      std::make_unique<UserBlockUpserter>(name));
+          _dht.insert(std::move(ub),
+                      std::make_unique<UserBlockUpserter>(name));
+          _dht.insert(std::move(rub),
+                      std::make_unique<ReverseUserBlockUpserter>(name));
+          _dht.insert(std::move(gb),
+                      std::make_unique<GroupBlockInserter>(name));
         });
       }
 
@@ -156,26 +154,21 @@ namespace infinit
           public_control_key();
           block();
           auto const ctrl = _control_key();
+          auto remove = [this, &ctrl](auto const& name)
+            {
+              auto const addr = UB::hash_address(name, this->_dht);
+              auto const block = _dht.fetch(addr);
+              auto const to_sign =
+                elle::serialization::binary::serialize((blocks::Block*)block.get());
+              auto sig = blocks::RemoveSignature{};
+              sig.signature_key.emplace(ctrl.K());
+              sig.signature.emplace(ctrl.k().sign(to_sign));
+              this->_dht.remove(addr, sig);
+            };
           // UB
-          {
-            auto addr = UB::hash_address(this->_name, this->_dht);
-            auto block = _dht.fetch(addr);
-            auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
-            blocks::RemoveSignature sig;
-            sig.signature_key.emplace(ctrl.K());
-            sig.signature.emplace(ctrl.k().sign(to_sign));
-            this->_dht.remove(addr, sig);
-          }
+          remove(this->_name);
           // RUB
-          {
-            auto addr = UB::hash_address(*this->_public_control_key, this->_dht);
-            auto block = _dht.fetch(addr);
-            auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
-            blocks::RemoveSignature sig;
-            sig.signature_key.emplace(ctrl.K());
-            sig.signature.emplace(ctrl.k().sign(to_sign));
-            this->_dht.remove(addr, sig);
-          }
+          remove(*this->_public_control_key);
           this->_dht.remove(this->_block->address(),
                             this->_block->sign_remove(this->_dht));
         });
@@ -206,19 +199,16 @@ namespace infinit
         auto key = this->public_control_key();
         try
         {
-          static
-          std::unordered_map<elle::cryptography::rsa::PublicKey, Address>
-          address_cache;
-
+          static auto cache =
+            std::unordered_map<elle::cryptography::rsa::PublicKey, Address>{};
           Address addr;
-          auto it = address_cache.find(key);
-          if (it == address_cache.end())
+          if (auto it = elle::find(cache, key))
+            addr = it->second;
+          else
           {
             addr = ACB::hash_address(this->_dht, key, group_block_key);
-            address_cache.insert(std::make_pair(key, addr));
+            cache.emplace(key, addr);
           }
-          else
-            addr = it->second;
           elle::unconst(this)->_block = elle::cast<GB>::runtime(
             this->_dht.fetch(addr));
           return *this->_block;
@@ -285,9 +275,8 @@ namespace infinit
       std::vector<std::unique_ptr<model::User>>
       Group::list_members(bool)
       {
-        auto entries = this->block().list_permissions(_dht);
         auto res = std::vector<std::unique_ptr<model::User>>{};
-        for (auto& ent: entries)
+        for (auto& ent: this->block().list_permissions(_dht))
           res.emplace_back(std::move(ent.user));
         return res;
       }
@@ -312,10 +301,10 @@ namespace infinit
       Group::add_member(elle::Buffer const& userdata)
       {
         infinit::filesystem::umbrella([&] {
-            auto user = _dht.make_user(userdata);
-            if (!user)
+            if (auto user = _dht.make_user(userdata))
+              this->add_member(*user);
+            else
               THROW_NOENT();
-            this->add_member(*user);
         });
       }
 
@@ -333,10 +322,10 @@ namespace infinit
       Group::add_admin(elle::Buffer const& userdata)
       {
         infinit::filesystem::umbrella([&] {
-            auto user = _dht.make_user(userdata);
-            if (!user)
+            if (auto user = _dht.make_user(userdata))
+              add_admin(*user);
+            else
               THROW_NOENT();
-            add_admin(*user);
         });
       }
 
@@ -355,10 +344,10 @@ namespace infinit
       Group::remove_member(elle::Buffer const& userdata)
       {
         infinit::filesystem::umbrella([&] {
-            auto user = _dht.make_user(userdata);
-            if (!user)
+            if (auto user = _dht.make_user(userdata))
+              this->remove_member(*user);
+            else
               THROW_NOENT();
-            this->remove_member(*user);
         });
       }
 
@@ -377,10 +366,10 @@ namespace infinit
       Group::remove_admin(elle::Buffer const& userdata)
       {
         infinit::filesystem::umbrella([&] {
-            auto user = _dht.make_user(userdata);
-            if (!user)
+            if (auto user = _dht.make_user(userdata))
+              this->remove_admin(*user);
+            else
               THROW_NOENT();
-            this->remove_admin(*user);
         });
       }
 

@@ -24,15 +24,16 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/UUID.hh>
+#include <elle/Version.hh>
 #include <elle/algorithm.hh>
 #include <elle/format/base64.hh>
 #include <elle/os/environ.hh>
+#include <elle/random.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 #include <elle/system/Process.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
-#include <elle/Version.hh>
 
 #include <elle/reactor/scheduler.hh>
 
@@ -43,9 +44,9 @@
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/overlay/Stonehenge.hh>
-#include <infinit/storage/Filesystem.hh>
-#include <infinit/storage/Memory.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Filesystem.hh>
+#include <infinit/silo/Memory.hh>
+#include <infinit/silo/Silo.hh>
 #include <infinit/utility.hh>
 
 #include "DHT.hh"
@@ -160,7 +161,7 @@ namespace
       DHT client(owner = this->owner_keys,
                  keys = k,
                  storage = nullptr,
-                 make_consensus = no_cheat_consensus,
+                 dht::consensus_builder = no_cheat_consensus(pax),
                  paxos = pax,
                  std::forward<Args>(args) ...
                  );
@@ -642,11 +643,11 @@ ELLE_TEST_SCHEDULED(create_excl)
 #if 0
 ELLE_TEST_SCHEDULED(multiple_writers)
 {
-  infinit::storage::Memory::Blocks blocks;
+  infinit::silo::Memory::Blocks blocks;
   struct stat st;
   auto servers = DHTs(1, {},
                with_cache = true,
-               storage = std::make_unique<infinit::storage::Memory>(blocks));
+               storage = std::make_unique<infinit::silo::Memory>(blocks));
   auto client = servers.client(false);
   char buffer[1024];
   initialize(buffer);
@@ -890,7 +891,7 @@ void read_all(std::shared_ptr<elle::reactor::filesystem::Path> p)
 
 ELLE_TEST_SCHEDULED(acls)
 {
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus());
   auto client0 = servers.client(false, {}, user_name="user0");
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1");
@@ -1274,32 +1275,29 @@ ELLE_TEST_SCHEDULED(basic)
 
   ELLE_LOG("randomizing a file")
   {
-    std::default_random_engine gen;
-    std::uniform_int_distribution<>dist(0, 255);
     auto const random_size = 10000;
     {
       auto h = fs->path("/tbig")->create(O_CREAT|O_RDWR, 0644);
       for (int i = 0; i < random_size; ++i)
       {
-        unsigned char c = dist(gen);
+        unsigned char c = elle::pick_one(256);
         h->write(elle::ConstWeakBuffer(&c, 1), 1, i);
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
-    std::uniform_int_distribution<>dist2(0, random_size - 1);
+    BOOST_TEST(file_size(fs->path("/tbig")) == random_size);
     for (int i=0; i < 2; ++i)
     {
       auto h = fs->path("/tbig")->open(O_RDWR, 0644);
       for (int i=0; i < 5; ++i)
       {
-        int sv = dist2(gen);
-        unsigned char c = dist(gen);
+        int sv = elle::pick_one(random_size);
+        unsigned char c = elle::pick_one(256);
         h->write(elle::ConstWeakBuffer(&c, 1), 1, sv);
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
+    BOOST_TEST(file_size(fs->path("/tbig")) == random_size);
   }
 
   ELLE_LOG("truncate")
@@ -1378,7 +1376,7 @@ ELLE_TEST_SCHEDULED(basic)
 
 ELLE_TEST_SCHEDULED(upgrade_06_07)
 {
-  infinit::storage::Memory::Blocks blocks;
+  infinit::silo::Memory::Blocks blocks;
   auto owner_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key2 = elle::cryptography::rsa::keypair::generate(512);
@@ -1388,7 +1386,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,6,0),
              id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
@@ -1412,7 +1410,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
       = DHTs(1,
              owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);
@@ -1446,7 +1444,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::storage::Memory>(blocks),
+             storage = std::make_unique<infinit::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);
@@ -1472,7 +1470,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
 
 ELLE_TEST_SCHEDULED(conflicts)
 {
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus(), yielding_overlay = true);
   auto client0 = servers.client(false, {}, user_name="user0", yielding_overlay = true);
   auto& fs0 = client0.fs;
   auto client1 = servers.client(true, {}, user_name="user1", yielding_overlay = true);
@@ -1626,7 +1624,7 @@ ELLE_TEST_SCHEDULED(world_perm_mode)
   auto client1 = servers.client(false, {});
   auto client2 = servers.client(true);
   auto client3 = DHTs::Client("volume", servers.dht(false, {}),
-    ifs::map_other_permissions = false);
+                              ifs::map_other_permissions = false);
   client1.fs->path("/");
   client1.fs->path("/")->chmod(0755);
   write_file(client1.fs->path("/foo"), "bar");
@@ -1751,7 +1749,7 @@ ELLE_TEST_SCHEDULED(block_size)
        return false;
   };
   elle::ConstWeakBuffer cc(content.data(), content.size());
-  auto servers = DHTs(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto servers = DHTs(3, {}, dht::consensus_builder = no_cheat_consensus(), yielding_overlay = true);
   auto client1 = servers.client(false, {}, yielding_overlay = true);
   auto client2 = servers.client(false, {}, yielding_overlay = true);
   BOOST_CHECK(write_file(client1.fs->path("/foo")));
@@ -1795,7 +1793,7 @@ ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
   // There is unfortunately no more specific way.
-  elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
+  elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no");
 #ifndef INFINIT_WINDOWS
   signal(SIGCHLD, SIG_IGN);
 #endif

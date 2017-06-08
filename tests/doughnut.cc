@@ -5,7 +5,9 @@
 
 #include <elle/cast.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
+#include <elle/find.hh>
 #include <elle/log.hh>
+#include <elle/random.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
 #include <elle/Version.hh>
@@ -32,7 +34,7 @@
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/Stonehenge.hh>
-#include <infinit/storage/Memory.hh>
+#include <infinit/silo/Memory.hh>
 
 #include "DHT.hh"
 
@@ -40,7 +42,9 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
 namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
-using namespace infinit::storage;
+using namespace infinit::silo;
+
+using dht::consensus::Paxos;
 
 ELLE_DAS_SYMBOL(keys_a);
 ELLE_DAS_SYMBOL(keys_b);
@@ -95,12 +99,8 @@ public:
         return std::make_unique<infinit::overlay::Stonehenge>(
           peers, std::move(local), &d);
       },
-      make_consensus =
-      [] (std::unique_ptr<dht::consensus::Consensus> c)
-        -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return c;
-      }
+      dht::consensus_builder = dht::Doughnut::ConsensusBuilder(),
+      with_cache = false
       ).call([this] (
         bool paxos,
         elle::cryptography::rsa::KeyPair keys_a,
@@ -109,9 +109,9 @@ public:
         infinit::model::Address id_a,
         infinit::model::Address id_b,
         infinit::model::Address id_c,
-        std::unique_ptr<Storage> storage_a,
-        std::unique_ptr<Storage> storage_b,
-        std::unique_ptr<Storage> storage_c,
+        std::unique_ptr<Silo> storage_a,
+        std::unique_ptr<Silo> storage_b,
+        std::unique_ptr<Silo> storage_c,
         boost::optional<elle::Version> version_a,
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
@@ -124,10 +124,8 @@ public:
             std::shared_ptr<
               infinit::model::doughnut::Local> local,
             infinit::model::doughnut::Doughnut& d)> make_overlay,
-        std::function<
-          std::unique_ptr<dht::consensus::Consensus>(
-            std::unique_ptr<dht::consensus::Consensus>
-            )> make_consensus)
+        dht::Doughnut::ConsensusBuilder consensus_builder,
+        bool cache)
               {
                 this->init(paxos,
                            std::move(keys_a),
@@ -141,7 +139,8 @@ public:
                            std::move(monitoring_socket_path_a),
                            std::move(encrypt_options),
                            std::move(make_overlay),
-                           std::move(make_consensus));
+                           std::move(consensus_builder),
+                           cache);
               }, std::forward<Args>(args)...);
   }
 
@@ -161,9 +160,9 @@ private:
        infinit::model::Address id_a,
        infinit::model::Address id_b,
        infinit::model::Address id_c,
-       std::unique_ptr<Storage> storage_a,
-       std::unique_ptr<Storage> storage_b,
-       std::unique_ptr<Storage> storage_c,
+       std::unique_ptr<Silo> storage_a,
+       std::unique_ptr<Silo> storage_b,
+       std::unique_ptr<Silo> storage_c,
        boost::optional<elle::Version> version_a,
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
@@ -175,27 +174,26 @@ private:
            infinit::model::NodeLocations peers,
            std::shared_ptr<infinit::model::doughnut::Local> local,
            infinit::model::doughnut::Doughnut& d)> make_overlay,
-       std::function<
-         std::unique_ptr<dht::consensus::Consensus>(
-           std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
+       dht::Doughnut::ConsensusBuilder consensus_builder,
+       bool cache)
   {
-    auto const consensus = [&paxos, &make_consensus] () -> dht::Doughnut::ConsensusBuilder
-      {
-        if (paxos)
-          return
-            [&] (dht::Doughnut& dht)
-            {
-              return make_consensus(
-                std::make_unique<dht::consensus::Paxos>(dht, 3));
-            };
-        else
-          return
-            [&] (dht::Doughnut& dht)
-            {
-              return make_consensus(
-                std::make_unique<dht::consensus::Consensus>(dht));
-            };
-      }();
+    if (!consensus_builder)
+      if (paxos)
+        consensus_builder = [&] (dht::Doughnut& dht)
+          {
+            return std::make_unique<dht::consensus::Paxos>(dht, 3);
+          };
+      else
+        consensus_builder = [&] (dht::Doughnut& dht)
+          {
+            return std::make_unique<dht::consensus::Consensus>(dht);
+          };
+    if (cache)
+      consensus_builder = [consensus_builder] (dht::Doughnut& dht)
+        {
+          return std::make_unique<dht::consensus::Cache>(
+            consensus_builder(dht));
+        };
     auto const members = infinit::model::NodeLocations
       {
         {id_a, infinit::model::Endpoints()},
@@ -228,13 +226,12 @@ private:
         this->keys_a,
         this->keys_a->public_key(),
         passport_a,
-        consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(0, members, std::move(local), d);
-          }),
+        consensus_builder,
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(0, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_a),
@@ -256,13 +253,12 @@ private:
         this->keys_b,
         this->keys_a->public_key(),
         passport_b,
-        consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(1, members, std::move(local), d);
-          }),
+        consensus_builder,
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(1, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
@@ -282,13 +278,12 @@ private:
         this->keys_c,
         this->keys_a->public_key(),
         passport_c,
-        consensus,
-        infinit::model::doughnut::Doughnut::OverlayBuilder(
-          [=] (infinit::model::doughnut::Doughnut& d,
-               std::shared_ptr<infinit::model::doughnut::Local> local)
-          {
-            return make_overlay(2, members, std::move(local), d);
-          }),
+        consensus_builder,
+        [=] (infinit::model::doughnut::Doughnut& d,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
+        {
+          return make_overlay(2, members, std::move(local), d);
+        },
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),
@@ -366,6 +361,20 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
     ELLE_LOG("remove block")
       dht.remove(addr);
   }
+}
+
+ELLE_TEST_SCHEDULED(missing_block, (bool, paxos))
+{
+  using namespace infinit::model;
+  DHTs dhts(paxos);
+  ELLE_LOG("fetch immutable block")
+    BOOST_CHECK_THROW(dhts.dht_a->fetch(
+                        Address::random(flags::immutable_block)),
+                      MissingBlock);
+  ELLE_LOG("fetch mutable block")
+    BOOST_CHECK_THROW(dhts.dht_a->fetch(
+                        Address::random(flags::mutable_block)),
+                      MissingBlock);
 }
 
 ELLE_TEST_SCHEDULED(async, (bool, paxos))
@@ -659,7 +668,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 }
 
 void
-noop(Storage*)
+noop(Silo*)
 {}
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
@@ -792,17 +801,10 @@ namespace tests_paxos
 
 ELLE_TEST_SCHEDULED(cache, (bool, paxos))
 {
-  dht::consensus::Cache* cache = nullptr;
-  DHTs dhts(
-    paxos,
-    make_consensus =
-      [&] (std::unique_ptr<dht::consensus::Consensus> c)
-      {
-        auto res = std::make_unique<dht::consensus::Cache>(std::move(c));
-        if (!cache)
-          cache = res.get();
-        return res;
-      });
+  DHTs dhts(paxos, with_cache = true);
+  auto cache =
+    dynamic_cast<dht::consensus::Cache*>(dhts.dht_a->consensus().get());
+  BOOST_REQUIRE(cache);
   // Check a null block is never stored in cache.
   {
     auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
@@ -1022,6 +1024,15 @@ namespace rebalancing
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
       paxos_a.rebalance(b1->address());
+    ELLE_LOG("read block on quorum of 2")
+    {
+      b1 = std::dynamic_pointer_cast<blocks::MutableBlock>(
+        dht_a.dht->fetch(b1->address()));
+      BOOST_TEST(b1->data() == elle::Buffer("extend_and_write 1"));
+      ELLE_ERR("VERSION: {}", b1->version());
+      auto bb = dht_b.dht->fetch(b1->address());
+      BOOST_TEST(bb->data() == elle::Buffer("extend_and_write 1"));
+    }
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("extend_and_write 1 bis"));
@@ -1035,37 +1046,43 @@ namespace rebalancing
   void
   run_extend_shrink_and_write()
   {
-    DHT dht_a(dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::seconds(0));
-    ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b(dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::seconds(0));
-    DHT dht_c(dht::consensus::rebalance_auto_expand = false);
-    ELLE_LOG("third DHT: %s", dht_b.dht->id());
-    dht_b.overlay->connect(*dht_a.overlay);
-    dht_c.overlay->connect(*dht_a.overlay);
+    DHT dht_a(id = special_id(1),
+              dht::consensus::rebalance_auto_expand = true,
+              dht::consensus::node_timeout = std::chrono::seconds(0));
+    DHT dht_b(id = special_id(2),
+              dht::consensus::rebalance_auto_expand = true,
+              dht::consensus::node_timeout = std::chrono::seconds(0));
+    DHT dht_c(id = special_id(3),
+              dht::consensus::rebalance_auto_expand = false);
+    dht_a.overlay->connect(*dht_b.overlay);
+    dht_a.overlay->connect(*dht_c.overlay);
     dht_b.overlay->connect(*dht_c.overlay);
+    auto& paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     auto b1 = dht_a.dht->make_block<BT>();
     ELLE_LOG("write block to quorum of 3")
     {
       b1->data(std::string("extend_and_write 1"));
       dht_a.dht->seal_and_insert(*b1);
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
     }
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
-    dht_c.overlay->disconnect(*dht_a.overlay);
-    dht_c.overlay->disconnect(*dht_b.overlay);
-    auto& paxos_a =
-      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
+    {
+      dht_c.overlay->disconnect(*dht_a.overlay);
+      dht_c.overlay->disconnect(*dht_b.overlay);
       paxos_a.rebalance(b1->address());
-      DHT dht_d(dht::consensus::rebalance_auto_expand = false);
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
-    dht_d.overlay->connect(*dht_a.overlay);
-    dht_d.overlay->connect(*dht_b.overlay);
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
+    }
+    DHT dht_d(id = special_id(4),
+              dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("rebalance block to quorum of 3")
+    {
+      dht_d.overlay->connect(*dht_a.overlay);
+      dht_d.overlay->connect(*dht_b.overlay);
       paxos_a.rebalance(b1->address());
+    }
     ELLE_LOG("write block to quorum of 3")
     {
       b1->data(std::string("extend_and_write 1 bis"));
@@ -1075,24 +1092,16 @@ namespace rebalancing
       }
       catch (infinit::model::Conflict const& c)
       {
-        ELLE_LOG("second write attempt");
-        dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
-          .data(std::string("extend_and_write 1 bis"));
-        try
+        ELLE_LOG("resolve conflict")
         {
-          dht_a.dht->seal_and_update(*c.current());
-        }
-        catch (infinit::model::Conflict const& c)
-        {
-          ELLE_LOG("third write attempt");
           dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
             .data(std::string("extend_and_write 1 bis"));
           dht_a.dht->seal_and_update(*c.current());
         }
       }
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
     }
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
   }
 
   ELLE_TEST_SCHEDULED(extend_shrink_and_write)
@@ -1290,17 +1299,17 @@ namespace rebalancing
       this->_confirm_barrier.open();
     }
 
-    boost::optional<PaxosClient::Accepted>
+    boost::optional<Paxos::PaxosClient::Accepted>
     propose(PaxosServer::Quorum const& peers,
             Address address,
             PaxosClient::Proposal const& p) override
     {
-      this->_proposing(address);
+      this->_proposing(address, p);
       elle::reactor::wait(this->all_barrier());
       if (!this->_propose_bypass)
         elle::reactor::wait(this->propose_barrier());
       auto res = Super::propose(peers, address, p);
-      this->_proposed(address);
+      this->_proposed(address, p);
       return res;
     }
 
@@ -1310,10 +1319,13 @@ namespace rebalancing
            PaxosClient::Proposal const& p,
            Value const& value) override
     {
+      this->_accepting(address, p);
       elle::reactor::wait(this->all_barrier());
       if (!this->_accept_bypass)
         elle::reactor::wait(this->accept_barrier());
-      return Super::accept(peers, address, p, value);
+      auto res = Super::accept(peers, address, p, value);
+      this->_accepted(address, p);
+      return res;
     }
 
     void
@@ -1321,10 +1333,12 @@ namespace rebalancing
             Address address,
             PaxosClient::Proposal const& p) override
     {
+      this->_confirming(address, p);
       elle::reactor::wait(this->all_barrier());
       if (!this->_confirm_bypass)
         elle::reactor::wait(this->confirm_barrier());
       Super::confirm(peers, address, p);
+      this->_confirmed(address, p);
     }
 
     void
@@ -1337,12 +1351,18 @@ namespace rebalancing
     ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, all_barrier);
     ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, propose_barrier);
     ELLE_ATTRIBUTE_RW(bool, propose_bypass);
-    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposing);
-    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposed);
+    using Hook =
+      boost::signals2::signal<void(Address, PaxosClient::Proposal const&)>;
+    ELLE_ATTRIBUTE_RX(Hook, proposing);
+    ELLE_ATTRIBUTE_RX(Hook, proposed);
     ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, accept_barrier);
     ELLE_ATTRIBUTE_RW(bool, accept_bypass);
+    ELLE_ATTRIBUTE_RX(Hook, accepting);
+    ELLE_ATTRIBUTE_RX(Hook, accepted);
     ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, confirm_barrier);
     ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
+    ELLE_ATTRIBUTE_RX(Hook, confirming);
+    ELLE_ATTRIBUTE_RX(Hook, confirmed);
     ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
   };
 
@@ -1358,7 +1378,7 @@ namespace rebalancing
     make_local(
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::storage::Storage> storage) override
+      std::unique_ptr<infinit::silo::Silo> storage) override
     {
       return std::make_unique<Local>(
         *this,
@@ -1373,16 +1393,16 @@ namespace rebalancing
     }
   };
 
-  std::function<std::unique_ptr<dht::consensus::Consensus>(
-    std::unique_ptr<dht::consensus::Consensus>)>
-  instrument(int factor)
+  dht::Doughnut::ConsensusBuilder
+  instrument(int factor, bool rebalance_auto_expand = true)
   {
-    return [factor] (std::unique_ptr<dht::consensus::Consensus> c)
+    return [factor, rebalance_auto_expand] (dht::Doughnut& d)
       -> std::unique_ptr<dht::consensus::Consensus>
     {
       return std::make_unique<InstrumentedPaxos>(
-        dht::consensus::doughnut = c->doughnut(),
-        dht::consensus::replication_factor = factor);
+        dht::consensus::doughnut = d,
+        dht::consensus::replication_factor = factor,
+        dht::consensus::rebalance_auto_expand = rebalance_auto_expand);
     };
   }
 
@@ -1403,10 +1423,10 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_new_block, (bool, immutable))
   {
-    auto dht_a = DHT(make_consensus = instrument(2));
+    auto dht_a = DHT(dht::consensus_builder = instrument(2));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(make_consensus = instrument(2));
+    auto dht_b = DHT(dht::consensus_builder = instrument(2));
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto client = DHT(storage = nullptr);
@@ -1428,10 +1448,10 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_newcomer, (bool, immutable))
   {
-    auto dht_a = DHT(make_consensus = instrument(3));
+    auto dht_a = DHT(dht::consensus_builder = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(make_consensus = instrument(3));
+    auto dht_b = DHT(dht::consensus_builder = instrument(3));
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = make_block(dht_a, immutable, "expand_newcomer");
     ELLE_LOG("write block to first DHT")
@@ -1445,7 +1465,12 @@ namespace rebalancing
       dht_b.overlay->connect(*dht_a.overlay);
     if (!immutable)
     {
-      elle::reactor::wait(local_a.proposing(), b->address());
+      elle::reactor::wait(
+        local_a.proposing(),
+        [&] (Address const& a, Paxos::PaxosClient::Proposal const&)
+        {
+          return a == b->address();
+        });
       BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 1u);
       BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 1u);
       // Insert another block, to check iterator invalidation while balancing.
@@ -1480,14 +1505,14 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_concurrent)
   {
-    auto dht_a = DHT(make_consensus = instrument(3));
+    auto dht_a = DHT(dht::consensus_builder = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(make_consensus = instrument(3));
+    auto dht_b = DHT(dht::consensus_builder = instrument(3));
     auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    auto dht_c = DHT(make_consensus = instrument(3));
+    auto dht_c = DHT(dht::consensus_builder = instrument(3));
     dht_c.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_b.overlay);
     ELLE_LOG("third DHT: %s", dht_b.dht->id());
@@ -1516,13 +1541,13 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_from_disk, (bool, immutable))
   {
-    infinit::storage::Memory::Blocks storage_a;
+    infinit::silo::Memory::Blocks storage_a;
     infinit::model::Address address;
     auto id_a = infinit::model::Address::random();
     ELLE_LOG("create block with 1 DHT")
     {
       auto dht_a = DHT(id = id_a,
-                make_consensus = instrument(3),
+                dht::consensus_builder = instrument(3),
                 storage = std::make_unique<Memory>(storage_a));
       auto block = make_block(dht_a, immutable, "expand_from_disk");
       address = block->address();
@@ -1532,10 +1557,10 @@ namespace rebalancing
     ELLE_LOG("restart with 2 DHTs")
     {
       auto dht_a = DHT(id = id_a,
-                make_consensus = instrument(3),
+                dht::consensus_builder = instrument(3),
                 storage = std::make_unique<Memory>(storage_a));
       auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
-      auto dht_b = DHT(make_consensus = instrument(3));
+      auto dht_b = DHT(dht::consensus_builder = instrument(3));
       dht_b.overlay->connect(*dht_a.overlay);
       elle::reactor::wait(local_a.rebalanced(), address);
     }
@@ -1558,21 +1583,21 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(evict_faulty, (bool, immutable))
   {
-    auto dht_a = DHT(make_consensus = instrument(3));
+    auto dht_a = DHT(dht::consensus_builder = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %f", dht_a.dht->id());
-    auto dht_b = DHT(make_consensus = instrument(3));
+    auto dht_b = DHT(dht::consensus_builder = instrument(3));
     auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %f", dht_b.dht->id());
-    auto dht_c = DHT(make_consensus = instrument(3));
+    auto dht_c = DHT(dht::consensus_builder = instrument(3));
     dht_c.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_b.overlay);
     ELLE_LOG("third DHT: %f", dht_c.dht->id());
     auto b = make_block(dht_a, immutable, "evict_faulty");
     ELLE_LOG("write block")
       dht_a.dht->seal_and_insert(*b);
-    auto dht_d = DHT(make_consensus = instrument(3));
+    auto dht_d = DHT(dht::consensus_builder = instrument(3));
     dht_d.overlay->connect(*dht_a.overlay);
     dht_d.overlay->connect(*dht_b.overlay);
     dht_d.overlay->connect(*dht_c.overlay);
@@ -1600,11 +1625,11 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(evict_removed_blocks, (bool, immutable))
   {
-    auto dht_a = DHT(make_consensus = instrument(3),
+    auto dht_a = DHT(dht::consensus_builder = instrument(3),
                      dht::consensus::rebalance_auto_expand = false);
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %f", dht_a.dht->id());
-    auto dht_b = DHT(make_consensus = instrument(3),
+    auto dht_b = DHT(dht::consensus_builder = instrument(3),
                      dht::consensus::rebalance_auto_expand = false);
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %f", dht_b.dht->id());
@@ -1624,6 +1649,300 @@ namespace rebalancing
       dht_b.overlay->disconnect_all();
       local_a.evict()();
     }
+  }
+
+  auto const make_dht = [] (int n, bool rebalance_auto_expand = false)
+  {
+    return std::make_unique<DHT>(
+      id = special_id(n + 10),
+      dht::consensus_builder = instrument(3, rebalance_auto_expand));
+  };
+
+  auto const make_resign_dht = [] (int n, bool rebalance_auto_expand = true)
+  {
+    return std::make_unique<DHT>(
+      id = special_id(n + 10),
+      dht::consensus_builder = instrument(3),
+      dht::resign_on_shutdown = true,
+      dht::consensus::rebalance_auto_expand = rebalance_auto_expand);
+  };
+
+  ELLE_TEST_SCHEDULED(resign)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto ba = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resignation1"));
+    auto bb = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resignation2"));
+    auto bc = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resignation3"));
+    ELLE_LOG("write blocks");
+    {
+      dht_a->dht->seal_and_insert(*ba);
+      dht_a->dht->seal_and_insert(*bb);
+      dht_a->dht->seal_and_insert(*bc);
+    }
+    ELLE_LOG("disconnect third dht")
+      dht_c.reset();
+    ELLE_LOG("disconnect second dht")
+      dht_b.reset();
+    ELLE_LOG("update blocks")
+    {
+      ba->data(std::string("resignation1'"));
+      bb->data(std::string("resignation2'"));
+      bc->data(std::string("resignation3'"));
+      dht_a->dht->seal_and_insert(*ba);
+      dht_a->dht->seal_and_insert(*bb);
+      dht_a->dht->seal_and_insert(*bc);
+    }
+  }
+
+  // If there was a conflict in quorum expansion, both nodes would consider that
+  // the other rebalanced to the correct quorum and none would propagate the
+  // block. Both should.
+  ELLE_TEST_SCHEDULED(conflict)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("conflict"));
+    ELLE_LOG("write block");
+      dht_a->dht->seal_and_insert(*block);
+    auto dht_d = make_resign_dht(3);
+    dht_d->overlay->connect(*dht_a->overlay);
+    dht_d->overlay->connect(*dht_b->overlay);
+    dht_d->overlay->connect(*dht_c->overlay);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    // Ensure we have a conflict when pickin the quorum.
+    elle::reactor::Barrier b_proposal;
+    elle::reactor::Barrier a_acceptance;
+    elle::reactor::Barrier confirmation_a;
+    elle::reactor::Barrier confirmation_b;
+    for (auto l: {&local_a, &local_b})
+      l->proposing().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          if (p.sender == dht_b->dht->id())
+          {
+            ELLE_LOG("block B proposal");
+            elle::reactor::wait(b_proposal);
+          }
+        });
+    local_b.accepting().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          if (p.sender == dht_a->dht->id())
+          {
+            ELLE_LOG("block A acceptance on B");
+            elle::reactor::wait(a_acceptance);
+          }
+        });
+    auto a_stuck = elle::reactor::waiter(
+      local_a.accepted(),
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      { return p.sender == dht_a->dht->id(); });
+    ELLE_LOG("disconnect C")
+      dht_c.reset();
+    ELLE_LOG("wait until A has accepted on A")
+      elle::reactor::wait(a_stuck);
+    ELLE_LOG("release B")
+      b_proposal.open();
+    auto wait_a =
+      elle::reactor::waiter(local_b.rebalanced(), block->address());
+    auto wait_b =
+      elle::reactor::waiter(local_a.rebalanced(), block->address());
+    ELLE_LOG("wait until B has picked the quorum");
+    boost::signals2::connection connection = local_a.confirming().connect(
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (p.sender == dht_b->dht->id())
+        {
+          ELLE_LOG("release A")
+            a_acceptance.open();
+          ELLE_LOG("wait until A has picked the quorum too")
+            elle::reactor::wait(
+              local_a.proposed(),
+              [&] (Address, Paxos::PaxosClient::Proposal const& p)
+              { return p.sender == dht_a->dht->id(); });
+          connection.disconnect();
+          for (auto l: {&local_a, &local_b})
+          {
+            l->proposing().disconnect_all_slots();
+            l->accepting().disconnect_all_slots();
+          }
+        }
+      });
+    elle::reactor::wait(elle::reactor::Waitables{&wait_a, &wait_b});
+  }
+
+  ELLE_TEST_SCHEDULED(conflict_quorum)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("conflict"));
+    ELLE_LOG("write block");
+      dht_a->dht->seal_and_insert(*block);
+    auto dht_d = make_resign_dht(3);
+    dht_d->overlay->connect(*dht_a->overlay);
+    dht_d->overlay->connect(*dht_b->overlay);
+    dht_d->overlay->connect(*dht_c->overlay);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    int count = 0;
+    elle::reactor::Barrier confirm;
+    local_a.confirming().connect(
+      [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (++count == 1)
+          elle::reactor::wait(confirm);
+        else
+          confirm.open();
+      });
+    auto rebalanced =
+      elle::reactor::waiter(local_b.rebalanced(), block->address());
+    ELLE_LOG("disconnect third dht")
+      dht_c.reset();
+    elle::reactor::wait(rebalanced);
+  }
+
+  ELLE_TEST_SCHEDULED(missing_block)
+  {
+    elle::reactor::Barrier confirm;
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("missing"));
+    ELLE_LOG("write block");
+      dht_a->dht->seal_and_insert(*block);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    for (auto l: {&local_a, &local_b})
+      l->confirming().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          elle::reactor::wait(confirm);
+        });
+    auto deleted = elle::reactor::waiter(
+      local_c.confirmed(),
+      [&] (Address a, Paxos::PaxosClient::Proposal const&)
+      { BOOST_TEST(a == block->address()); return true; });
+    elle::reactor::Thread resign(
+      "resign",
+      [&]
+      {
+        ELLE_LOG("resign third dht")
+          dht_c->dht->resign();
+      });
+    elle::reactor::wait(deleted);
+    ELLE_LOG("fetch block")
+    {
+      auto fetched = dht_a->dht->fetch(block->address());
+      BOOST_TEST(fetched->data() == block->data());
+    }
+    confirm.open();
+  }
+
+  ELLE_TEST_SCHEDULED(resign_insist)
+  {
+    auto dht_a = make_resign_dht(0);
+    auto dht_b = make_resign_dht(1);
+    auto dht_c = make_resign_dht(2);
+    dht_b->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("resign_insist"));
+    ELLE_LOG("write block")
+      dht_a->dht->seal_and_insert(*block);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto& local_b = dynamic_cast<Local&>(*dht_b->dht->local());
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    int count = 0;
+    for (auto l: {&local_a, &local_b})
+      l->proposing().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          if (++count <= 16)
+            throw elle::athena::paxos::Unavailable();
+        });
+    auto rebalanced =
+      elle::reactor::waiter(local_c.rebalanced(), block->address());
+    dht_c.reset();
+    BOOST_TEST(count > 16);
+    elle::reactor::wait(rebalanced);
+  }
+
+  // Perform a full rotation, transferring a block to a quorum with none of the
+  // original owners. New owner used to not replicate immutable blocks. The
+  // expand version evicts a node and then introduce a new one, to check the
+  // block is expanded. The !expand version introduce a new node, then evicts
+  // one to check the block is rebalanced right away.
+  ELLE_TEST_SCHEDULED(evict_chain, (bool, expand))
+  {
+    std::vector<std::unique_ptr<DHT>> dhts;
+    auto const make = [&] (int i)
+      {
+        auto dht = make_dht(i, expand);
+        for (auto const& d: dhts)
+          dht->overlay->connect(*d->overlay);
+        auto const id = dht->dht->id();
+        dhts.emplace_back(std::move(dht));
+        return id;
+      };
+    make(0);
+    make(1);
+    make(2);
+    auto block = dhts[0]->dht->make_block<blocks::ImmutableBlock>(
+      std::string("resign_chain"));
+    ELLE_LOG("write block")
+      dhts[0]->dht->seal_and_insert(*block);
+    BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+    for (auto i = 3; i < 32; ++i)
+      ELLE_LOG("rotate to a new DHT")
+      {
+        decltype(make(i)) inserted;
+        if (!expand)
+          inserted = make(i);
+        auto erased = [&]
+          {
+            auto it = *std::begin(elle::pick_n(1, dhts));
+            auto id = (*it)->dht->id();
+            dhts.erase(it);
+            return id;
+          }();
+        auto& local = dynamic_cast<Local&>(*dhts[0]->dht->local());
+        auto not_rebalanced =
+          elle::reactor::waiter(local.under_replicated(), block->address(), 2);
+        local.evict()();
+        if (expand)
+        {
+          elle::reactor::wait(not_rebalanced);
+          inserted = make(i);
+        }
+        if (erased != inserted)
+          elle::reactor::wait(local.rebalanced(), block->address());
+        BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
+      }
   }
 }
 
@@ -1733,7 +2052,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   b3 = client.dht->make_block<blocks::ACLBlock>();
   b3->data(std::string("baz"));
   BOOST_CHECK_NO_THROW(client.dht->seal_and_insert(*b3));
-
   // check admin can actually read the block
   auto cadm = DHT(storage = nullptr, keys=admin, owner=owner_key);
   cadm.dht->admin_keys().r.push_back(admin.K());
@@ -1744,7 +2062,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto b0a = cadm.dht->fetch(b0->address());
   no_cheating(cadm.dht.get(), b0a);
   BOOST_CHECK_THROW(b0a->data(), std::exception);
-
   // do some stuff with blocks owned by admin
   auto ba = cadm.dht->make_block<blocks::ACLBlock>();
   ba->data(std::string("foo"));
@@ -1763,7 +2080,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto ba4 = cadm.dht->fetch(ba->address());
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
-
   // try to change admin user's permissions
   auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
   b_perm->data(std::string("admin user data"));
@@ -1775,7 +2091,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
     b_perm->set_permissions(
       *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
     false, false), elle::Error);
-
   // check group admin key
   auto gadmin = elle::cryptography::rsa::keypair::generate(512);
   auto cadmg = DHT(storage = nullptr, keys=gadmin, owner=owner_key);
@@ -1792,13 +2107,11 @@ ELLE_TEST_SCHEDULED(admin_keys)
     g_K.reset(
       new elle::cryptography::rsa::PublicKey(g.public_control_key()));
   }
-
   auto bg = client.dht->make_block<blocks::ACLBlock>();
   bg->data(std::string("baz"));
   client.dht->seal_and_insert(*bg);
   auto bg2 = cadmg.dht->fetch(bg->address());
   BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
-
   // try to change admin group's permissions
   auto bg_perm = cadmg.dht->fetch(bg->address());
   // no_cheating(cadmg.dht.get(), bg_perm);
@@ -1807,7 +2120,6 @@ ELLE_TEST_SCHEDULED(admin_keys)
       *cadmg.dht->make_user(elle::serialization::json::serialize(g_K)),
     false, false), elle::Error);
 }
-
 
 ELLE_TEST_SCHEDULED(disabled_crypto)
 {
@@ -1846,6 +2158,7 @@ ELLE_TEST_SUITE()
   }
   TEST(CHB);
   TEST(OKB);
+  TEST(missing_block);
   TEST(async);
   TEST(ACB);
   TEST(NB);
@@ -1918,6 +2231,27 @@ ELLE_TEST_SUITE()
       auto evict_removed_blocks_OKB = [] () { evict_removed_blocks(false); };
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_CHB), 0, valgrind(3));
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_OKB), 0, valgrind(3));
+    }
+    rebalancing->add(BOOST_TEST_CASE(resign), 0, valgrind(3));
+    {
+      auto conflict = &rebalancing::conflict;
+      rebalancing->add(BOOST_TEST_CASE(conflict), 0, valgrind(3));
+      auto conflict_quorum = &rebalancing::conflict_quorum;
+      rebalancing->add(BOOST_TEST_CASE(conflict_quorum), 0, valgrind(3));
+      auto missing_block = &rebalancing::missing_block;
+      rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
+      auto resign_insist = &rebalancing::resign_insist;
+      rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
+    }
+    {
+      auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
+      rebalancing->add(evict_chain);
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, true), "expand"),
+        0, valgrind(5));
+      evict_chain->add(
+        ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, false), "rebalance"),
+        0, valgrind(5));
     }
   }
 }

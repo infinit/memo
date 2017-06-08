@@ -1,7 +1,8 @@
 import base64
+import os
 import requests
 import subprocess
-import os
+import sys
 
 import infinit.beyond.version
 
@@ -10,15 +11,51 @@ from infinit.beyond import validation, emailer
 from copy import deepcopy
 from itertools import chain
 
-
 exe_ext = os.environ.get('EXE_EXT', '')
 host_os = os.environ.get('OS', '')
+
+def log(fmt, *args):
+  print('beyond:', fmt.format(*args), file=sys.stderr)
+
+
+## ------------ ##
+## Crash report ##
+## ------------ ##
+
+# Where the symbol files are.
+symbols_path = '/opt/infinit/lib/debug/symbols/'
+
+def symbolize_dump(in_, out = None):
+  '''Read this minidump file and save its content,
+  symbolized if possible.  It is safe to use in_ == out.'''
+  import subprocess
+  if not out:
+    out = in_
+  try:
+    with open(out + '.tmp', 'wb') as o:
+      p = subprocess.run(['minidump_stackwalk', in_, symbols_path], stdout=o)
+      if p.returncode:
+        log("symbolize: error: {}", p.stderr)
+      else:
+        log("symbolize: success")
+        os.rename(out + '.tmp', out)
+        return
+  except Exception as e:
+    log("symbolize: fatal: {}", e)
+
+  # Worst case: return the input file.
+  try:
+    os.rename(in_, out)
+  except Exception as e:
+    log("symbolizer: cannot rename dump file: {}", e)
+
 
 ## -------- ##
 ## Binaries ##
 ## -------- ##
 
-os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
+# Don't generate crash reports on our Beyond server.
+os.environ['INFINIT_CRASH_REPORTER'] = '0'
 
 def find_binaries():
   for path in chain(
@@ -31,14 +68,18 @@ def find_binaries():
     if not path.endswith('/'):
       path += '/'
     try:
-      subprocess.check_call([path + 'infinit-user' + exe_ext, '--version'])
+      args = [path + 'infinit' + exe_ext, '--version']
+      subprocess.check_call(args)
+      log('find_binaries: {} works', args)
       return path
     except FileNotFoundError:
-      pass
-    except subprocess.CalledProcessError:
-      pass
+      log('find_binaries: {} does not exist', args)
+    except subprocess.CalledProcessError as e:
+      log('find_binaries: {} failed: {}', args, e)
+  log('find_binaries: could not find `infinit`')
   return None
 
+# Our bindir, with a trailing slash, or None if we can't find `infinit`.
 binary_path = find_binaries()
 
 # Email templates.
@@ -345,6 +386,8 @@ class Beyond:
   def process_invitations(self, user, email, drives):
     if binary_path is None:
       raise NotImplementedError()
+    # The infinit executable (possibly infinit.exe).
+    infinit_path = binary_path + 'infinit' + exe_ext
     errors = []
     try:
       try:
@@ -360,8 +403,7 @@ class Beyond:
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
-                  '--import', '-s']
+          args = [infinit_path, type, 'import', '-s']
           try:
             subprocess.check_output(
               args,
@@ -382,7 +424,7 @@ class Beyond:
             import_data('network', network.json())
             output = subprocess.check_output(
               [
-                binary_path + 'infinit-passport' + exe_ext, '--create',
+                infinit_path, 'passport', 'create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
@@ -401,10 +443,10 @@ class Beyond:
             errors.append(str(e))
     except BaseException as e:
       errors.append(str(e))
-    if len(errors) > 0:
+    if errors:
       self.__emailer.send_one(
-        recipient_email = 'developers+passport_generation@infinit.sh',
-        recipient_name = 'Developers',
+        recipient_email = 'crash+passport_generation@infinit.sh',
+        recipient_name = 'Crash',
         variables = {
           'user': user.name,
           'email': email,
@@ -425,14 +467,16 @@ class Beyond:
     }
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
-      with open('%s/client.dmp' % temp_dir, 'wb') as crash_dump:
-        crash_dump.write(data.getvalue())
-      with open('%s/client.dmp' % temp_dir, 'rb') as crash_dump:
+      tfile = '%s/client.dmp' % temp_dir
+      with open(tfile, 'wb') as f:
+        f.write(data)
+      symbolize_dump(tfile)
+      with open(tfile, 'rb') as dump:
         self.__emailer.send_one(
-          recipient_email = 'developers@infinit.io',
-          recipient_name = 'Developers',
+          recipient_email = 'crash@infinit.sh',
+          recipient_name = 'Crash',
           variables = variables,
-          files = [crash_dump],
+          files = [dump],
           **self.template('Internal/Crash Report')
         )
 

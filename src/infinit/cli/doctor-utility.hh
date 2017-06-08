@@ -344,9 +344,9 @@ namespace
       `-------------*/
       SilosResult() = default;
       SilosResult(std::string const& name,
-                            bool sane,
-                            std::string const& type,
-                            BasicResult::Reason const& reason = {})
+                  bool sane,
+                  std::string const& type,
+                  BasicResult::Reason const& reason = {})
         : Super(name, sane, reason)
         , type(type)
       {}
@@ -2116,7 +2116,7 @@ namespace
       }
     }();
 
-    using namespace infinit::storage;
+    using namespace infinit::silo;
     auto networks = parse(ifnt.networks_get(owner));
 
     ELLE_TRACE("verify silos")
@@ -2129,7 +2129,7 @@ namespace
         auto& status = elem.second.second;
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
         INFINIT_ENTREPRISE(
-        if (auto s3config = dynamic_cast<S3StorageConfig const*>(
+        if (auto s3config = dynamic_cast<S3SiloConfig const*>(
               silo.get()))
         {
           status = any_of(aws_credentials,
@@ -2145,7 +2145,7 @@ namespace
         })
 #undef COMPARE
         if (auto fsconfig
-            = dynamic_cast<FilesystemStorageConfig const*>(silo.get()))
+            = dynamic_cast<FilesystemSiloConfig const*>(silo.get()))
         {
           auto perms = has_permission(fsconfig->path);
           status = perms.first;
@@ -2164,7 +2164,7 @@ namespace
             store(results.silos, silo->name, status, "GCS");
           else
             store(results.silos, silo->name, status, "GCS",
-                  std::string{"credentials are missing"});
+                  std::string("credentials are missing"));
         })
       }
 
@@ -2177,7 +2177,7 @@ namespace
         bool linked = network.model != nullptr;
         if (linked && network.model->storage)
         {
-          if (auto strip = dynamic_cast<StripStorageConfig*>(
+          if (auto strip = dynamic_cast<StripSiloConfig*>(
                 network.model->storage.get()))
             for (auto const& s: strip->storage)
               silos_names.emplace_back(s->name);
@@ -2305,9 +2305,9 @@ namespace
           else if (is_parent_of(ifnt._users_path(), p.path()))
             load<infinit::User>(ifnt, p.path(), "users");
           else if (is_parent_of(ifnt._silos_path(), p.path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "silo");
+            load<std::unique_ptr<infinit::silo::SiloConfig>>(ifnt, p.path(), "silo");
           else if (is_parent_of(deprecated::storages_path(), p.path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
+            load<std::unique_ptr<infinit::silo::SiloConfig>>(ifnt, p.path(), "storage");
           else if (is_parent_of(ifnt._credentials_path(), p.path()))
             load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
           else

@@ -12,7 +12,7 @@
 
 #include <infinit/version.hh>
 
-ELLE_LOG_COMPONENT("infinit1");
+ELLE_LOG_COMPONENT("infinit.utility");
 
 namespace infinit
 {
@@ -93,7 +93,7 @@ namespace infinit
     // FIXME: no static here, tests/kelips.cc changes this environment
     // variable. We should change the test and fix this.
     auto const res = elle::os::getenv("INFINIT_BEYOND", BEYOND_HOST);
-    if (help && res != BEYOND_HOST)
+    if (help && res == BEYOND_HOST)
       return "the Hub";
     else
       return res;
@@ -107,7 +107,7 @@ namespace infinit
   }
 
   bool
-  is_hidden_file(boost::filesystem::path const& path)
+  is_hidden_file(bfs::path const& path)
   {
     return
       path.filename().string().front() == '.'
@@ -115,7 +115,7 @@ namespace infinit
   }
 
   bool
-  is_visible_file(boost::filesystem::directory_entry const& e)
+  is_visible_file(bfs::directory_entry const& e)
   {
     return is_regular_file(e.status()) && !is_hidden_file(e);
   }

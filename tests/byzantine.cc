@@ -1,7 +1,7 @@
 #include <elle/test.hh>
 
-#include <elle/protocol/Serializer.hh>
 #include <elle/protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
 
 #include <infinit/RPC.hh>
 
@@ -12,7 +12,7 @@ ELLE_LOG_COMPONENT("byzantine")
 ELLE_TEST_SCHEDULED(unknown_rpc)
 {
   ELLE_LOG("creating dht");
-  auto dht = DHT{};
+  auto dht = DHT{::id = special_id(1)};
   {
     ELLE_LOG("connecting");
     auto s = dht.connect_tcp();
@@ -24,7 +24,8 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
   }
 
   ELLE_LOG("creating dht_b");
-  auto dht_b = DHT(keys = dht.dht->keys());
+  auto dht_b = DHT{::id = special_id(2),
+                   ::keys = dht.dht->keys()};
   auto peer = dht_b.dht->dock().make_peer(
     infinit::model::NodeLocation(dht.dht->id(),
                                  dht.dht->local()->server_endpoints())).lock();
@@ -37,6 +38,9 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
 
 ELLE_TEST_SUITE()
 {
+  // It takes 10sec _with_ Valgrind on a laptop in Docker, otherwise
+  // less than a second.
+  auto timeout = valgrind(5, 5);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(unknown_rpc));
+  suite.add(BOOST_TEST_CASE(unknown_rpc), 0, timeout);
 }

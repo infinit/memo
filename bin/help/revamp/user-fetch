@@ -1,11 +1,11 @@
-user: fetch: Usage: infinit-user user fetch [OPTIONS]
+user: fetch: Usage: infinit user fetch [OPTIONS]
 Fetch users from the Hub
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
-  -n, --name arg            name of the user to fetch (default: [bob])
+  -a, --as arg              user to run commands as (default: john-doe)
+  -n, --name arg            name of the user to fetch (default: [john-doe])
       --no-avatar           do not to fetch avatars
 

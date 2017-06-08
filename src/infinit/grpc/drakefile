@@ -121,7 +121,6 @@ class GRPCPyGen(GRPCGen):
 def configure(
     cxx_toolkit,
     cxx_config,
-    cxx_lib, # macOS's libc++, or None.
     git = None,
 ):
   global doughnut_proto, doughnut_json, grpc_lib, grpc, sources
@@ -130,7 +129,6 @@ def configure(
     'grpc',
     cxx_toolkit,
     cxx_config,
-    cxx_lib = cxx_lib,
     cmake_vars = {
       # We don't care about the (copious) warnings on macOS.
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',

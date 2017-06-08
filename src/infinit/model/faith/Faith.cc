@@ -10,7 +10,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
 
@@ -22,7 +22,7 @@ namespace infinit
   {
     namespace faith
     {
-      Faith::Faith(std::unique_ptr<storage::Storage> storage,
+      Faith::Faith(std::unique_ptr<silo::Silo> storage,
                    boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _storage(std::move(storage))
@@ -38,7 +38,7 @@ namespace infinit
           return elle::serialization::deserialize<
             Serializer, std::unique_ptr<blocks::Block>>(data, false);
         }
-        catch (infinit::storage::MissingKey const&)
+        catch (infinit::silo::MissingKey const&)
         {
           throw MissingBlock(address);
         }
@@ -76,7 +76,7 @@ namespace infinit
         {
           this->_storage->erase(address);
         }
-        catch (infinit::storage::MissingKey const&)
+        catch (infinit::silo::MissingKey const&)
         {
           throw MissingBlock(address);
         }

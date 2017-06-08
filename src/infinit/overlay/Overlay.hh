@@ -7,12 +7,15 @@
 #include <elle/log.hh>
 
 #include <elle/reactor/network/tcp-socket.hh>
+#include <elle/reactor/Barrier.hh>
 #include <elle/reactor/Generator.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/serialization.hh>
 
 namespace prometheus
@@ -80,7 +83,11 @@ namespace infinit
     `-----------*/
     public:
       /// Whether we accept new blocks.
-      ELLE_ATTRIBUTE_RW(bool, storing, virtual);
+      ELLE_ATTRIBUTE_Rw(bool, storing, virtual);
+    protected:
+      virtual
+      void
+      _store(bool value);
 
     /*------.
     | Peers |
@@ -204,6 +211,50 @@ namespace infinit
       elle::json::Object
       stats() const = 0;
 
+#if INFINIT_ENABLE_PROMETHEUS
+      /// Gauge on the number of accessible blocks.
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_mutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, reachable_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        underreplicated_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        overreplicated_immutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr,
+        underreplicated_mutable_blocks_gauge);
+      ELLE_ATTRIBUTE_R(prometheus::GaugePtr, under_quorum_mutable_blocks_gauge);
+#endif
+
+    public:
+      /// Information about reachable blocks
+      struct ReachableBlocks
+      {
+        /// Total number of blocks we know about
+        int total_blocks;
+        int mutable_blocks;
+        int immutable_blocks;
+        int underreplicated_immutable_blocks;
+        int overreplicated_immutable_blocks;
+        int underreplicated_mutable_blocks;
+        int under_quorum_mutable_blocks;
+      };
+
+    protected:
+      /// Overlay-dependant computation of how many blocks are reachable.
+      virtual
+      ReachableBlocks
+      _compute_reachable_blocks() const;
+      /// Request for reachable_blocks to be updated.
+      /// Call from overlay when something changes.
+      void
+      _update_reachable_blocks();
+      ELLE_ATTRIBUTE_RW(elle::Duration, reachable_max_update_period);
+      ELLE_ATTRIBUTE(elle::reactor::Barrier, reachable_blocks_barrier);
+      ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, reachable_blocks_thread);
+      ELLE_ATTRIBUTE_R(ReachableBlocks, reachable_blocks);
+      ELLE_ATTRIBUTE_RX(elle::reactor::Signal, reachable_blocks_updated);
+      void
+      _reachable_blocks_loop();
     /*----------.
     | Printable |
     `----------*/

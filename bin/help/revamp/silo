@@ -1,4 +1,4 @@
-Usage: infinit-storage silo [MODE|--help]
+Usage: infinit silo [MODE|--help]
 Infinit silo management utility.
 
 Modes:

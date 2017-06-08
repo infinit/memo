@@ -1,0 +1,12 @@
+device: receive: Usage: _build/macosx64/bin/infinit-device --receive [OPTIONS.. device: receive: Usage: infinit device receive [OPTIONS]
+										Receive an object from another device using the Hub
+Receive an object from another device using the Hub:
+										Options:
+Receive options:								  -h, --help		    show this help message
+  -n [ --name ] arg	 Name of object to receive				      --compatibility-version arg  compatibility version to force
+  -u [ --user ]		 Receive a user identity from another device using the	  -s, --script		    suppress extraneous human friendly messages and use
+			 Hub							  -a, --as arg		    user to run commands as (default: john-doe)
+  --passphrase arg	 Passphrase to secure identity (default: prompt for	  -u, --user		    to receive user identity to another device using th
+			 passphrase)						  -n, --name arg	    name of the device to receive (default: john-doe)
+										      --passphrase arg	    passphrase to secure identity (default: prompt for
+

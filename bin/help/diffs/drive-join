@@ -1,0 +1,10 @@
+drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE [OPTI drive: join: Usage: infinit drive join [OPTIONS]
+										Join a drive you were invited to (Hub operation)
+Join a drive you were invited to (Hub operation):
+										Options:
+Join options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Drive to invite the user on				      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -n, --name arg	    name of the drive to join
+

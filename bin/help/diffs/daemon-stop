@@ -1,0 +1,9 @@
+daemon: stop: Usage: _build/macosx64/bin/infinit-daemon --stop [OPTIONS...]	daemon: stop: Usage: infinit daemon stop [OPTIONS]
+										Stop daemon
+Stop daemon:
+										Options:
+										  -h, --help		    show this help message
+										      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+

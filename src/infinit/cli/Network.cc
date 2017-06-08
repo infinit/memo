@@ -26,8 +26,8 @@
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
-#include <infinit/storage/Storage.hh>
-#include <infinit/storage/Strip.hh>
+#include <infinit/silo/Silo.hh>
+#include <infinit/silo/Strip.hh>
 
 #ifndef INFINIT_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
@@ -178,7 +178,8 @@ namespace infinit
             cli::prometheus = boost::none,
 #endif
             cli::paxos_rebalancing_auto_expand = boost::none,
-            cli::paxos_rebalancing_inspect = boost::none)
+            cli::paxos_rebalancing_inspect = boost::none,
+            cli::resign_on_shutdown = boost::none)
       , stat(*this,
               "Fetch stats of a network on {hub}",
               cli::name)
@@ -285,11 +286,11 @@ namespace infinit
         return res;
       }
 
-      std::unique_ptr<infinit::storage::StorageConfig>
+      std::unique_ptr<infinit::silo::SiloConfig>
       make_silo_config(infinit::Infinit& ifnt,
                        Strings const& silos)
       {
-        auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
+        auto res = std::unique_ptr<infinit::silo::SiloConfig>{};
         if (silos.empty())
           return {};
         else
@@ -300,7 +301,7 @@ namespace infinit
           if (backends.size() == 1)
             return std::move(backends[0]);
           else
-            return std::make_unique<infinit::storage::StripStorageConfig>
+            return std::make_unique<infinit::silo::StripSiloConfig>
               (std::move(backends));
         }
       }
@@ -396,37 +397,32 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-      auto overlay_config =
-        [&] () -> std::unique_ptr<infinit::overlay::Configuration>
-        {
+      auto overlay_config = [&]{
+          auto res = std::unique_ptr<infinit::overlay::Configuration>{};
           if (1 < kalimero + kelips + kouncil)
             elle::err<CLIError>("only one overlay type must be specified");
           if (kalimero)
-            return std::make_unique<infinit::overlay::KalimeroConfiguration>();
+            res = std::make_unique<infinit::overlay::KalimeroConfiguration>();
           else if (kelips)
-            return make_kelips_config(nodes, k, kelips_contact_timeout,
-                                      encrypt, protocol);
+            res = make_kelips_config(nodes, k, kelips_contact_timeout,
+                                     encrypt, protocol);
           else
-            return std::make_unique<infinit::overlay::kouncil::Configuration>();
+            res = std::make_unique<infinit::overlay::kouncil::Configuration>();
+          if (protocol)
+            res->rpc_protocol = protocol_get(protocol);
+          return res;
         }();
-      if (protocol)
-        overlay_config->rpc_protocol = protocol_get(protocol);
-      auto silo = make_silo_config(ifnt, silos_names);
-      auto consensus_config = make_consensus_config(paxos,
-                                                    no_consensus,
-                                                    replication_factor,
-                                                    eviction_delay);
-      auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
-      infinit::model::doughnut::EncryptOptions encrypt_options(
+      auto const encrypt_options = infinit::model::doughnut::EncryptOptions(
         !disable_encrypt_at_rest,
         !disable_encrypt_rpc,
         !disable_signature);
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
-          std::move(consensus_config),
+          make_consensus_config(paxos, no_consensus, replication_factor,
+                                eviction_delay),
           std::move(overlay_config),
-          std::move(silo),
+          make_silo_config(ifnt, silos_names),
           owner.keypair(),
           std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
@@ -437,7 +433,7 @@ namespace infinit
           owner.name,
           std::move(port),
           infinit::version(),
-          admin_keys,
+          make_admin_keys(ifnt, admin_r, admin_rw),
           parse_peers(peer),
           tcp_heartbeat,
           encrypt_options);
@@ -445,7 +441,7 @@ namespace infinit
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
                                         description);
-        auto desc = [&] {
+        auto const desc = [&] {
             if (output_name)
             {
               auto output = cli.get_output(output_name);
@@ -562,7 +558,7 @@ namespace infinit
                 d->id,
                 std::move(desc.consensus),
                 std::move(desc.overlay),
-                // XXX[Storage]: dnut::Configuration::storage ?
+                // XXX[Silo]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
                 std::make_shared<elle::cryptography::rsa::PublicKey>(
@@ -588,8 +584,9 @@ namespace infinit
           "network", name);
         save(network);
       }
-      else // Fetch all networks for owner.
+      else
       {
+        // Fetch all networks for owner.
         using Networks
           = std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>;
         auto res =
@@ -888,6 +885,7 @@ namespace infinit
 #endif
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
+                  boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
         auto& ifnt = cli.infinit();
@@ -917,7 +915,7 @@ namespace infinit
           false,
           cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
           async, cache_disk_size, cli.compatibility_version(), port,
-          listen_address
+          listen_address, resign_on_shutdown
 #ifndef INFINIT_WINDOWS
           , monitoring
 #endif
@@ -1059,6 +1057,7 @@ namespace infinit
 #endif
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
+         {}, // resign_on_shutdown
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,
@@ -1103,10 +1102,10 @@ namespace infinit
       auto owner = cli.as_user();
 
       auto network = ifnt.network_get(network_name, owner, true);
-      // XXX[Storage]: Network::modem::storage
+      // XXX[Silo]: Network::modem::storage
       if (network.model->storage)
       {
-        if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+        if (auto strip = dynamic_cast<infinit::silo::StripSiloConfig*>(
             network.model->storage.get()))
           for (auto const& s: strip->storage)
             std::cout << s->name << "\n";
@@ -1219,7 +1218,8 @@ namespace infinit
                       boost::optional<std::string> prometheus,
 #endif
                       boost::optional<bool> paxos_rebalancing_auto_expand,
-                      boost::optional<bool> paxos_rebalancing_inspect)
+                      boost::optional<bool> paxos_rebalancing_inspect,
+                      boost::optional<bool> resign_on_shutdown)
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
@@ -1256,6 +1256,7 @@ namespace infinit
 #endif
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
+         resign_on_shutdown,
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,

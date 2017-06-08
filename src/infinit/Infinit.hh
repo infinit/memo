@@ -114,7 +114,7 @@ namespace infinit
     | Storage.  |
     `----------*/
 
-    using SiloConfigPtr = std::unique_ptr<storage::StorageConfig>;
+    using SiloConfigPtr = std::unique_ptr<silo::SiloConfig>;
     SiloConfigPtr
     silo_get(std::string const& name);
 

@@ -36,10 +36,9 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/MonitoringServer.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
@@ -210,7 +209,7 @@ namespace infinit
       Protocol
       deprecate_utp(Protocol const& p)
       {
-        bool utp_guard = std::stoi(elle::os::getenv("INFINIT_UTP", "0"));
+        auto utp_guard = elle::os::getenv("INFINIT_UTP", false);
         if (!utp_guard && p == Protocol::all)
         {
           ELLE_WARN(
@@ -233,6 +232,7 @@ namespace infinit
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
         , _protocol(deprecate_utp(init.protocol))
+        , _resign_on_shutdown(init.resign_on_shutdown)
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -358,6 +358,12 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
         this->_terminating.open();
+        if (this->_resign_on_shutdown)
+        {
+          ELLE_TRACE_SCOPE("resign");
+          this->overlay()->storing(false);
+          this->consensus()->resign();
+        }
         if (this->_user_init)
         {
           if (!elle::reactor::wait(*this->_user_init, 5_sec))
@@ -703,7 +709,7 @@ namespace infinit
         Address id_,
         std::unique_ptr<consensus::Configuration> consensus_,
         std::unique_ptr<overlay::Configuration> overlay_,
-        std::unique_ptr<storage::StorageConfig> storage,
+        std::unique_ptr<silo::SiloConfig> storage,
         elle::cryptography::rsa::KeyPair keys_,
         std::shared_ptr<elle::cryptography::rsa::PublicKey> owner_,
         Passport passport_,
@@ -817,6 +823,7 @@ namespace infinit
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
         boost::optional<std::string> rdv_host,
+        boost::optional<bool> resign_on_shutdown,
         boost::optional<bfs::path> monitoring_socket_path)
       {
         auto make_consensus =
@@ -854,7 +861,7 @@ namespace infinit
                 "invalid network configuration, missing field \"overlay\"");
             return this->overlay->make(std::move(local), &dht);
           };
-        std::unique_ptr<storage::Storage> storage;
+        std::unique_ptr<silo::Silo> storage;
         if (this->storage)
           storage = this->storage->make();
         return std::make_unique<infinit::model::doughnut::Doughnut>(
@@ -874,7 +881,8 @@ namespace infinit
           std::move(monitoring_socket_path),
           this->overlay->rpc_protocol,
           doughnut::tcp_heartbeat = this->tcp_heartbeat,
-          doughnut::encrypt_options = this->encrypt_options);
+          doughnut::encrypt_options = this->encrypt_options,
+          doughnut::resign_on_shutdown = resign_on_shutdown.value_or(false));
       }
 
       std::string

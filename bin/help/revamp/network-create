@@ -1,14 +1,14 @@
-network: create: Usage: infinit-network network create [OPTIONS]
+network: create: Usage: infinit network create [OPTIONS]
 Create a network
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -n, --name arg            name of the network to create
       --description arg     network description (default: null)
-  -S, --storage arg         storage to contribute (optional, data striped over multiple) (default: [])
+  -S, --silo arg            silo to contribute (optional, data striped over multiple) (default: [])
       --port arg            outbound port to use (default: null)
   -r, --replication-factor arg  data replication factor (default: 1) (default: 1)
   -e, --eviction-delay arg  missing servers eviction delay (default: 10min) (default: null)
@@ -29,4 +29,7 @@ Options:
       --encrypt arg         use encryption: no, lazy, yes (default: yes) (default: null)
       --protocol arg        RPC protocol to use: tcp, utp, all (default: all) (default: null)
       --tcp-heartbeat arg   tcp heartbeat period and timeout (default: null)
+      --disable-encrypt-at-rest  disable at-rest encryption
+      --disable-encrypt-rpc  disable RPC encryption
+      --disable-signature   disable all block signature computation and validation
 

@@ -1,10 +1,10 @@
-user: import: Usage: infinit-user user import [OPTIONS]
+user: import: Usage: infinit user import [OPTIONS]
 Import local user
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -i, --input arg           file to read user from (default: null)
 

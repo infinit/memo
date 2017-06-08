@@ -352,6 +352,8 @@ namespace infinit
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),
                  decltype(cli::paxos_rebalancing_inspect =
+                          boost::optional<bool>()),
+                 decltype(cli::resign_on_shutdown =
                           boost::optional<bool>())),
            decltype(modes::mode_run)>
       run;
@@ -389,7 +391,8 @@ namespace infinit
 #endif
                // Options that used to be hidden.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
-               boost::optional<bool> paxos_rebalancing_inspect = {});
+               boost::optional<bool> paxos_rebalancing_inspect = {},
+               boost::optional<bool> resign_on_shutdown = {});
 
 
       /*-------------.

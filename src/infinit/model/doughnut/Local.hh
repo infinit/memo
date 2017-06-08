@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Peer.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/silo/Silo.hh>
 
 namespace infinit
 {
@@ -36,7 +36,7 @@ namespace infinit
       public:
         Local(Doughnut& dht,
               Address id,
-              std::unique_ptr<storage::Storage> storage,
+              std::unique_ptr<silo::Silo> storage,
               int port = 0,
               boost::optional<boost::asio::ip::address> listen_address = {});
         ~Local() override;
@@ -47,7 +47,7 @@ namespace infinit
         virtual
         void
         initialize();
-        ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<silo::Silo>, storage);
         ELLE_attribute_r(elle::Version, version);
       protected:
         void
@@ -111,9 +111,13 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(elle::reactor::Barrier, server_barrier);
         class Connection
+          : public elle::Printable
         {
         public:
           Connection(Local& local, std::shared_ptr<std::iostream> stream);
+
+          void
+          print(std::ostream&) const override;
 
         private:
           friend class doughnut::Local;
@@ -139,6 +143,14 @@ namespace infinit
         void
         _require_auth(RPCServer& rpcs, bool write_op);
         std::unordered_map<RPCServer*, Passport> _passports;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        /// Print pretty representation to \a stream.
+        void
+        print(std::ostream& stream) const override;
       };
     }
   }

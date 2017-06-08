@@ -1,4 +1,4 @@
-Usage: infinit-doctor doctor [MODE|--help]
+Usage: infinit doctor [MODE|--help]
 Infinit doctor management utility.
 
 Modes:

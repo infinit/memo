@@ -1,7 +1,11 @@
 #include <infinit/Infinit.hh>
+
+#include <boost/algorithm/cxx11/none_of.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+
 #include <infinit/utility.hh>
 
-#include <infinit/storage/Filesystem.hh>
+#include <infinit/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("infinit");
 
@@ -16,10 +20,11 @@ namespace infinit
     bfs::path
     storages_path()
     {
-      auto root = xdg_data_home() / "storages";
-      create_directories(root);
-      return root;
+      auto res = xdg_data_home() / "storages";
+      create_directories(res);
+      return res;
     }
+
     // See storages_path.
     bfs::path
     silo_path(std::string const& name)
@@ -133,9 +138,7 @@ namespace infinit
   }
 
   std::vector<Network>
-  Infinit::networks_get(
-    boost::optional<User> self,
-    bool require_linked) const
+  Infinit::networks_get(boost::optional<User> self, bool require_linked) const
   {
     auto res = std::vector<Network>{};
     auto extract =
@@ -164,10 +167,9 @@ namespace infinit
             this->network_save(desc);
           }
           // Ignore duplicates.
-          if (std::find_if(res.begin(), res.end(),
-                           [&network] (Network const& n) {
-                             return n.name == network.name;
-                           }) == res.end())
+          if (boost::algorithm::none_of(res, [&network] (auto const& n) {
+                return n.name == network.name;
+              }))
             res.emplace_back(std::move(network));
         }
     };
@@ -184,17 +186,11 @@ namespace infinit
                                 boost::optional<User> user)
   {
     ELLE_ASSERT(is_qualified_name(name_) || user);
-    auto name = name_;
-    if (user)
-      name = qualified_name(name_, *user);
+    auto const name = user ? qualified_name(name_, *user) : name_;
     auto res = this->users_get();
-    res.erase(
-      std::remove_if(res.begin(), res.end(),
-                     [&] (User const& u)
-                     {
-                       return !bfs::exists(this->_network_path(name, u, false));
-                     }),
-      res.end());
+    boost::remove_erase_if(res, [&] (User const& u) {
+        return !bfs::exists(this->_network_path(name, u, false));
+      });
     return res;
   }
 
@@ -212,15 +208,11 @@ namespace infinit
       boost::system::error_code erc;
       bfs::remove(path, erc);
       if (erc)
-      {
         ELLE_WARN("Unable to unlink network \"%s\": %s",
                   network.name, erc.message());
-      }
       else
-      {
         this->report_local_action()("unlinked", "network",
                                     network.name);
-      }
     }
   }
 
@@ -496,9 +488,9 @@ namespace infinit
   bfs::path
   Infinit::_avatars_path() const
   {
-    auto root = xdg_cache_home() / "avatars";
-    create_directories(root);
-    return root;
+    auto res = xdg_cache_home() / "avatars";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -572,7 +564,7 @@ namespace infinit
     if (clear)
     {
       if (auto fs_silo =
-          dynamic_cast<infinit::storage::FilesystemStorageConfig*>(silo.get()))
+          dynamic_cast<infinit::silo::FilesystemSiloConfig*>(silo.get()))
         this->_delete_all(fs_silo->path, "silo content", name);
       else
         elle::err("only filesystem silos can be cleared");
@@ -802,17 +794,17 @@ namespace infinit
   bfs::path
   Infinit::_credentials_path() const
   {
-    auto root = xdg_data_home() / "credentials";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "credentials";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
   Infinit::_credentials_path(std::string const& service) const
   {
-    auto root = this->_credentials_path() / service;
-    create_directories(root);
-    return root;
+    auto res = this->_credentials_path() / service;
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -824,9 +816,9 @@ namespace infinit
   bfs::path
   Infinit::_network_descriptors_path() const
   {
-    auto root = xdg_data_home() / "networks";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "networks";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -838,19 +830,19 @@ namespace infinit
   bfs::path
   Infinit::_networks_path(bool create_dir) const
   {
-    auto root = xdg_data_home() / "linked_networks";
+    auto res = xdg_data_home() / "linked_networks";
     if (create_dir)
-      create_directories(root);
-    return root;
+      create_directories(res);
+    return res;
   }
 
   bfs::path
   Infinit::_networks_path(User const& user, bool create_dir) const
   {
-    auto root = _networks_path(create_dir) / user.name;
+    auto res = _networks_path(create_dir) / user.name;
     if (create_dir)
-      create_directories(root);
-    return root;
+      create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -865,9 +857,9 @@ namespace infinit
   bfs::path
   Infinit::_passports_path() const
   {
-    auto root = xdg_data_home() / "passports";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "passports";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -880,9 +872,9 @@ namespace infinit
   bfs::path
   Infinit::_silos_path() const
   {
-    auto root = xdg_data_home() / "silos";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "silos";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -894,9 +886,9 @@ namespace infinit
   bfs::path
   Infinit::_users_path() const
   {
-    auto root = xdg_data_home() / "users";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "users";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -908,9 +900,9 @@ namespace infinit
   bfs::path
   Infinit::_volumes_path() const
   {
-    auto root = xdg_data_home() / "volumes";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "volumes";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -955,9 +947,9 @@ namespace infinit
   bfs::path
   Infinit::_drives_path() const
   {
-    auto root = xdg_data_home() / "drives";
-    create_directories(root);
-    return root;
+    auto res = xdg_data_home() / "drives";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -995,9 +987,9 @@ namespace infinit
   bfs::path
   Infinit::_drive_icon_path() const
   {
-    auto root = xdg_cache_home() / "icons";
-    create_directories(root);
-    return root;
+    auto res = xdg_cache_home() / "icons";
+    create_directories(res);
+    return res;
   }
 
   bfs::path
@@ -1016,34 +1008,31 @@ namespace infinit
   std::vector<std::string>
   Infinit::user_passports_for_network(std::string const& network_name)
   {
-    std::vector<std::string> res;
-    for (auto const& pair: this->passports_get(network_name))
-      res.push_back(pair.second);
-    return res;
+    return elle::make_vector(this->passports_get(network_name),
+                             [](auto const& p)
+                             {
+                               return p.second;
+                             });
   }
 
   std::vector<Volume>
   Infinit::volumes_for_network(std::string const& network_name)
   {
-    std::vector<Volume> res;
-    for (auto const& volume: this->volumes_get())
-    {
-      if (volume.network == network_name)
-        res.push_back(volume);
-    }
-    return res;
+    return elle::make_vector_if(this->volumes_get(),
+                                [&](auto const& v)
+                                {
+                                  return v.network == network_name;
+                                });
   }
 
   std::vector<Drive>
   Infinit::drives_for_volume(std::string const& volume_name)
   {
-    std::vector<Drive> res;
-    for (auto const& drive: this->drives_get())
-    {
-      if (drive.volume == volume_name)
-        res.push_back(drive);
-    }
-    return res;
+    return elle::make_vector_if(this->drives_get(),
+                                [&](auto const& v)
+                                {
+                                  return v.volume == volume_name;
+                                });
   }
 
     /*-------.

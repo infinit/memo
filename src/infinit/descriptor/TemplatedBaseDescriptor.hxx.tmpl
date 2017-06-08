@@ -1,3 +1,5 @@
+// FIXME: GCC on Jessie has these regexes wrong, don't move to
+// std::regex just yet.
 #include <boost/regex.hpp>
 
 #include <elle/serialization/Serializer.hh>
@@ -27,10 +29,9 @@ namespace infinit
     TemplatedBaseDescriptor<T>::check_description(
       boost::optional<std::string> const& description)
     {
-      if (!description)
-        return;
       static auto const allowed = boost::regex{T::description_regex()};
-      if (!boost::regex_match(description.get(), allowed))
+      if (description
+          && !boost::regex_match(description.get(), allowed))
         throw DescriptorDescriptionError(description.get());
     }
 

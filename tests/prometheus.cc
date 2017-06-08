@@ -26,7 +26,7 @@ void run(int num_servers = 30)
       ::id = special_id(n + 1),
       ::keys = k,
       ::make_overlay = make_kouncil,
-      ::storage = std::make_unique<infinit::storage::Memory>());
+      ::storage = std::make_unique<infinit::silo::Memory>());
   };
 
   new_server();

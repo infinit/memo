@@ -1,0 +1,17 @@
+Usage: _build/macosx64/bin/infinit-journal MODE [OPTIONS...]			Usage: infinit journal [MODE|--help]
+										Infinit journal management utility.
+Infinit journal utility:
+										Modes:
+Modes:										  describe   Describe asynchronous operation(s)
+  --stat		       Show the remaining asynchronous operations count	  export     Export an operation
+			       and size						  stat	     Show the remaining asynchronous operations count and size
+  --export		       Export an operation
+  --describe		       Describe asynchronous operation(s)		Options:
+										  -h, --help		    show this help message
+Miscellaneous:
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

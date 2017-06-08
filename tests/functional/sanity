@@ -43,6 +43,7 @@ darwin_deps = [
   r'/System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration',
   r'/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation',
   r'/System/Library/Frameworks/Kerberos.framework/Versions/A/Kerberos',
+  r'/System/Library/Frameworks/Security.framework/Versions/A/Security',
   r'/usr/lib/libSystem\.B\.dylib',
   r'/usr/lib/libiconv\.2\.dylib',
   r'/usr/lib/libobjc\.A\.dylib',

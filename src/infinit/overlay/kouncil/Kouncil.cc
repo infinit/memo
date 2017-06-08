@@ -141,6 +141,7 @@ namespace infinit
                       }
                     ELLE_TRACE("%s: added/removed %s entries from %f",
                                this, entries.size(), r.id());
+                    this->_update_reachable_blocks();
                   });
               else
                 r.rpc_server().add(
@@ -151,6 +152,7 @@ namespace infinit
                       this->_address_book.emplace(r.id(), addr);
                     ELLE_TRACE("%s: added %s entries from %f",
                                this, entries.size(), r.id());
+                    this->_update_reachable_blocks();
                   });
               if (this->doughnut()->version() >= elle::Version(0, 8, 0))
               {
@@ -196,6 +198,7 @@ namespace infinit
                             LamportAge(), this->storing());
        for (auto const& key: local->storage()->list())
          this->_address_book.emplace(this->id(), key);
+       this->_update_reachable_blocks();
        ELLE_DEBUG("loaded %s entries from storage",
                   this->_address_book.size());
        this->_connections.emplace_back(local->on_store().connect(
@@ -204,6 +207,7 @@ namespace infinit
            ELLE_DEBUG("%s: register new block %f", this, b.address());
            this->_address_book.emplace(this->id(), b.address());
            this->_new_entries.emplace(b.address(), true);
+           this->_update_reachable_blocks();
          }));
        this->_connections.emplace_back(local->on_remove().connect(
          [this] (model::blocks::Block const& b)
@@ -212,6 +216,7 @@ namespace infinit
            auto entry = Entry(this->id(), b.address());
            ELLE_ENFORCE_EQ(this->_address_book.get<2>().erase(entry), 1u);
            this->_new_entries.emplace(b.address(), false);
+           this->_update_reachable_blocks();
          }));
        // Add server-side kouncil RPCs.
        this->_connections.emplace_back(local->on_connect().connect(
@@ -343,15 +348,11 @@ namespace infinit
       `-----------*/
 
       void
-      Kouncil::storing(bool storing)
+      Kouncil::_store(bool storing)
       {
-        if (storing != this->storing())
-        {
-          this->Overlay::storing(storing);
-          // FIXME: don't block if some node fail to respond
-          this->local()->broadcast<void>(
-            "kouncil_configure", Configuration(storing));
-        }
+        // FIXME: don't block if some node fail to respond
+        this->local()->broadcast<void>(
+          "kouncil_configure", Configuration(storing));
       }
 
       /*-------------.
@@ -504,6 +505,7 @@ namespace infinit
             });
         this->_peers.erase(id);
         this->_address_book.erase(id);
+        this->_update_reachable_blocks();
         peer.reset();
         if (!this->_cleaning)
         {
@@ -526,6 +528,7 @@ namespace infinit
         assert(!this->_discovered(id));
         this->_infos.erase(id);
         this->_address_book.erase(id);
+        this->_update_reachable_blocks();
         this->_stale_endpoints.erase(id);
         this->on_eviction()(id);
       }
@@ -573,13 +576,11 @@ namespace infinit
           {
             if (this->doughnut()->version() < elle::Version(0, 8, 0))
             {
-              auto const size = static_cast<int>(this->_peers.size());
-              ELLE_DEBUG("%s: selecting %s nodes from %s peers",
-                         this, n, size);
-              auto const indexes = elle::pick_n(
-                std::min(n, size), size, this->_gen);
-              for (auto r: indexes)
-                yield(this->peers().get<1>()[r]);
+              auto const& range = this->peers().get<1>();
+              auto const size = int(boost::size(range));
+              ELLE_DEBUG("selecting %s nodes from %s peers", n, size);
+              for (auto i: elle::pick_n(std::min(n, size), range))
+                yield(*i);
             }
             else
             {
@@ -589,15 +590,8 @@ namespace infinit
                                  boost::optional<bool>(true)));
               auto const size = int(boost::size(range));
               ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
-              auto const indexes = elle::pick_n(std::min(n, size), size, this->_gen);
-              auto it = range.begin();
-              auto prev = 0;
-              for (auto r: indexes)
-              {
-                std::advance(it, r - prev);
-                prev = r;
-                yield(*ELLE_ENFORCE(elle::find(this->peers(), it->id())));
-              }
+              for (auto i: elle::pick_n(std::min(n, size), range))
+                yield(*ELLE_ENFORCE(elle::find(this->peers(), i->id())));
             }
           };
       }
@@ -815,7 +809,48 @@ namespace infinit
         for (auto const& b: entries)
           this->_address_book.emplace(r.id(), b);
         ELLE_DEBUG("added %s entries from %f", entries.size(), r);
+        this->_update_reachable_blocks();
       }
+
+      Overlay::ReachableBlocks
+      Kouncil::_compute_reachable_blocks() const
+      {
+        std::unordered_map<Address, int> ids_mutable, ids_immutable;
+        for (auto const& entry: this->_address_book.get<2>())
+        {
+          if (entry.block().mutable_block())
+            ids_mutable[entry.block()] += 1;
+          else
+            ids_immutable[entry.block()] += 1;
+        }
+        Overlay::ReachableBlocks res {0,0,0,0,0,0,0};
+        res.total_blocks = ids_mutable.size() + ids_immutable.size();
+        res.mutable_blocks = ids_mutable.size();
+        res.immutable_blocks = ids_immutable.size();
+        int rf = 1;
+        if (auto* pax = dynamic_cast<model::doughnut::consensus::Paxos*>(
+          doughnut()->consensus().get()))
+        {
+          rf = pax->factor();
+        }
+        int quorum = rf/2 + 1;
+        for (auto const& idcount: ids_immutable)
+        {
+          if (idcount.second > rf)
+            res.overreplicated_immutable_blocks++;
+          else if (idcount.second < rf)
+            res.underreplicated_immutable_blocks++;
+        }
+        for (auto const& idcount: ids_mutable)
+        {
+          if (idcount.second < rf)
+            res.underreplicated_mutable_blocks++;
+          if (idcount.second < quorum)
+            res.under_quorum_mutable_blocks++;
+        }
+        return res;
+      }
+
 
       /*---------.
       | PeerInfo |

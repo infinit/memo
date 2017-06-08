@@ -89,7 +89,7 @@ with TemporaryDirectory() as tmp, \
       user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
       peer = peer())
     assertEq(response['success'], False)
-    assertEq(response['message'], 'Access denied.')
+    assertEq(response['message'], 'Access denied')
   finally:
     if volume_process is not None:
       volume_process.terminate()

@@ -1,12 +1,12 @@
-user: signup: Usage: infinit-user user signup [OPTIONS]
+user: signup: Usage: infinit user signup [OPTIONS]
 Create and push a user to the Hub
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
-  -n, --name arg            name of the user to signup (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
+  -n, --name arg            name of the user to signup (default: john-doe)
       --description arg     user description (default: null)
   -k, --key arg             RSA key pair in PEM format - e.g. your SSH key (default: null)
   -e, --email arg           user email (default: null)

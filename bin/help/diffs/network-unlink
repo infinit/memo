@@ -1,0 +1,10 @@
+network: unlink: Usage: _build/macosx64/bin/infinit-network --unlink --name NET network: unlink: Usage: infinit network unlink [OPTIONS]
+										Unlink this device from a network
+Unlink this device from a network:
+										Options:
+Unlink options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Network to unlink from					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+Hidden options:									  -a, --as arg		    user to run commands as (default: john-doe)
+  -o [ --output ] arg	 File to write the network to				  -n, --name arg	    name of the network to unlink
+			 (default: stdout)

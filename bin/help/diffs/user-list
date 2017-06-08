@@ -1,10 +1,9 @@
-user: list: Usage: _build/macosx64/bin/infinit-user --list [OPTIONS...]	       |user: list: Usage: _build/macosx64/bin/infinit-user user list [OPTIONS]
-									       |List local users
-List users:								       |
-									       |Options:
-									       |  -h, --help		    show this help message
-									       |      --compatibility-version arg  compatibility version to force
-									       |  -s, --script		    suppress extraneous human friendly messages and use
-									       |JSON output
-									       |  -a, --as arg		    user to run commands as (default: akim)
-									       |
+user: list: Usage: _build/macosx64/bin/infinit-user --list [OPTIONS...]		user: list: Usage: infinit user list [OPTIONS]
+										List local users
+List users:
+										Options:
+										  -h, --help		    show this help message
+										      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+

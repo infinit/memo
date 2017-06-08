@@ -291,6 +291,7 @@ namespace infinit
             elle::sprintf("%f", this),
             [this, connecting_it]
             {
+              ELLE_TRACE_SCOPE("%f: connect", this);
               elle::SafeFinally remove_from_connecting([&] {
                   this->_dock._connecting.erase(connecting_it);
                   this->_thread->dispose(true);
@@ -299,28 +300,28 @@ namespace infinit
                 });
               this->_cleanup_on_disconnect = std::function<void()>();
               bool connected = false;
-              ELLE_TRACE_SCOPE("%f: connection attempt to %s endpoints",
+              ELLE_TRACE_SCOPE("%f: attempt connection to {} endpoints",
                                this, this->_location.endpoints().size());
               ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
               auto handshake =
                 [&] (std::unique_ptr<std::iostream> socket,
                      boost::optional<std::chrono::milliseconds> ping)
                 {
-                  ELLE_TRACE("%f: handshake: %s", this, socket);
+                  ELLE_TRACE("handshake: {}", socket);
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
                   auto serializer =
-                    elle::make_unique<elle::protocol::Serializer>(
+                    std::make_unique<elle::protocol::Serializer>(
                       *socket, sv, false,
                       ping,
                       ping);
                   auto channels =
-                    elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
+                    std::make_unique<elle::protocol::ChanneledStream>(*serializer);
                   try
                   {
                     if (!disable_key)
                       this->_key_exchange(*channels);
-                    ELLE_TRACE("%f: connected", this);
+                    ELLE_TRACE("connected");
                     this->_socket = std::move(socket);
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
@@ -329,8 +330,8 @@ namespace infinit
                   }
                   catch (...)
                   {
-                    ELLE_TRACE("%f: handshake: %s: caught: %s",
-                               this, socket, elle::exception_string());
+                    ELLE_TRACE("%s: handshake error: %s",
+                               socket, elle::exception_string());
                     // Delay termination from destructor.
                     elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                     {
@@ -362,15 +363,16 @@ namespace infinit
                 if (this->_dock.doughnut().protocol().with_tcp())
                   for (auto const& e: this->_location.endpoints())
                   {
-                    ELLE_TRACE("trying to connect to %s", e);
+                    ELLE_TRACE("try connecting to %s", e);
                     scope.run_background(
-                      elle::sprintf("%s: tcp://%s",
-                                    elle::reactor::scheduler().current()->name(), e),
+                      elle::sprintf(
+                        "%s: tcp://%s",
+                        elle::reactor::scheduler().current()->name(), e),
                       umbrella(
                         [&, e]
                         {
                           using elle::reactor::network::TCPSocket;
-                          handshake(elle::make_unique<TCPSocket>(e.tcp()),
+                          handshake(std::make_unique<TCPSocket>(e.tcp()),
                                     this->_dock._tcp_heartbeat);
                           this->_serializer->ping_timeout().connect(
                             [this]
@@ -396,7 +398,7 @@ namespace infinit
                         if (this->_location.id() != Address::null)
                           cid = elle::sprintf("%x", this->_location.id());
                         auto socket =
-                          elle::make_unique<elle::reactor::network::UTPSocket>(
+                          std::make_unique<elle::reactor::network::UTPSocket>(
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
@@ -414,8 +416,7 @@ namespace infinit
                 // failed to validate etc.
                 this->_disconnected_exception = std::make_exception_ptr(
                   elle::reactor::network::ConnectionRefused());
-                ELLE_TRACE("%s: connection to %f failed",
-                           this, this->_location.endpoints());
+                ELLE_TRACE("connection failed");
                 this->_dock._connecting.erase(connecting_it);
                 auto hold = this->shared_from_this();
                 this->_thread->dispose(true);
@@ -429,7 +430,7 @@ namespace infinit
               ELLE_ASSERT_NEQ(id, Address::null);
               if (elle::contains(this->_dock._connected, id))
               {
-                ELLE_TRACE("%s: drop duplicate", this);
+                ELLE_TRACE("drop duplicate");
                 this->_disconnected = true;
                 this->_dock._connecting.erase(connecting_it);
                 auto hold = this->shared_from_this();
@@ -609,7 +610,7 @@ namespace infinit
                 this->_location.id(res.id);
               return std::make_pair(
                 res.challenge,
-                elle::make_unique<Passport>(std::move(res.passport)));
+                std::make_unique<Passport>(std::move(res.passport)));
             }
             else if (version >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);
@@ -684,51 +685,51 @@ namespace infinit
           ELLE_TRACE("peer is ourself");
           return this->_doughnut.local();
         }
-        {
-          auto it = this->_peer_cache.find(loc.id());
-          if (it != this->_peer_cache.end())
-            return overlay::Overlay::WeakMember::own(ELLE_ENFORCE(it->lock()));
-        }
-        return overlay::Overlay::WeakMember::own(
-          this->make_peer(this->connect(loc)));
+        if (auto it = elle::find(this->_peer_cache, loc.id()))
+          return overlay::Overlay::WeakMember::own(
+               ELLE_ENFORCE(it->lock()));
+        else
+          return overlay::Overlay::WeakMember::own(
+               this->make_peer(this->connect(loc)));
       }
 
       std::shared_ptr<Remote>
       Dock::make_peer(std::shared_ptr<Connection> connection, bool ignored_result)
       {
+        // Already connected?
+        if (auto it = elle::find(this->_peer_cache, connection->id()))
         {
-          auto it = this->_peer_cache.find(connection->id());
-          if (it != this->_peer_cache.end())
+          auto peer = ELLE_ENFORCE(it->lock());
+          auto res = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
+          if (res->connection() == connection)
+            ;
+          // FIXME: This is messy. We could miss that current connection is
+          // broken and not replace it, but we don't want to replace a working
+          // connection with the new one and kill all RPCs.
+          else if (!res->connection()->connected() ||
+                   res->connection()->disconnected())
           {
-            auto peer = ELLE_ENFORCE(it->lock());
-            auto remote = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
-            if (remote->connection() == connection)
-              ;
-            // FIXME: This is messy. We could miss that current connection is
-            // broken and not replace it, but we don't want to replace a working
-            // connection with the new one and kill all RPCs.
-            else if (!remote->connection()->connected() ||
-                     remote->connection()->disconnected())
-            {
-              ELLE_TRACE_SCOPE(
-                "%s: replace broken connection for %s", this, remote);
-              remote->connection(connection);
-            }
-            else
-              ELLE_TRACE("%s: drop duplicate %s", this, connection);
-            return remote;
+            ELLE_TRACE_SCOPE(
+              "%s: replace broken connection for %s", this, res);
+            res->connection(connection);
           }
+          else
+            ELLE_TRACE("%s: drop duplicate %s", this, connection);
+          return res;
         }
         // FIXME: don't always spawn paxos
-        if (ignored_result && this->_on_peer.empty())
-          return std::shared_ptr<Remote>();
-        using RemotePeer = consensus::Paxos::RemotePeer;
-        auto peer = std::make_shared<RemotePeer>(this->_doughnut, connection);
-        auto insertion = this->_peer_cache.emplace(peer);
-        ELLE_ASSERT(insertion.second);
-        peer->_cache_iterator = insertion.first;
-        this->_on_peer(peer);
-        return peer;
+        else if (ignored_result && this->_on_peer.empty())
+          return {};
+        else
+        {
+          using RemotePeer = consensus::Paxos::RemotePeer;
+          auto res = std::make_shared<RemotePeer>(this->_doughnut, connection);
+          auto insertion = this->_peer_cache.emplace(res);
+          ELLE_ASSERT(insertion.second);
+          res->_cache_iterator = insertion.first;
+          this->_on_peer(res);
+          return res;
+        }
       }
     }
   }

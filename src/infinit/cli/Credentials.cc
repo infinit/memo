@@ -282,7 +282,7 @@ namespace infinit
         for (auto const& a_json: credentials_vec)
         {
           auto input = elle::serialization::json::SerializerIn(a_json, false);
-          auto a = elle::make_unique<Cred>(input.deserialize<Cred>());
+          auto a = std::make_unique<Cred>(input.deserialize<Cred>());
           elle::fprintf(
             std::cout, "Fetched %s credentials \"%s\" (%s)\n",
             ServicePrint<Service>::pretty, a->uid(), a->display_name());

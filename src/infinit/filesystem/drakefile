@@ -1,6 +1,8 @@
 sources = drake.nodes(
   'Directory.cc',
   'Directory.hh',
+  'Error.cc',
+  'Error.hh',
   'File.cc',
   'File.hh',
   'FileHeader.hh',

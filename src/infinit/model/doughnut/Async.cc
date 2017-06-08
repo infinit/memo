@@ -16,7 +16,7 @@
 #include <elle/reactor/exception.hh>
 #include <elle/reactor/scheduler.hh>
 
-#include <infinit/storage/Collision.hh>
+#include <infinit/silo/Collision.hh>
 
 #include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -182,7 +182,7 @@ namespace infinit
         Async::make_local(
           boost::optional<int> port,
           boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<storage::Storage> storage)
+          std::unique_ptr<silo::Silo> storage)
         {
           return this->_backend->make_local(
             port, std::move(listen_address), std::move(storage));
@@ -617,7 +617,7 @@ namespace infinit
               }
               break;
             }
-            catch (storage::Collision const& c)
+            catch (silo::Collision const& c)
             {
               // check for idempotence
               try

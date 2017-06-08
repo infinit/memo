@@ -1,10 +1,10 @@
-journal: stat: Usage: infinit-journal journal stat [OPTIONS]
+journal: stat: Usage: infinit journal stat [OPTIONS]
 Show the remaining asynchronous operations count and size
 
 Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: bob)
+  -a, --as arg              user to run commands as (default: john-doe)
   -N, --network arg         network to stat journal for (default: null)
 

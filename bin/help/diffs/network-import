@@ -1,0 +1,10 @@
+network: import: Usage: _build/macosx64/bin/infinit-network --import [OPTIONS.. network: import: Usage: infinit network import [OPTIONS]
+										Fetch a network
+Import a network:
+										Options:
+Import options:									  -h, --help		    show this help message
+  -i [ --input ] arg	 File to read the network from (default: stdin)		      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -i, --input arg	    file to read network from (default: null)
+

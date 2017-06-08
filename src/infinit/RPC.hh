@@ -141,17 +141,15 @@ namespace infinit
     template <typename Remaining, typename ... Parsed>
     std::enable_if_t<
       !Remaining::empty &&
-      !std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value,
-      void>
+      !elle::serialization::virtually<
+        std::remove_reference_t<typename Remaining::Head>>()>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", arg);
       this->_handle<typename Remaining::Tail,
@@ -162,17 +160,15 @@ namespace infinit
     template <typename Remaining, typename ... Parsed>
     std::enable_if_t<
       !Remaining::empty &&
-      std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_reference_t<typename Remaining::Head>>::value,
-      void>
+      elle::serialization::virtually<
+        std::remove_reference_t<typename Remaining::Head>>()>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", *arg);
@@ -182,9 +178,7 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    std::enable_if_t<
-      Remaining::empty && std::is_same<R, void>::value,
-      void>
+    std::enable_if_t<Remaining::empty && std::is_void<R>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -214,9 +208,7 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    std::enable_if_t<
-      Remaining::empty && !std::is_same<R, void>::value,
-      void>
+    std::enable_if_t<Remaining::empty && !std::is_void<R>::value>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -366,8 +358,9 @@ namespace infinit
         ELLE_DEBUG_SCOPE("decipher RPC");
         try
         {
-          static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench
+            = elle::Bench("bench.rpcserve.decipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           if (request.size() > 262144)
           {
             auto& key = this->_key.get();
@@ -385,19 +378,19 @@ namespace infinit
           ELLE_ERR("decypher request: %s", e.what());
           throw;
         }
-	    }
-	    elle::IOStream ins(request.istreambuf());
-	    auto versions = elle::serialization::get_serialization_versions
-	    <infinit::serialization_tag>(this->_version);
-	    elle::serialization::binary::SerializerIn input(ins, versions, false);
-	    input.set_context(this->_context);
-	    std::string name;
-	    input.serialize("procedure", name);
+      }
+      elle::IOStream ins(request.istreambuf());
+      auto const versions = elle::serialization::get_serialization_versions
+        <infinit::serialization_tag>(this->_version);
+      elle::serialization::binary::SerializerIn input(ins, versions, false);
+      input.set_context(this->_context);
+      std::string name;
+      input.serialize("procedure", name);
       elle::Buffer response;
       {
         auto it = this->_rpcs.find(name);
         elle::IOStream outs(response.ostreambuf());
-        elle::serialization::binary::SerializerOut output(
+        auto output = elle::serialization::binary::SerializerOut(
           outs, versions, false);
         if (it == this->_rpcs.end())
         {
@@ -426,8 +419,9 @@ namespace infinit
       }
       if (had_key)
       {
-        static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);
-        elle::Bench::BenchScope bs(bench);
+        static auto bench =
+          elle::Bench("bench.rpcserve.encipher", std::chrono::seconds(10000));
+        auto bs = elle::Bench::BenchScope(bench);
         if (response.size() >= 262144)
         {
           auto& key = this->_key.get();
@@ -436,14 +430,14 @@ namespace infinit
                 response = key.encipher(
 	          elle::ConstWeakBuffer(response.contents(),
 	            response.size()));
-	          });
-	        };
-	      }
-	      else
-	      response = _key->encipher(
-	        elle::ConstWeakBuffer(response.contents(), response.size()));
-	    }
-	    channel.write(response);
+              });
+          };
+        }
+        else
+          response = _key->encipher(
+            elle::ConstWeakBuffer(response.contents(), response.size()));
+      }
+      channel.write(response);
     }
 
     template <typename T>
@@ -505,36 +499,6 @@ namespace infinit
   class RPC
   {};
 
-  template <typename ... Args>
-  class RPC<void (Args...)>
-    : public BaseRPC
-  {
-  public:
-    RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
-        elle::Version const& version,
-        boost::optional<elle::cryptography::SecretKey> key = {})
-      : BaseRPC(std::move(name), channels, version, std::move(key))
-    {}
-
-    RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
-        elle::Version const& version,
-        elle::Buffer* credentials)
-      : RPC(
-        std::move(name),
-        channels,
-        version,
-        credentials && !credentials->empty() ?
-        boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
-        boost::optional<elle::cryptography::SecretKey>())
-    {}
-
-    void
-    operator ()(Args const& ... args);
-    using result_type = void;
-  };
-
   template <typename R, typename ... Args>
   class RPC<R (Args...)>
     : public BaseRPC
@@ -577,10 +541,7 @@ namespace infinit
     template <typename Head, typename ... Tail>
     static
     std::enable_if_t<
-      std::is_base_of<
-        elle::serialization::VirtuallySerializableBase,
-        std::remove_cv_reference_t<Head>>::value,
-      void>
+      elle::serialization::virtually<std::remove_cv_reference_t<Head>>()>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
@@ -595,9 +556,7 @@ namespace infinit
     template <typename Head, typename ... Tail>
     static
     std::enable_if_t<
-      !std::is_base_of<elle::serialization::VirtuallySerializableBase,
-                       std::remove_reference_t<Head>>::value,
-    void>
+      !elle::serialization::virtually<std::remove_reference_t<Head>>()>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
@@ -614,22 +573,28 @@ namespace infinit
 
     template <typename Res>
     static
-    std::enable_if_t<std::is_same<Res, void>::value, int>
+    std::enable_if_t<std::is_void<Res>::value>
     get_result(elle::serialization::SerializerIn&)
     {
-      return 0;
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_TRACE_SCOPE("get result");
+      ELLE_DUMP("result: void");
     }
 
     template <typename Res>
     static
-    std::enable_if_t<!std::is_same<Res, void>::value, R>
+    std::enable_if_t<!std::is_void<Res>::value, R>
     get_result(elle::serialization::SerializerIn& input)
     {
-      return input.deserialize<R>("value");
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_TRACE_SCOPE("get result");
+      auto res = input.deserialize<R>("value");
+      ELLE_DUMP("result: %s", res);
+      return res;
     }
 
     static
-    std::conditional_t<std::is_same<R, void>::value, int, R>
+    R
     _call(elle::Version const& version,
           RPC<R (Args...)>& self,
           Args const&... args)
@@ -645,7 +610,7 @@ namespace infinit
 
         ELLE_DEBUG("build request")
         {
-          elle::serialization::binary::SerializerOut output(outs, versions, false);
+          auto output = elle::serialization::binary::SerializerOut(outs, versions, false);
           output.set_context(self._context);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
@@ -653,8 +618,9 @@ namespace infinit
         outs.flush();
         if (self.key())
         {
-          static elle::Bench bench("bench.rpcclient.encipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench =
+            elle::Bench("bench.rpcclient.encipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           ELLE_DEBUG("encipher request")
             if (call.size() > 262144)
             {
@@ -677,8 +643,9 @@ namespace infinit
         auto response = channel.read();
         if (self.key())
         {
-          static elle::Bench bench("bench.rpcclient.decipher", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench
+            = elle::Bench("bench.rpcclient.decipher", std::chrono::seconds(10000));
+          auto bs = elle::Bench::BenchScope(bench);
           if (response.size() > 262144)
           {
             elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
@@ -692,18 +659,14 @@ namespace infinit
             response = self.key()->decipher(
               elle::ConstWeakBuffer(response.contents(), response.size()));
         }
-        elle::IOStream ins(response.istreambuf());
-        elle::serialization::binary::SerializerIn input(ins, versions, false);
+        auto ins = elle::IOStream(response.istreambuf());
+        auto input
+          = elle::serialization::binary::SerializerIn(ins, versions, false);
         input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);
         if (success)
-        {
-          ELLE_TRACE_SCOPE("get result");
-          auto res = get_result<R>(input);
-          ELLE_DUMP("result: %s", res);
-          return std::move(res);
-        }
+          return get_result<R>(input);
         else
         {
           ELLE_TRACE_SCOPE("call failed, get exception");

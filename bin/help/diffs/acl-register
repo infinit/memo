@@ -1,0 +1,14 @@
+acl: register: Usage: _build/macosx64/bin/infinit-acl --register --user USER -- acl: register: Usage: infinit acl register [OPTIONS]
+										Register user's passport to the network
+Register user's passport to the network:
+										Options:
+Register options:								  -h, --help		    show this help message
+  -u [ --user ] arg	 User to register					      --compatibility-version arg  compatibility version to force
+  -p [ --path ] arg	 Path to mountpoint					  -s, --script		    suppress extraneous human friendly messages and use
+  -N [ --network ] arg	 Name of the network					  -a, --as arg		    user to run commands as (default: john-doe)
+  --fetch		 Fetch users from the Hub if needed			      --path arg	    file whose acl to register
+										  -u, --user arg	    user to register acl for
+Hidden options:									  -N, --network arg	    network to register acl for
+  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	  -f, --fetch		    fetch acl from the Hub
+			 not suppported						      --fallback-xattrs	    use fallback special file if extended attributes ar
+

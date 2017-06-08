@@ -75,6 +75,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(port);
       ELLE_DAS_SYMBOL(protocol);
       ELLE_DAS_SYMBOL(rdv_host);
+      ELLE_DAS_SYMBOL(resign_on_shutdown);
       ELLE_DAS_SYMBOL(soft_fail_running);
       ELLE_DAS_SYMBOL(soft_fail_timeout);
       ELLE_DAS_SYMBOL(storage);
@@ -145,7 +146,7 @@ namespace infinit
             doughnut::listen_address =
               std::declval<boost::optional<boost::asio::ip::address>>(),
             doughnut::storage =
-              std::declval<std::unique_ptr<storage::Storage>>(),
+              std::declval<std::unique_ptr<silo::Silo>>(),
             doughnut::name = std::declval<boost::optional<std::string>>(),
             doughnut::version = std::declval<boost::optional<elle::Version>>(),
             doughnut::admin_keys = std::declval<AdminKeys>(),
@@ -161,7 +162,8 @@ namespace infinit
               std::declval<elle::Defaulted<bool>>(),
             doughnut::tcp_heartbeat =
               std::declval<boost::optional<std::chrono::milliseconds>>(),
-            doughnut::encrypt_options = EncryptOptions()));
+            doughnut::encrypt_options = EncryptOptions(),
+            doughnut::resign_on_shutdown = bool()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
@@ -191,6 +193,7 @@ namespace infinit
         ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
+        ELLE_ATTRIBUTE_RW(bool, resign_on_shutdown);
         ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
@@ -316,7 +319,7 @@ namespace infinit
           Address id,
           std::unique_ptr<consensus::Configuration> consensus,
           std::unique_ptr<overlay::Configuration> overlay,
-          std::unique_ptr<storage::StorageConfig> storage,
+          std::unique_ptr<silo::SiloConfig> storage,
           elle::cryptography::rsa::KeyPair keys,
           std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
           Passport passport,
@@ -350,6 +353,7 @@ namespace infinit
           boost::optional<int> port = {},
           boost::optional<boost::asio::ip::address> listen_address = {},
           boost::optional<std::string> rdv_host = {},
+          boost::optional<bool> resign_on_shutdown = {},
           boost::optional<boost::filesystem::path> monitoring_socket_path = {});
       };
 

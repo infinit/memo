@@ -1,0 +1,12 @@
+device: transmit: Usage: _build/macosx64/bin/infinit-device --transmit [OPTIONS device: transmit: Usage: infinit device transmit [OPTIONS]
+										transmit an object to another device using the Hub
+Transmit object to another device using the Hub:
+										Options:
+Transmit options:								  -h, --help		    show this help message
+  -u [ --user ]		 Transmit the user identity to another device using the	      --compatibility-version arg  compatibility version to force
+			 Hub							  -s, --script		    suppress extraneous human friendly messages and use
+  --passphrase arg	 Passphrase to secure identity (default: prompt for	  -a, --as arg		    user to run commands as (default: john-doe)
+			 passphrase)						  -u, --user		    to transmit user identity to another device using t
+  --no-countdown	 Do not show countdown timer				      --passphrase arg	    passphrase to secure identity (default: prompt for
+										      --no-countdown	    do not show countdown timer
+

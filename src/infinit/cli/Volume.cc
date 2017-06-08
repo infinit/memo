@@ -14,7 +14,7 @@
 #ifdef INFINIT_MACOSX
 # include <elle/reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
-# include <crash_reporting/gcc_fix.hh>
+//# include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
@@ -27,6 +27,118 @@
 #endif
 
 ELLE_LOG_COMPONENT("cli.volume");
+
+#ifdef INFINIT_MACOSX
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wdeprecated-declarations"
+namespace
+{
+  void
+  add_path_to_finder_sidebar(std::string const& path)
+  {
+    ELLE_DUMP("add to sidebar: %s", path);
+    LSSharedFileListRef favorite_items =
+      LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+    if (!favorite_items)
+      return;
+    CFStringRef path_str = CFStringCreateWithCString(
+      kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+    CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+    CFIndex count = CFArrayGetCount(items_array);
+    bool in_list = false;
+    for (CFIndex i = 0; i < count; i++)
+    {
+      LSSharedFileListItemRef item_ref
+        = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+      CFURLRef item_url;
+      OSStatus err = LSSharedFileListItemResolve(
+        item_ref,
+        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+        &item_url,
+        NULL);
+      if (err == noErr && item_url)
+      {
+        if (CFStringRef item_path = CFURLCopyPath(item_url))
+        {
+          if (CFStringHasPrefix(item_path, path_str))
+          {
+            ELLE_DEBUG("already in sidebar favorites: %s", path);
+            in_list = true;
+          }
+          CFRelease(item_path);
+        }
+        CFRelease(item_url);
+      }
+    }
+    if (items_array)
+      CFRelease(items_array);
+    if (path_str)
+      CFRelease(path_str);
+    if (!in_list)
+    {
+      CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        reinterpret_cast<const unsigned char*>(path.data()),
+        path.size(),
+        true);
+      LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+        favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
+      ELLE_DEBUG("added to sidebar favorites: %s", path);
+      if (url)
+        CFRelease(url);
+      if (item)
+        CFRelease(item);
+    }
+    if (favorite_items)
+      CFRelease(favorite_items);
+  }
+
+  void
+  remove_path_from_finder_sidebar(std::string const& path)
+  {
+    ELLE_DUMP("remove from sidebar: %s", path);
+    LSSharedFileListRef favorite_items =
+      LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+    if (!favorite_items)
+      return;
+    CFStringRef path_str = CFStringCreateWithCString(
+      kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+    CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+    CFIndex count = CFArrayGetCount(items_array);
+    for (CFIndex i = 0; i < count; i++)
+    {
+      LSSharedFileListItemRef item_ref
+        = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+      CFURLRef item_url;
+      OSStatus err = LSSharedFileListItemResolve(
+        item_ref,
+        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+        &item_url,
+        NULL);
+      if (err == noErr && item_url)
+      {
+        if (CFStringRef item_path = CFURLCopyPath(item_url))
+        {
+          if (CFStringHasPrefix(item_path, path_str))
+          {
+            LSSharedFileListItemRemove(favorite_items, item_ref);
+            ELLE_DEBUG("found and removed item from sidebar: %s", path);
+          }
+          CFRelease(item_path);
+        }
+        CFRelease(item_url);
+      }
+    }
+    if (items_array)
+      CFRelease(items_array);
+    if (path_str)
+      CFRelease(path_str);
+    if (favorite_items)
+      CFRelease(favorite_items);
+  }
+}
+# pragma clang diagnostic pop
+#endif
 
 namespace infinit
 {
@@ -70,7 +182,6 @@ namespace infinit
                cli::fetch_endpoints = elle::defaulted(false),
                cli::fetch = elle::defaulted(false),
                cli::peer = elle::defaulted(Strings{}),
-               cli::peers_file = boost::optional<std::string>(),
                cli::push_endpoints = elle::defaulted(false),
                cli::push = elle::defaulted(false),
                cli::publish = elle::defaulted(false),
@@ -233,7 +344,6 @@ namespace infinit
               cli::fetch_endpoints = elle::defaulted(false),
               cli::fetch = elle::defaulted(false),
               cli::peer = elle::defaulted(Strings{}),
-              cli::peers_file = boost::optional<std::string>(),
               cli::push_endpoints = elle::defaulted(false),
               cli::register_service = false,
               cli::no_local_endpoints = false,
@@ -283,7 +393,6 @@ namespace infinit
                cli::fetch_endpoints = elle::defaulted(false),
                cli::fetch = elle::defaulted(false),
                cli::peer = elle::defaulted(Strings{}),
-               cli::peers_file = boost::optional<std::string>(),
                cli::push_endpoints = elle::defaulted(false),
                cli::push = elle::defaulted(false),
                cli::map_other_permissions = true,
@@ -437,7 +546,6 @@ namespace infinit
                         Defaulted<bool> fetch_endpoints,
                         Defaulted<bool> fetch,
                         Defaulted<Strings> peer,
-                        boost::optional<std::string> peers_file,
                         Defaulted<bool> push_endpoints,
                         Defaulted<bool> push,
                         Defaulted<bool> publish,
@@ -595,42 +703,36 @@ namespace infinit
             {
               auto v = elle::serialization::binary::deserialize<infinit::Volume>
                 (dht->fetch(volume.second)->data());
-              ifnt.volume_save(v);
+              ifnt.volume_save(v, true);
             }
       }
       else if (volume_name)
       {
         auto name = ifnt.qualified_name(*volume_name, owner);
         auto desc = ifnt.beyond_fetch<infinit::Volume>("volume", name);
-        ifnt.volume_save(std::move(desc));
+        ifnt.volume_save(std::move(desc), true);
       }
       else if (network_name)
       {
-        // Fetch all networks for network.
+        // Fetch all volumes for network.
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("networks/%s/volumes", net_name),
             "volumes for network",
             net_name);
         for (auto const& volume: res["volumes"])
-          ifnt.volume_save(std::move(volume));
+          ifnt.volume_save(std::move(volume), true);
       }
       else
       {
-        // Fetch all networks for owner.
+        // Fetch all volumes for owner.
         auto res = ifnt.beyond_fetch<VolumesMap>(
             elle::sprintf("users/%s/volumes", owner.name),
             "volumes for user",
             owner.name,
             owner);
-        for (auto const& volume: res["volumes"])
-          try
-          {
-            ifnt.volume_save(std::move(volume));
-          }
-          catch (infinit::ResourceAlreadyFetched const& error)
-          {
-          }
+        for (auto const& v: res["volumes"])
+          ifnt.volume_save(v, true);
       }
     }
 
@@ -850,118 +952,6 @@ namespace infinit
     | Mode: run.  |
     `------------*/
 
-#ifdef INFINIT_MACOSX
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    namespace
-    {
-      void
-      add_path_to_finder_sidebar(std::string const& path)
-      {
-        ELLE_DUMP("add to sidebar: %s", path);
-        LSSharedFileListRef favorite_items =
-          LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
-        if (!favorite_items)
-          return;
-        CFStringRef path_str = CFStringCreateWithCString(
-          kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
-        CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
-        CFIndex count = CFArrayGetCount(items_array);
-        bool in_list = false;
-        for (CFIndex i = 0; i < count; i++)
-        {
-          LSSharedFileListItemRef item_ref
-            = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-          CFURLRef item_url;
-          OSStatus err = LSSharedFileListItemResolve(
-            item_ref,
-            kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
-            &item_url,
-            NULL);
-          if (err == noErr && item_url)
-          {
-            if (CFStringRef item_path = CFURLCopyPath(item_url))
-            {
-              if (CFStringHasPrefix(item_path, path_str))
-              {
-                ELLE_DEBUG("already in sidebar favorites: %s", path);
-                in_list = true;
-              }
-              CFRelease(item_path);
-            }
-            CFRelease(item_url);
-          }
-        }
-        if (items_array)
-          CFRelease(items_array);
-        if (path_str)
-          CFRelease(path_str);
-        if (!in_list)
-        {
-          CFURLRef url = CFURLCreateFromFileSystemRepresentation(
-            kCFAllocatorDefault,
-            reinterpret_cast<const unsigned char*>(path.data()),
-            path.size(),
-            true);
-          LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
-            favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
-          ELLE_DEBUG("added to sidebar favorites: %s", path);
-          if (url)
-            CFRelease(url);
-          if (item)
-            CFRelease(item);
-        }
-        if (favorite_items)
-          CFRelease(favorite_items);
-      }
-
-      void
-      remove_path_from_finder_sidebar(std::string const& path)
-      {
-        ELLE_DUMP("remove from sidebar: %s", path);
-        LSSharedFileListRef favorite_items =
-          LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
-        if (!favorite_items)
-          return;
-        CFStringRef path_str = CFStringCreateWithCString(
-          kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
-        CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
-        CFIndex count = CFArrayGetCount(items_array);
-        for (CFIndex i = 0; i < count; i++)
-        {
-          LSSharedFileListItemRef item_ref
-            = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-          CFURLRef item_url;
-          OSStatus err = LSSharedFileListItemResolve(
-            item_ref,
-            kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
-            &item_url,
-            NULL);
-          if (err == noErr && item_url)
-          {
-            if (CFStringRef item_path = CFURLCopyPath(item_url))
-            {
-              if (CFStringHasPrefix(item_path, path_str))
-              {
-                LSSharedFileListItemRemove(favorite_items, item_ref);
-                ELLE_DEBUG("found and removed item from sidebar: %s", path);
-              }
-              CFRelease(item_path);
-            }
-            CFRelease(item_url);
-          }
-        }
-        if (items_array)
-          CFRelease(items_array);
-        if (path_str)
-          CFRelease(path_str);
-        if (favorite_items)
-          CFRelease(favorite_items);
-      }
-    }
-# pragma clang diagnostic pop
-#endif
-
     void
     Volume::mode_run(std::string const& volume_name,
                      bool allow_root_creation,
@@ -1032,17 +1022,13 @@ namespace infinit
       if (mo.mountpoint)
       {
 #ifdef INFINIT_WINDOWS
-        if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
-          ;
-        else
+        if (mo.mountpoint->size() != 2 || (*mo.mountpoint)[1] != ':')
 #elif defined INFINIT_MACOSX
         // Do not try to create folder in /Volumes.
-        auto mount_path = bfs::path(mo.mountpoint.get());
+        auto mount_path = bfs::path(*mo.mountpoint);
         auto mount_parent
           = boost::algorithm::to_lower_copy(mount_path.parent_path().string());
-        if (mount_parent.find("/volumes") == 0)
-          ;
-        else
+        if (mount_parent.find("/volumes") != 0)
 #endif
         try
         {
@@ -1094,7 +1080,7 @@ namespace infinit
       {
         local_endpoint = model->local()->server_endpoint();
         if (port_file)
-          port_to_file(local_endpoint.get().port(), *port_file);
+          port_to_file(local_endpoint->port(), *port_file);
         if (endpoints_file)
           endpoints_to_file(model->local()->server_endpoints(),
                             *endpoints_file);
@@ -1108,8 +1094,6 @@ namespace infinit
         cli.report_action("running", "volume", volume.name);
         auto& dht = *model;
         auto fs = volume.run(std::move(model),
-                             mo.mountpoint,
-                             mo.readonly,
                              allow_root_creation,
                              map_other_permissions
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
@@ -1149,7 +1133,7 @@ namespace infinit
               }
           });
         // Experimental: poll root on mount to trigger caching.
-#   if 0
+#if 0
         auto root_poller = boost::optional<std::thread>{};
         if (mo.mountpoint && mo.cache && mo.cache.get())
           root_poller.emplace(
@@ -1172,7 +1156,7 @@ namespace infinit
             if (root_poller)
               root_poller->join();
           });
-#   endif
+#endif
         if (volume.default_permissions && !volume.default_permissions->empty())
         {
           auto ops =
@@ -1233,7 +1217,7 @@ namespace infinit
           }
         });
 #ifdef INFINIT_MACOSX
-        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", true))
         {
           reachability.reset(new elle::reactor::network::Reachability(
             {},
@@ -1651,7 +1635,6 @@ namespace infinit
                        Defaulted<bool> fetch_endpoints,
                        Defaulted<bool> fetch,
                        Defaulted<Strings> peer,
-                       boost::optional<std::string> peers_file,
                        Defaulted<bool> push_endpoints,
                        bool register_service,
                        bool no_local_endpoints,
@@ -1808,7 +1791,6 @@ namespace infinit
                         Defaulted<bool> fetch_endpoints,
                         Defaulted<bool> fetch,
                         Defaulted<Strings> peer,
-                        boost::optional<std::string> peers_file,
                         Defaulted<bool> push_endpoints,
                         Defaulted<bool> push,
                         bool map_other_permissions,

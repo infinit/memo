@@ -1,0 +1,18 @@
+Usage: _build/macosx64/bin/infinit-storage MODE [OPTIONS...]			Usage: infinit silo [MODE|--help]
+										Infinit silo management utility.
+Infinit storage management utility:
+										Modes:
+Modes:										  create     Create local silo
+  --create		       Create a storage					  delete     Delete local silo
+  --list		       List storages					  export     Export local silo
+  --export		       Export storage information			  import     Import local silo
+  --import		       Import storage information			  list	     List local silos
+  --delete		       Delete a storage
+										Options:
+Miscellaneous:									  -h, --help		    show this help message
+  -h [ --help ]		       Display the help
+  -s [ --script ]	       Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]	       Display version
+  --critical-log	       Path to critical log file, none to disable
+  -a [ --as ] arg	       User to run commands as (default: system user)

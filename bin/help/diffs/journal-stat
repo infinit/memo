@@ -1,0 +1,10 @@
+journal: stat: Usage: _build/macosx64/bin/infinit-journal --stat [--network NET journal: stat: Usage: infinit journal stat [OPTIONS]
+										Show the remaining asynchronous operations count and size
+Show the remaining asynchronous operations count and size:
+										Options:
+Stat options:									  -h, --help		    show this help message
+  -N [ --network ] arg	 Network to check					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -N, --network arg	    network to stat journal for (default: null)
+

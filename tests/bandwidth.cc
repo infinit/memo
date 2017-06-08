@@ -21,7 +21,7 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.bandwidth-test");
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_HOME", path.string());
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -34,9 +34,9 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
     infinit::filesystem::allow_root_creation = true);
   elle::reactor::filesystem::FileSystem driver(std::move(fs), true);
   auto root = driver.path("/");
-  int const max = std::stoi(elle::os::getenv("ITERATIONS", "100"));
+  int const max = elle::os::getenv("ITERATIONS", 100);
   auto& storage =
-    dynamic_cast<infinit::storage::Memory&>(*server_a.dht->local()->storage());
+    dynamic_cast<infinit::silo::Memory&>(*server_a.dht->local()->storage());
   auto resident = boost::optional<double>{};
   for (int i = 0; i < max; ++i)
   {
@@ -59,5 +59,6 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(bazillion_small_files), 0, valgrind(100));
+  // Takes 47s with Valgrind in Docker on a labtop, otherwise less than 2s.
+  suite.add(BOOST_TEST_CASE(bazillion_small_files), 0, valgrind(20, 20));
 }

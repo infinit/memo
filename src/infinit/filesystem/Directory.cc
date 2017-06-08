@@ -600,14 +600,11 @@ namespace infinit
                              std::shared_ptr<DirectoryData> self)
     {
       ELLE_ASSERT_EQ(self.get(), this);
-      static int prefetch_threads = std::stoi(
-        elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
-      static int prefetch_depth = std::stoi(
-        elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
-      static int prefetch_group = std::stoi(
-        elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
-      static int prefetch_tasks = std::stoi(
-        elle::os::getenv("INFINIT_PREFETCH_TASKS", "5"));
+      using elle::os::getenv;
+      static int prefetch_threads = getenv("INFINIT_PREFETCH_THREADS", 3);
+      static int prefetch_depth = getenv("INFINIT_PREFETCH_DEPTH", 2);
+      static int prefetch_group = getenv("INFINIT_PREFETCH_GROUP", 5);
+      static int prefetch_tasks = getenv("INFINIT_PREFETCH_TASKS", 5);
       // Disable prefetching if we have no cache
       static bool have_cache =
         model::doughnut::consensus::StackedConsensus::find<
@@ -644,7 +641,7 @@ namespace infinit
         [self, files, fs = &fs, running,
          parked, nthreads, group_size, available]
         {
-          static elle::Bench bench("bench.fs.prefetch", 10000_sec);
+          static elle::Bench bench("bench.fs.prefetch", std::chrono::seconds(10000));
           elle::Bench::BenchScope bs(bench);
           auto start_time = boost::posix_time::microsec_clock::universal_time();
           int nf = 0;

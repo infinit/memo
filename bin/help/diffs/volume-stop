@@ -1,11 +1,10 @@
-volume: stop: Usage: _build/macosx64/bin/infinit-volume --stop --name VOLUME   |volume: stop: Usage: _build/macosx64/bin/infinit-volume volume stop [OPTIONS]
-[OPTIONS...]								       |Stop a volume
-									       |
-Stop a volume:								       |Options:
-									       |  -h, --help		    show this help message
-Stop options:								       |      --compatibility-version arg  compatibility version to force
-  -n [ --name ] arg	 Volume to remove				       |  -s, --script		    suppress extraneous human friendly messages and use
-									       |JSON output
-									       |  -a, --as arg		    user to run commands as (default: akim)
-									       |  -n, --name arg	    name of the volume to stop
-									       |
+volume: stop: Usage: _build/macosx64/bin/infinit-volume --stop --name VOLUME [O volume: stop: Usage: infinit volume stop [OPTIONS]
+										Stop a volume
+Stop a volume:
+										Options:
+Stop options:									  -h, --help		    show this help message
+  -n [ --name ] arg	 Volume to remove					      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -n, --name arg	    name of the volume to stop
+

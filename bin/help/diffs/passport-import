@@ -1,0 +1,10 @@
+passport: import: Usage: _build/macosx64/bin/infinit-passport --import [--input passport: import: Usage: infinit passport import [OPTIONS]
+										Import a passport for a user to a network
+Import a passport for a user to a network:
+										Options:
+Import options:									  -h, --help		    show this help message
+  -i [ --input ] arg	 File to read the passport from (default: stdin)	      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -i, --input arg	    file to read passport from (default: null)
+

@@ -6,7 +6,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.paranoid.Paranoid");
 
@@ -17,7 +17,7 @@ namespace infinit
     namespace paranoid
     {
       Paranoid::Paranoid(elle::cryptography::rsa::KeyPair keys,
-                         std::unique_ptr<storage::Storage> storage,
+                         std::unique_ptr<silo::Silo> storage,
                          elle::Version version)
         : Model(std::move(version))
         , _keys(std::move(keys))
@@ -62,7 +62,7 @@ namespace infinit
           auto stored = this->_storage->get(address);
           raw = this->_keys.k().open(stored);
         }
-        catch (infinit::storage::MissingKey const&)
+        catch (infinit::silo::MissingKey const&)
         {
           throw MissingBlock(address);
         }
@@ -112,7 +112,7 @@ namespace infinit
         {
           this->_storage->erase(address);
         }
-        catch (infinit::storage::MissingKey const&)
+        catch (infinit::silo::MissingKey const&)
         {
           throw MissingBlock(address);
         }

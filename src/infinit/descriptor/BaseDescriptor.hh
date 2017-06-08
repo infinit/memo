@@ -50,7 +50,7 @@ namespace infinit
         : public std::string
       {
       public:
-        Name();
+        Name() = default;
         Name(std::string name);
         Name(std::string const& qualifier, std::string const& name);
 
@@ -90,7 +90,6 @@ namespace infinit
     | Printable |
     `----------*/
     public:
-
       void
       print(std::ostream& out) const override;
     };

@@ -282,13 +282,12 @@ namespace infinit
     std::ostream&
     operator <<(std::ostream& output, NodeLocation const& loc)
     {
-      if (loc.id() != Address::null)
-        if (is_fixed(output))
-          elle::fprintf(output, "peer %f", loc.id());
-        else
-          elle::fprintf(output, "peer %s (%s)", loc.id(), loc.endpoints());
-      else
+      if (loc.id() == Address::null)
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
+      else if (is_fixed(output))
+        elle::fprintf(output, "peer %f", loc.id());
+      else
+        elle::fprintf(output, "peer %s (%s)", loc.id(), loc.endpoints());
       return output;
     }
   }
@@ -300,7 +299,7 @@ namespace elle
   {
     auto
     Serialize<infinit::model::NodeLocation>::convert(infinit::model::NodeLocation const& nl)
-    -> Type
+      -> Type
     {
       return std::make_pair(nl.id(), nl.endpoints());
     }
@@ -308,8 +307,7 @@ namespace elle
     infinit::model::NodeLocation
     Serialize<infinit::model::NodeLocation>::convert(Type const& repr)
     {
-      return infinit::model::NodeLocation(repr.first,
-                                          infinit::model::Endpoints(repr.second));
+      return {repr.first, infinit::model::Endpoints(repr.second)};
     }
   }
 }

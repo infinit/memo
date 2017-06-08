@@ -1,0 +1,10 @@
+passport: list: Usage: _build/macosx64/bin/infinit-passport --list [--network N passport: list: Usage: infinit passport list [OPTIONS]
+										List all local passports
+List all local passports:
+										Options:
+List options:									  -h, --help		    show this help message
+  -N [ --network ] arg	 Network to list passports for (optional)		      --compatibility-version arg  compatibility version to force
+										  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -N, --network arg	    network to list passport for (default: null)
+

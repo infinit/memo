@@ -24,7 +24,7 @@
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/HandshakeFailed.hh>
-#include <infinit/storage/MissingKey.hh>
+#include <infinit/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
@@ -32,8 +32,8 @@ using Serializer = elle::serialization::Binary;
 
 namespace
 {
-  auto const ipv4_enabled = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-  auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+  auto const ipv4_enabled = !elle::os::getenv("INFINIT_NO_IPV4", false);
+  auto const ipv6_enabled = !elle::os::getenv("INFINIT_NO_IPV6", false);
 }
 
 namespace infinit
@@ -57,7 +57,7 @@ namespace infinit
 
       Local::Local(Doughnut& dht,
                    Address id,
-                   std::unique_ptr<storage::Storage> storage,
+                   std::unique_ptr<silo::Silo> storage,
                    int port,
                    boost::optional<boost::asio::ip::address> listen_address)
         : Super(dht, std::move(id))
@@ -211,7 +211,7 @@ namespace infinit
             else
               throw ValidationFailed(vr.reason());
         }
-        catch (storage::MissingKey const&)
+        catch (silo::MissingKey const&)
         {}
         elle::Buffer data = [&block]
           {
@@ -228,7 +228,7 @@ namespace infinit
                               mode == STORE_INSERT,
                               mode == STORE_UPDATE);
         }
-        catch (storage::MissingKey const&)
+        catch (silo::MissingKey const&)
         {
           throw MissingBlock(block.address());
         }
@@ -244,7 +244,7 @@ namespace infinit
         {
           data = this->_storage->get(address);
         }
-        catch (storage::MissingKey const& e)
+        catch (silo::MissingKey const& e)
         {
           throw MissingBlock(e.key());
         }
@@ -279,7 +279,7 @@ namespace infinit
           }
           this->_storage->erase(address);
         }
-        catch (storage::MissingKey const& k)
+        catch (silo::MissingKey const& k)
         {
           throw MissingBlock(k.key());
         }
@@ -607,6 +607,25 @@ namespace infinit
       Local::Connection::_run()
       {
         this->_rpcs.serve(this->_channels);
+      }
+
+      void
+      Local::Connection::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%x, %f)",
+                      elle::type_info(*this),
+                      reinterpret_cast<void const*>(this),
+                      this->_local);
+      }
+
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      Local::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
       }
     }
   }

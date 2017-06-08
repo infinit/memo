@@ -1,0 +1,11 @@
+passport: pull: Usage: _build/macosx64/bin/infinit-passport --pull --network NE passport: pull: Usage: infinit passport pull [OPTIONS]
+										Remove a user's network passport from the Hub
+Remove a user's network passport from the Hub:
+										Options:
+Pull options:									  -h, --help		    show this help message
+  -N [ --network ] arg	 Network name						      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	 User name						  -s, --script		    suppress extraneous human friendly messages and use
+										  -a, --as arg		    user to run commands as (default: john-doe)
+										  -N, --network arg	    network to pull passport for
+										  -u, --user arg	    user to pull passport for
+

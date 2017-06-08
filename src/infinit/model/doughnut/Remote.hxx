@@ -22,7 +22,7 @@ namespace infinit
         // GCC bug, argument packs dont work in lambdas
         auto helper = std::bind(&remote_call_next<F, Args...>,
           this, std::ref(args)...);
-        return _remote->safe_perform<typename RPC<F>::result_type>(
+        return _remote->safe_perform(
           this->name(),
           [&]
           {
@@ -41,10 +41,10 @@ namespace infinit
         });
       }
 
-      template<typename R>
-      R
-      Remote::safe_perform(std::string const& name,
-                           std::function<R()> op)
+      template <typename Op>
+      auto
+      Remote::safe_perform(std::string const& name, Op op)
+        -> decltype(op())
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
         auto const rpc_timeout = this->doughnut().connect_timeout();
@@ -90,7 +90,7 @@ namespace infinit
                 boost::posix_time::millisec(
                   std::chrono::duration_cast<std::chrono::milliseconds>(
                     rpc_timeout_delay).count());
-              boost::asio::deadline_timer timeout(
+              auto&& timeout = boost::asio::deadline_timer(
                 elle::reactor::scheduler().io_service(), delay);
               if (this->doughnut().soft_fail_running())
                 timeout.async_wait(
@@ -116,12 +116,12 @@ namespace infinit
               give_up = true;
             }
           }
-          catch(elle::reactor::network::Error const& e)
+          catch (elle::reactor::network::Error const& e)
           {
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);
           }
-          catch(elle::protocol::Serializer::EOF const& e)
+          catch (elle::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
           }
