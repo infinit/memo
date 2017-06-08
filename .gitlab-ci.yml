@@ -87,10 +87,6 @@ x86_64-ubuntu-gcc4:
     - scp "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
-    - time python3 drake //docker
-    - docker tag infinit:${DESC} mefyl/infinit:${DESC}
-    - time docker push mefyl/infinit:${DESC}
-    - docker rmi {,mefyl/}infinit:${DESC}
     - time python3 drake //beyond/docker
     - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
     - time docker push mefyl/infinit-beyond:${DESC}
@@ -126,11 +122,7 @@ x86_64-alpine-gcc:
     - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - rm "$TARBALL"
-    - python3 drake //docker-alpine
-    - docker tag memo-alpine:$DESC mefyl/memo-alpine:$DESC
-    - docker push mefyl/memo-alpine:$DESC
-    - docker rmi {,mefyl/}memo-alpine:$DESC
-    - python3 drake //src/memo/grpc/docker
+    - python3 drake //src/infinit/grpc/docker
     - docker tag memo-client-python:$DESC mefyl/memo-client-python:$DESC
     - docker push mefyl/memo-client-python:$DESC
     - docker rmi {,mefyl/}memo-client-python:$DESC
