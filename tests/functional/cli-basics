@@ -5,15 +5,15 @@ import json
 import re
 
 with Infinit() as bob:
-  def slashify(s):
-    '''Replace Window paths with Unix ones.'''
-    return re.sub(r'Z:.*?\\(infinit(?:-\w+)?).exe', r'./bin/\1', s)
+  def neutralize(s):
+    '''Fix gratuitous difference such as Window paths vs. Unix ones.'''
+    s = re.sub(r'Z:.*?\\(infinit(?:-\w+)?).exe', r'./bin/\1', s)
+    # Gee...  Maybe do this in assertEq?
+    s = s.replace('\r\n', '\n')
+    return s
 
   def xfail(command, message, binary='infinit'):
-    err = bob.run([binary] + command, return_code = 2)[1]
-    err = slashify(err)
-    # Gee...  Maybe do this in assertEq?
-    err = err.replace('\r\n', '\n')
+    err = neutralize(bob.run([binary] + command, return_code = 2)[1])
     assertEq(message, err)
 
   xfail(['--foo'],
@@ -59,7 +59,7 @@ with Infinit() as bob:
   # Regression: check that "the Hub" is properly displayed, and that
   # we display `infinit passport` not `infinit-passport passport`.  It
   # exercised code different from the above test case.
-  out = slashify(bob.run(['infinit-passport', '--help'])[0])
+  out = neutralize(bob.run(['infinit-passport', '--help'])[0])
   assertEq(out,
            "Usage: ./bin/infinit passport [MODE|--help]\n"
            "Infinit passport management utility.\n"
