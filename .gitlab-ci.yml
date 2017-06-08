@@ -91,7 +91,6 @@ x86_64-ubuntu-gcc4:
     - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
     - time docker push mefyl/infinit-beyond:${DESC}
     - docker rmi {,mefyl/}infinit-beyond:${DESC}
-    - if [ -n "$SIBYLFS" ]; then time python3 drake //sibylfs; fi
   tags:
     - x86_64
     - ubuntu

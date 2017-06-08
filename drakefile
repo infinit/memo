@@ -984,68 +984,6 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_bench << runner.status
 
-  ## ------- ##
-  ## SibylFS ##
-  ## ------- ##
-
-  if linux and beyond:
-    sibylfs_rule = drake.Rule('sibylfs')
-    sibylfs_binaries_basename = 'sibylfs_linux_amd64'
-    sibylfs_binaries_version = '2015-10-05'
-    sibylfs_binaries_url = \
-      'https://github.com/sibylfs/sibylfs_binaries/releases/download' \
-      '/%s/%s.tar.gz' % (sibylfs_binaries_version, sibylfs_binaries_basename)
-    sibylfs_binaries_tarball = drake.node('sibylfs/%s-%s.tar.gz' % (
-      sibylfs_binaries_basename, sibylfs_binaries_version))
-    drake.HTTPDownload(sibylfs_binaries_url, sibylfs_binaries_tarball,
-                       fingerprint = '17f2ef7bc45f49094126d786575ec5e0')
-    drake.TarballExtractor(sibylfs_binaries_tarball,
-                           targets = ['sibylfs/bin/fs_test'])
-    sibylfs_test_suite_version = '14f81504ca2d497e8b945133cd6fe0159e163079'
-    sibylfs_test_suite_url = \
-      'https://github.com/sibylfs/sibylfs_test_suite/archive/%s.tar.gz' % \
-      sibylfs_test_suite_version
-    sibylfs_test_suite_tarball = drake.node(
-      'sibylfs/sibylfs_test_suite-%s.tar.gz' % sibylfs_test_suite_version)
-    drake.HTTPDownload(sibylfs_test_suite_url, sibylfs_test_suite_tarball,
-                       fingerprint = 'c60b0a3b302c9f641caa0f8a26dfdaf2')
-    sibylfs_test_suites = \
-      'sibylfs_test_suite-%s/test-suite' % sibylfs_test_suite_version
-    drake.TarballExtractor(
-      sibylfs_test_suite_tarball,
-      targets = ['%s/testgen.version' % sibylfs_test_suites])
-    sibylfs_test = drake.node('tests/sibylfs/sibylfs')
-    utils = drake.node('tests/functional/utils.py')
-    sibylfs_test_bin = drake.node('sibylfs/sibylfs/bin/fs_test')
-    sibylfs_test_suite_version_file = \
-      drake.node('sibylfs/%s/testgen.version' % sibylfs_test_suites)
-    sibylfs_test.dependencies_add([
-      sibylfs_test_bin,
-      sibylfs_test_suite_version_file,
-    ] + beyond.package.nodes + installed_binaries)
-    env = {
-      'SOURCE_DIR': str(drake.path_source()),
-      'BUILD_DIR': str(drake.path_build()),
-      'OS': 'windows' if windows else 'unix',
-      'PYTHONPATH': str(
-        drake.path_build('beyond/lib/python%s:%s' % (
-        elle.python3.version, drake.path_build(utils.path(True).dirname(), True)
-      ))),
-      'MEMO_BINARIES': str(
-        drake.path_build(installed_binaries[0].path(True).dirname(),
-                         absolute = True)),
-      'SIBYLFS_BIN_PATH': str(sibylfs_test_bin.path(True)),
-      'SIBYLFS_SUITE_PATH': str(
-        drake.path_build(sibylfs_test_suite_version_file.path(True).dirname(),
-                         absolute = True)),
-    }
-    sibylfs_runner = drake.Runner(
-      exe = sibylfs_test,
-      env = env,
-      sources = [utils],
-    )
-    sibylfs_rule << sibylfs_runner.status
-
 # Local Variables:
 # mode: python
 # End:
