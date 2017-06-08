@@ -504,7 +504,7 @@ namespace infinit
 //             auto name = u.substr(0, sep);
 //             auto pass = u.substr(sep+1);
 //             auto c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
-//             auto json = ifnt.beyond_login(name, c);
+//             auto json = ifnt.hub_login(name, c);
 //             elle::serialization::json::SerializerIn input(json, false);
 //             auto user = input.deserialize<infinit::User>();
 //             ifnt.user_save(user, true);
@@ -719,7 +719,7 @@ namespace infinit
             {
               try
               {
-                passport.emplace(ifnt.beyond_fetch<infinit::Passport>(elle::sprintf(
+                passport.emplace(ifnt.hub_fetch<infinit::Passport>(elle::sprintf(
                   "networks/%s/passports/%s", name, u.name),
                     "passport for",
                     name,
@@ -789,7 +789,7 @@ namespace infinit
                       std::string const& name)
       {
         auto desc
-          = ifnt.beyond_fetch<infinit::NetworkDescriptor>("network", name);
+          = ifnt.hub_fetch<infinit::NetworkDescriptor>("network", name);
         ifnt.network_save(desc);
         try
         {

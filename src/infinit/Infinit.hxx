@@ -46,13 +46,13 @@ namespace infinit
 
   template <typename T>
   T
-  Infinit::beyond_fetch(std::string const& where,
-                        std::string const& type,
-                        std::string const& name,
-                        boost::optional<infinit::User const&> self,
-                        infinit::Headers const& extra_headers) const
+  Infinit::hub_fetch(std::string const& where,
+                     std::string const& type,
+                     std::string const& name,
+                     boost::optional<infinit::User const&> self,
+                     infinit::Headers const& extra_headers) const
   {
-    auto json = beyond_fetch_json(where, type, name, self, extra_headers);
+    auto json = hub_fetch_json(where, type, name, self, extra_headers);
     elle::serialization::json::SerializerIn input(json, false);
     this->report_local_action()("fetched", type, name);
     return input.deserialize<T>();
@@ -60,21 +60,21 @@ namespace infinit
 
   template <typename T>
   T
-  Infinit::beyond_fetch(std::string const& type,
-                        std::string const& name) const
+  Infinit::hub_fetch(std::string const& type,
+                     std::string const& name) const
   {
-    return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
+    return hub_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
   }
 
   template <typename Serializer, typename T>
   void
-  Infinit::beyond_push(std::string const& where,
-                       std::string const& type,
-                       std::string const& name,
-                       T const& o,
-                       infinit::User const& self,
-                       bool beyond_error,
-                       bool update) const
+  Infinit::hub_push(std::string const& where,
+                    std::string const& type,
+                    std::string const& name,
+                    T const& o,
+                    infinit::User const& self,
+                    bool hub_error,
+                    bool update) const
   {
     ELLE_LOG_COMPONENT("infinit");
     auto payload_ = [&] {
@@ -84,22 +84,22 @@ namespace infinit
     }();
     ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
     elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
-    beyond_push_data(
-      where, type, name, payload, "application/json", self, beyond_error,
+    hub_push_data(
+      where, type, name, payload, "application/json", self, hub_error,
       update);
   }
 
   template <typename Serializer, typename T>
   void
-  Infinit::beyond_push(std::string const& type,
-                       std::string const& name,
-                       T const& o,
-                       infinit::User const& self,
-                       bool beyond_error,
-                       bool update) const
+  Infinit::hub_push(std::string const& type,
+                    std::string const& name,
+                    T const& o,
+                    infinit::User const& self,
+                    bool hub_error,
+                    bool update) const
   {
-    beyond_push<Serializer>(
+    hub_push<Serializer>(
       elle::sprintf("%ss/%s", type, name),
-      type, name, o, self, beyond_error, update);
+      type, name, o, self, hub_error, update);
   }
 }

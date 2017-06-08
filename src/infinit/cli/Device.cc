@@ -131,7 +131,7 @@ namespace infinit
         auto hashed_pass = cli.hash_password(pass, _pair_salt);
         try
         {
-          auto pairing = ifnt.beyond_fetch<PairingInformation>(
+          auto pairing = ifnt.hub_fetch<PairingInformation>(
             elle::sprintf("users/%s/pairing", name), "pairing",
             name, boost::none,
             {{"infinit-pairing-passphrase-hash", hashed_pass}});
@@ -193,7 +193,7 @@ namespace infinit
           key.encipher(to_json(user),
                        elle::cryptography::Cipher::aes256),
           cli.hash_password(pass, _pair_salt));
-        ifnt.beyond_push
+        ifnt.hub_push
           (elle::sprintf("users/%s/pairing", user.name),
            "user identity for", user.name, p, user, false);
         cli.report_action("transmitted", "user identity for", user.name);
@@ -202,7 +202,7 @@ namespace infinit
           int timeout = 5 * 60; // 5 min.
           bool timed_out = false;
           bool done = false;
-          elle::reactor::Thread beyond_poller(elle::reactor::scheduler(), "beyond poller", [&]
+          elle::reactor::Thread hub_poller(elle::reactor::scheduler(), "beyond poller", [&]
             {
               auto where = elle::sprintf("users/%s/pairing/status", user.name);
               while (timeout > 0)
@@ -257,7 +257,7 @@ namespace infinit
             else if (timed_out)
               break;
           }
-          beyond_poller.terminate_now();
+          hub_poller.terminate_now();
           elle::fprintf(
             std::cout, "Timed out, user identity no longer available on %s\n",
             infinit::beyond(true));

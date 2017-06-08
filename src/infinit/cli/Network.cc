@@ -457,7 +457,7 @@ namespace infinit
             }
           }();
         if (push || push_network)
-          ifnt.beyond_push("network", desc->name, *desc, owner);
+          ifnt.hub_push("network", desc->name, *desc, owner);
       }
     }
 
@@ -492,7 +492,7 @@ namespace infinit
           ifnt.passport_delete(network.name, user);
       }
       if (pull)
-        ifnt.beyond_delete("network", network.name, owner, true, purge);
+        ifnt.hub_delete("network", network.name, owner, true, purge);
       ifnt.network_delete(network.name, owner, unlink);
     }
 
@@ -571,7 +571,7 @@ namespace infinit
       if (network_name)
       {
         auto name = ifnt.qualified_name(*network_name, owner);
-        auto network = ifnt.beyond_fetch<infinit::NetworkDescriptor>(
+        auto network = ifnt.hub_fetch<infinit::NetworkDescriptor>(
           "network", name);
         save(network);
       }
@@ -581,7 +581,7 @@ namespace infinit
         using Networks
           = std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>;
         auto res =
-          ifnt.beyond_fetch<Networks>(
+          ifnt.hub_fetch<Networks>(
             elle::sprintf("users/%s/networks", owner.name),
             "networks for user",
             owner.name,
@@ -955,11 +955,11 @@ namespace infinit
             if (fetch || publish)
             {
               infinit::model::NodeLocations eps;
-              network.beyond_fetch_endpoints(eps);
+              network.hub_fetch_endpoints(eps);
               dht->overlay()->discover(eps);
               if (fetch_endpoints_interval && *fetch_endpoints_interval > 0)
                 poll_thread =
-                  network.make_poll_beyond_thread(*dht, eps,
+                  network.make_poll_hub_thread(*dht, eps,
                                                   *fetch_endpoints_interval);
             }
 #ifndef INFINIT_WINDOWS
@@ -1119,7 +1119,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(network_name, owner);
-      ifnt.beyond_delete("network", name, owner, false, purge);
+      ifnt.hub_delete("network", name, owner, false, purge);
     }
 
     /*-------------.
@@ -1139,7 +1139,7 @@ namespace infinit
         auto& dht = *network.dht();
         auto owner_uid = infinit::User::uid(*dht.owner);
         auto desc = infinit::NetworkDescriptor(std::move(network));
-        ifnt.beyond_push("network", desc.name, desc, owner, false, true);
+        ifnt.hub_push("network", desc.name, desc, owner, false, true);
       }
     }
 
@@ -1398,7 +1398,7 @@ namespace infinit
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(network_name, owner);
       auto res =
-        ifnt.beyond_fetch<infinit::Storages>(
+        ifnt.hub_fetch<infinit::Storages>(
           elle::sprintf("networks/%s/stat", name),
           "stat",
           "stat",
@@ -1572,7 +1572,7 @@ namespace infinit
         ifnt.network_save(owner, network, true);
       auto desc = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
       if (push || push_network)
-        ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
+        ifnt.hub_push("network", desc->name, *desc, owner, false, true);
       if (changed_admins && !output_name)
         std::cout << "INFO: Changes to network admins do not affect existing data:\n"
                   << "INFO: Admin access will be updated on the next write to each\n"

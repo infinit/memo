@@ -224,7 +224,7 @@ run_nodes(bfs::path const& where,
     if (beyond_port)
     {
       infinit::overlay::NodeLocations locs;
-      tptr = net.make_poll_beyond_thread(*dn, locs, 1);
+      tptr = net.make_poll_hub_thread(*dn, locs, 1);
     }
     res.emplace_back(dn, std::move(tptr));
     //if (res.size() == 1)
@@ -297,7 +297,7 @@ namespace
     if (beyond_port)
     {
       infinit::overlay::NodeLocations locs;
-      tptr = net.make_poll_beyond_thread(*dn, locs, 1);
+      tptr = net.make_poll_hub_thread(*dn, locs, 1);
     }
     while (true)
     {

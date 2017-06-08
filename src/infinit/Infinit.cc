@@ -434,7 +434,7 @@ namespace infinit
   }
 
   User
-  Infinit::user_get(std::string const& user, bool beyond_fallback) const
+  Infinit::user_get(std::string const& user, bool hub_fallback) const
   {
     auto const path = this->_user_path(user);
     try
@@ -447,10 +447,10 @@ namespace infinit
     {
       ELLE_TRACE("%s: unable to load user %s from %s",
                  this, user, this->_user_path(user));
-      if (!beyond_fallback)
+      if (!hub_fallback)
         throw;
       ELLE_LOG("User %s not found locally, trying on %s", user, beyond());
-      auto u = beyond_fetch<User>("user", user);
+      auto u = hub_fetch<User>("user", user);
       return u;
     }
   }
@@ -877,7 +877,7 @@ namespace infinit
   | Beyond |
   `-------*/
   elle::json::Json
-  Infinit::beyond_login(std::string const& name,
+  Infinit::hub_login(std::string const& name,
                         LoginCredentials const& o) const
   {
     elle::reactor::http::Request::Configuration c;
@@ -947,7 +947,7 @@ namespace infinit
   }
 
   std::unique_ptr<elle::reactor::http::Request>
-  Infinit::beyond_fetch_data(std::string const& where,
+  Infinit::hub_fetch_request(std::string const& where,
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
@@ -965,18 +965,18 @@ namespace infinit
   }
 
   elle::json::Json
-  Infinit::beyond_fetch_json(std::string const& where,
+  Infinit::hub_fetch_json(std::string const& where,
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
                              Headers const& extra_headers) const
   {
-    auto r = beyond_fetch_data(where, type, name, self, extra_headers);
+    auto r = hub_fetch_request(where, type, name, self, extra_headers);
     return elle::json::read(*r);
   }
 
   bool
-  Infinit::beyond_delete(std::string const& where,
+  Infinit::hub_delete(std::string const& where,
                          std::string const& type,
                          std::string const& name,
                          User const& self,
@@ -1031,24 +1031,24 @@ namespace infinit
   }
 
   bool
-  Infinit::beyond_delete(std::string const& type,
+  Infinit::hub_delete(std::string const& type,
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
                          bool purge) const
   {
-    return beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
+    return hub_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
                          ignore_missing, purge);
   }
 
   Infinit::PushResult
-  Infinit::beyond_push_data(std::string const& where,
+  Infinit::hub_push_data(std::string const& where,
                             std::string const& type,
                             std::string const& name,
                             elle::ConstWeakBuffer const& object,
                             std::string const& content_type,
                             User const& self,
-                            bool beyond_error,
+                            bool hub_error,
                             bool update) const
   {
     elle::reactor::http::Request::Configuration c;
@@ -1091,7 +1091,7 @@ namespace infinit
     }
     else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
     {
-      if (beyond_error)
+      if (hub_error)
         read_error<BeyondError>(r, type, name);
       else
         read_error<MissingResource>(r, type, name);

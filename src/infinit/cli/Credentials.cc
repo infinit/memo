@@ -272,7 +272,7 @@ namespace infinit
         // FIXME: Workaround for using std::unique_ptr.
         // Remove when serialization does not require copy.
         auto res =
-          infinit.beyond_fetch_json
+          infinit.hub_fetch_json
           (where,
            elle::sprintf("\"%s\" credentials", ServicePrint<Service>::pretty),
            user.name, user);
@@ -364,7 +364,7 @@ namespace infinit
                                    ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
-        cli.infinit().beyond_delete(
+        cli.infinit().hub_delete(
           where,
           elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
           ServicePrint<Service>::name, owner, allow_missing);

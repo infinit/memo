@@ -130,10 +130,10 @@ namespace infinit
     auto poll_thread = [&] () -> elle::reactor::Thread::unique_ptr {
       if (mo.fetch.value_or(mo.publish.value_or(false)))
       {
-        beyond_fetch_endpoints(eps);
+        hub_fetch_endpoints(eps);
         if (mo.poll_beyond && *mo.poll_beyond > 0)
          return
-           this->make_poll_beyond_thread(*dht, eps, *mo.poll_beyond);
+           this->make_poll_hub_thread(*dht, eps, *mo.poll_beyond);
       }
       return {};
     }();
@@ -155,7 +155,7 @@ namespace infinit
   }
 
   elle::reactor::Thread::unique_ptr
-  Network::make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+  Network::make_poll_hub_thread(infinit::model::doughnut::Doughnut& model,
                                    infinit::overlay::NodeLocations const& locs_,
                                    int interval)
   {
@@ -168,7 +168,7 @@ namespace infinit
           infinit::overlay::NodeLocations news;
           try
           {
-            this->beyond_fetch_endpoints(news);
+            this->hub_fetch_endpoints(news);
           }
           catch (elle::Error const& e)
           {
@@ -262,7 +262,7 @@ namespace infinit
         "networks/%s/stat/%s/%s", name, user.name, node_id);
       auto storage = this->dht()->storage->make();
       auto s = Storages{storage->usage(), storage->capacity()};
-      infinit.beyond_push(
+      infinit.hub_push(
         url, "storage usage", name, std::move(s), user, false);
     }
     catch (elle::Error const& e)
@@ -315,8 +315,8 @@ namespace infinit
   }
 
   void
-  Network::beyond_fetch_endpoints(infinit::model::NodeLocations& hosts,
-                                  Reporter report)
+  Network::hub_fetch_endpoints(infinit::model::NodeLocations& hosts,
+                               Reporter report)
   {
     auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), this->name);
     elle::reactor::http::Request r(url);

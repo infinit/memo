@@ -134,7 +134,7 @@ namespace infinit
           std::istreambuf_iterator<char>{});
         elle::ConstWeakBuffer data(s.data(), s.size());
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().infinit().beyond_push_data(
+        api.cli().infinit().hub_push_data(
           url, "avatar", self.name, data, "image/jpeg", self);
         save_avatar(api, self.name, data);
       }
@@ -143,7 +143,8 @@ namespace infinit
       fetch_avatar(User& api, std::string const& name)
       {
         auto url = elle::sprintf("users/%s/avatar", name);
-        auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
+        auto request = api.cli().infinit().hub_fetch_request(
+          url, "avatar", name);
         if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
@@ -159,7 +160,7 @@ namespace infinit
       pull_avatar(User& api, infinit::User& self)
       {
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().infinit().beyond_delete(url, "avatar", self.name, self);
+        api.cli().infinit().hub_delete(url, "avatar", self.name, self);
       }
 
       infinit::User
@@ -202,7 +203,7 @@ namespace infinit
             password = Memo::read_password();
           if (!user.ldap_dn)
             user.password_hash = Memo::hub_password_hash(*password);
-          api.cli().infinit().beyond_push<elle::das::Serializer<PrivateUserPublish>>(
+          api.cli().infinit().hub_push<elle::das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -210,7 +211,7 @@ namespace infinit
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          api.cli().infinit().beyond_push<elle::das::Serializer<PublicUserPublish>>(
+          api.cli().infinit().hub_push<elle::das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -291,7 +292,7 @@ namespace infinit
         try
         {
           auto self = this->cli().as_user();
-          ifnt.beyond_delete("user", name, self, true, purge);
+          ifnt.hub_delete("user", name, self, true, purge);
         }
         catch (MissingLocalResource const& e)
         {
@@ -374,7 +375,7 @@ namespace infinit
         };
         try
         {
-          auto user = this->cli().infinit().beyond_fetch<infinit::User>(
+          auto user = this->cli().infinit().hub_fetch<infinit::User>(
             "user", elle::reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
@@ -472,7 +473,7 @@ namespace infinit
       auto pass = password.value_or(Memo::read_password());
       auto hashed_pass = Memo::hub_password_hash(pass);
       auto c = LoginCredentials{name, hashed_pass, pass};
-      auto json = this->cli().infinit().beyond_login(name, c);
+      auto json = this->cli().infinit().hub_login(name, c);
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       this->cli().infinit().user_save(user, true);
@@ -483,7 +484,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
-      this->cli().infinit().beyond_delete("user", name, self, false, purge);
+      this->cli().infinit().hub_delete("user", name, self, false, purge);
     }
 
     void

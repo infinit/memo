@@ -148,13 +148,13 @@ namespace infinit
       }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");
-      this->_infinit.beyond_push(this->_url, "endpoints for",
-                                 network.name, endpoints, self, false);
+      this->_infinit.hub_push(this->_url, "endpoints for",
+                              network.name, endpoints, self, false);
     }
 
     InterfacePublisher::~InterfacePublisher()
     {
-      this->_infinit.beyond_delete(
+      this->_infinit.hub_delete(
         this->_url, "endpoints for", this->_network.name, _self);
     }
 
