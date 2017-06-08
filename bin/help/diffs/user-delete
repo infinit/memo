@@ -5,9 +5,9 @@ Delete a user locally:
 Delete options:									  -h, --help		    show this help message
   -n [ --name ] arg	 User to delete (default: system user)			      --compatibility-version arg  compatibility version to force
   --force		 Delete the user without any prompt			  -s, --script		    suppress extraneous human friendly messages and use
-  --pull		 Pull the user if it is on the Hub			  -a, --as arg		    user to run commands as (default: akim)
-  --purge		 Remove objects owned by the user			  -n, --name arg	    name of the user to delete (default: akim)
-										      --pull		    pull user from https://beyond.infinit.sh
+  --pull		 Pull the user if it is on the Hub			  -a, --as arg		    user to run commands as (default: john-doe)
+  --purge		 Remove objects owned by the user			  -n, --name arg	    name of the user to delete (default: john-doe)
+										      --pull		    pull user from the Hub
 										      --purge		    purge objects owned by the user
 										  -f, --force		    do not ask for user confirmation
 

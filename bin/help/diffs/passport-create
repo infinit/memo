@@ -5,7 +5,7 @@ Create a passport for a user to a network:
 Create options:									  -h, --help		    show this help message
   -N [ --network ] arg	    Network to create the passport to			      --compatibility-version arg  compatibility version to force
   -u [ --user ] arg	    User to create the passport for			  -s, --script		    suppress extraneous human friendly messages and use
-  --push-passport	    Push the passport to the Hub			  -a, --as arg		    user to run commands as (default: akim)
+  --push-passport	    Push the passport to the Hub			  -a, --as arg		    user to run commands as (default: john-doe)
   -p [ --push ]		    Alias for --push-passport				  -N, --network arg	    network to create passport for
   --deny-write		    Deny user write access to the network		  -u, --user arg	    user to create passport for
   --deny-storage	    Deny user ability to contribute storage to the	      --push-passport	    push passport to https://beyond.infinit.sh

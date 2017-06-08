@@ -5,7 +5,7 @@ Start daemon in the background:
 Start options:									  -h, --help		    show this help message
   --login-user arg		  Login with selected user(s), of form		      --compatibility-version arg  compatibility version to force
 				  'user:password'				  -s, --script		    suppress extraneous human friendly messages and use
-  --mount-root arg		  Default root path for all mounts		  -a, --as arg		    user to run commands as (default: akim)
+  --mount-root arg		  Default root path for all mounts		  -a, --as arg		    user to run commands as (default: john-doe)
 				  (default: /run/user/505/infinit/filesystem/mn	      --login-user arg	    Login with selected user(s), of form 'user:password
 				  t)						      --mount arg	    mount given volumes on startup, keep trying on erro
   --default-network arg		  Default network for volume creation		      --mount-root arg	    Default root path for all mounts (default: null)

@@ -5,7 +5,7 @@ Run a volume:
 Run options:									  -h, --help		    show this help message
   --name arg				Volume name				      --compatibility-version arg  compatibility version to force
   --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -s, --script		    suppress extraneous human friendly messages and use
-  -m [ --mountpoint ] arg		Where to mount the filesystem		  -a, --as arg		    user to run commands as (default: akim)
+  -m [ --mountpoint ] arg		Where to mount the filesystem		  -a, --as arg		    user to run commands as (default: john-doe)
   --readonly [=arg(=true)]		Mount as readonly			  -n, --name arg	    name of the volume to run
   --mount-name arg			Name of mounted volume			      --allow-root-creation  create the filesystem root if not found
   --mount-icon arg			Path to an icon for mounted volume	  -m, --mountpoint arg	    where to mount the filesystem (default: null)

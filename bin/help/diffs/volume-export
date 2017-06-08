@@ -5,7 +5,7 @@ Export a volume for someone else to import:
 Export options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Volume to export					      --compatibility-version arg  compatibility version to force
   -o [ --output ] arg	 File to write the volume to				  -s, --script		    suppress extraneous human friendly messages and use
-			 (default: stdout)					  -a, --as arg		    user to run commands as (default: akim)
+			 (default: stdout)					  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the volume to export
 										  -o, --output arg	    file to write the volume to (default: null)
 

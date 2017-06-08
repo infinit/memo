@@ -25,7 +25,6 @@ Options:
       --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
   -f, --fetch arg           fetch volume from the Hub (default: false)
       --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
-      --peers-file arg      Periodically write list of known peers to given file (default: null)
       --push-endpoints arg  push endpoints to the Hub (default: false)
   -r, --register-service    register volume in the network
       --no-local-endpoints  Disable automatic detection of local endpoints

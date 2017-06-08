@@ -5,7 +5,7 @@ Run a network:
 Run options:									  -h, --help		    show this help message
   -i [ --input ] arg			File to read the commands from		      --compatibility-version arg  compatibility version to force
 					(default: stdin)			  -s, --script		    suppress extraneous human friendly messages and use
-  -d [ --daemon ]			Run as a background daemon		  -a, --as arg		    user to run commands as (default: akim)
+  -d [ --daemon ]			Run as a background daemon		  -a, --as arg		    user to run commands as (default: john-doe)
   --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)	  -n, --name arg	    name of the network to run
   -n [ --name ] arg			Network to run				  -i, --input arg	    file to read network from (default: null)
   --peer arg				Peer address or file with list of peer	  -d, --daemon		    run as a background daemon

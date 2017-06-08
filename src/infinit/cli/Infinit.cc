@@ -21,6 +21,7 @@
 
 #include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/environ.hh>
 #include <infinit/report-crash.hh>
 #include <infinit/utility.hh>
 
@@ -296,6 +297,7 @@ namespace infinit
       {
         auto report_thread = make_reporter_thread();
         check_broken_locale();
+        check_environment();
         main_impl(args);
         if (report_thread)
           elle::reactor::wait(*report_thread);
@@ -383,9 +385,9 @@ namespace infinit
 
     void
     Infinit::report_action(std::string const& action,
-                            std::string const& type,
-                            std::string const& name,
-                            std::string const& where)
+                           std::string const& type,
+                           std::string const& name,
+                           std::string const& where)
     {
       if (where.empty())
         report("%s %s \"\%s\"", action, type, name);
@@ -438,10 +440,10 @@ namespace infinit
 #else
         struct termios tty;
         tcgetattr(STDIN_FILENO, &tty);
-        if(!enable)
-          tty.c_lflag &= ~ECHO;
-        else
+        if (enable)
           tty.c_lflag |= ECHO;
+        else
+          tty.c_lflag &= ~ECHO;
         (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
       }
@@ -461,7 +463,6 @@ namespace infinit
         std::cout << std::endl;
         return res;
       }
-
     }
 
     std::string
@@ -539,6 +540,8 @@ main(int argc, char** argv)
 {
   argv_0 = argv[0];
   infinit_exe = (bfs::path(argv_0).parent_path() / "infinit").string();
+  if (boost::algorithm::ends_with(argv_0, ".exe"))
+    infinit_exe += ".exe";
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);

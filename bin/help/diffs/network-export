@@ -5,7 +5,7 @@ Export a network:
 Export options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Network to export					      --compatibility-version arg  compatibility version to force
   -o [ --output ] arg	 File to write the network to				  -s, --script		    suppress extraneous human friendly messages and use
-			 (default: stdout)					  -a, --as arg		    user to run commands as (default: akim)
+			 (default: stdout)					  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the network to export
 										  -o, --output arg	    file to write the network to (default: null)
 

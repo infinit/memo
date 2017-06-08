@@ -5,7 +5,7 @@ Perform integrity checks on the Infinit configuration files:
 Configuration options:								  -h, --help		    show this help message
   --no-color		 Don't use colored output				      --compatibility-version arg  compatibility version to force
   -v [ --verbose ]	 Output everything					  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
+										  -a, --as arg		    user to run commands as (default: john-doe)
 										      --ignore-non-linked   do not consider problematic non-linked networks
 										      --no-color	    don't use colored output
 										  -v, --verbose		    use verbose output

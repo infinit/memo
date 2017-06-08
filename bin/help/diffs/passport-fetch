@@ -5,7 +5,7 @@ Fetch a user's network passport from the Hub:
 Fetch options:									  -h, --help		    show this help message
   -N [ --network ] arg	 Network to fetch the passport for (optional)		      --compatibility-version arg  compatibility version to force
   -u [ --user ] arg	 User to fetch passports for (optional)			  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
+										  -a, --as arg		    user to run commands as (default: john-doe)
 										  -N, --network arg	    network to fetch passport for (default: null)
 										  -u, --user arg	    user to fetch passport for (default: null)
 

@@ -5,6 +5,6 @@ Push a volume to the Hub:
 Push options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Volume to push						      --compatibility-version arg  compatibility version to force
 										  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
+										  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the volume to push
 

@@ -5,7 +5,7 @@ Register user's passport to the network:
 Register options:								  -h, --help		    show this help message
   -u [ --user ] arg	 User to register					      --compatibility-version arg  compatibility version to force
   -p [ --path ] arg	 Path to mountpoint					  -s, --script		    suppress extraneous human friendly messages and use
-  -N [ --network ] arg	 Name of the network					  -a, --as arg		    user to run commands as (default: akim)
+  -N [ --network ] arg	 Name of the network					  -a, --as arg		    user to run commands as (default: john-doe)
   --fetch		 Fetch users from the Hub if needed			      --path arg	    file whose acl to register
 										  -u, --user arg	    user to register acl for
 Hidden options:									  -N, --network arg	    network to register acl for
