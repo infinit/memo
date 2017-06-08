@@ -175,7 +175,7 @@ def configure(
 
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
-    'docker', 'infinit-client-python', git.description())
+    'docker', 'memo-client-python', git.description())
   docker_file = drake.docker.DockerFile(
     docker_path / 'Dockerfile',
     image = 'alpine',
