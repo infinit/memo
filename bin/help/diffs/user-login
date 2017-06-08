@@ -5,7 +5,7 @@ Log the user to the Hub:
 Login options:									  -h, --help		    show this help message
   -n [ --name ] arg	 User name (default: system user)			      --compatibility-version arg  compatibility version to force
   --password arg	 Password to authenticate with the Hub (default:	  -s, --script		    suppress extraneous human friendly messages and use
-			 prompt)						  -a, --as arg		    user to run commands as (default: akim)
-										  -n, --name arg	    name of the user to login (default: akim)
+			 prompt)						  -a, --as arg		    user to run commands as (default: john-doe)
+										  -n, --name arg	    name of the user to login (default: john-doe)
 										  -P, --password arg	    password to authenticate with the Hub (default: nul
 

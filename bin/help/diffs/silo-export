@@ -5,7 +5,7 @@ Export storage information:
 Export options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Storage to export					      --compatibility-version arg  compatibility version to force
   -o [ --output ] arg	 File to write the storage to				  -s, --script		    suppress extraneous human friendly messages and use
-			 (default: stdout)					  -a, --as arg		    user to run commands as (default: akim)
+			 (default: stdout)					  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the silo to export
 										  -o, --output arg	    file to write the silo to (default: null)
 

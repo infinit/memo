@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import os
 import re
 import subprocess
 
@@ -42,7 +43,9 @@ def mode_option(mode):
 def get_help(obj, mode=None):
     m = mode_option(mode) if mode else ''
     cmd = '{}-{} {} --help'.format(args.infinit, obj, m).split()
-    return subprocess.check_output(cmd).decode('utf-8')
+    env = dict(os.environ)
+    env['INFINIT_USER'] = 'john-doe'
+    return subprocess.check_output(cmd, env = env).decode('utf-8')
 
 
 def get_modes(obj):

@@ -5,7 +5,7 @@ Locally delete a passport:
 Delete options:									  -h, --help		    show this help message
   -N [ --network ] arg	 Network name						      --compatibility-version arg  compatibility version to force
   -u [ --user ] arg	 User name						  -s, --script		    suppress extraneous human friendly messages and use
-  --pull		 Pull the passport if it is on the Hub			  -a, --as arg		    user to run commands as (default: akim)
+  --pull		 Pull the passport if it is on the Hub			  -a, --as arg		    user to run commands as (default: john-doe)
 										  -N, --network arg	    network to delete passport for
 										  -u, --user arg	    user to delete passport for
 										      --pull		    pull passport from the Hub

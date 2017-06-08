@@ -5,7 +5,7 @@ Import a volume:
 Import options:									  -h, --help		    show this help message
   -i [ --input ] arg	 File to read the volume from (default: stdin)		      --compatibility-version arg  compatibility version to force
   --mountpoint arg	 Default location to mount the volume (optional)	  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
+										  -a, --as arg		    user to run commands as (default: john-doe)
 										  -i, --input arg	    file to read volume from (default: null)
 										  -m, --mountpoint arg	    where to mount the filesystem (default: null)
 

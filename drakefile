@@ -180,6 +180,8 @@ def configure(
     'src/infinit/User.cc',
     'src/infinit/User.hh',
     'src/infinit/Version.hh',
+    'src/infinit/environ.cc',
+    'src/infinit/environ.hh',
     'src/infinit/report-crash.cc',
     'src/infinit/report-crash.hh',
     'src/infinit/serialization.cc',

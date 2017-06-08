@@ -5,15 +5,15 @@ import json
 import re
 
 with Infinit() as bob:
-  def slashify(s):
-    '''Replace Window paths with Unix ones.'''
-    return re.sub(r'Z:.*?\\memo.exe', './bin/memo', s)
+  def neutralize(s):
+    '''Fix gratuitous difference such as Window paths vs. Unix ones.'''
+    s = re.sub(r'Z:.*?\\(memo(?:-\w+)?).exe', r'./bin/\1', s)
+    # Gee...  Maybe do this in assertEq?
+    s = s.replace('\r\n', '\n')
+    return s
 
   def xfail(command, message, binary='memo'):
-    err = bob.run([binary] + command, return_code = 2)[1]
-    err = slashify(err)
-    # Gee...  Maybe do this in assertEq?
-    err = err.replace('\r\n', '\n')
+    err = neutralize(bob.run([binary] + command, return_code = 2)[1])
     assertEq(message, err)
 
   xfail(['--foo'],

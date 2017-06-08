@@ -10,6 +10,7 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <elle/algorithm.hh>
 #include <elle/cast.hh>
 #include <elle/serialization/json.hh>
 
@@ -294,14 +295,13 @@ namespace infinit
       {
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
-        if (boost::starts_with(*special, "auth."))
+        if (auto const perms = elle::tail(*special, "auth."))
         {
-          auto perms = special->substr(5);
-          ELLE_DEBUG("set permissions %s", perms);
-          set_permissions(perms, v, this->_address);
+          ELLE_DEBUG("set permissions %s", *perms);
+          set_permissions(*perms, v, this->_address);
           return;
         }
-        else if (boost::starts_with(*special, "auth_others"))
+        else if (*special == "auth_others")
         {
           auto block = this->_header_block(true);
           bool r = v.find("r") != std::string::npos;
@@ -342,24 +342,23 @@ namespace infinit
             return;
           }
         }
-        else if (boost::starts_with(*special, "register."))
+        else if (auto const name = elle::tail(*special, "register."))
         {
           auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
-          auto name = special->substr(9);
           std::stringstream s(v);
           auto p =
             elle::serialization::json::deserialize<model::doughnut::Passport>(
               s, false);
-          model::doughnut::UB ub(dht.get(), name, p, false);
-          model::doughnut::UB rub(dht.get(), name, p, true);
+          model::doughnut::UB ub(dht.get(), *name, p, false);
+          model::doughnut::UB rub(dht.get(), *name, p, true);
           this->_owner.block_store()->seal_and_insert(
-            ub, std::make_unique<model::doughnut::UserBlockUpserter>(name));
+            ub, std::make_unique<model::doughnut::UserBlockUpserter>(*name));
           this->_owner.block_store()->seal_and_insert(
-            rub, std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
+            rub, std::make_unique<model::doughnut::ReverseUserBlockUpserter>(*name));
           return;
         }
-        else if (boost::starts_with(*special, "group."))
+        else if (auto const op = elle::tail(*special, "group."))
         {
           auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
@@ -371,20 +370,19 @@ namespace infinit
               dht->version());
             THROW_NOSYS();
           }
-          auto operation = special->substr(6);
-          if (operation == "create")
+          if (*op == "create")
           {
             model::doughnut::Group g(*dht, v);
             g.create();
             return;
           }
-          else if (operation == "delete")
+          else if (*op == "delete")
           {
             model::doughnut::Group g(*dht, v);
             g.destroy();
             return;
           }
-          else if (operation == "add")
+          else if (*op == "add")
           {
             auto sep = v.find_first_of(':');
             auto gn = v.substr(0, sep);
@@ -393,7 +391,7 @@ namespace infinit
             g.add_member(elle::Buffer(userdata.data(), userdata.size()));
             return;
           }
-          else if (operation == "remove")
+          else if (*op == "remove")
           {
             auto sep = v.find_first_of(':');
             auto gn = v.substr(0, sep);
@@ -402,7 +400,7 @@ namespace infinit
             g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
             return;
           }
-          else if (operation == "addadmin")
+          else if (*op == "addadmin")
           {
             auto sep = v.find_first_of(':');
             auto gn = v.substr(0, sep);
@@ -411,7 +409,7 @@ namespace infinit
             g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
             return;
           }
-          else if (operation == "removeadmin")
+          else if (*op == "removeadmin")
           {
             auto sep = v.find_first_of(':');
             auto gn = v.substr(0, sep);
@@ -423,13 +421,12 @@ namespace infinit
         }
         // New naming for group attributes:
         // infinit.groups.<group_name>.<attribute>
-        else if (boost::starts_with(*special, "groups."))
+        else if (auto const name = elle::tail(*special, "groups."))
         {
-          auto name_start = strlen("groups.");
-          auto name_end = special->find_last_of('.');
-          auto group_name = special->substr(name_start, name_end - name_start);
+          auto name_end = name->find_last_of('.');
+          auto group_name = name->substr(0, name_end);
           model::doughnut::Group group(*dht, group_name);
-          auto attribute = special->substr(name_end + 1);
+          auto attribute = name->substr(name_end + 1);
           if (attribute == "description")
           {
             umbrella([&] {
@@ -546,26 +543,24 @@ namespace infinit
           }
           return elle::serialization::json::serialize(block).string();
         }
-        else if (boost::starts_with(*special, "block."))
+        else if (auto const op = elle::tail(*special, "block."))
         {
-          auto op = special->substr(6);
           if (block)
-            return getxattr_block(*dht, op, block->address());
+            return getxattr_block(*dht, *op, block->address());
           else if (this->_parent)
           {
             auto const& elem = this->_parent->_files.at(this->_name);
-            return getxattr_block(*dht, op, elem.second);
+            return getxattr_block(*dht, *op, elem.second);
           }
           else
             return "<ROOT>";
         }
-        else if (boost::starts_with(*special, "blocks."))
+        else if (auto const blocks = elle::tail(*special, "blocks."))
         {
-          auto blocks = special->substr(7);
-          auto dot = blocks.find(".");
+          auto dot = blocks->find(".");
           if (dot == std::string::npos)
           {
-            auto addr = model::Address::from_string(blocks);
+            auto addr = model::Address::from_string(*blocks);
             auto block = this->_owner.block_store()->fetch(addr);
             std::stringstream s;
             elle::serialization::json::serialize(block, s);
@@ -573,28 +568,26 @@ namespace infinit
           }
           else
           {
-            auto addr = model::Address::from_string(blocks.substr(0, dot));
-            auto op = blocks.substr(dot + 1);
+            auto addr = model::Address::from_string(blocks->substr(0, dot));
+            auto op = blocks->substr(dot + 1);
             return getxattr_block(*dht, op, addr);
           }
         }
-        else if (boost::starts_with(*special, "group."))
+        else if (auto const op = elle::tail(*special, "group."))
         {
-          auto operation = special->substr(6);
-          if (boost::starts_with(operation, "control_key."))
+          if (auto const value = elle::tail(*op, "control_key."))
           {
-            std::string value = operation.substr(strlen("control_key."));
             return umbrella(
               [&]
               {
-                model::doughnut::Group g(*dht, value);
+                model::doughnut::Group g(*dht, *value);
                 return elle::serialization::json::serialize(
                   g.public_control_key()).string();
               });
           }
-          else if (boost::starts_with(operation, "list."))
+          else if (boost::starts_with(*op, "list."))
           {
-            std::string value = operation.substr(strlen("list."));
+            std::string value = op->substr(strlen("list."));
             return umbrella(
               [&]
               {
@@ -625,13 +618,12 @@ namespace infinit
         }
         // New naming for group attributes:
         // infinit.groups.<group_name>.<attribute>
-        else if (boost::starts_with(*special, "groups."))
+        else if (auto const name = elle::tail(*special, "groups."))
         {
-          auto name_start = strlen("groups.");
-          auto name_end = special->find_last_of('.');
-          auto group_name = special->substr(name_start, name_end - name_start);
+          auto name_end = name->find_last_of('.');
+          auto group_name = name->substr(0, name_end);
           model::doughnut::Group group(*dht, group_name);
-          auto attribute = special->substr(name_end + 1);
+          auto attribute = name->substr(name_end + 1);
           if (attribute == "description")
           {
             return umbrella(
@@ -645,23 +637,22 @@ namespace infinit
             elle::err("unknown group attribute: %s", attribute);
           }
         }
-        else if (boost::starts_with(*special, "mountpoint"))
+        else if (elle::tail(*special, "mountpoint"))
         {
           return (
             this->_owner.mountpoint() ? this->_owner.mountpoint().get().string()
                                       : "");
         }
-        else if (boost::starts_with(*special, "resolve."))
+        else if (auto const what = elle::tail(*special, "resolve."))
         {
           return umbrella(
             [&]
             {
-              std::string what = special->substr(strlen("resolve."));
-              if (what.empty())
+              if (what->empty())
                 THROW_NODATA();
               std::unique_ptr<model::doughnut::User> user;
               user = std::dynamic_pointer_cast<model::doughnut::User>
-                (dht->make_user(what));
+                (dht->make_user(*what));
               if (!user)
               {
                 auto block = elle::cast<ACLBlock>::runtime(
@@ -670,7 +661,7 @@ namespace infinit
                 {
                   if (model::doughnut::short_key_hash(
                     dynamic_cast<model::doughnut::User*>(e.user.get())->key())
-                      == what)
+                      == *what)
                   {
                     user = std::dynamic_pointer_cast<model::doughnut::User>
                       (std::move(e.user));
@@ -708,12 +699,12 @@ namespace infinit
           elle::json::write(ss, res, true);
           return ss.str();
         }
-        else if (boost::starts_with(*special, "root"))
+        else if (elle::tail(*special, "root"))
         {
           return (this->full_path() == this->full_path().root_path()
                   ? "true" : "false");
         }
-        else if (boost::starts_with(*special, "compatibility-version"))
+        else if (elle::tail(*special, "compatibility-version"))
         {
           return umbrella(
             [&]
@@ -723,7 +714,7 @@ namespace infinit
               return elle::sprintf("%s", dht->version());
             });
         }
-        else if (boost::starts_with(*special, "cache.clear"))
+        else if (elle::tail(*special, "cache.clear"))
         {
           auto c = dht->consensus().get();
           if (auto a = dynamic_cast<model::doughnut::consensus::Async*>(c))
@@ -738,9 +729,9 @@ namespace infinit
             return "cache not found";
         }
       }
-      if (k.substr(0, strlen(overlay_info)) == overlay_info)
+      if (elle::tail(k, overlay_info))
       {
-        std::string okey = k.substr(strlen(overlay_info));
+        auto okey = k.substr(strlen(overlay_info));
         elle::json::Json v = umbrella([&] {
           return dynamic_cast<model::doughnut::Doughnut*>(
             this->_owner.block_store().get())->overlay()->query(okey, {});

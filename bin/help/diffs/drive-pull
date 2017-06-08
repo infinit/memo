@@ -5,7 +5,7 @@ Remove a drive from the Hub:
 Pull options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Drive to remove					      --compatibility-version arg  compatibility version to force
   --purge		 Remove objects that depend on the drive		  -s, --script		    suppress extraneous human friendly messages and use
-										  -a, --as arg		    user to run commands as (default: akim)
+										  -a, --as arg		    user to run commands as (default: john-doe)
 										  -n, --name arg	    name of the drive to pull
 										      --purge		    purge objects owned by the drive
 

@@ -5,7 +5,7 @@ Create a volume:
 Create options:									  -h, --help		    show this help message
   --name arg				Volume name				      --compatibility-version arg  compatibility version to force
   --description arg			Description of volume			  -s, --script		    suppress extraneous human friendly messages and use
-  -R [ --create-root ] [=arg(=true)]	Create root directory			  -a, --as arg		    user to run commands as (default: akim)
+  -R [ --create-root ] [=arg(=true)]	Create root directory			  -a, --as arg		    user to run commands as (default: john-doe)
   -N [ --network ] arg			Underlying network to use		  -n, --name arg	    name of the volume to create
   --push-volume [=arg(=true)]		Push the volume to the Hub		  -N, --network arg	    network to create volume for
   -o [ --output ] arg			File to write the volume to		      --description arg	    volume description (default: null)
@@ -32,18 +32,18 @@ Create options:									  -h, --help		    show this help message
 					seconds (default: 15 seconds)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
   --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch arg	    fetch volume from the Hub (default: false)
 					in bytes (default: 512 MB)		      --peer arg	    peer address or file with list of peer addresses (h
-  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		      --peers-file arg	    Periodically write list of known peers to given fil
-  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --push-endpoints arg  push endpoints to the Hub (default: false)
-  --peer arg				Peer address or file with list of peer	  -p, --push arg	    push volume to the Hub (default: false)
-					addresses (host:port)			      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
-  --peers-file arg			Periodically write list of known peers	      --advertise-host arg  advertise extra endpoint using given host (default:
-					to given file				      --endpoints-file arg  write node listening endpoints to file (format: hos
-  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --port-file arg	    write node listening port to file (default: null)
-  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --port arg	    outbound port to use (default: null)
-					--push-volume				      --listen arg	    specify which IP address to listen on (default: all
-  --publish [=arg(=true)]		Alias for --fetch-endpoints		      --fetch-endpoints-interval arg  period for repolling endpoints from the H
-					--push-endpoints			  -i, --input arg	    file to read volume from (default: null)
-  --advertise-host arg			Advertise extra endpoint using given	      --block-size arg	    volume block size (default: 1048576)
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		      --push-endpoints arg  push endpoints to the Hub (default: false)
+  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		  -p, --push arg	    push volume to the Hub (default: false)
+  --peer arg				Peer address or file with list of peer	      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
+					addresses (host:port)			      --advertise-host arg  advertise extra endpoint using given host (default:
+  --peers-file arg			Periodically write list of known peers	      --endpoints-file arg  write node listening endpoints to file (format: hos
+					to given file				      --port-file arg	    write node listening port to file (default: null)
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --port arg	    outbound port to use (default: null)
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --listen arg	    specify which IP address to listen on (default: all
+					--push-volume				      --fetch-endpoints-interval arg  period for repolling endpoints from the H
+  --publish [=arg(=true)]		Alias for --fetch-endpoints		  -i, --input arg	    file to read volume from (default: null)
+					--push-endpoints			      --block-size arg	    volume block size (default: 1048576)
+  --advertise-host arg			Advertise extra endpoint using given
 					host
   --endpoints-file arg			Write node listening endpoints to file
 					(format: host:port\n)

@@ -119,16 +119,14 @@ class GRPCPyGen(GRPCGen):
 def configure(
     cxx_toolkit,
     cxx_config,
-    cxx_lib = None,
     git = None,
-):
+  ):
   global memo_proto, memo_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
     cxx_toolkit,
     cxx_config,
-    cxx_lib = cxx_lib,
     cmake_vars = {
       # We don't care about the (copious) warnings on macOS.
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',

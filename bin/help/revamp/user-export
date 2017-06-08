@@ -5,8 +5,8 @@ Options:
   -h, --help                show this help message
       --compatibility-version arg  compatibility version to force
   -s, --script              suppress extraneous human friendly messages and use JSON output
-  -a, --as arg              user to run commands as (default: akim)
-  -n, --name arg            name of the user to export (default: akim)
+  -a, --as arg              user to run commands as (default: john-doe)
+  -n, --name arg            name of the user to export (default: john-doe)
       --full                include private key (do not use unless you understand the implications
   -o, --output arg          file to write the user to (default: null)
 

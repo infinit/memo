@@ -5,7 +5,7 @@ Delete a network locally:
 Delete options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Network to delete					      --compatibility-version arg  compatibility version to force
   --pull		 Pull the network if it is on the Hub			  -s, --script		    suppress extraneous human friendly messages and use
-  --purge		 Remove objects that depend on the network		  -a, --as arg		    user to run commands as (default: akim)
+  --purge		 Remove objects that depend on the network		  -a, --as arg		    user to run commands as (default: john-doe)
   --unlink		 Automatically unlink network if linked			  -n, --name arg	    name of the network to delete
 										      --pull		    pull network from the Hub
 										      --purge		    purge objects owned by the network

@@ -5,7 +5,7 @@ Start a volume through the daemon.:
 Start options:									  -h, --help		    show this help message
   --name arg				Volume name				      --compatibility-version arg  compatibility version to force
   --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -s, --script		    suppress extraneous human friendly messages and use
-  -m [ --mountpoint ] arg		Where to mount the filesystem		  -a, --as arg		    user to run commands as (default: akim)
+  -m [ --mountpoint ] arg		Where to mount the filesystem		  -a, --as arg		    user to run commands as (default: john-doe)
   --readonly [=arg(=true)]		Mount as readonly			  -n, --name arg	    name of the volume to start
   --mount-name arg			Name of mounted volume			      --allow-root-creation  create the filesystem root if not found
   --mount-icon arg			Path to an icon for mounted volume	  -m, --mountpoint arg	    where to mount the filesystem (default: null)
@@ -25,21 +25,21 @@ Start options:									  -h, --help		    show this help message
 					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
   --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from the Hub (default: false)
   -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --peer arg	    peer address or file with list of peer addresses (h
-  --peer arg				Peer address or file with list of peer	      --peers-file arg	    Periodically write list of known peers to given fil
-					addresses (host:port)			      --push-endpoints arg  push endpoints to the Hub (default: false)
-  --peers-file arg			Periodically write list of known peers	  -r, --register-service    register volume in the network
-					to given file				      --no-local-endpoints  Disable automatic detection of local endpoints
-  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --no-public-endpoints  Disable automatic detection of public endpoints
-  -r [ --register-service ] [=arg(=true)]					  -p, --push arg	    push volume to the Hub (default: false)
-					Register volume in the network		      --map-other-permissions  allow chmod to set world permissions
-  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
-					endpoints				      --advertise-host arg  advertise extra endpoint using given host (default:
-  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public	      --endpoints-file arg  write node listening endpoints to file (format: hos
-					endpoints				      --port-file arg	    write node listening port to file (default: null)
-  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --port arg	    outbound port to use (default: null)
-  --map-other-permissions [=arg(=true)] (=true)					      --listen arg	    specify which IP address to listen on (default: all
-					Allow chmod to set world permissions	      --fetch-endpoints-interval arg  period for repolling endpoints from the H
-  --publish [=arg(=true)]		Alias for --fetch-endpoints		  -i, --input arg	    file to read volume from (default: null)
+  --peer arg				Peer address or file with list of peer	      --push-endpoints arg  push endpoints to the Hub (default: false)
+					addresses (host:port)			  -r, --register-service    register volume in the network
+  --peers-file arg			Periodically write list of known peers	      --no-local-endpoints  Disable automatic detection of local endpoints
+					to given file				      --no-public-endpoints  Disable automatic detection of public endpoints
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		  -p, --push arg	    push volume to the Hub (default: false)
+  -r [ --register-service ] [=arg(=true)]					      --map-other-permissions  allow chmod to set world permissions
+					Register volume in the network		      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
+  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --advertise-host arg  advertise extra endpoint using given host (default:
+					endpoints				      --endpoints-file arg  write node listening endpoints to file (format: hos
+  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public	      --port-file arg	    write node listening port to file (default: null)
+					endpoints				      --port arg	    outbound port to use (default: null)
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --listen arg	    specify which IP address to listen on (default: all
+  --map-other-permissions [=arg(=true)] (=true)					      --fetch-endpoints-interval arg  period for repolling endpoints from the H
+					Allow chmod to set world permissions	  -i, --input arg	    file to read volume from (default: null)
+  --publish [=arg(=true)]		Alias for --fetch-endpoints
 					--push-endpoints
   --advertise-host arg			Advertise extra endpoint using given
 					host

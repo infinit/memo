@@ -5,7 +5,7 @@ Group control:
 Group options:									  -h, --help		    show this help message
   -n [ --name ] arg	 Group name						      --compatibility-version arg  compatibility version to force
   -c [ --create ]	 Create the group					  -s, --script		    suppress extraneous human friendly messages and use
-  --description arg	 Description of group					  -a, --as arg		    user to run commands as (default: akim)
+  --description arg	 Description of group					  -a, --as arg		    user to run commands as (default: john-doe)
   --show		 List group users, administrators and description	      --path arg	    file whose acl to group
   --add-user arg	 Add user to group					  -n, --name arg	    name of the acl to group
   --add-admin arg	 Add administrator to group				  -c, --create		    create the acl
