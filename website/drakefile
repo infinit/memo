@@ -965,16 +965,14 @@ def configure(
   # Go.
   go_toolkit = drake.go.Toolkit(
     path = str(drake.path_build(absolute = True) / '.go'))
-  gen = grpc.GRPCGoGen(doughnut_proto,
-                       toolkit = go_toolkit,
-                       protoc = grpc.grpc.protoc)
+  doughnut_pb_go = drake.nodes('../src/infinit/grpc/doughnut.pb.go')
   rule_check << Runner(
     drake.go.Executable(
       source = drake.go.Source("tests/value-store/grpc/api.go"),
       toolkit = go_toolkit,
       config = drake.go.Config(),
       sources = drake.copy(
-        gen.targets(),
+        doughnut_pb_go,
         drake.Path(go_toolkit.path) / 'src/doughnut',
         strip_prefix = True)),
     infinit = infinit).targets()
