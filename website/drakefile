@@ -930,7 +930,7 @@ def configure(
   import os, stat
   def render(path, sources):
     with drake.templating.Context(
-        template_dir = ['/home/dimrok/infinit/fs/website'],
+        template_dir = [str(drake.path_source('.'))],
         sources = sources,
         post_process = lambda n: os.chmod(str(n.path()), stat.S_IRUSR | stat.S_IXUSR)):
       drake.node(path)
