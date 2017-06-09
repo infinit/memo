@@ -431,9 +431,10 @@ namespace infinit
         {
           rpcs.add(
             "auth_syn",
-            [this, auth_syn]
+            [this, auth_syn, &connection]
             (Address id, Passport const& p, elle::Version const& v)
             {
+              connection._id = id;
               if (this->doughnut().id() == id)
                 elle::err<HandshakeFailed>
                   ("incoming peer has same id as us: %s", id);

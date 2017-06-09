@@ -123,6 +123,7 @@ namespace infinit
           ELLE_ATTRIBUTE_R(elle::protocol::Serializer, serializer);
           ELLE_ATTRIBUTE_R(elle::protocol::ChanneledStream, channels);
           ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
+          ELLE_ATTRIBUTE_R(Address, id);
           ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, ready);
         };
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::TCPServer>, server);
