@@ -543,6 +543,9 @@ namespace infinit
                     conn->ready().connect(
                       [this, &conn, &remove] ()
                       {
+                        // Rename the thread with the peer id.
+                        elle::reactor::scheduler().current()->name(
+                          elle::print("%f: %f", this, conn->id()));
                         this->_peers.emplace_front(conn);
                         remove.action(
                           [this, &conn, it = this->_peers.begin()] ()
