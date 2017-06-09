@@ -22,3 +22,6 @@
 [submodule "prometheus-cpp"]
 	path = prometheus/prometheus-cpp
 	url = https://github.com/infinit/prometheus-cpp.git
+[submodule "crash-report/debug-symbols"]
+	path = crash-report/debug-symbols
+	url = git@git.infinit.sh:infinit/debug-symbols.git
