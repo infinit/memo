@@ -370,8 +370,9 @@ namespace infinit
       }
 
       void
-      Local::_register_rpcs(RPCServer& rpcs)
+      Local::_register_rpcs(Connection& connection)
       {
+        auto& rpcs = connection.rpcs();
         rpcs.set_context(this);
         rpcs._destroying.connect([this, rpcs = &rpcs] ()
           {
@@ -465,11 +466,12 @@ namespace infinit
               return auth_syn(p);
             });
         }
-        rpcs.add("auth_ack",
-          [this, &rpcs, stored_challenge](
-                 elle::Buffer const& enc_key,
-                 elle::Buffer const& /*token*/,
-                 elle::Buffer const& signed_challenge)
+        rpcs.add(
+          "auth_ack",
+          [this, &connection, &rpcs, stored_challenge](
+            elle::Buffer const& enc_key,
+            elle::Buffer const& /*token*/,
+            elle::Buffer const& signed_challenge)
           {
             ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
@@ -491,7 +493,7 @@ namespace infinit
               elle::cryptography::Mode::cbc);
             if (this->doughnut().encrypt_options().encrypt_rpc)
               rpcs._key.emplace(std::move(password));
-            rpcs._ready();
+            connection.ready()();
             return true;
           });
         rpcs.add(
@@ -504,7 +506,7 @@ namespace infinit
           "resolve_all_keys",
           [this]() { return this->_resolve_all_keys(); });
         if (!this->doughnut().encrypt_options().encrypt_rpc)
-          rpcs._ready();
+          connection.ready()();
       }
 
       void
@@ -537,15 +539,14 @@ namespace infinit
                       });
                   }
                   else
-                    elle::unconst(conn->rpcs())._ready.connect(
+                    conn->ready().connect(
                       [this, &conn, &remove] ()
                       {
                         this->_peers.emplace_front(conn);
                         remove.action(
                           [this, &conn, it = this->_peers.begin()] ()
                           {
-                            elle::unconst(conn->rpcs())._ready.
-                              disconnect_all_slots();
+                            conn->ready().disconnect_all_slots();
                             this->_peers.erase(it);
                           });
                       });
@@ -598,7 +599,7 @@ namespace infinit
         , _channels{this->_serializer}
         , _rpcs(this->_local.doughnut().version())
       {
-        this->_local._register_rpcs(this->_rpcs);
+        this->_local._register_rpcs(*this);
         this->_local._on_connect(this->_rpcs);
         this->_rpcs.set_context<Doughnut*>(&this->_local.doughnut());
       }

@@ -105,11 +105,6 @@ namespace infinit
         server_endpoint();
         Endpoints
         server_endpoints();
-        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::TCPServer>, server);
-        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, server_thread);
-        ELLE_ATTRIBUTE_RX(std::unique_ptr<elle::reactor::network::UTPServer>, utp_server);
-        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, utp_server_thread);
-        ELLE_ATTRIBUTE(elle::reactor::Barrier, server_barrier);
         class Connection
           : public elle::Printable
         {
@@ -127,13 +122,19 @@ namespace infinit
           ELLE_ATTRIBUTE_R(std::shared_ptr<std::iostream>, stream);
           ELLE_ATTRIBUTE_R(elle::protocol::Serializer, serializer);
           ELLE_ATTRIBUTE_R(elle::protocol::ChanneledStream, channels);
-          ELLE_ATTRIBUTE_R(RPCServer, rpcs);
+          ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
+          ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, ready);
         };
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::TCPServer>, server);
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, server_thread);
+        ELLE_ATTRIBUTE_RX(std::unique_ptr<elle::reactor::network::UTPServer>, utp_server);
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, utp_server_thread);
+        ELLE_ATTRIBUTE(elle::reactor::Barrier, server_barrier);
         ELLE_ATTRIBUTE_R(std::list<std::shared_ptr<Connection>>, peers);
       protected:
         virtual
         void
-        _register_rpcs(RPCServer& rpcs);
+        _register_rpcs(Connection& rpcs);
         void
         _serve(std::function<std::unique_ptr<std::iostream> ()>);
         void

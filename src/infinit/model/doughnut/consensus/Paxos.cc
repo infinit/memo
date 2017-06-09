@@ -1065,9 +1065,10 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::_register_rpcs(RPCServer& rpcs)
+        Paxos::LocalPeer::_register_rpcs(Connection& connection)
         {
-          Local::_register_rpcs(rpcs);
+          auto& rpcs = connection.rpcs();
+          Local::_register_rpcs(connection);
           namespace ph = std::placeholders;
           rpcs.add(
             "propose",

@@ -451,7 +451,6 @@ namespace infinit
     elle::serialization::Context _context;
     boost::optional<elle::cryptography::SecretKey> _key;
     boost::signals2::signal<void()> _destroying;
-    boost::signals2::signal<void()> _ready;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
 
