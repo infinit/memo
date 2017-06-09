@@ -373,7 +373,7 @@ namespace infinit
       Local::_register_rpcs(RPCServer& rpcs)
       {
         rpcs.set_context(this);
-        rpcs._destroying.connect([this] (RPCServer* rpcs)
+        rpcs._destroying.connect([this, rpcs = &rpcs] ()
           {
             this->_passports.erase(rpcs);
           });
@@ -491,7 +491,7 @@ namespace infinit
               elle::cryptography::Mode::cbc);
             if (this->doughnut().encrypt_options().encrypt_rpc)
               rpcs._key.emplace(std::move(password));
-            rpcs._ready(&rpcs);
+            rpcs._ready();
             return true;
           });
         rpcs.add(
@@ -504,7 +504,7 @@ namespace infinit
           "resolve_all_keys",
           [this]() { return this->_resolve_all_keys(); });
         if (!this->doughnut().encrypt_options().encrypt_rpc)
-          rpcs._ready(&rpcs);
+          rpcs._ready();
       }
 
       void
@@ -538,7 +538,7 @@ namespace infinit
                   }
                   else
                     elle::unconst(conn->rpcs())._ready.connect(
-                      [this, &conn, &remove] (RPCServer*)
+                      [this, &conn, &remove] ()
                       {
                         this->_peers.emplace_front(conn);
                         remove.action(
