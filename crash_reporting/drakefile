@@ -47,7 +47,8 @@ class SymbolsGenerator(drake.Builder):
       self.cmd('Generating debug symbols for %s' % self.__binary,
                ['dsymutil', self.binary_path],
                throw = True)
-      args = ['-g', self.binary_path + '.dSYM']
+      # dump_syms -f fails on macOS. Akim is investigating.
+      args = [] # ['-g', self.binary_path + '.dSYM']
     else:
       args = []
     self.cmd('Generating symbols file for %s' % self.__binary,
