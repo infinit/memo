@@ -1,7 +1,6 @@
 #pragma once
 
 #include <elle/reactor/asio.hh>
-
 #include <elle/reactor/semaphore.hh>
 
 #include <infinit/silo/Silo.hh>

@@ -25,7 +25,7 @@ Add GCS credentials to Infinit
 We can now add the GCS credentials to Infinit. This process uses [OAuth](https://en.wikipedia.org/wiki/OAuth) and requires you to navigate to a link provided from the command line.
 
 ```
-$> infinit-credentials --add --as alice --gcs
+$> infinit-credentials add --as alice --gcs
 Register your Google account with infinit by visiting https://beyond.infinit.sh/users/alice/gcs-oauth
 ```
 
@@ -36,7 +36,7 @@ Navigate to this link with your Web browser and allow Infinit to access your acc
 Infinit is now allowed access to your bucket. You however need to fetch the credentials from the Hub in order to proceed.
 
 ```
-$> infinit credentials --fetch --as alice
+$> infinit credentials fetch --as alice
 Fetched Google Cloud Storage credentials alice@example.com (Alice)
 ```
 
@@ -50,6 +50,6 @@ Now that the bucket has been created and Infinit has the GCS credentials, you ca
 Take care of referencing the bucket name you chose in the first step through the `--bucket` option along with the name of the credentials you just registered i.e. the email address associated with your GCS account, in this example _alice@example.com_. Finally, the `--path` option can be used to specify a folder within the bucket to hold the blocks of encrypted data that Infinit will store.
 
 ```
-$> infinit silo --create --as alice --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
+$> infinit silo create --as alice --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
 Created storage "gcs-storage".
 ```

@@ -1,0 +1,122 @@
+#!/bin/bash
+
+set -ex
+
+# Retry 15 times, waiting 2 sec between attempts.
+function retry {
+  local n=1
+  local max=15
+  local delay=2
+  while true; do
+    ERROR=$($@ 2>&1) && break || {
+      if [[ $ERROR == *"Permission denied"* ]]; then
+        break;
+      fi
+      if [[ $n -lt $max ]]; then
+        ((n++))
+        echo "Command failed. Attempt $n/$max:"
+        sleep $delay;
+      else
+        echo "The command has failed after $n attempts."
+        exit 1
+      fi
+    }
+  done
+  sleep $delay
+}
+
+export PATH=$INFINIT_BINARIES_PATH:$BEYOND_BINARY_PATH:$PATH
+
+# Cleanup.
+trap 'echo $PROCESSES; PIFS=$IFS; IFS=,; for PROC in $PROCESSES; do IFS=$PIFS; echo $PROC; kill -SIGINT $PROC; wait $PROC || true; done;' EXIT
+
+# Beyond.
+PORT=$(shuf -i 10000-55555 -n 1)
+timeout --preserve-status --signal=SIGINT 120s beyond --port $PORT &
+PROCESSES="$!"
+export INFINIT_BEYOND=127.0.0.1:$PORT
+retry curl $INFINIT_BEYOND
+
+# Create the 3 devices.
+device1=$(mktemp -d)
+device2=$(mktemp -d)
+device3=$(mktemp -d)
+
+# Setup everything.
+export INFINIT_HOME=$device1
+<%include file="/alice/device_A/signup.sh" />
+<%include file="/alice/device_A/silo-create.sh" />
+<%include file="/alice/device_A/network-create.sh" />
+<%include file="/alice/device_A/volume-create.sh" />
+
+# Run the volume.
+<%include file="/alice/device_A/volume-mount.sh" /> &
+PROCESSES="$!,$PROCESSES"
+retry mountpoint "$INFINIT_HOME/mountpoint"
+
+# Put data.
+<%include file="/alice/device_A/echo.sh" />
+<%include file="/alice/device_A/cat.sh" />
+
+# Transmit Alice identity from device1 to device2.
+<%include file="/alice/device_A/transmit.sh" /> --passphrase foo --no-countdown
+export INFINIT_HOME=$device2
+<%include file="/alice/device_B/receive.sh" /> --passphrase foo
+
+# Fetch configuration on device2.
+<%include file="/alice/device_B/network-fetch.sh" />
+<%include file="/alice/device_B/volume-fetch.sh" />
+<%include file="/alice/device_B/network-link.sh" />
+
+# Run the volume on device2.
+<%include file="/alice/device_B/volume-mount.sh" /> &
+PROCESSES="$!,$PROCESSES"
+retry mountpoint "$INFINIT_HOME/mountpoint"
+
+# Check data availability.
+export INFINIT_HOME=$device2
+<%include file="/alice/device_B/ls.sh" />
+<%include file="/alice/device_B/cat.sh" />
+
+# Create user bob.
+export INFINIT_HOME=$device3
+<%include file="/bob/device_C/signup.sh" />
+
+# Fetch user bob (from alice device1).
+export INFINIT_HOME=$device1
+<%include file="/alice/device_A/fetch-bob.sh" />
+
+# Invite bob to the network.
+<%include file="/alice/device_A/passport-create-bob.sh" />
+
+# Fetch configuration on bob's device.
+export INFINIT_HOME=$device3
+<%include file="/bob/device_C/network-fetch.sh" />
+<%include file="/bob/device_C/volume-fetch.sh" />
+<%include file="/bob/device_C/passport-fetch.sh" />
+<%include file="/bob/device_C/network-link.sh" />
+
+# Run the volume on device 3.
+<%include file="/bob/device_C/volume-mount.sh" /> --cache-ram-invalidation=1 &
+PROCESSES="$!,$PROCESSES"
+retry mountpoint "$INFINIT_HOME/mountpoint"
+
+# Bob shouldn't be able to ls the mountpoint.
+<%include file="/bob/device_C/ls-failed.sh" /> && exit 1 || true
+
+# Set permissions for bob.
+export INFINIT_HOME=$device1
+<%include file="/alice/device_A/list-permissions-before.sh" />
+<%include file="/alice/device_A/set-directory-permissions.sh" />
+<%include file="/alice/device_A/set-permissions.sh" />
+<%include file="/alice/device_A/list-permissions-after.sh" />
+
+sleep 15
+
+# Inspect permissions as bob.
+export INFINIT_HOME=$device3
+<%include file="/bob/device_C/list-permissions.sh" />
+<%include file="/bob/device_C/cat.sh" />
+
+# Fail at editing file as bob.
+<%include file="/bob/device_C/echo-failed.sh" /> && exit 1 || true

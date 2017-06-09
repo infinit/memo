@@ -1,0 +1,152 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <section class="presentation">
+  	<img src="${url('images/logos/memo.png')}" alt="memo key value store logo">
+  	<h1>An elastic and resilient key-value store</h1>
+  	<div class="star">
+      <a href="https://github.com/infinit" target="_blank"><img src="${url('images/logos/github.png')}" alt="github logo"> Github</a>
+      <span>&nbsp;</span>
+    </div>
+    <a class="button" href="${route('doc_kv_overview')}">Documentation</a>
+  </section>
+
+  <section class="features">
+  	<div>
+	  	<img src="${url('images/icons/content-addressable.png')}" alt="content addressable">
+	  	<h2>Content Addressable</h2>
+	  	<p>Each piece of information is assigned a unique identifier for self-certification, allowing for optimized data placement, fault tolerance, performance, security and integrity.</p>
+  	</div>
+
+  	<div>
+	  	<img src="${url('images/icons/decentralized.png')}" alt="decentralized architecture">
+	  	<h2>Decentralized</h2>
+	  	<p>As opposed to the popular manager/worker (a.k.a master/slave) model, memo relies on a decentralized architecture that does away with bottlnecks, single points of failure, cascading effects etc.</p>
+  	</div>
+
+  	<div>
+	  	<img src="${url('images/icons/policy-based.png')}" alt="policy based">
+	  	<h2>Policy Based</h2>
+	  	<p><em>memo</em> can be customized through policies such as redundancy, encryption, compression, versioning, deduplication etc. so as to fit with your application's needs.</p>
+  	</div>
+
+  	<div>
+	  	<img src="${url('images/icons/strongly-consistent.png')}">
+	  	<h2>Strongly Consistent</h2>
+	  	<p><em>memo</em>'s consistency model can be configured, from eventual to strong for the most demanding applications all the way to rebalancing delays and more.</p>
+  	</div>
+  </section>
+
+  <section class="architecture">
+  	<h2>A modern approach to distribution</h2>
+  	<p class="subtitle"><em>memo</em></em>'s decentralized architecture brings a number of advantages over manager/worker-based distributed systems.</p>
+
+  	<div class="schemas">
+      <div class="etcd">
+        <strong>Manager/Worker Model</strong><br>
+        <img class="logo" src="${url('images/logos/etcd-consul-zookeeper.png')}" alt="etcd consul zookeeper"><br>
+        <img src="${url('images/schema-etcd-architecture.png')}" alt="existing key-value stores' architecture">
+      </div>
+      <div class="separator"></div>
+      <div class="memo">
+        <strong>Decentralized Model</strong><br>
+        <img class="logo" src="${url('images/logos/memo.png')}" alt="logo memo key value store"><br>
+  	    <img src="${url('images/schema-memo-architecture.png')}" alt="memo key-value store's architecture">
+  	  </div>
+    </div>
+
+    <div class="comparison">
+      <div class="etcd">
+        <p class="summary">Managers can't scale easily</p>
+        <p>The manager/worker model has been designed for workers to be easily scaled out, leaving managers out of the equation and therefore limiting the overall system's scalability.</p>
+      </div>
+      <div>
+        <strong>Scalability</strong><br>
+        <hr>
+        <img src="${url('images/icons/scalability.png')}" alt="scalability"><br>
+      </div>
+      <div class="memo">
+        <p class="summary">Scalable by nature</p>
+        <p>Instead of relying on authoritative manager nodes, all the nodes play both the role of manager and worker, collectively participating in maintaining consistency, routing messages, hosting replicas and more.</p>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="etcd">
+        <p class="summary">Managers could get overflowed and fail</p>
+        <p>The manager nodes may get overflowed by requests and fail, leading clients to redirect their requests to the remaining managers which in turn could get overflowed taking down the whole system through a cascading effect.</p>
+      </div>
+      <div>
+        <strong>Resilience</strong><br>
+        <hr>
+        <img src="${url('images/icons/resilience.png')}" alt="resilience">
+      </div>
+      <div class="memo">
+        <p class="summary">All nodes can process clients' requests</p>
+        <p>Since every node can process a client's request, it is far more complicated to overflow the system, hence removing bottlenecks, single points of failure and cascading effects.</p>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="etcd">
+        <p class="summary">Managers have limited capacity</p>
+        <p>The manager nodes, being limited in number, have intrinsec limited capacity to handle a large number of client requests in parallel.</p>
+      </div>
+      <div>
+        <strong>Performance</strong><br>
+        <hr>
+        <img src="${url('images/icons/performance.png')}" alt="performance">
+      </div>
+      <div class="memo">
+        <p class="summary">More nodes = more bandwidth and power</p>
+        <p>Thanks to the natural distribution of the decentralized model, the more nodes in the system, the faster requests will be processed.</p>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="etcd">
+        <p class="summary">Managers are ideal targets</p>
+        <p>Because manager nodes orchestrate the system but also handle access control, such nodes represent an ideal target for an attacker.</p>
+      </div>
+      <div>
+        <strong>Security</strong><br>
+        <hr>
+        <img src="${url('images/icons/security.png')}" alt="security">
+      </div>
+      <div class="memo">
+        <p class="summary">No concentration of authority</p>
+        <p>No concentration of power in authoritative nodes means that the system is far more complicated to attack.</p>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="etcd">
+        <p class="summary">Consensus is achieved within the managers</p>
+        <p>On top of handling clients' specific requests, orchestrating the system etc, the manager nodes are also responsible for maintaining consistency whenever a value is updated. As such, those managers have inherent limited capacity to process many of those update requests in parallel.</p>
+      </div>
+      <div>
+        <strong>Consistency</strong><br>
+        <hr>
+        <img src="${url('images/icons/consistency.png')}" alt="consistency">
+      </div>
+      <div class="memo">
+        <p class="summary">Multiple per-value quorums</p>
+        <p>Instead of relying on a single quorum of manager nodes for maintaing consistency, memo makes use of per-value quorums, allowing for better performance (increased parallism), fault tolerance and scalability.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="example">
+    <h2>Example</h2>
+    <p class="subtitle">This example shows how to store and retrieve images via a gRPC interface</p>
+    <a class="button" href="${route('doc_get_started')}">Get Started</a>
+    <a class="button white" href="${route('doc_reference')}">Documentation</a>
+
+    <pre>
+      <code>
+        XXX
+      </code>
+    </pre>
+  </section>
+</%block>

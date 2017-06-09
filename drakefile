@@ -228,7 +228,6 @@ def configure(
   ## ------ ##
   ## grpc.  ##
   ## ------ ##
-
   PatchAndInstall = drake.cxx.PatchAndInstall
 
   grpc = drake.include(
@@ -954,7 +953,49 @@ def configure(
         sendwithus = sendwithus,
         PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
+        doughnut_json = grpc.doughnut_json,
+        infinit = infinit_cli,
+        grpc = grpc,
       )
+      ## ----- ##
+      ## Tests ##
+      ## ----- ##
+      if linux:
+        # This test is still in fs / memo until website is extracted.
+        with open(str(website.get_started['variables'][0].path()),
+                  encoding = 'utf-8') as f:
+          import json
+          get_started_variables = json.load(f)
+        get_started_variables['guide_mountpoint'] = "$INFINIT_HOME/mountpoint"
+        get_started_variables['guide_mountpoint_abs'] = \
+          get_started_variables['guide_mountpoint']
+        import stat
+        with drake.templating.Context(
+            content = get_started_variables,
+            sources = website.get_started['scripts'],
+            template_dir = [
+              str(website.get_started['scripts'][0].path().dirname())
+            ],
+            post_process = \
+              lambda n: os.chmod(str(n.path()), stat.S_IRUSR | stat.S_IXUSR),
+        ):
+          drake.node('website/tests/get-started.sh.tmpl')
+        runner = drake.Runner(
+          exe = drake.node('website/tests/get-started.sh'),
+          sources = list(chain(installed_binaries, beyond.build.dependencies)),
+          env = {
+            'PYTHONPATH': str(
+              drake.path_build('beyond/lib/python%s:%s' % (
+                elle.python3.version,
+                drake.path_build(utils.path(True).dirname(), True)
+              ))),
+            'BEYOND_BINARY_PATH': str(drake.path_build('beyond/bin')),
+            'INFINIT_BINARIES_PATH': str(
+              drake.path_build(installed_binaries[0].path(True).dirname(),
+                               absolute = True))
+          })
+        runner.reporting = drake.Runner.Reporting.on_failure
+        website.check << runner.status
 
   ## ----- ##
   ## Tests ##

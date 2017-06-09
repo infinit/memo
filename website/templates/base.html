@@ -56,7 +56,10 @@
     <div id="full"></div>
 
     % if route_name == 'home4':
-      <div id="announcement">We're joining Docker! <a href="http://blog.infinit.sh/infinit-joins-docker" target="_blank"> Read our full announcement 🐳🎈</a></div>
+      <div id="announcement">
+        <img src="${url('images/logos/meetup.png')}" alt="meetup logo">
+        Next Infinit Meetup in Paris: 10 May — <a href="https://www.meetup.com/Infinit-Paris/events/239323584/" target="_blank"> Join us!</a>
+      </div>
     % endif
 
     <header>
@@ -103,6 +106,8 @@
       <%block name="content">
       default
       </%block>
+
+      <div style="clear: both;"></div>
     </div>
 
     <div id="slack" class="popup mfp-hide">
@@ -213,7 +218,7 @@
       <script src="//cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
     %endif
 
-    % if 'doc_' in route_name and route_name != 'doc_kv':
+    % if 'doc_' in route_name:
       <script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script>
       <script type="text/javascript"> docsearch({
         apiKey: 'b430c7fa7482c946d41e19bfc147b247',

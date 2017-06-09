@@ -38,7 +38,7 @@ basic prometheus monitoring.
 
 ### Added
 
-- GRPC interface to the key-value store using the `--grpc` option.
+- gRPC interface to the key-value store using the `--grpc` option.
 - Prometheus-compatible metrics collection endpoint using the
   `--prometheus` option.
 - Add a software TCP heartbeat to detect and drop TCP connection stale
@@ -50,6 +50,8 @@ basic prometheus monitoring.
   filesystem at-rest encryption (--disable-encrypt-at-rest), RPC encryption
   (--disable-encrypt-rpc), and signature computation/validation
   (--disable-signature).
+- Add `--grpc-port-file` option to `infinit network run` to store the port
+  the gRPC server is listening on to disk.
 
 ### Changed
 
@@ -69,7 +71,6 @@ basic prometheus monitoring.
 - Reading CHB (immutable blocks) now balances the reads between the available
   servers based on number of transfers running.
 - In the filesystem, removing big files is now much faster than before.
-
 
 ### Fixed
 

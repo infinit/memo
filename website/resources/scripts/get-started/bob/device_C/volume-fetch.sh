@@ -1,0 +1,1 @@
+infinit${exe} volume fetch --as bob --name alice/my-volume

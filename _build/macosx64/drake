@@ -12,7 +12,7 @@ def find_python3():
   for minor in range(9, 0, -1):
     # /opt/local is MacPorts.
     # /usr/local/Cellar/ is Brew.
-    for dir in ['/usr/local', '/opt/local/Library', '/usr/local/Cellar/python3/3.5.1']:
+    for dir in ['/usr/local', '/opt/local/Library', '/usr/local/Cellar/python3/3.6.0']:
       p = '{}/Frameworks/Python.framework/Versions/3.{}'.format(dir, minor)
       if os.path.isdir(p):
         return p
@@ -39,7 +39,7 @@ with drake.Drake('../..') as d:
   # in our build tree, as a means to control includes.
   cfg.add_local_include_path('valgrind')
   d.run(
-    python3 = python3,
+    python = '/usr/local/Cellar/python3/3.6.0/Frameworks/Python.framework/Versions/3.6/',
     cxx_toolkit = tk,
     cxx_config = cfg,
     prefix = '_install',

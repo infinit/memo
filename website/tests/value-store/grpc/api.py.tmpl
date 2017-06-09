@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import sys
+import codecs
+import doughnut_pb2_grpc
+import grpc
+import doughnut_pb2 as doughnut
+
+channel = grpc.insecure_channel(sys.argv[1])
+stub = doughnut_pb2_grpc.DoughnutStub(channel)
+
+<%include file="/resources/scripts/value-store/python/MakeImmutableBlock" />
+
+<%include file="/resources/scripts/value-store/python/MakeMutableBlock" />
+
+address = block.address
+
+<%include file="/resources/scripts/value-store/python/Fetch" />
+
+payload = b'new data'
+
+<%include file="/resources/scripts/value-store/python/Update" />
+
+<%include file="/resources/scripts/value-store/python/Remove" />
+
+# Create the block, empty.
+block = stub.MakeMutableBlock(doughnut.MakeMutableBlockRequest())
+# Set the block payload.
+block.data_plain = b'something else'
+
+<%include file="/resources/scripts/value-store/python/Insert" />

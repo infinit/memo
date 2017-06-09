@@ -11,7 +11,8 @@ from infinit.website.utils import \
   resources_path, \
   route, \
   static_file, \
-  view
+  view, \
+  detect_os
 
 def error(code, reason = ''):
   bottle.response.status = code
@@ -30,6 +31,13 @@ class Website(bottle.Bottle):
     error_page.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.sh')
+    self.platforms = {}
+    with open(resources_path() + '/json/platform/windows.json',
+              encoding = 'utf-8') as json_file:
+      self.platforms['windows'] = json.load(json_file)
+    with open(resources_path() + '/json/platform/linux.json',
+              encoding = 'utf-8') as json_file:
+      self.platforms['linux'] = json.load(json_file)
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
@@ -70,7 +78,15 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Product',
-      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, elasticity and resilience.',
+      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, resilience and more.',
+    }
+
+  @route('/project/memo', name = 'memo')
+  @view('pages/projects/memo.html')
+  def root(self):
+    return {
+      'title': 'Memo Key-Value Store',
+      'description': 'Modern key-value store built with replication and security in mind',
     }
 
   @route('/docker', name = 'docker')
@@ -78,39 +94,39 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Persistent Storage Solutions for Docker',
-      'description': 'Infinit provdides many persistent storage solutions to make your containerized Docker applications stateful.',
+      'description': 'Infinit provides persistent storage through several solutions well suited to make your containerized Docker applications stateful.',
     }
 
-  @route('/drive', name = 'drive')
-  @view('pages/drive/drive.html')
+  @route('/desktop', name = 'drive')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/linux', name = 'drive_linux')
-  @view('pages/drive/drive.html')
+  @route('/desktop/linux', name = 'desktop_linux')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Linux',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Linux',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/mac', name = 'drive_mac')
-  @view('pages/drive/drive.html')
+  @route('/desktop/mac', name = 'desktop_mac')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Mac',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Mac',
+      'description': 'The Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/drive/windows', name = 'drive_windows')
-  @view('pages/drive/drive.html')
+  @route('/desktop/windows', name = 'desktop_windows')
+  @view('pages/desktop/desktop.html')
   def root(self):
     return {
-      'title': 'Infinit Drive - Windows',
-      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+      'title': 'Infinit Desktop - Windows',
+      'description': 'Infinit Desktop allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
   @route('/download', name = 'download')
@@ -143,6 +159,7 @@ class Website(bottle.Bottle):
     return {
       'title': 'Get Started',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
+      **self.platforms[detect_os() == "Windows" and 'windows' or 'linux']
     }
 
   @route('/get-started/mac', name = 'doc_get_started_mac')
@@ -299,12 +316,30 @@ class Website(bottle.Bottle):
       'show_comparison': show_comparison,
     }
 
-  @route('/documentation/key-value-store', name = 'doc_kv')
-  @view('pages/docs/kv.html')
+  @route('/documentation/key-value-store', name = 'doc_kv_overview')
+  @view('pages/docs/kv_overview.html')
   def root(self):
+    file = resources_path() + '/scripts/kv/doughnut.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
     return {
       'title': 'Key-Value Store',
-      'description': 'Learn about the Infinit key-value store.',
+      'description': 'Infinit provides a distributed decentralized key-value store, with built-in replication and security.',
+      'proto': json_data
+    }
+
+  @route('/documentation/key-value-store-api', name = 'doc_kv_api')
+  @view('pages/docs/kv_api.html')
+  def root(self):
+    file = resources_path() + '/scripts/kv/doughnut.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
+    return {
+      'title': 'API Key-Value Store',
+      'description': 'Check out the API of our decentralized key-value store.',
+      'proto': json_data
     }
 
   @route('/open-source', name = 'opensource')
@@ -365,12 +400,8 @@ class Website(bottle.Bottle):
         return {}
 
   @route('/legal', name = 'legal')
-  @view('pages/legal.html')
   def root(self):
-    return {
-      'title': 'Legal Terms',
-      'description': 'All the legal terms related to the use of the Infinit products and services.',
-    }
+    redirect("https://www.docker.com/docker-terms-service")
 
   @route('/slack', name = 'slack', method = 'POST')
   def root(self):
@@ -437,6 +468,7 @@ class Website(bottle.Bottle):
   @route('/images/<path:path>')
   @route('/js/<path:path>')
   @route('/json/<path:path>')
+  @route('/licenses/<path:path>')
   @route('/scripts/<path:path>')
   def images(self, path):
     d = bottle.request.urlparts.path.split('/')[1]

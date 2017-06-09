@@ -5,15 +5,15 @@
   <progress value="0"></progress>
   <div id="progressTooltip" class="tooltip"></div>
 
-  <nav id="sidebar">
+  <nav class="side-menu" id="sidebar">
     <div id="menu-anchor"></div>
 
-    <ul class="menu">
+    <ul class="tier1">
       <li class="notice"><span>Through this guide, it should take you around <strong>10 minutes</strong> to deploy your own infrastructure!</span></li>
       <li><input type="text" id="docsearch"></li>
-      <li class="installation"><a href="#installation">1. Installation</a></li>
+      <li class="installation"><a href="#installation">Installation</a></li>
       <li class="create-infrastructure">
-        <a href="#create-infrastructure">2. Create Infrastructure</a>
+        <a href="#create-infrastructure">Create Infrastructure</a>
         <ul>
           <li class="create-a-user"><a href="#create-a-user">Create a user</a></li>
           <li class="create-a-silo"><a href="#create-a-silo">Create a silo</a></li>
@@ -24,8 +24,8 @@
           <li class="share-the-volume-with-another-user"><a href="#share-the-volume-with-another-user">Share the volume</a></li>
         </ul>
       </li>
-      <li class="doctor"><a href="#doctor">3. Diagnose Problems</a></li>
-      <li class="go-further"><a href="#go-further">4. Go Further</a></li>
+      <li class="doctor"><a href="#doctor">Diagnose Problems</a></li>
+      <li class="go-further"><a href="#go-further">Go Further</a></li>
     </ul>
   </nav>
 
@@ -44,65 +44,73 @@
         osname = "windows"
       else:
         osname = "linux"
-
-      if osname != "windows":
-        cat_command = "cat"
-        demo_home = "$PWD/share/infinit/filesystem/test/home/"
-        demo_mountpoint = "~/mnt-demo"
-        demo_mountpoint_abs = "~/mnt-demo"
-        dir = "/"
-        dir_end = "/"
-        env_home = "$HOME"
-        env_infinit_home = "$INFINIT_HOME"
-        env_infinit_data_home = "$INFINIT_DATA_HOME"
-        env_infinit_state_home = "$INFINIT_STATE_HOME"
-        env_pwd = "$PWD"
-        exe = ""
-        guide_mountpoint = "~/mnt-alice-volume"
-        guide_mountpoint_abs = "~/mnt-alice-volume"
-        guide_storage_dir = "/var/storage/infinit/"
-        ls_command = "ls"
-        temp_dir = "/tmp/infinit-demo/"
-        term = "$>"
-      else:
-        cat_command = "type"
-        demo_home = "%CD%\\share\\infinit\\filesystem\\test\\home"
-        demo_mountpoint = "z:"
-        demo_mountpoint_abs = "z:\\"
-        dir = "\\"
-        dir_end = ""
-        env_home = "%HOMEPATH%"
-        env_infinit_home = "%INFINIT_HOME%"
-        env_infinit_data_home = "%INFINIT_DATA_HOME%"
-        env_infinit_state_home = "%INFINIT_STATE_HOME%"
-        env_pwd = "%CD%"
-        exe = ".exe"
-        guide_mountpoint = "z:"
-        guide_mountpoint_abs = "z:\\"
-        guide_storage_dir = "C:\\storage\\infinit"
-        ls_command = "dir"
-        temp_dir = "%TEMP%\\infinit-demo"
-        term = ">"
     %>
 
     <h1>Get Started</h1>
 
+    <p><em>Before proceeding, this guide uses the Infinit command-line tools with a terminal window. You don’t need to be a UNIX guru but you should be familiar with typing shell commands and interpreting outputs.</em></p>
+
     % if osname == "windows":
-    <p><em>The following is written for users of Windows. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_mac')}">macOS</a> guide.</em></p>
+      <p>The following is written for users of Windows. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_mac')}">macOS</a> guide.</p>
 
     % elif osname == "mac":
-    <p><em>The following is written for users of macOS. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+      <p>The following is written for users of macOS. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</p>
 
     % else:
-    <p><em>The following is written for users of Linux. If you are not this platform, please refer to the <a href="${route('doc_get_started_mac')}">macOS</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
-
+      <p>The following is written for users of Linux. If you are not using this platform, please refer to the <a href="${route('doc_get_started_mac')}">macOS</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</p>
     % endif
 
-    <p><em>Before proceeding, this guide uses the Infinit command-line tools with a terminal window. You don’t need to be a UNIX guru but you should be familiar with typing shell commands and interpreting outputs. You can otherwise download the <a href="${route('drive')}">Infinit Drive desktop client</a>.</em></p>
+    % if osname != "windows":
+      <h2 id="platform">Choose a platform</h2>
 
-    <h2 id="installation">1. Installation</h2>
+      <div class="tabs-circle">
+        <nav>
+          <ul>
+            <li class="active" data-platform="docker" data-os="docker"><a href="#">
+              <img src="${url('images/logos/docker-vector.png')}" alt="">
+              <span>Docker</span></a>
+            </li>
 
-    <h3 class="skip">Download and install Infinit’s dependencies</h3>
+            % if osname == "windows":
+              <li data-platform="windows" data-os="windows"><a href="#">
+                <img src="${url('images/icons/windows.png')}" alt="">
+                <span>Windows</span></a>
+              </li>
+
+            % elif osname == "mac":
+              <li data-platform="mac" data-os="mac"><a href="#">
+                <img src="${url('images/icons/apple.png')}" alt="">
+                <span>macOS</span></a>
+              </li>
+
+            % else:
+              <li data-platform="debian" data-os="linux"><a href="#">
+                <img src="${url('images/logos/ubuntu.png')}" alt="">
+                <span>Debian</span></a>
+              </li>
+              <li data-platform="centos" data-os="linux"><a href="#">
+                <img src="${url('images/logos/centos.png')}" alt="">
+                <span>CentOS</span></a>
+              </li>
+              <li data-platform="alpine" data-os="linux"><a href="#">
+                <img src="${url('images/logos/alpine.png')}" alt="">
+                <span>Alpine</span></a>
+              </li>
+              <!--
+              <li data-platform="arm" data-os="linux"><a href="#">
+                <img src="${url('images/logos/raspberry.png')}" alt="">
+                <span>Raspberry</span></a>
+              </li>
+              -->
+            % endif
+          </ul>
+        </nav>
+      </div>
+    % endif
+
+    <h2 id="installation">Installation</h2>
+
+    <h3 class="skip">Install Infinit’s dependencies</h3>
 
     % if osname == "mac":
       <%include file='generated/get_started/mac_fuse_install.html'/>
@@ -112,36 +120,50 @@
       <%include file='generated/get_started/linux_fuse_install.html'/>
     % endif
 
-    <h3 class="skip">Download and install the Infinit command-line tools</h3>
+    <h3 id="install-infinit" class="skip">Install the Infinit command-line tools</h3>
 
+
+    % if osname != "windows":
+    <!-- Docker Installation -->
+      <section data-platform="docker">
+        <%include file='generated/get_started/docker_install.html'/>
+
+        <p>Now that you’ve launched your container, let's test that Infinit is correctly installed:</p>
+
+        <pre><code>${term} infinit --version
+${tarball_version}</code></pre>
+      </section>
+    % endif
+
+
+    <!-- macOS Installation -->
     % if osname == "mac":
 
-      <p>If you have <a href="http://brew.sh">Homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
+      <section data-platform="mac">
+        <p>If you have <a href="http://brew.sh">Homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
 
-      <ul data-tabs class="tabs">
-        <li><a data-tab href="#mac-homebrew-install" class="active">• Homebrew Install</a></li>
-        <li><a data-tab href="#mac-tarball-install">• Tarball Install</a></li>
-      </ul>
+        <ul data-tabs class="tabs">
+          <li><a data-tab href="#mac-homebrew-install" class="active">• Homebrew Install</a></li>
+          <li><a data-tab href="#mac-tarball-install">• Tarball Install</a></li>
+        </ul>
 
-      <div data-tabs-content class="data-tabs-content">
-        <div data-tabs-pane class="tabs-pane active" id="mac-homebrew-install">
-          <h3 class="skip">Homebrew Install</h3>
-          <%include file='generated/get_started/mac_homebrew_install.html'/>
-          <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
+        <div data-tabs-content class="data-tabs-content">
+          <div data-tabs-pane class="tabs-pane active" id="mac-homebrew-install">
+            <%include file='generated/get_started/mac_homebrew_install.html'/>
+            <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
 
-          <pre><code>$> cd /usr/local
+            <pre><code>$> cd /usr/local
 $> ls
 bin/    lib/    share/
 </code></pre>
-        </div>
+          </div>
 
-        <div data-tabs-pane class="tabs-pane" id="mac-tarball-install">
-          <h3 class="skip">Tarball Install</h3>
-          <%include file='generated/get_started/mac_tarball_install.html'/>
+          <div data-tabs-pane class="tabs-pane" id="mac-tarball-install">
+            <%include file='generated/get_started/mac_tarball_install.html'/>
 
-          <p>Next, open your terminal and extract the Infinit tarball:</p>
+            <p>Next, open your terminal and extract the Infinit tarball:</p>
 
-          <pre><code>$> tar xjvf infinit-x86_64-osx-clang3-${tarball_version}.tbz
+            <pre><code>$> tar xjvf infinit-x86_64-osx-clang3-${tarball_version}.tbz
 infinit-${tarball_version}/
 infinit-${tarball_version}/bin/
 infinit-${tarball_version}/lib
@@ -149,97 +171,152 @@ infinit-${tarball_version}/lib
 infinit-${tarball_version}/bin/infinit
 ...</code></pre>
 
-      <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+        <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 
-          <pre><code>$> cd infinit-${tarball_version}/
+            <pre><code>$> cd infinit-${tarball_version}/
 $> ls
 bin/    lib/    share/
 </code></pre>
 
+          </div>
         </div>
-    </div>
+      </section>
 
+
+    <!-- Windows Installation -->
     % elif osname == "windows":
-    <%include file='generated/get_started/windows_tarball_install.html'/>
 
-    <p>Using the command line, navigate into the directory where Infinit was extracted.</p>
+      <section data-platform="windows">
+        <%include file='generated/get_started/windows_tarball_install.html'/>
 
-    <pre><code>> cd C:\Users\%USERNAME%\Downloads\infinit-${tarball_version}
-> dir
-    </code></pre>
+        <p>Using the command line, navigate into the directory where Infinit was extracted.</p>
+
+        <pre><code>> cd C:\Users\%USERNAME%\Downloads\infinit-${tarball_version}
+> dir</code></pre>
+      </section>
+
 
     % else:
+      <!-- Debian Installation -->
+      <section data-platform="debian centos alpine arm">
 
-    <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball Install.</p>
+        <p data-platform="debian">
+          If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball Install.
+        </p>
 
-    <ul data-tabs class="tabs">
-      <li><a data-tab href="#linux-repository-install" class="active">• Repository Install</a></li>
-      <li><a data-tab href="#linux-tarball-install">• Tarball Install</a></li>
-    </ul>
+        <ul data-platform="debian" data-tabs class="tabs">
+          <li><a data-tab href="#linux-repository-install" class="active">• Repository Install</a></li>
+          <li><a data-tab href="#linux-tarball-install">• Tarball Install</a></li>
+        </ul>
 
-    <div data-tabs-content class="data-tabs-content">
-      <div data-tabs-pane class="tabs-pane active" id="linux-repository-install">
-        <h3 class="skip">Repository Install</h3>
-        <%include file='generated/get_started/linux_apt_install.html'/>
+        <div data-tabs-content class="data-tabs-content">
+          <div data-tabs-pane class="tabs-pane active" id="linux-repository-install">
 
-        <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
-        <pre><code>$> cd /opt/infinit
+            <div data-platform="debian">
+              <%include file='generated/get_started/linux_apt_install.html'/>
+            </div>
+
+            <div data-platform="centos">
+              <%include file='generated/get_started/linux_yum_install.html'/>
+            </div>
+
+            <p data-platform="debian centos">
+              Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:
+            </p>
+
+            <pre data-platform="debian centos"><code>$> cd /opt/infinit
 $> ls
-bin/    lib/    share/
-    </code></pre>
-      </div>
+bin/    lib/    share/</code></pre>
+          </div>
 
-      <div data-tabs-pane class="tabs-pane" id="linux-tarball-install">
-        <h3 class="skip">Tarball Install</h3>
-        <%include file='generated/get_started/linux_tarball_install.html'/>
+          <div data-tabs-pane class="tabs-pane" id="linux-tarball-install">
 
-        <p>Next, open your terminal and extract the Infinit tarball:</p>
+            <div data-platform="debian">
+              <%include file='generated/get_started/linux_tarball_install.html'/>
+            </div>
 
-        <pre><code>$> tar xjvf infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
-    ...
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit
-    ...
-    </code></pre>
+            <div data-platform="alpine">
+              <%include file='generated/get_started/linux_alpine_install.html'/>
+            </div>
 
-        <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+            <div data-platform="arm">
+              <%include file='generated/get_started/linux_arm_install.html'/>
+            </div>
 
-        <pre><code>$> cd infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+            <p data-platform="debian alpine arm">Next, open your terminal and extract the Infinit tarball:</p>
+
+            <pre data-platform="debian"><code>$> tar xjvf infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
+...
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit
+...</code></pre>
+
+            <pre data-platform="alpine"><code>$> tar xjvf infinit-x86_64-alpine-gcc-${tarball_version}.tbz
+infinit-x86_64-alpine-gcc-${tarball_version}/
+infinit-x86_64-alpine-gcc-${tarball_version}/bin/
+infinit-x86_64-alpine-gcc-${tarball_version}/lib
+...
+infinit-x86_64-alpine-gcc-${tarball_version}/bin/infinit
+...</code></pre>
+
+            <pre data-platform="arm"><code>$> tar xjvf infinit-arm-${tarball_version}.tar.gz
+infinit-arm-${tarball_version}/
+infinit-arm-${tarball_version}/bin/
+infinit-arm-${tarball_version}/lib
+...
+infinit-arm-${tarball_version}/bin/infinit
+...</code></pre>
+
+            <p data-platform="debian alpine arm">Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+
+            <pre data-platform="debian"><code>$> cd infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
 $> ls
 bin/    lib/    share/</code></pre>
 
-      </div>
-    </div>
+            <pre data-platform="alpine"><code>$> cd infinit-x86_64-alpine-gcc-${tarball_version}/
+$> ls
+bin/    lib/    share/</code></pre>
 
-    <div>
+            <pre data-platform="arm"><code>$> cd infinit-arm-${tarball_version}/
+$> ls
+bin/    lib/    share/</code></pre>
+          </div>
+        </div>
+      </section>
+
     % endif
 
-    <ul>
+    <ul data-platform="mac windows debian centos alpine arm">
       <li>The <code>bin${dir_end}</code> subdirectory contains the actual Infinit binary <em>infinit${exe}</em>.</li>
+
       % if osname == "mac" or osname == "linux":
-      <li>The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
+        <li>The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
       % endif
     </ul>
 
-    <h2 id="create-infrastructure">2. Create Infrastructure</h2>
+    <h2 id="create-infrastructure">Create Infrastructure</h2>
 
     <p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks. Subsequently, another user will be invited to join the storage infrastructure to show how to control permissions and more.</p>
 
-    <img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
+    <img id="twodevices" data-platform="mac windows debian centos alpine arm" src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
+
+    <img data-platform="docker" src="${url('images/schema-two-containers.png')}" alt="two containers with a file composed of blocks that are distributed among those containers">
 
     <p><em><strong>NOTE:</strong> For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, you can skip this tutorial and refer directly to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
 
-    <p>First, add the <code>bin${dir_end}</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
+    <div data-platform="mac windows debian centos alpine arm">
+      <p>First, add the <code>bin${dir_end}</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
 
-    <div>
-    % if osname == "windows":
-    <pre><code>> set PATH=%CD%\bin;%PATH%
-    </code></pre>
-    % else:
-    <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
-    % endif
+      <div>
+      % if osname == "windows":
+      <pre><code>> set PATH=%CD%\bin;%PATH%
+      </code></pre>
+      % else:
+      <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
+      % endif
+      </div>
     </div>
 
     <h3 id="create-a-user">Create a user</h3>
@@ -248,7 +325,7 @@ bin/    lib/    share/</code></pre>
 
     <p>All the commands that follow use the user name <code>alice</code> but you should <strong>pick your own unique user name</strong>:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user --signup --name alice --fullname "Alice"
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user signup --name alice --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 </code></pre>
@@ -261,8 +338,9 @@ Remotely saved user "alice".
 
     <p>The binary <em>infinit silo</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit silo --create --filesystem --name local --capacity 1GB
-Created storage "local".</code></pre>
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/silo-create.sh' />
+Created storage "local".
+</code></pre>
 
     <h3 id="create-a-network">Create a network</h3>
 
@@ -270,7 +348,7 @@ Created storage "local".</code></pre>
 
     <p>The <em>infinit network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit network --create --as alice --storage local --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/network-create.sh' />
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
@@ -281,7 +359,7 @@ Remotely saved network "alice/my-network".
 
     <p>The last step on this device consists of creating a logical volume to store and access files through a file system interface. Volumes can be manipulated through the <em>infinit volume</em> binary as shown next:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume --create --as alice --network my-network --name my-volume --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-create.sh' />
 Locally created volume "alice/my-volume".
 Remotely saved volume "alice/my-volume".
 </code></pre>
@@ -292,30 +370,53 @@ Remotely saved volume "alice/my-volume".
 
     <p>For now, only configuration files have been created. Nothing has been run. Let’s start the server and access the volume by mounting it through FUSE, as easily as any other filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --cache --publish
+    <div data-platform="mac windows debian centos alpine arm">
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-mount.sh' />
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 ...
 </code></pre>
 
-    <p><em><strong>NOTE:</strong> This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
+      <p><em><strong>NOTE:</strong> This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
+    </div>
+
+    <div data-platform="docker">
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/volume-mount.sh' /> &
+Running network "alice/my-network".
+Fetched endpoints for "alice/my-network".
+Running volume "alice/my-volume".
+...
+</code></pre>
+
+      <p><em><strong>NOTE:</strong> We're running this command in the background so we can continue working on this container.</em></p>
+    </div>
 
     <p>That’s it! You can now create, list and access files from the mount point <code>${guide_mountpoint_abs}</code>. Try creating a file right now:
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} echo "everything is" > ${guide_mountpoint}${dir}awesome.txt
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+      <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/echo.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/cat.sh' />
 everything is</code></pre>
 
     <h3 id="access-from-another-machine">Access from another machine</h3>
 
-    <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and <a href="${route('doc_environment_variables')}#infinit_home">setting</a> <code>INFINIT_HOME</code> to a different directory.</p>
+    <div data-platform="mac windows debian centos alpine arm">
+      <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and <a href="${route('doc_environment_variables')}#infinit_home">setting</a> <code>INFINIT_HOME</code> to a different directory.</p>
 
-    <p>In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
+      <p>In order to access your volume from another device, you will need to transfer your user’s identity to that device.</p>
+    </div>
+
+    <div data-platform="docker">
+      <p>Now that you have successfully created and mounted a volume on your container, it would be interesting to access the data from another container. Open a new terminal and repeat the <a href="#install-infinit">installation steps</a> from earlier.</p>
+
+      <p>In order to access your volume from another container, you will need to transfer your user’s identity to that container.</p>
+    </div>
+
+    <p>A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
 
     <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit device --transmit --user --as alice
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/transmit.sh' />
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -323,7 +424,7 @@ User identity on the Hub for: 297 seconds
 
     <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit device --receive --user --name alice
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/receive.sh' />
 Passphrase: ********
 Received user identity for "alice".
 </code></pre>
@@ -332,21 +433,21 @@ Received user identity for "alice".
 
     <p>The next steps consist of fetching the resources that you previously pushed on the Hub: network and volume.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network --fetch --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/network-fetch.sh' />
 Fetched network "alice/my-network".
-${term} infinit volume --fetch --as alice --name my-volume
+<%include file='scripts/get-started/alice/device_B/volume-fetch.sh' />
 Fetched volume "alice/my-volume".
 </code></pre>
 
     <p>Let’s link this device to the <code>my-network</code> network you created on device A for this new device to be authorized to connect.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network --link --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/network-link.sh' />
 Linked device to network "alice/my-network".
-    </code></pre>
+</code></pre>
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --cache --publish
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/volume-mount.sh' />
 Fetch endpoints for "alice/my-network".
 Running network "alice/my-network".
 Running volume "alice/my-volume".
@@ -355,9 +456,9 @@ Running volume "alice/my-volume".
 
     <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} ${ls_command} ${guide_mountpoint}${dir}
+    <pre class="device2"><div><span>Device B</span></div><code>${term} <%include file='scripts/get-started/alice/device_B/ls.sh' />
 awesome.txt
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+<%include file='scripts/get-started/alice/device_B/cat.sh' />
 everything is
 </code></pre>
 
@@ -367,9 +468,11 @@ everything is
 
     <p>We can now proceed a step further by allowing another user to connect to Alice's storage infrastructure and access/edit the files in the volume <code>alice/my-volume</code>.</p>
 
-    <p>First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
+    <p data-platform="docker">First, let us create another user, unconventially named Bob, on a new container. Run another container by repeating the <a href="#install-infinit">steps from earlier</a>, then create your new user:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user --signup --name bob --fullname "Bob"
+    <p data-platform="mac windows debian centos alpine arm">First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
+
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/signup.sh' />
 Generating RSA keypair.
 Remotely saved user "bob".
 </code></pre>
@@ -378,34 +481,34 @@ Remotely saved user "bob".
 
     <p>Back to device A and Alice to generate a passport for Bob. Note that in order to reference another user by its name, for generating a passport for instance, you first need to retrieve his/her user public identity from the Hub (or otherwise).</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user --fetch --as alice --name bob
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/fetch-bob.sh' />
 Fetched user "bob".
-${term} infinit passport --create --as alice --network my-network --user bob --push
+${term} <%include file='scripts/get-started/alice/device_A/passport-create-bob.sh' />
 Locally created passport "alice/my-network: bob".
 Remotely saved passport "alice/my-network: bob".
 </code></pre>
 
     <p>Now that a passport has been issued, Bob can very easily retrieve it from the Hub in order to join Alice's storage network. For this, Bob must fetch Alice's public user identity, Alice's <code>alice/my-network</code> network descriptor along with the freshly issued passport:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user --fetch --as bob --name alice
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/fetch-alice.sh' />
 Fetched user "alice".
-${term} infinit network --fetch --as bob --name alice/my-network
+<%include file='scripts/get-started/bob/device_C/network-fetch.sh' />
 Fetched network "alice/my-network".
-${term} infinit passport --fetch --as bob --network alice/my-network
+<%include file='scripts/get-started/bob/device_C/passport-fetch.sh' />
 Fetched passport for "alice/my-network".
 </code></pre>
 
     <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit network --link --as bob --name alice/my-network
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/network-link.sh' />
 Linked device to network "alice/my-network".
 </code></pre>
 
     <p>Once his device linked to the network, Bob can now mount Alice's volume. Note that the volume descriptor <code>alice/my-volume</code> must first be retrieved from the Hub in order for it to be mounted:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit volume --fetch --as bob --name alice/my-volume
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/volume-fetch.sh' />
 Fetched volume "alice/my-volume".
-${term} infinit volume --mount --as bob --name alice/my-volume --mountpoint ${guide_mountpoint} --cache --publish
+${term} <%include file='scripts/get-started/bob/device_C/volume-mount.sh' />
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -414,7 +517,7 @@ Running volume "alice/my-volume".
 
     <p>Bob can now try to access the mounted volume as shown below:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} ${ls_command} ${guide_mountpoint}
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/ls-failed.sh' />
 % if osname == "windows":
 Access is denied.
 % else:
@@ -426,16 +529,16 @@ ${ls_command}: ${guide_mountpoint}: Permission denied
 
     <p>This lack of permission can be verified on Alice's device A, through the <em>infinit acl</em> binary which can be used for access control purposes:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl --list --path ${guide_mountpoint_abs}
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/list-permissions-before.sh' />
 ${guide_mountpoint_abs}:
         alice: rw (owner)
 </code></pre>
 
     <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl --set --mode r --user bob --path ${guide_mountpoint_abs}
-${term} infinit acl --set --mode r --user bob --path ${guide_mountpoint}${dir}awesome.txt
-${term} infinit acl --list --path ${guide_mountpoint_abs} --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device1"><div><span>Device A</span></div><code>${term} <%include file='scripts/get-started/alice/device_A/set-directory-permissions.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/set-permissions.sh' />
+${term} <%include file='scripts/get-started/alice/device_A/list-permissions-after.sh' />
 ${guide_mountpoint_abs}:
   inherit: no
         alice: rw (owner)
@@ -450,13 +553,13 @@ ${guide_mountpoint}${dir}awesome.txt:
 
     <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit acl --list --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device3"><div><span>Device C</span></div><code>${term} <%include file='scripts/get-started/bob/device_C/list-permissions.sh' />
 ${guide_mountpoint}${dir}awesome.txt:
         alice: rw (owner)
         bob: r
-${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
+${term} <%include file='scripts/get-started/bob/device_C/cat.sh' />
 everything is
-${term} echo "or not" > ${guide_mountpoint}${dir}awesome.txt
+${term} <%include file='scripts/get-started/bob/device_C/echo-failed.sh' />
 % if osname == "windows":
 Access is denied.
 % else:
@@ -464,13 +567,21 @@ zsh: permission denied: ${guide_mountpoint}${dir}awesome.txt
 % endif
 </code></pre>
 
-    <p>Download full shell script: <a class="external" href="${url('scripts/get-started.sh')}"><img src="${url('images/icons/external-link.png')}">get_started.sh</a>.</p>
+    <p>Download full shell script: <a class="external" href="${url('scripts/get-started.sh')}"><img src="${url('images/icons/external-link.png')}">get-started.sh</a>.</p>
 
-    <h2 id="doctor">3. Diagnose Problems</h2>
+    <div data-platform="docker">
+      <h3 id="clean">Clean your installation</h3>
+
+      <p>Before shutting down your containers, you can clean your installations by removing your users, networks, volumes from the Hub and locally:</p>
+
+      <pre><code>${term} infinit user delete --as alice --name alice --pull --purge</code></pre>
+    </div>
+
+    <h2 id="doctor">Diagnose Problems</h2>
 
     <p>The <em>infinit doctor</em> binary is provided to automatically analyze your environment and detect common issues for you to quickly understand why Infinit may not be behaving as expected. Issues may range from incorrect permissions on some files/directories, to a router blocking UDP packets and more. The easiest way to run <em>infinit doctor</em> is to use the <code>--all</code> so as to analyze the operarting system, environment variables, networking capabilities, configuration files etc.</p>
 
-    <pre><code>$> infinit doctor --all
+    <pre><code>${term} <%include file='scripts/get-started/doctor.sh' />
 CONFIGURATION INTEGRITY:
 [OK] Storage resources
 [OK] Networks
@@ -493,18 +604,23 @@ CONNECTIVITY:
 </code></pre>
 
     <div class="next">
-      <h2 id="go-further">4. Go Further</h2>
+      <h2 id="go-further">Go Further</h2>
 
       <blockquote class="warning">
       <strong>Notice:</strong> Some features may not be entirely developed yet, please have a look at <a href="${route('doc_roadmap')}">our roadmap</a> to follow our advancement. You can also subscribe to <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">our newsletter</a> to get notified of our upcoming features.
       </blockquote>
 
-      <p>You can now <a href="/documentation/reference#create-a-passport">authorize more users</a> to connect to the network, to <a href="/documentation/reference#link-a-device-to-a-network">contribute additional storage i.e scale up/out</a>, make the network resilient through <a href="/documentation/reference#create-a-network">redundancy</a> and <a href="/documentation/reference#drive">invite non-tech-savvy users to join drives</a> through a <a href="/drive">graphical user interface</a>. You can also keep reading the Infinit documentation through examples of deployments and/or the reference documentation:</p>
+      <p>You can now <span data-platform="docker">have a look at our <a href="${route('docker')}">Docker integrations,</a></span> <a href="/documentation/reference#create-a-passport">authorize more users</a> to connect to the network, to <a href="/documentation/reference#link-a-device-to-a-network">contribute additional storage i.e scale up/out</a>, make the network resilient through <a href="/documentation/reference#create-a-network">redundancy</a> and <a href="/documentation/reference#drive">invite non-tech-savvy users to join drives</a> through a <a href="/drive">graphical user interface</a>. You can also keep reading the Infinit documentation through examples of deployments and/or the reference documentation:</p>
 
       <div>
-        <a class="go_deployments" href="${route('doc_deployments')}">
+        <a data-platform="mac windows debian centos alpine arm" class="go_deployments" href="${route('doc_deployments')}">
           <img src="${url('images/icons/network.png')}">
           <span>→ Deployment Examples</span>
+        </a>
+
+        <a data-platform="docker" class="go_docker" href="${route('docker')}">
+          <img src="${url('images/logos/docker-small.png')}">
+          <span>→ Docker Integrations</span>
         </a>
 
         <a class="go_reference" href="${route('doc_reference')}">

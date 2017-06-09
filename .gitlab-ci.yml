@@ -63,7 +63,7 @@ x86_64-centos6-gcc4:
     - centos6
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-ubuntu-gcc4:
   stage: build
@@ -105,7 +105,7 @@ x86_64-ubuntu-gcc4:
     - ubuntu
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-alpine-gcc:
   stage: build
@@ -146,7 +146,7 @@ x86_64-alpine-gcc:
     - alpine
     - gcc
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-jessie-gcc4:
   stage: build
@@ -180,7 +180,7 @@ x86_64-jessie-gcc4:
     - jessie
     - gcc4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-windows-mingw4:
   stage: build
@@ -216,7 +216,7 @@ x86_64-windows-mingw4:
     - windows
     - mingw4
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 x86_64-osx-clang:
   stage: build
@@ -251,7 +251,7 @@ x86_64-osx-clang:
     - osx
     - clang
   except:
-    - feature/website
+    - /^.*feature.website.*$/
 
 website:
   stage: build
@@ -260,7 +260,6 @@ website:
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
-    - pip3 install -r drake/requirements.txt
     - pip3 install -r requirements.txt
     - SOURCE_DIR=${CI_PROJECT_DIR}
     - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
@@ -270,6 +269,7 @@ website:
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 drake -j $(nproc) //website/build
+    - python3 drake -j $(nproc) //website/check
     - python3 drake -j $(nproc) //website/install
     - python3 drake -j $(nproc) //website/debian
     - PACKAGE="website/infinit-sh_${DESC}_amd64.deb"
@@ -281,4 +281,4 @@ website:
     - ubuntu
     - gcc4
   only:
-    - feature/website
+    - /^.*feature.website.*$/

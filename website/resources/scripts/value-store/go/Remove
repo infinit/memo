@@ -1,0 +1,7 @@
+// Given an address `address`, remove the block at `address`.
+//
+_, err := client.Remove(context.Background(),
+                        &doughnut.RemoveRequest{Address: address})
+if err != nil {
+  log.Fatal("Unable to remove block")
+}

@@ -15,17 +15,17 @@ In order to ensure that you never lose access to your Infinit storage infrastruc
 As Infinit relies on public/private key encryption, it is vital to ensure that you do not lose your user's key pair. Loss of the key pair will mean that you will lose access to and the ability to administrate networks. Even if you use the Hub, the default push action does not include the private key. To backup a user's key pair, you can export it in full to a file as follows:
 
 ```
-$> infinit user --export --full --name alice --output alice.user
+$> infinit user export --full --name alice --output alice.user
 WARNING: you are exporting the user "alice" including the private key
 WARNING: anyone in possession of this information can impersonate that user
 WARNING: if you mean to export your user for someone else, remove the --full flag
 Exported user "alice".
 ```
 
-To restore a backed up user, you use the `--import` mode.
+To restore a backed up user, you use the `import` mode.
 
 ```
-$> infinit user --import --input alice.user
+$> infinit user-import --input alice.user
 Imported user "alice".
 ```
 
@@ -35,17 +35,17 @@ Imported user "alice".
 
 A storage is a device specific concept that is not pushed to the Hub. There are two components to a storage: the storage descriptor and the block storage itself. If you are using a *filesystem* storage without replication, you will need to backup the block store which is the folder you specified with `--path` on creation.
 
-To backup the storage descriptor, you use the `--export` mode.
+To backup the storage descriptor, you use the `export` mode.
 
 ```
-$> infinit silo --export local --output local.storage
+$> infinit silo export local --output local.storage
 Exported storage "local".
 ```
 
-The storage descriptor can restored using the `--import` mode.
+The storage descriptor can restored using the `import` mode.
 
 ```
-$> infinit silo --import local --input local.storage
+$> infinit silo import local --input local.storage
 Imported storage "local".
 ```
 
@@ -53,19 +53,19 @@ Imported storage "local".
 
 *Only backup if not using the Hub.*
 
-A network descriptor is backed up using the `--export` mode.
+A network descriptor is backed up using the `export` mode.
 
 ```
-$> infinit network --export --as alice --name cluster --output cluster.network
+$> infinit network export --as alice --name cluster --output cluster.network
 Exported network "alice/cluster".
 ```
 
 To restore the network, you will need to import it and then relink the network with the storage that it was using before.
 
 ```
-$> infinit network --import --input cluster.network
+$> infinit network import --input cluster.network
 Imported network "alice/cluster".
-$> infinit network --link --as alice --name cluster --storage local
+$> infinit network link --as alice --name cluster --storage local
 Linked device to network "alice/cluster".
 ```
 
@@ -76,14 +76,14 @@ Linked device to network "alice/cluster".
 A volume is backed up by exporting it to a file as was done for the other objects.
 
 ```
-$> infinit volume --export --as alice --name shared --output shared.volume
+$> infinit volume export --as alice --name shared --output shared.volume
 Exported volume "alice/shared".
 ```
 
-It can then be restored using the `--import` mode.
+It can then be restored using the `import` mode.
 
 ```
-$> infinit volume --import --input shared.volume
+$> infinit volume import --input shared.volume
 Imported volume "alice/shared".
 ```
 
