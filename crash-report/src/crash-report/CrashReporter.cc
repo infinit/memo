@@ -1,4 +1,4 @@
-#include <crash_reporting/CrashReporter.hh>
+#include <crash-report/CrashReporter.hh>
 
 #include <elle/format/base64.hh>
 #include <elle/json/json.hh>
@@ -16,7 +16,7 @@
 #if defined INFINIT_LINUX
 # include <client/linux/handler/exception_handler.h>
 #elif defined INFINIT_MACOSX
-# include <crash_reporting/gcc_fix.hh>
+# include <crash-report/gcc_fix.hh>
 // FIXME: Adding `pragma GCC diagnostic ignored "-Wdeprecated"` does not work
 // for removing #import warnings.
 # include <client/mac/handler/exception_handler.h>
@@ -26,7 +26,7 @@
 
 ELLE_LOG_COMPONENT("CrashReporter");
 
-namespace crash_reporting
+namespace crash_report
 {
   namespace
   {

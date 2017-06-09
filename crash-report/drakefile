@@ -295,9 +295,9 @@ def configure(cxx_toolkit = None,
 
   local_cxx_config.add_local_include_path('src')
   sources = drake.nodes(
-    'src/crash_reporting/CrashReporter.cc',
-    'src/crash_reporting/CrashReporter.hh',
-    'src/crash_reporting/fwd.hh',
+    'src/crash-report/CrashReporter.cc',
+    'src/crash-report/CrashReporter.hh',
+    'src/crash-report/fwd.hh',
   )
 
   lib_dynamic = drake.cxx.DynLib(
