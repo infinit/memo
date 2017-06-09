@@ -939,14 +939,15 @@ def configure(
   render('tests/value-store/grpc/api.go.tmpl', value_store['go'])
   # Python.
   # XXX: Pass the node...
-  doughnut_pb_python = drake.node('../src/infinit/grpc/doughnut_pb2.py')
+  doughnut_pb_python = drake.nodes('../src/infinit/grpc/doughnut_pb2.py',
+                                   '../src/infinit/grpc/doughnut_pb2_grpc.py')
   rule_check << Runner(
     drake.node('tests/value-store/grpc/api.py'),
     infinit = infinit,
     env = {
-      'PYTHONPATH': str(doughnut_pb_python.path(absolute = True).dirname())
+      'PYTHONPATH': str(doughnut_pb_python[0].path(absolute = True).dirname())
     },
-    sources = [doughnut_pb_python]).targets()
+    sources = doughnut_pb_python).targets()
   # Cpp
   config = drake.cxx.Config(grpc.cxx_config)
   config += grpc.grpc.cxx_config
