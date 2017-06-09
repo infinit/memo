@@ -43,19 +43,21 @@ class SymbolsGenerator(drake.Builder):
 
   def execute(self):
     out = self.__output_file
-    if self.__cxx_toolkit.os is drake.os.macos:
-      self.cmd('Generating debug symbols for %s' % self.__binary,
-               ['dsymutil', self.binary_path],
-               throw = True)
-      args = ['-g', self.binary_path + '.dSYM']
-    else:
-      args = []
-    self.cmd('Generating symbols file for %s' % self.__binary,
-             [self.dump_syms_cmd] + args + [self.binary_path],
-             redirect_stdout = out,
-             cut_stderr = True,
-             throw = True)
-    return True
+    # dump_syms sometimes crashes when we use dsymutil output.  For be
+    # ready not to use it.
+    with_dsym = [True, False] if self.__cxx_toolkit.os is drake.os.macos else [False]
+    for dsym in with_dsym:
+      if dsym and self.cmd('Generating debug symbols for %s' % self.__binary,
+                           ['dsymutil', self.binary_path]):
+        args = ['-g', self.binary_path + '.dSYM']
+      else:
+        args = []
+      if self.cmd('Generating symbols file for %s' % self.__binary,
+                  [self.dump_syms_cmd] + args + [self.binary_path],
+                  redirect_stdout = out,
+                  cut_stderr = True):
+        return True
+    return False
 
   def __repr__(self):
     return 'SymbolsGenerator(%s)' % self.__binary
