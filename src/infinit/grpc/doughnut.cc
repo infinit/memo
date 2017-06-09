@@ -4,6 +4,7 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/grpc/doughnut.grpc.pb.h>
+#include <infinit/grpc/grpc.hh>
 #include <infinit/grpc/serializer.hh>
 
 # include <elle/athena/paxos/Client.hh>
@@ -182,6 +183,11 @@ namespace infinit
     {
       ::grpc::Status status = ::grpc::Status::OK;
       ::grpc::StatusCode code = ::grpc::INTERNAL;
+      Task task;
+      if (!task.proceed())
+      {
+        return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
+      }
       sched.mt_run<void>("invoke", [&] {
           try
           {
