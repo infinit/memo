@@ -83,6 +83,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(fuse_option, 0, "option to pass directly to FUSE" , false);
     ELLE_DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
+    ELLE_DAS_CLI_SYMBOL(grpc_port_file, 0, "write grpc listening port to file", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);

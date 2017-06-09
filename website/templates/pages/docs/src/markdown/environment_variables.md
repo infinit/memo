@@ -23,7 +23,7 @@ Noteworthy is that the '\*' wildcard character can be used to form glob patterns
 By default the log level is set to `*:LOG` meaning that all the components are activated with the least verbose log level `LOG`:
 
 ```
-$> infinit volume --mount --as alice --name shared
+$> infinit volume mount --as alice --name shared
 [           infinit volume           ] [main] client version: 0.5.5-dev
 [        infinit.model.Model         ] [main] infinit::model::Model(0x168f2a0): compatibility version 0.5.5
 [       infinit.overlay.kelips       ] [main] Filesystem running in bootstrap read/write mode.
@@ -87,7 +87,7 @@ Finally, you will find next some of the components that can be activated or not 
 The example below activates several components in different log levels to demonstrate the use of the `ELLE_LOG_LEVEL` environment variable:
 
 ```
-$> ELLE_LOG_LEVEL="infinit.cryptography*:TRACE,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_LEVEL="infinit.cryptography*:TRACE,infinit.filesystem*:DEBUG" ./bin/infinit volume mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 [           infinit volume           ] [main] client version: 0.5.4-136-g83aa53b
@@ -127,7 +127,7 @@ Note that depending on the verbosity of the logs, it may have an impact on the p
 The `ELLE_LOG_FILE` takes a path as argument that references the file in which the logs will be stored rather than being displayed on the standard error (`stderr`) stream.
 
 ```
-$> ELLE_LOG_FILE=$PWD/demo.log ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_FILE=$PWD/demo.log ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 Running volume "infinit/demo".
@@ -170,7 +170,7 @@ In the example below, only the `ELLE_LOG_PID` variable is activated, resulting i
 These environment variables are particularly helpful when logs from different programs are written to the same file.
 
 ```
-$> ELLE_LOG_PID=1 ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_PID=1 ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 [           infinit volume           ] [29607] [main] client version: 0.5.4-136-g83aa53b
@@ -194,7 +194,7 @@ Running volume "infinit/demo".
 The `ELLE_LOG_TIME` environment variables can be set to `1` to add a section in the logs that displays the current time. This option is particularly useful when trying to understand why some operations take a long time.
 
 ```
-$> ELLE_LOG_TIME=1 ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_TIME=1 ./bin/infinit volume mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 2016-Mar-18 13:23:13: [           infinit volume           ] [main] client version: 0.5.4-136-g83aa53b
@@ -211,7 +211,7 @@ Running network "infinit/demo".
 You can have the type of message specified in the logs: _INFO_, _WARNING_ or _ERROR_. This is useful when logging to a file in which the colors (white, yellow and red in bold) will not be easily detectable.
 
 ```
-$> ELLE_LOG_DISPLAY_TYPE=1 ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_DISPLAY_TYPE=1 ./bin/infinit-volume mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 [           infinit-volume           ] [main] client version: 0.5.4-136-g83aa53b

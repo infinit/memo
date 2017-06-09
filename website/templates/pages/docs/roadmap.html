@@ -47,15 +47,26 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="openstack-swift">Openstack Swift interface</h2>
+          <h2 id="on-premise-hub">On-premise Hub</h2>
+          <p>Allow the Hub to be deployed on premise to allow it to act as a gateway for mobility, to support both LDAP-based and standalone accounts (for external collaborators), to manage keys and more.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="ldap">LDAP</h2>
+          <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="openstack-swift-interface">Openstack Swift interface</h2>
           <p>Provide an Openstack Swift object/block interface.</p>
         </div>
       </div>
-
       <div class="step">
-        <div class="date">
-          Q4 <br><span>2017</span>
-        </div>
+        <hr>
         <div class="desc">
           <h2 id="file-locking">File locking</h2>
           <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
@@ -64,32 +75,57 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="erasure-coding">Erasure coding</h2>
+          <h2 id="erasure-coding-policy">Erasure coding policy</h2>
           <p>Provide erasure coding as an alternative to bare replication to halve the storage capacity required to ensure data durability.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="compression">Compression</h2>
+          <h2 id="compression-policy">Compression policy</h2>
           <p>Allow compression to be activated to reduce storage consumption depending on the nature of the data to be stored.</p>
         </div>
       </div>
-
       <div class="step">
-        <div class="date">
-          Q3 <br><span>2017</span>
-        </div>
+        <hr>
         <div class="desc">
-          <h2 id="deduplication">Deduplication</h2>
+          <h2 id="deduplication-policy">Deduplication policy</h2>
           <p>Provide a policy to activate deduplication in order to reduce storage consumption when storing identical pieces of data.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="windows-smb">SMB interface</h2>
+          <h2 id="windows-smb-interface">Windows SMB interface</h2>
           <p>Provide an SMB integration server to easily integrate in existing production environments.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="versioning-policy">Versioning policy</h2>
+          <p>Allow users to explore and roll-back to a previous version of a file.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="iscsi-interface">iSCSI interface</h2>
+          <p>Allow the underlying block device logic to be accessed through the iSCSI interface.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="data-placement-policy">Data placement policy</h2>
+          <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="kubernetes-integration">Kubernetes integration</h2>
+          <p>Provide an integration for Kubernetes to use Infinit as a resilient and scalable storage backend.</p>
         </div>
       </div>
       <div class="step">
@@ -102,8 +138,77 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="versioning">Versioning</h2>
-          <p>Allow users to explore and roll-back to a previous version of a file.</p>
+          <h2 id="nfs-gateway-interface">NFS gateway interface</h2>
+          <p>Allow volumes to be mounted through the NFS protocol, via a specific gateway.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="residence-policy">Residence policy</h2>
+          <p>Allow for one to specify the type of storage (SSD, HD etc.) to use for specific data types e.g metadata.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="consistency-policy">Consistency policy</h2>
+          <p>Provide a way to customize the consistency policy for the administrator to pick the one that best fits its use cases e.g strong, eventual etc.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Q4 <br><span>2017</span>
+        </div>
+        <div class="desc">
+          <h2 id="encryption-policy">Encryption policy</h2>
+          <p>Provide encryption policies that can be activated/deactivated and customized.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="block-device-logic">Block device logic</h2>
+          <p>Provide a storage logic that allows for storing data through an elastic block device.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="nbd-interface">NBD interface</h2>
+          <p>Provide an network block device interface for accessing a block device storage logic.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Q3 <br><span>2017</span>
+        </div>
+        <div class="desc">
+          <h2 id="object-storage-logic">Object storage logic</h2>
+          <p>A logic to store blobs of unstructured data in the same way made popular by the Amazon S3 cloud service.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="s3-interface">Amazon S3 interface</h2>
+          <p>Provide an AWS S3-compatible interface for accessing the object storage logic.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="infinit-cluster">infinit cluster</h2>
+          <p>Provide a <em>cluster</em> mode to ease the process of setting up common infrastructure-like storage deployments.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="kvs-performance-optimization">Key-value store performance optimization</h2>
+          <p>Optimize the underlying key-value store (ovelay network and distributed hash table).</p>
         </div>
       </div>
 
@@ -112,70 +217,72 @@
           Q2 <br><span>2017</span>
         </div>
         <div class="desc">
-          <h2 id="nfs">NFS interface</h2>
-          <p>Allow volumes to be mounted through the NFS protocol.</p>
+          <h2 id="kvs-api">Key-value store API</h2>
+          <p>Provide an gRPC-based API for accessing the underlying key-value store directly without instantiating a storage logic/interface.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="iscsi">iSCSI interface</h2>
-          <p>Allow the underlying storage to be accessed through a block device.</p>
+          <h2 id="docker-swarm-service">Docker Swarm Service</h2>
+          <p>Offer an easy way for Infinit's key-value store to be deployed in a Docker Swarm through a service.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="data-placement">Data placement</h2>
-          <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
+          <h2 id="elasticity">Elasticity</h2>
+          <p>Improve the key-value store's stability, in particular its resilience and scalability.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="s3">S3 interface</h2>
-          <p>Provide an AWS S3-compatible interface for storing objects.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="kubernetes-volumes">Kubernetes volumes</h2>
-          <p>Provide an integration for Kubernetes to use Infinit as a resilient and scalable storage backend.</p>
+          <h2 id="prometheus-integration">Prometheus integration</h2>
+          <p>Integrate with Prometheus in order to simplify accessibility to monitoring information.</p>
         </div>
       </div>
 
-      <div class="step">
+      <div class="step done">
         <div class="date">
-          Q1 <br><span>2017</span>
+          Feb <br><span>2017</span>
         </div>
         <div class="desc">
-          <h2 id="encryption">Encryption</h2>
-          <p>Provide encryption policies that can be activated/deactivated and customized.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="nbd">NBD interface</h2>
-          <p>Provide an network block device interface.</p>
+          <h2 id="block-size-policy">Block size policy</h2>
+          <p>Allow for the block size to be customize at the storage logic level e.g file system.</p>
         </div>
       </div>
 
-      <div class="step">
+      <div class="step done">
         <div class="date">
           Dec <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="monitoring">Clustering</h2>
-          <p>Provide a "cluster" binary to ease the process of setting up common storage deployments.</p>
+          <h2 id="monitoring">Monitoring</h2>
+          <span>0.7.2 release</span>
+          <a href="${route('doc_reference')}#doctor">&raquo; read more</a>
+          <p>Provide a binary and API to retrieve information from an Infinit storage platform: number of nodes, health, I/Os etc.</p>
         </div>
       </div>
-      <div class="step">
+      <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="monitoring">Monitoring</h2>
-          <p>Provide a binary and API to retrieve information from an Infinit storage platform: number of nodes, health, I/Os etc.</p>
+          <h2 id="alpine-linux">Alpine Linux Build</h2>
+          <span>0.7.2 release</span>
+          <a href="${route('download')}">&raquo; read more</a>
+          <p>Provide a build for the Alpine Linux distribution.</p>
+        </div>
+      </div>
+
+      <div class="step done">
+        <div class="date">
+          Nov <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2 id="kouncil-overlay">Kouncil overlay network</h2>
+          <span>0.7.3 release</span>
+          <a href="${route('doc_reference')}#create-a-network">&raquo; read more</a>
+          <p>The Kouncil overlay network offers better performance for medium-sized networks.</p>
         </div>
       </div>
 
@@ -184,10 +291,17 @@
           Sep <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="windows">Windows native file system integration</h2>
+          <h2 id="windows-dokan">Windows Dokan interface</h2>
           <span>0.7.0 release</span>
           <a href="${route('doc_get_started_windows')}">&raquo; read more</a>
-          <p>Provide a native interface for Windows operating systems to mount Infinit file systems.</p>
+          <p>Provide a native interface for Windows operating systems to mount Infinit file systems through the Dokan (FUSE-like) kernel module.</p>
+        </div>
+      </div>
+      <div class="step done">
+        <hr>
+        <div class="desc">
+          <h2 id="koordinate-overlay">Koordinate overlay network</h2>
+          <p>Offer the possibility to run multiple overlay networks in parallel to ease debugging when introducing a new type of overlay network.</p>
         </div>
       </div>
 
@@ -207,24 +321,7 @@
           <h2 id="docker-volume-plugin">Docker volume plugin</h2>
           <span>0.6.2 release</span>
           <a href="${route('doc_docker_plugin')}">&raquo; read more</a>
-          <p>Allow Infinit volumes to be accessed directly from within Docker containers through the Docker volume plugin API.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="date">
-          Jun <br><span>2016</span>
-        </div>
-        <div class="desc">
-          <h2 id="on-premise-hub">On-premise Hub</h2>
-          <p>Allow the Hub to be deployed on premise to allow it to act as a gateway for mobility, to support both LDAP-based and standalone accounts (for external collaborators), to manage keys and more.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="ldap">LDAP</h2>
-          <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
+          <p>Allow Infinit volumes to be accessed directly from within Docker containers through the Docker volume plugin API and the new infinit-daemon binary.</p>
         </div>
       </div>
 
@@ -292,7 +389,7 @@
           Feb <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="gcs-storage">Google Cloud Storage silo</h2>
+          <h2 id="gcs-silo">Google Cloud Storage silo</h2>
           <span>0.5.2 release</span>
           <a href="${route('doc_storages_gcs')}">&raquo; read more</a>
           <p>Allow Google Cloud Storage to be used as a block silo.</p>
@@ -301,10 +398,10 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="aws-s3-storage">AWS S3 silo</h2>
+          <h2 id="s3-silo">Amazon S3 silo</h2>
           <span>0.3.5 release</span>
           <a href="${route('doc_storages_s3')}">&raquo; read more</a>
-          <p>Allow AWS S3 to be used as a block silo.</p>
+          <p>Allow Amazon S3 to be used as a block silo.</p>
         </div>
       </div>
 
@@ -392,7 +489,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="replication">Replication</h2>
+          <h2 id="replication-policy">Replication policy</h2>
           <span>0.3.0 release</span>
           <p>Define the replication factor for every block of every file system object (file, directory etc.) to be stored multiple times to ensure the durability and availability of the data.</p>
         </div>
@@ -401,7 +498,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="caching">Caching</h2>
+          <h2 id="caching-policy">Caching policy</h2>
           <span>0.3.0 release</span>
           <p>Introduce a caching mechanism to speed up operations.</p>
         </div>
@@ -409,7 +506,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="asynchronous-operations">Asynchronous operations</h2>
+          <h2 id="asynchronous-policy">Asynchronous policy</h2>
           <span>0.3.0 release</span>
           <p>Support operations being performed asynchronously meaning that system calls return once the operation is committed in the journal with the data modifications being later published throughout the storage network.</p>
         </div>
@@ -440,7 +537,7 @@
           <h2 id="credentials-management">Cloud storage services management</h2>
           <span>0.3.0 release</span>
           <a href="${route('doc_reference')}#hub">&raquo; read more</a>
-          <p>Offer an easy way to manage credentials to cloud storage services, possibly by relying on the Infinit Hub.</p>
+          <p>Offer an easy way to manage credentials to cloud storage services by relying on the Infinit Hub.</p>
         </div>
       </div>
       <div class="step done">
@@ -474,7 +571,7 @@
           Sept <br><span>2015</span>
         </div>
         <div class="desc">
-          <h2 id="kelips">Kelips overlay network</h2>
+          <h2 id="kelips-overlay">Kelips overlay network</h2>
           <span>0.3.0 release</span>
           <p>Introduce the Kelips gossip-based overlay network.</p>
         </div>
@@ -482,7 +579,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="osx">macOS native file system integration</h2>
+          <h2 id="macos-fuse-interface">macOS FUSE interface</h2>
           <span>0.3.0 release</span>
           <p>Support for a native integration through the FUSE kernel module on macOS.</p>
         </div>
@@ -501,7 +598,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="linux">Linux native file system integration</h2>
+          <h2 id="linux-fuse-interface">Linux FUSE interface</h2>
           <span>0.3.0 release</span>
           <p>Support for a native integration through the FUSE Linux kernel module.</p>
         </div>
@@ -509,7 +606,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="multi-storage">Multiple silos per server</h2>
+          <h2 id="multi-silo">Multiple silos per server</h2>
           <span>0.3.0 release</span>
           <p>Allow nodes to attach several storage nodes and distribute blocks among those storages.</p>
         </div>
@@ -519,21 +616,21 @@
         <div class="desc">
           <h2 id="block-encryption">Block encryption</h2>
           <span>0.3.0 release</span>
-          <p>Encrypt the data blocks with a key unique to the block.</p>
+          <p>Encrypt the data blocks, in transit and at rest, with a key unique to the block.</p>
         </div>
       </div>
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="file-system">File system logic</h2>
+          <h2 id="file-system-logic">File system logic</h2>
           <span>0.3.0 release</span>
-          <p>Represent files into a collection of mutable and immutable blocks.</p>
+          <p>Represent files into a collection of mutable/immutable blocks and hierarchical organization.</p>
         </div>
       </div>
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="local-storage">Local silo</h2>
+          <h2 id="local-silo">Local silo</h2>
           <span>0.3.0 release</span>
           <p>Allow a local file system to act as a silo by storing blocks of encrypted data as local files.</p>
         </div>

@@ -1,0 +1,16 @@
+// Create a fetch response.
+::FetchResponse res;
+// Create a context.
+grpc::ClientContext ctx;
+// Create a fetch request.
+::FetchRequest fetch;
+// Set the address to fetch request.
+fetch.set_address(address);
+// Actually fetch the block.
+{
+  auto status = kv->Fetch(&ctx, fetch, &res);
+  if (!status.ok())
+    throw std::runtime_error("Unable to fetch block");
+}
+// Retrieve the block.
+auto block = res.block();

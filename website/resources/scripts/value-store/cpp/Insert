@@ -1,0 +1,40 @@
+// XXX: wrong.
+//
+// Depending on the type of block (mutable or immutable), insertion differs.
+//
+// Given a mutable block `mblock`, insert the mutable block.
+{
+  // Create an insert response.
+  ::InsertResponse insertion;
+  // Create a context.
+  grpc::ClientContext ctx;
+  // Create an insertion request.
+  ::InsertRequest insert;
+  // Set the block to the insertion request using the setter.
+  //
+  // N.B. `mutable_block` is to access to a mutable version of the attribute
+  // `block`. It's not correlated with MutableBlock or ImmutableBlock.
+  insert.mutable_block()->set_data_plain("some data");
+  // Actually insert the block.
+  auto status = kv->Insert(&ctx, insert, &insertion);
+  if (!status.ok())
+    throw std::runtime_error("Cannot insert block");
+}
+// Given a immutable block with a payload already set, insert a immutable block.
+{
+  // Create an insert response.
+  ::InsertResponse insertion;
+  // Create a context.
+  grpc::ClientContext ctx;
+  // Create an insertion request.
+  ::InsertRequest insert;
+  // Set the block to the insertion request using the setter.
+  //
+  // N.B. `mutable_block` is to access to a mutable version of the attribute
+  // `block`. It's not correlated with MutableBlock or ImmutableBlock.
+  insert.mutable_block()->CopyFrom(block);
+  // Actually insert the block.
+  auto status = kv->Insert(&ctx, insert, &insertion);
+  if (!status.ok())
+    throw std::runtime_error("Cannot insert block");
+}

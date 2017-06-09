@@ -1,0 +1,794 @@
+<%!
+  def entry(name, l):
+    return list(filter(lambda x: x['name'] == name, l))[0]
+
+  def rpc(proto, name):
+    e = entry(name, proto['service']['rpcs'])
+    return "`%s(%s) returns (%s)`: %s." % (
+      e['name'], ' '.join(e['arguments']), e['returns'],
+      e['documentation']['abstract'])
+
+  def attribute(proto, object, name, oneof = None):
+    e = entry(object, proto['messages'])
+    if oneof is None:
+      a = entry(name, e['attributes'])
+    else:
+      a = entry(name, entry(oneof, e['attributes'])['values'])
+    return "`%s %s`: %s." % (a['type'], a['name'], a['documentation']['abstract'])
+%>
+
+The Infinit Key-Value store
+===========================
+
+Infinit provides a distributed decentralized key-value store, with
+built-in replication and security. This key-value store is accessible
+through a [grpc](http://www.grpc.io) interface specified in the file
+<a class="open-popup" href="#doughnut-proto">doughnut.proto</a>.
+
+API overview
+------------
+
+At its most basic level, a key-value store provides a mapping from an
+Address to its corresponding content. The API relies on of four main
+methods:
+
+* ${rpc(proto, 'Fetch')}
+* ${rpc(proto, 'Insert')}
+* ${rpc(proto, 'Update')}
+* ${rpc(proto, 'Remove')}
+
+Blocks
+------
+
+The infinit KV store supports many different block types that serve different
+purposes. The most important ones are:
+
+* __Immutable blocks (IB)__: A block whose contents may never change
+  and thus cannot be updated.
+* __Mutable Block (MB)__: A block whose contents can change.
+<!-- * __Address Control List Block (ACB)__: Refinement over mutable blocks providing a -->
+<!--   fined-grained ACL system which can be used to defined which users can read and -->
+<!--   write the block content. -->
+* __Named Block (NB)__: A named immutable block whose address can be
+  deduced from its name.
+
+Due to the infinit security model, only the KV store can create blocks
+and pick their address through the following methods:
+
+* ${rpc(proto, 'MakeImmutableBlock')}
+* ${rpc(proto, 'MakeMutableBlock')}
+* ${rpc(proto, 'MakeNamedBlock')}
+
+You can then fill the `data` (IB) or `data_plain` (MB) field with your
+payload and call the `insert` procedure .
+
+<h3>The Block message type</h3>
+
+Blocks are read and written on the KV store through the `Block`
+protobuf message type. Most fields are opaque internal data you don't
+need to worry about. The relevant fields common to all blocks are:
+
+* ${attribute(proto, 'Block', 'address')}
+* ${attribute(proto, 'Block', 'data', 'payload')}
+* ${attribute(proto, 'Block', 'data_plain', 'payload')}
+
+<h3>Immutable blocks (IB)</h3>
+
+While immutable blocks are less potent that mutable blocks, they are
+much faster because they are cachable and are much easier to verify
+and not subject to conflicts. One should thus use immutable blocks
+whenever possible, especially for big payloads.
+
+The IB address is the hash of its content, which ensures the data is
+tamper-proof: when fetching an IB through the `Fetch` API call,
+infinit will recompute the hash of the content and check it against
+the address. If both hash do not match `Fetch` will return an
+exception.
+
+IB exposes one additional feature through the `block.owner` field: if
+set to the address of a mutable block, then removing the IB will only
+be allowed if the user would be allowed to remove said mutable block.
+
+<h3>Mutable blocks (MB)</h3>
+
+Infinit enforces an atomic update scheme by using a versioning
+mechanism.  When you `Fetch` a mutable block, the returned `Block`
+contains in the `int64 version` field that contains the block version.
+When you attempt to call `Update`, that version is incremented and the
+update will succeed only if the pushed version is stricly superior to
+the current one. This prevents data loss if the block was updated by
+someone else between your `Fetch` and your `Update`. In case of such a
+conflict, the `Update` call will return
+the latest block in its `current` field. One may then replay its
+modification on the new block and retry the update. This system
+enables atomic updates - see the [example](#example) below for an
+illustration of this use case.
+
+<h3>ACL blocks (ACB)</h3>
+
+<!-- ACB inherits the features of mutable blocks and provide additional fields to control -->
+<!-- which users can read and write the data. -->
+
+<!-- By default an ACB can only be read and written by the user who created the block. -->
+
+<!-- The `Block` message has the following fields used to control ACLs: -->
+
+<!-- * `world_readable`: If true all users will be allowed to read the ACB payload. -->
+<!-- * `world_writable`: If true all users will be allowed to update the ACB payload. -->
+<!-- * `acl`: A list of `ACLEntry`. -->
+
+<!-- The `ACLEntry` message exposes the following fields: -->
+
+<!-- * `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user. -->
+<!-- * `read`: give read access to the user. -->
+<!-- * `write`: give write access to the user. -->
+
+<h3>Named blocks (NB)</h3>
+
+Since block addresses are picked by infinit, named blocks enable to
+have a named root block to a block hierarchy. NBs are immutable blocks
+and thus cannot be updated once created.  Use the
+`NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse)`
+procedure to obtain the NB block address from its name.
+
+Example
+-------
+
+*A simple multi-user document storage system*
+
+This section provides a complete example of a simple use case of the
+infinit KV store. Our task for this project is to provide a simple
+document storage system for multiple users.
+
+<h3>Public API</h3>
+
+Our goal is to implement the following simple API:
+
+<pre class="goal">
+<code class="notInFullCode">void create_user(string user);
+vector<string> list_documents(string user);
+string get_document(string user, string name);
+void set_document(string user, string name, string data);
+</code>
+</pre>
+
+<h3>Specifying our block layout</h3>
+
+We will use the following blocks:
+
+* For each user, one [NB](#named-blocks--nb-) keyed with the user name will contain
+  the address of the document list block.
+* For each user, one [MB](#mutable-blocks--mb-) will serve as the document list. Its
+  payload will be a serialized map of document names to the document
+  content address.
+* For each document, one [IB](#immutable-blocks--ib-) will store the document content.
+
+For the document list format, we will use a simple text serialization
+scheme of the form `"name=address\nname2=address2\n..."`. We will
+encode addresses in hexadecimal.
+
+<h3>Generating the gRPC and protobuf sources</h3>
+
+The first step is to generate the sources from the <a class="open-popup" href="#doughnut-proto">doughnut.proto</a>
+file. This can be achieved by the following two commands:
+
+<ul class="switchLanguage">
+  <li><a class="active" data-language="go" href="#">Go</a></li>
+  <li><a data-language="cpp" href="#">C++</a></li>
+  <li><a data-language="python" href="#">Python</a></li>
+</ul>
+
+<pre>
+<code class="lang-python notInFullCode">$> protoc -I path --python_out=. --grpc_python_out=.  --plugin=protoc-gen-grpc_python=$(which grpc_python_plugin) path/doughnut.proto
+</code>
+</pre>
+
+<pre>
+<code class="lang-go notInFullCode">$> mkdir -p doughnut/src/doughnut
+$> protoc -I path --go_out=plugins=grpc:doughnut/src/doughnut path/doughnut.proto
+</code>
+</pre>
+
+<pre>
+<code class="c++ notInFullCode">$> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/doughnut.proto
+$> protoc -I/path --cpp_out=. /path/doughnut.proto
+</code>
+</pre>
+
+... where *path* is the path where <a class="open-popup" href="#doughnut-proto">doughnut.proto</a> is stored. This step will generate a few source and headers file depending on the
+language.
+
+
+<h3>Connecting to the gRPC KV store server</h3>
+
+Let us start with the boilerplate needed to connect to the grpc
+server. We will accept the grpc endpoint name into the first command
+line argument.  We also take a command from *create*, *list*, *get*,
+*set* and its arguments from the command line.
+
+```python
+#! /usr/bin/env python3
+
+import sys
+import codecs
+import doughnut_pb2_grpc
+import grpc
+
+import doughnut_pb2 as doughnut
+
+# create the stubs with:
+# python -m grpc_tools.protoc -I../../protos --python_out=. --grpc_python_out=. doughnut.proto
+def to_hex(s):
+  return "".join("{:02x}".format(c) for c in s)
+
+def from_hex(h):
+  return codecs.decode(h, "hex")
+
+channel = grpc.insecure_channel(sys.argv[1])
+stub = doughnut_pb2_grpc.DoughnutStub(channel)
+
+command = sys.argv[2]
+if command == 'create':
+  create_user(sys.argv[3])
+elif command == 'list':
+  print("\n".join(list_documents(sys.argv[3])))
+elif command == 'get':
+  print(get_document(sys.argv[3], sys.argv[4]))
+elif command == 'set':
+  set_document(sys.argv[3], sys.argv[4], sys.argv[5])
+```
+
+```go
+package main
+
+import (
+  "encoding/hex"
+  "fmt"
+  "os"
+  "strings"
+  "doughnut"
+  "golang.org/x/net/context"
+  "google.golang.org/grpc"
+  "google.golang.org/grpc/grpclog"
+)
+
+func from_hex(input string) []byte {
+  v, _ := hex.DecodeString(input)
+  return v
+}
+
+func to_hex(input []byte) string {
+  return hex.EncodeToString(input)
+}
+
+func main() {
+  conn, err := grpc.Dial(os.Args[1], grpc.WithInsecure())
+	if err != nil {
+		grpclog.Fatalf("fail to dial: %v", err)
+	}
+	defer conn.Close()
+	client := doughnut.NewDoughnutClient(conn)
+	cmd := os.Args[2]
+	if cmd == "create" {
+	  create_user(client, os.Args[3])
+	}
+	if cmd == "list" {
+	  fmt.Printf("%v\n", list_documents(client, os.Args[3]))
+	}
+	if cmd == "get" {
+	 fmt.Println(string(get_document(client, os.Args[3], os.Args[4])))
+	}
+	if cmd == "set" {
+	  set_document(client, os.Args[3], os.Args[4], []byte(os.Args[5]))
+	}
+}
+```
+
+```c++
+#include <vector>
+#include <string>
+#include <map>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/hex.hpp>
+
+#include <doughnut.grpc.pb.h>
+#include <grpc++/grpc++.h>
+
+// Connection to the grpc server
+std::shared_ptr<Doughnut::Stub> kv;
+
+using std::vector;
+using std::string;
+using std::map;
+
+// our API
+void create_user(string name);
+vector<string> list_documents(string name);
+string get_document(string user, string name);
+void set_document(string user, string name, string data);
+
+// helper functions
+using boost::algorithm::hex;
+using boost::algorithm::unhex;
+
+int main(int argc, char** argv)
+{
+    // create the connection to the infinit kv grpc server
+    auto chan = grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials());
+    // instanciate the client stub whose code was autogenerated
+    kv = Doughnut::NewStub(chan);
+    string cmd = argv[2];
+    if (cmd == "create") {
+      create_user(argv[3]);
+      std::cout << "OK" << std::endl;
+    }
+    else if (cmd == "list") {
+      vector<string> docs = list_documents(argv[3]);
+      std::cout << boost::algorithm::join(docs, "\n") << std::endl;
+    }
+    else if (cmd == "get")
+      std::cout << get_document(argv[3], argv[4]) << std::endl;
+    else if (cmd == "set")
+      set_document(argv[3], argv[4], argv[5]);
+}
+```
+
+<h3>create_user</h3>
+
+Implementing `create_user` is easy: we first create a Mutable Block with an empty payload,
+which will be our document list block. We then create a Named Block keyed with our user
+name, that points to the document list block.
+
+```python
+def create_user(user):
+  # Create and insert the document list MB
+  doclist = stub.MakeMutableBlock(doughnut.MakeMutableBlockRequest())
+  stub.Insert(doughnut.InsertRequest(block=doclist))
+  # Create a NB keyed by the user name
+  nb = stub.MakeNamedBlock(doughnut.MakeNamedBlockRequest(key=user.encode('utf-8')))
+  nb.data = doclist.address
+  try:
+    stub.Insert(doughnut.InsertRequest(block=nb))
+  except Exception:
+    raise Exception('User already exists')
+
+```
+
+```go
+func create_user(client doughnut.DoughnutClient, user string) {
+  doclist,_ := client.MakeMutableBlock(context.Background(), &doughnut.MakeMutableBlockRequest{})
+  client.Insert(context.Background(), &doughnut.InsertRequest{Block: doclist})
+
+  nb, _ := client.MakeNamedBlock(context.Background(),
+    &doughnut.MakeNamedBlockRequest{Key: []byte(user)})
+  nb.Payload = &doughnut.Block_Data{doclist.Address}
+  _, err := client.Insert(context.Background(), &doughnut.InsertRequest{Block: nb})
+  if err != nil {
+    fmt.Printf("User already exists")
+  }
+}
+```
+
+```c++
+void create_user(string user)
+{
+  // Create an insert message
+  ::InsertRequest insert;
+  // Fill it with a new mutable block
+  ::MakeMutableBlockRequest empty;
+  {
+     grpc::ClientContext ctx;
+     kv->MakeMutableBlock(&ctx, empty, insert.mutable_block());
+  }
+  // Call the insert method
+  {
+    grpc::ClientContext ctx;
+    ::InsertResponse res;
+    kv->Insert(&ctx, insert, &res);
+  }
+  // Create a new named block with key the user name
+  ::MakeNamedBlockRequest key;
+  ::Block nb;
+  key.set_key(user);
+  {
+    grpc::ClientContext ctx;
+    kv->MakeNamedBlock(&ctx, key, &nb);
+  }
+  // Set it's payload to the address of the document list mutable block
+  nb.set_data(insert.block().address());
+  // Insert the block into the kv store
+  {
+    ::InsertResponse res;
+    ::InsertRequest insert;
+    insert.mutable_block()->CopyFrom(nb);
+    grpc::ClientContext ctx;
+    grpc::Status status = kv->Insert(&ctx, insert, &res);
+    if (!status.ok())
+      throw std::runtime_error("User already exists");
+  }
+}
+```
+
+<h3>list_documents</h3>
+
+Let's first factor the serialization functions since we
+are going to need them multiple times.
+
+```python
+def parse_document_list(payload):
+  lines = payload.split('\n')
+  res = dict()
+  for l in lines:
+    kv = l.split('=')
+    if len(kv) == 2:
+      res[kv[0]] = kv[1]
+  return res
+
+def serialize_document_list(dl):
+  res = ''
+  for k,v in dl.items():
+    res += '%s=%s\n' % (k, v)
+  return res
+```
+
+
+```go
+func parse_document_list(payload string) map[string]string {
+  m := make(map[string]string)
+  lines := strings.Split(payload, "\n")
+  for _, l := range lines {
+    kv := strings.Split(l, "=")
+    if len(kv) == 2 {
+      m[kv[0]] = kv[1]
+    }
+  }
+  return m
+}
+
+func serialize_document_list(dl map[string]string) string {
+  res := ""
+  for k, v := range dl {
+    res += fmt.Sprintf("%s=%s\n", k, v)
+  }
+  return res
+}
+```
+
+```c++
+map<string, string> parse_document_list(string payload)
+{
+  vector<string> lines;
+  boost::algorithm::split(lines, payload, boost::algorithm::is_any_of("\n"));
+  map<string, string> res;
+  for (string const& l: lines)
+  {
+    auto p = l.find_first_of("=");
+    res.insert(std::make_pair(l.substr(0, p), l.substr(p+1)));
+  }
+  return res;
+}
+
+string serialize_document_list(map<string, string> dl)
+{
+  string res;
+  for (auto const& d: dl)
+  {
+    res += d.first + "=" + d.second + "\n";
+  }
+  return res;
+}
+```
+
+To list a user's document. We need to first fetch it's Named Block. The NB payload
+will be the address of the document list block.
+
+Let's factor the get part since we'll need it multiple times.
+
+```python
+def get_documents(user):
+  addr = stub.NamedBlockAddress(doughnut.NamedBlockAddressRequest(key=user.encode('utf-8')))
+  try:
+    nb = stub.Fetch(doughnut.FetchRequest(address = addr.address))
+  except Exception:
+    raise Exception('No such user')
+  mb = stub.Fetch(doughnut.FetchRequest(address = nb.block.data, decrypt_data = True))
+  b = doughnut.Block()
+  b.CopyFrom(mb.block)
+  return (parse_document_list(mb.block.data_plain.decode()), b)
+
+def list_documents(user):
+  dl,unused = get_documents(user)
+  return dl.keys()
+```
+
+```go
+func get_documents(client doughnut.DoughnutClient, user string) (map[string]string, doughnut.Block) {
+  addr,_ := client.NamedBlockAddress(context.Background(),
+    &doughnut.NamedBlockAddressRequest{Key: []byte(user)})
+  nb, err := client.Fetch(context.Background(),
+    &doughnut.FetchRequest{Address: addr.Address})
+  if err != nil {
+    fmt.Println("No such user", user)
+    return make(map[string]string), doughnut.Block{}
+  }
+  mb,_ := client.Fetch(context.Background(),
+    &doughnut.FetchRequest{Address: nb.GetBlock().GetData(), DecryptData: true})
+  return parse_document_list(
+    string((*mb.GetBlock()).GetDataPlain())), *mb.GetBlock()
+}
+
+func list_documents(client doughnut.DoughnutClient, user string) []string {
+  dl, _ := get_documents(client, user)
+  res := make([]string, len(dl))
+  i := 0
+  for k, _ := range(dl) {
+    res[i] = k
+    i++
+  }
+  return res
+}
+```
+
+```c++
+map<string, string> get_documents(string user, ::Block* block = nullptr)
+{
+  ::NamedBlockAddressResponse address;
+  ::NamedBlockAddressRequest key;
+  key.set_key(user);
+  // Get the NB address
+  {
+    grpc::ClientContext ctx;
+    kv->NamedBlockAddress(&ctx, key, &address);
+  }
+  // Get the NB
+  ::FetchResponse res;
+  {
+    grpc::ClientContext ctx;
+    ::FetchRequest fetch;
+    fetch.set_address(address.address());
+    grpc::Status status = kv->Fetch(&ctx, fetch, &res);
+    if (!status.ok())
+      throw std::runtime_error("No such user");
+  }
+  // Get the document list MB
+  address.set_address(res.block().data());
+  {
+    grpc::ClientContext ctx;
+    ::FetchRequest fetch;
+    fetch.set_address(res.block().data());
+    fetch.set_decrypt_data(true);
+    kv->Fetch(&ctx, fetch, &res);
+  }
+  if (block)
+    block->CopyFrom(res.block());
+  auto dl = parse_document_list(res.block().data_plain());
+  return dl;
+}
+
+vector<string> list_documents(string user)
+{
+  auto dl = get_documents(user);
+  vector<string> list;
+  for (auto const& d: dl)
+    list.push_back(d.first);
+  return list;
+}
+```
+
+<h3>get_document</h3>
+
+To get the content of one specific document, we use the above `get_documents` function,
+extract the document address, and fetch its IB:
+
+```python
+def get_document(user, name):
+  dl, unused = get_documents(user)
+  hexaddr = dl.get(name, None)
+  if not hexaddr:
+    raise Exception('No such document')
+  doc = stub.Fetch(doughnut.FetchRequest(address = from_hex(hexaddr)))
+  return doc.block.data
+```
+
+```go
+func get_document(client doughnut.DoughnutClient, user string, name string) []byte {
+  dl, _ := get_documents(client, user)
+  addr := from_hex(dl[name])
+  doc, _ := client.Fetch(context.Background(), &doughnut.FetchRequest{Address: addr})
+  return doc.GetBlock().GetData()
+}
+```
+
+```c++
+string get_document(string user, string name)
+{
+  auto dl = get_documents(user);
+  auto it = dl.find(name);
+  if (it == dl.end())
+    throw std::runtime_error("no such document");
+  ::FetchResponse res;
+  grpc::ClientContext ctx;
+  ::FetchRequest fetch;
+  fetch.set_address(unhex(it->second));
+  kv->Fetch(&ctx, fetch, &res);
+  return res.block().data();
+}
+```
+
+<h3>set_document</h3>
+
+To create or update a document, we first need to create a new IB with the document
+content, and then add it to the user document list.
+Here comes the trickiest part: we need to update the document list atomically, in
+case two tasks try to update said document list at the same time. For that we will
+retry the update until there is no update conflict.
+
+```python
+def set_document(user, name, data):
+  # create and insert the document IB
+  doc = stub.MakeImmutableBlock(doughnut.MakeImmutableBlockRequest(data=data.encode('utf-8')))
+  stub.Insert(doughnut.InsertRequest(block=doc))
+  blockaddr = to_hex(doc.address)
+  dl, block = get_documents(user)
+  while True:
+    # If name is already in the document list, cleanup the data IB
+    prev = dl.get(name, None)
+    if prev:
+      stub.Remove(doughnut.RemoveRequest(address = from_hex(prev)))
+    # play or re-play our operation into dl
+    dl[name] = blockaddr
+    block.data_plain = serialize_document_list(dl).encode('utf-8')
+    status = stub.Update(doughnut.UpdateRequest(block = block, decrypt_data = True))
+    if not status.HasField('current'):
+      break
+    block.CopyFrom(status.current)
+    dl = parse_document_list(block.data_plain.decode())
+```
+
+```go
+func set_document(client doughnut.DoughnutClient, user string, name string, data []byte) {
+  // create and insert the document IB
+  doc, _ := client.MakeImmutableBlock(context.Background(),
+    &doughnut.MakeImmutableBlockRequest{Data: data})
+  client.Insert(context.Background(), &doughnut.InsertRequest{Block: doc})
+  blockaddr := to_hex(doc.Address)
+  dl, block := get_documents(client, user)
+  for {
+    // If name is already in the document list, cleanup the data IB
+    if val, ok := dl[name]; ok {
+      client.Remove(context.Background(), &doughnut.RemoveRequest{Address: from_hex(val)})
+    }
+    // play or re-play our operation into dl
+    dl[name] = blockaddr
+    payload := []byte(serialize_document_list(dl))
+    block.Payload = &doughnut.Block_DataPlain{payload}
+    status, _ := client.Update(context.Background(),
+      &doughnut.UpdateRequest{Block: &block, DecryptData: true})
+    if status.GetCurrent() == nil {
+      break
+    }
+    block = *status.Current
+    dl = parse_document_list(string(block.GetDataPlain()))
+  }
+}
+```
+
+```c++
+void set_document(string user, string name, string data)
+{
+  ::Block mb;
+  auto dl = get_documents(user, &mb);
+  // Create and insert the document IB
+  ::MakeImmutableBlockRequest cdata;
+  cdata.set_data(data);
+  ::Block doc;
+  {
+    grpc::ClientContext ctx;
+    kv->MakeImmutableBlock(&ctx, cdata, &doc);
+  }
+  ::InsertResponse status;
+  {
+    grpc::ClientContext ctx;
+    ::InsertRequest insert;
+    insert.mutable_block()->CopyFrom(doc);
+    kv->Insert(&ctx, insert, &status);
+  }
+  string chb_addr = hex(doc.address());
+  ::UpdateResponse response;
+  while (true)
+  {
+    // If name is already in the document list, cleanup the data IB
+    auto it = dl.find(name);
+    if (it != dl.end())
+    {
+      ::RemoveRequest address;
+      ::RemoveResponse status;
+      address.set_address(unhex(it->second));
+      grpc::ClientContext ctx;
+      kv->Remove(&ctx, address, &status);
+    }
+    dl[name] = chb_addr; // play or re-play our operation into dl
+    mb.set_data_plain(serialize_document_list(dl));
+    {
+      grpc::ClientContext ctx;
+      ::UpdateRequest update;
+      update.mutable_block()->CopyFrom(mb);
+      update.set_decrypt_data(true);
+      kv->Update(&ctx, update, &response);
+    }
+    if (!response.has_current())
+      break; // all good
+    // try again from the current block version
+    mb.CopyFrom(response.current());
+    dl = parse_document_list(mb.data_plain());
+  }
+}
+```
+
+Complete code
+-------------
+
+<pre><code class="complete lang-python notInFullCode"></code></pre>
+<pre><code class="complete lang-go notInFullCode"></code></pre>
+<pre><code class="complete cpp notInFullCode"></code></pre>
+
+The complete API
+----------------
+
+<h3>Methods</h3>
+
+% for method in proto['service']['rpcs']:
+
+<h4 name="${method['name']}">${method['name']}</h4>
+
+_${method['documentation']['abstract']}_.
+
+**returns**: [${method['returns']}](#${method['returns']}).
+
+**arguments**: ${' '.join(["[%(arg)s](#%(arg)s)" % {"arg": arg} for arg in method['arguments']])}.
+
+  % for doc in ['description', 'related', 'specific']:
+    % if method.get('documentation', {}).get(doc):
+${method['documentation'][doc]}.
+    % endif
+  % endfor
+
+% endfor
+
+<h3>Messages</h3>
+
+% for message in proto['messages']:
+
+<h4 name="${message['name']}">${message['name']}</h4>
+<table>
+  <tr>
+    <th width="10%">index</th>
+    <th>name</th>
+    <th>type</th>
+    <th>abstract</th>
+  </tr>
+  % for attr in message.get('attributes', []):
+    <tr>
+      % if attr['type'] == 'oneof':
+        <td colspan=1>${attr['name']}<td>
+        <td>${attr['type']}</td>
+        <td>${attr.get('documentation', {}).get('abstract', '')}</td>
+        % for subattr in attr['values']:
+          <tr>
+            <td>${subattr['index']}</td>
+            <td>${subattr['name']}</td>
+            <td>${subattr['type']}</td>
+            <td>${subattr.get('documentation', {}).get('abstract', '')}</td>
+          </tr>
+        % endfor
+      % else:
+        <td>${attr['index']}</td>
+        <td>${attr['name']}</td>
+        <td>${attr['type']}</td>
+        <td>${attr.get('documentation', {}).get('abstract', '')}</td>
+      % endif
+    </tr>
+  % endfor
+</table>
+
+% endfor

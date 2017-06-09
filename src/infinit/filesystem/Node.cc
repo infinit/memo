@@ -55,6 +55,8 @@ namespace infinit
 {
   namespace filesystem
   {
+    namespace bfs = boost::filesystem;
+
     class ACLConflictResolver
       : public model::ConflictResolver
     {

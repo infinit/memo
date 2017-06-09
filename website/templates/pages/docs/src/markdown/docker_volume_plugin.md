@@ -32,12 +32,12 @@ user_allow_other
 
 ```
 
-The `infinit daemon` binary provides the Docker volume plugin. The binary can either be run in the background as a daemon (using `--start` and `--stop`) or in the foreground (using `--run`).
+The `infinit daemon` binary provides the Docker volume plugin. The binary can either be run in the background as a daemon (using `start` and `stop`) or in the foreground (using `run`).
 
 In order to install the plugin, the daemon must be run as _root_ using `sudo`. The user specified by the `--as` option is the Infinit user we wish to use and the user specified by `--docker-user` is the system user that we would like to use for Docker volume manipulations.
 
 ```
-$> sudo infinit daemon --run --as alice --docker-user alice
+$> sudo infinit daemon run --as alice --docker-user alice
 [sudo] password for alice:
 [  infinit daemon  ] [main] started daemon
 ```
@@ -69,23 +69,23 @@ _**IMPORTANT**: Ensure that you have run the volume and accessed it at least onc
 Volume mount options
 --------------------
 
-The options used to mount volumes are those set as the default in the volume descriptor. These can be configured on volume creation or using `infinit volume --update`.
+The options used to mount volumes are those set as the default in the volume descriptor. These can be configured on volume creation or using `infinit volume update`.
 
 ```
-$> infinit volume --update --name alice/my-volume --cache
+$> infinit volume update --name alice/my-volume --cache
 ```
 
 To view the options that have been set, you can export the volume descriptor using `infinit volume --export`:
 
 ```
-$> infinit volume --export --name alice/my-volume
+$> infinit volume export --name alice/my-volume
 {"mount_options":{"cache":true},"name":"alice/my-volume","network":"alice/my-network"}
 ```
 
 To disable options that are specified with a boolean, you can set them to `false`, `no` or `0`:
 
 ```
-$> infinit volume --update --name alice/my-volume --cache=false
-$> infinit volume --export --name alice/my-volume
+$> infinit volume update --name alice/my-volume --cache=false
+$> infinit volume export --name alice/my-volume
 {"mount_options":{"cache":false},"name":"alice/my-volume","network":"alice/my-network"}
 ```

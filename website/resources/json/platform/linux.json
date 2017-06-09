@@ -1,0 +1,20 @@
+{
+  "cat_command": "cat",
+  "demo_home": "$PWD/share/infinit/filesystem/test/home/",
+  "demo_mountpoint": "~/mnt-demo",
+  "demo_mountpoint_abs": "~/mnt-demo",
+  "dir": "/",
+  "dir_end": "/",
+  "env_home": "$HOME",
+  "env_infinit_home": "$INFINIT_HOME",
+  "env_infinit_data_home": "$INFINIT_DATA_HOME",
+  "env_infinit_state_home": "$INFINIT_STATE_HOME",
+  "env_pwd": "$PWD",
+  "exe": "",
+  "guide_mountpoint": "~/mnt-alice-volume",
+  "guide_mountpoint_abs": "~/mnt-alice-volume",
+  "guide_storage_dir": "/var/storage/infinit/",
+  "ls_command": "ls",
+  "temp_dir": "/tmp/infinit-demo/",
+  "term": "$>"
+}

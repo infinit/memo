@@ -28,13 +28,13 @@ $(document).ready(function() {
 
   if ($('body').hasClass('documentation')) {
     // dropdown menus
-    $('ul.menu li.dropdown > a').click(function(e) {
+    $('.side-menu ul.tier1 li.dropdown > a').click(function(e) {
       e.preventDefault();
       $(this).parent().toggleClass('clicked');
     });
 
     // comparisons menu
-    $('ul.menu li.comparisons > a').click(function(e) {
+    $('.side-menu ul.tier1 li.comparisons > a').click(function(e) {
       showPopupMenu(this);
       e.preventDefault();
     });
@@ -46,12 +46,20 @@ $(document).ready(function() {
   }
 
   if ($('body').hasClass('documentation')) {
+    var menu;
+
+    if ($('body').attr('class').indexOf("doc_kv") >= 0) {
+      menu = $("#page-menu ul.tier1");
+    } else {
+      menu = $(".side-menu ul.tier1");
+    }
+
     var a = function () {
       var height = $(window).scrollTop();
       var menu_anchor = $("#menu-anchor").offset().top - 13;
       var footer = $("footer").offset().top;
-      var menu = $("ul.menu");
-      var menu_height = $("ul.menu").height() + 60; // margin bottom
+
+      var menu_height = $(".side-menu ul.tier1").height() + 60; // margin bottom
 
       if (height > menu_anchor) {
         var myTop = $(window).scrollTop();
@@ -162,12 +170,12 @@ $(document).ready(function() {
   }
 
 
-  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
+  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').attr('class').indexOf("doc_kv") >= 0) {
     var enableSubMenu = function () {
       var position = $(window).scrollTop() + 100;
       var anchors, targets;
 
-      if ($('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
+      if ($('body').hasClass('doc_get_started') || $('body').attr('class').indexOf("doc_kv") >= 0) {
         anchors = $('h2, h3');
       } else {
         anchors = $('h2');
@@ -183,10 +191,12 @@ $(document).ready(function() {
           position > $(anchor).offset().top)
         )
         {
-          if ($('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
-            targets = 'ul.menu li';
+          if ($('body').hasClass('doc_get_started')) {
+            targets = '.side-menu ul.tier1 li';
+          } else if ($('body').attr('class').indexOf("doc_kv") >= 0) {
+            targets = '#page-menu ul.tier1 li';
           } else {
-            targets = 'ul.menu li.scroll_menu ul li';
+            targets = '.side-menu ul.tier1 li.scroll_menu ul li';
           }
 
           if (!$(anchor).hasClass('skip')) {
@@ -205,42 +215,50 @@ $(document).ready(function() {
   | Get Started     |
   `----------------*/
 
+  function showInstallProcedure(platform) {
+
+    // Reset Debian tabs choice package/tarball
+    if (platform !== 'debian') {
+      $('.tabs-pane').addClass('active');
+    } else {
+      $('.tabs-pane').removeClass('active');
+      $('.tabs-pane#linux-repository-install').addClass('active');
+    }
+
+    // Toggle platform instructions display throughout the guide
+    $('[data-platform]').not('[data-os]').hide();
+    $('[data-platform~="' + platform + '"]').not('[data-os]').show();
+  }
+
   if ($('body').hasClass('doc_get_started') ) {
     $('a.button').click(function() {
       ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
     });
 
-    var winHeight = $(window).height(),
-        docHeight = $(document).height(),
-        progressBar = $('progress'),
-        tooltip = $('#progressTooltip'),
-        max, value, porcent;
+    // Enable platform tabs
+    $('.tabs-circle a').click(function(e) {
+      $('.tabs-circle li').removeClass('active');
+      $(this).parent().addClass('active');
 
-    max = docHeight - winHeight - ($("footer").height() + $('.next').height());
-    progressBar.attr('max', max);
+      var platform = $(this).parent().attr('data-platform');
 
-    $(document).on('scroll', function(){
-       value = $(window).scrollTop();
-       porcent = value / max * 100;
-
-      if (porcent > 1 && porcent < 98) {
-        tooltip.text(Math.round(porcent) + '%');
-        tooltip.css('left', (porcent - 1) + '%');
-        tooltip.show();
-      }
-
-      if (value > $('#go-further').offset().top - 200) {
-        tooltip.text('👍');
-      }
-
-      if (porcent < 96) {
-        progressBar.attr('value', value);
-      }
-
-      if (porcent < 1) {
-        tooltip.hide();
-      }
+      showInstallProcedure(platform);
+      e.preventDefault();
     });
+
+    // Initiate platform instructions when not Windows
+    if (!$('#get_started').hasClass('windows')) {
+      showInstallProcedure($('.tabs-circle li.active').attr('data-platform'));
+    }
+
+    // var winHeight = $(window).height(),
+    //     docHeight = $(document).height(),
+    //     progressBar = $('progress'),
+    //     tooltip = $('#progressTooltip'),
+    //     max, value, porcent;
+
+    // max = docHeight - winHeight - ($("footer").height() + $('.next').height());
+    // progressBar.attr('max', max);
   }
 
   if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_storages_s3')) {
@@ -258,7 +276,7 @@ $(document).ready(function() {
     if (language === 'cpp') { pre_elements = 'pre code.cpp'; }
 
     $(pre_elements).not('pre code.notInFullCode').each(function(index, obj) {
-      if (index === 0) { 
+      if (index === 0) {
         fullCode = $(this).text();
       } else {
         fullCode += $(this).text() + '\r';
@@ -267,7 +285,7 @@ $(document).ready(function() {
     return fullCode;
   }
 
-  if ($('body').hasClass('doc_kv')) {
+  if ($('body').attr('class').indexOf("doc_kv") >= 0) {
 
     // Display Go snippets by default
     $('code.cpp').parent().not('pre.goal').hide();
@@ -292,15 +310,21 @@ $(document).ready(function() {
 
       e.preventDefault();
     });
+  }
+
+  if ($('body').hasClass('doc_kv_api')) {
+    // si 
+  }
+
+  if ($('body').hasClass('doc_kv_overview')) {
+    // Clone language bar before all the snippets
+    $('code.lang-python').parent().before($('ul.switchLanguage'));
 
     // Merge all snippets of the page
     // While excluding generic ones
     $('pre code.complete.lang-go').text(mergeAllSnippets('go'));
     $('pre code.complete.lang-python').text(mergeAllSnippets('python'));
     $('pre code.complete.cpp').text(mergeAllSnippets('cpp'));
-
-    // Clone language bar before all the snippets
-    $('code.lang-python').parent().before($('ul.switchLanguage'));
 
     $.ajax({
       url : '/scripts/kv/doughnut.proto',
@@ -318,33 +342,4 @@ $(document).ready(function() {
       hljs.highlightBlock(block);
     });
   }
-
-
-
-
-  /*----------------.
-  | Comparisons     |
-  `----------------*/
-
-  function displayComparison() {
-    if (elem.checked) {
-      $('.properties').addClass('compared');
-      $('.property .infinit').show();
-    } else {
-      $('.properties').removeClass('compared');
-      $('.property .infinit').hide();
-    }
-  }
-
-  if ($('body').hasClass('doc_comparison')) {
-    var elem = document.querySelector('.js-switch');
-    var switcher = new Switchery(elem, { color: "#252d3b"});
-
-    elem.onchange = function() {
-      displayComparison();
-    };
-
-    displayComparison();
-  }
-
 });

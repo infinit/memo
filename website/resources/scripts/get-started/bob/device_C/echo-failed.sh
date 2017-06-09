@@ -1,0 +1,1 @@
+echo "or not" > ${guide_mountpoint}${dir}awesome.txt

@@ -345,6 +345,7 @@ namespace infinit
                  decltype(cli::no_public_endpoints = false),
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::grpc = boost::optional<std::string>()),
+                 decltype(cli::grpc_port_file = boost::optional<std::string>()),
 #if INFINIT_ENABLE_PROMETHEUS
                  decltype(cli::prometheus = boost::optional<std::string>()),
 #endif
@@ -386,6 +387,7 @@ namespace infinit
                bool no_public_endpoints = false,
                Strings advertise_host = {},
                boost::optional<std::string> grpc = {},
+               boost::optional<std::string> const& grpc_port_file = {},
 #if INFINIT_ENABLE_PROMETHEUS
                boost::optional<std::string> prometheus = {},
 #endif

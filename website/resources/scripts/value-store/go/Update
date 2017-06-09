@@ -1,0 +1,17 @@
+// Given a block `block` and a payload `payload`.
+//
+// Set the block new payload.
+block.Payload = &doughnut.Block_DataPlain{payload}
+// Perform the update.
+//
+// Setting the update request `DecryptData` field to `true` so the `Block`
+// field of the update response will be decrypted. This is useful if you need
+// to fix potential conflicts resulting of the update.
+status, _ := client.Update(context.Background(),
+                           &doughnut.UpdateRequest{Block: block,
+                                                   DecryptData: true})
+// If there is a conflict.
+if (status.GetCurrent() != nil) {
+  // Solve conflict here, `response.block` contains the current version of
+  // the block in the value-store.
+}

@@ -1,4 +1,7 @@
-<p>Get the latest Infinit image with Docker:</p>
-<pre><code>$> docker pull mefyl/infinit:latest</code></pre>
+Get the latest Infinit image with [Docker](https://www.docker.com/):
 
-<p><em>Note: The Infinit image runs on Ubuntu.</em></p>
+```
+$> docker run --rm --privileged -it mefyl/infinit bash
+```
+
+*Note: The Infinit image runs on Ubuntu.*

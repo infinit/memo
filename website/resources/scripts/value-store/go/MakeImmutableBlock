@@ -1,0 +1,6 @@
+// Create the immutable block with a payload.
+iblock, _ := client.MakeImmutableBlock(
+               context.Background(),
+               &doughnut.MakeImmutableBlockRequest{Data: []byte("some data")})
+// Actually insert the block.
+client.Insert(context.Background(), &doughnut.InsertRequest{Block: iblock})

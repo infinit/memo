@@ -174,6 +174,7 @@ namespace infinit
             cli::no_public_endpoints = false,
             cli::advertise_host = Strings{},
             cli::grpc = boost::none,
+            cli::grpc_port_file = boost::none,
 #if INFINIT_ENABLE_PROMETHEUS
             cli::prometheus = boost::none,
 #endif
@@ -880,6 +881,7 @@ namespace infinit
                   bool no_public_endpoints = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> grpc = {},
+                  boost::optional<std::string> grpc_port_file = {},
 #if INFINIT_ENABLE_PROMETHEUS
                   boost::optional<std::string> prometheus = {},
 #endif
@@ -926,10 +928,17 @@ namespace infinit
         {
           auto const eps = model::Endpoints{*grpc};
           auto const ep = *eps.begin();
+          int grpc_port = -1;
           grpc_thread.reset(new elle::reactor::Thread("grpc",
-            [dht=dht.get(), ep] {
-              infinit::grpc::serve_grpc(*dht, boost::none, ep);
+            [dht=dht.get(), ep, &grpc_port] {
+              infinit::grpc::serve_grpc(*dht, boost::none, ep, &grpc_port);
           }));
+          if (grpc_port_file)
+          {
+            while (grpc_port == -1)
+              elle::reactor::sleep(50_ms);
+            port_to_file(grpc_port, *grpc_port_file);
+          }
         }
 #if INFINIT_ENABLE_PROMETHEUS
         if (prometheus)
@@ -1052,6 +1061,7 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          {}, // grpc
+         {}, // grpc_port_file
 #if INFINIT_ENABLE_PROMETHEUS
          {}, // prometheus
 #endif
@@ -1214,6 +1224,7 @@ namespace infinit
                       bool no_public_endpoints,
                       Strings advertise_host,
                       boost::optional<std::string> grpc,
+                      boost::optional<std::string> const& grpc_port_file,
 #if INFINIT_ENABLE_PROMETHEUS
                       boost::optional<std::string> prometheus,
 #endif
@@ -1251,6 +1262,7 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          grpc,
+         grpc_port_file,
 #if INFINIT_ENABLE_PROMETHEUS
          prometheus,
 #endif

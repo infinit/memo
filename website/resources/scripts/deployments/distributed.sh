@@ -107,7 +107,7 @@ create_user()
   name="${1}"
   options="${2}"
 
-  execute_foreground "infinit user --create --name ${name} ${options}"
+  execute_foreground "infinit user create --name ${name} ${options}"
 }
 
 create_filesystem_storage()
@@ -116,7 +116,7 @@ create_filesystem_storage()
   capacity="${2}"
   storage_path="${3}"
 
-  execute_foreground "infinit silo --create --filesystem --path ${storage_path} --name ${name} --capacity ${capacity}"
+  execute_foreground "infinit silo create --filesystem --path ${storage_path} --name ${name} --capacity ${capacity}"
 }
 
 create_network()
@@ -131,7 +131,7 @@ create_network()
     _storages="${_storages} --storage ${_storage}"
   done
 
-  execute_foreground "infinit network --create --as ${as} ${_storages} --name ${name} ${options}"
+  execute_foreground "infinit network create --as ${as} ${_storages} --name ${name} ${options}"
 }
 
 run_network()
@@ -148,7 +148,7 @@ run_network()
 
   endpoints_path=$(mktemp)
 
-  pid=$(execute_background "infinit network --run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
+  pid=$(execute_background "infinit network run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
   sleep 10
 
@@ -163,7 +163,7 @@ create_volume()
   name="${3}"
   options="${4}"
 
-  execute_foreground "infinit volume --create --as ${as} --network ${network} --name ${name} ${options}"
+  execute_foreground "infinit volume create --as ${as} --network ${network} --name ${name} ${options}"
 }
 
 mount_volume()
@@ -195,7 +195,7 @@ transmit_identity()
   passphrase="${2}"
   options="${3}"
 
-  execute_foreground "infinit device --transmit --as ${name} --user --passphrase ${passphrase} --no-countdown ${options}"
+  execute_foreground "infinit device transmit --as ${name} --user --passphrase ${passphrase} --no-countdown ${options}"
 }
 
 receive_identity()
@@ -204,7 +204,7 @@ receive_identity()
   passphrase="${2}"
   options="${3}"
 
-  execute_foreground "infinit device --receive --user --name ${name} --passphrase ${passphrase} ${options}"
+  execute_foreground "infinit device receive --user --name ${name} --passphrase ${passphrase} ${options}"
 }
 
 export_item()
@@ -214,7 +214,7 @@ export_item()
   name="${3}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit ${object} --export --as ${as} --name ${name} --output ${file_path}"
+  execute_foreground "infinit ${object} export --as ${as} --name ${name} --output ${file_path}"
 
   echo "${file_path}"
 }
@@ -225,7 +225,7 @@ export_user()
   options="${2}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit user --export --name ${name} --output ${file_path} ${options}"
+  execute_foreground "infinit user export --name ${name} --output ${file_path} ${options}"
 
   echo "${file_path}"
 }
@@ -237,7 +237,7 @@ export_passport()
   invitee="${3}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit passport --export --as ${as} --network ${network} --user ${invitee} --output ${file_path}"
+  execute_foreground "infinit passport export --as ${as} --network ${network} --user ${invitee} --output ${file_path}"
 
   echo "${file_path}"
 }
@@ -267,7 +267,7 @@ import_item()
   object="${1}"
   file_path="${2}"
 
-  execute_foreground "infinit ${object} --import --input ${file_path}"
+  execute_foreground "infinit ${object} import --input ${file_path}"
 }
 
 import_user()
@@ -318,7 +318,7 @@ create_passport()
   invitee="${3}"
   options="${4}"
 
-  execute_foreground "infinit passport --create --as ${as} --network ${network} --user ${invitee} ${options}"
+  execute_foreground "infinit passport create --as ${as} --network ${network} --user ${invitee} ${options}"
 }
 
 link_device()
@@ -333,7 +333,7 @@ link_device()
     _storages="${_storages} --storage ${_storage}"
   done
 
-  execute_foreground "infinit network --link --as ${as} --name ${network} ${_storages} ${options}"
+  execute_foreground "infinit network link --as ${as} --name ${network} ${_storages} ${options}"
 }
 
 grant_access()
@@ -342,7 +342,7 @@ grant_access()
   mode="${2}"
   target="${3}"
 
-  execute_foreground "infinit acl --set --mode ${mode} --path ${path} --user ${target}"
+  execute_foreground "infinit acl set --mode ${mode} --path ${path} --user ${target}"
 }
 
 # ---------- hub -------------------------------------------------------------
@@ -352,7 +352,7 @@ fetch_user()
   as="${1}"
   name="${2}"
 
-  execute_foreground "infinit user --fetch --as ${as} --name ${name}"
+  execute_foreground "infinit user fetch --as ${as} --name ${name}"
 }
 
 fetch_network()
@@ -366,7 +366,7 @@ fetch_network()
     _name=""
   fi
 
-  execute_foreground "infinit network --fetch --as ${as} ${_name}"
+  execute_foreground "infinit network fetch --as ${as} ${_name}"
 }
 
 fetch_volume()
@@ -387,7 +387,7 @@ fetch_volume()
     _name=""
   fi
 
-  execute_foreground "infinit volume --fetch --as ${as} ${_network} ${_name}"
+  execute_foreground "infinit volume fetch --as ${as} ${_network} ${_name}"
 }
 
 fetch_passport()
@@ -401,7 +401,7 @@ fetch_passport()
     _network=""
   fi
 
-  execute_foreground "infinit passport --fetch --as ${as} ${_network}"
+  execute_foreground "infinit passport fetch --as ${as} ${_network}"
 }
 
 pull_item()
@@ -410,14 +410,14 @@ pull_item()
   as="${2}"
   name="${3}"
 
-  execute_foreground "infinit ${object} --pull --as ${as} --name ${name}"
+  execute_foreground "infinit ${object} pull --as ${as} --name ${name}"
 }
 
 pull_user()
 {
   name="${1}"
 
-  execute_foreground "infinit user --pull --as ${name} --name ${name}"
+  execute_foreground "infinit user pull --as ${name} --name ${name}"
 }
 
 pull_network()
@@ -442,7 +442,7 @@ pull_passport()
   network="${2}"
   user="${3}"
 
-  execute_foreground "infinit passport --pull --as ${as} --network ${network} --user ${user}"
+  execute_foreground "infinit passport pull --as ${as} --network ${network} --user ${user}"
 }
 
 # ---------- track -----------------------------------------------------------

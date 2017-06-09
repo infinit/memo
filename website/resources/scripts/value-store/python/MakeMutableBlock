@@ -1,0 +1,6 @@
+# Create the block, empty.
+block = stub.MakeMutableBlock(doughnut.MakeMutableBlockRequest())
+# Set the block payload.
+block.data_plain = b'some data'
+# Actually insert the block.
+stub.Insert(doughnut.InsertRequest(block = block))

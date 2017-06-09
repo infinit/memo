@@ -23,10 +23,8 @@ def url(url):
     host += '/'
   return host + url
 
-def find_route(name, **params):
-  for route in bottle.request.app.routes:
-    if route.name == name:
-      return route.rule
+def find_route(id, **parameters):
+  return bottle.request.app.reverse(id, **parameters)
 
 def detect_os():
   agent = bottle.request.environ.get('HTTP_USER_AGENT')
@@ -37,19 +35,22 @@ def detect_os():
     os = os['os']['name']
   return os
 
+def resources_path():
+  return '%s/share/infinit/website/resources' % PREFIX
+
 def view(name):
   def res(f):
     lookup = '%s/share/infinit/website/templates' % PREFIX
     return bottle.mako_view(
       name,
-      template_lookup = [lookup],
+      template_lookup = [lookup, resources_path()],
       request = bottle.request,
       response = bottle.response,
       route = find_route,
       url = url,
       os = detect_os,
       version = version,
-      tarball_version = tarball_version,
+      tarball_version = tarball_version
     )(f)
   return res
 

@@ -8,17 +8,23 @@ grpc = None
 sources = None
 cxx_config_grpc = None
 doughnut_proto = None
+doughnut_json = None
+gendn = None
+genfs = None
 
 class GRPCGen(drake.Builder):
 
-  def __init__(self, proto, protoc, plugin, targets):
+  def __init__(self, proto, protoc, targets, plugin = None):
     self.__proto = proto
     if protoc is None:
       self.__protoc = drake.node(drake.which.which('protoc'))
     self.__protoc = protoc
     self.__plugin = plugin
     self.__output = proto.name().dirname()
-    super().__init__([proto, protoc, plugin], targets)
+    srcs = [proto, protoc]
+    if plugin:
+      srcs.append(plugin)
+    super().__init__(srcs, targets)
 
   @property
   def proto(self):
@@ -47,7 +53,6 @@ class GRPCCxxGen(GRPCGen):
       name.with_extension('grpc.pb.h'),
       name.with_extension('grpc.pb.cc'),
     )
-    srcs = []
     if plugin is None:
       plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
     super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
@@ -91,9 +96,8 @@ class GRPCPyGen(GRPCGen):
       '{}_pb2.py'.format(name),
       '{}_pb2_grpc.py'.format(name),
     )
-    srcs = []
     if plugin is None:
-      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+      plugin = drake.node('/usr/local/bin/grpc_python_plugin')
     super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
 
   def execute(self):
@@ -114,13 +118,52 @@ class GRPCPyGen(GRPCGen):
   def hash(self):
     return list(map(str, self.command))
 
+class GRPCGoGen(GRPCGen):
+
+  def __init__(self, proto, protoc = None, plugin = None, toolkit = None):
+    name = proto.name_relative.without_last_extension()
+    dsts = drake.nodes(
+      name.with_extension('pb.go'),
+    )
+    srcs = []
+    if plugin is None:
+      if toolkit is not None:
+        plugin = drake.go.FetchPackage(
+          url = 'github.com/golang/protobuf/protoc-gen-go',
+          targets = drake.nodes('%s/bin/protoc-gen-go' % toolkit.path,),
+          toolkit = toolkit).targets()[0]
+      elif os.environ.get('GOPATH'):
+        plugin = drake.node('%s/bin/protoc-gen-go' % os.environ['GOPATH'])
+      elif os.environ.get('GOROOT'):
+        plugin = drake.node('%s/bin/protoc-gen-go' % os.environ['GOROOT'])
+    self.__toolkit = toolkit
+    super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
+
+  def execute(self):
+    self.cmd('GRPC protoc Go %s' % self.proto, self.command, throw = True)
+    return True
+
+  @property
+  def command(self):
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--go_out=plugins=grpc:%s' % self.output_dir,
+      '--plugin=protoc-gen-go=%s' % self.plugin.path(),
+      self.proto.path(),
+    ]
+
+  def hash(self):
+    return list(map(str, self.command))
+
+
 
 def configure(
     cxx_toolkit,
     cxx_config,
     git = None,
 ):
-  global doughnut_proto, grpc_lib, grpc, sources
+  global doughnut_proto, doughnut_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -131,7 +174,13 @@ def configure(
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',
       'GO_EXECUTABLE': go.go,
     })
+  import json
+  doughnut_json = drake.Node('doughnut.json')
+  with open(str(doughnut_json.path())) as f:
+    with drake.templating.Context(content = {'proto': json.load(f)}):
+      drake.node('doughnut.proto.tmpl')
   doughnut_proto = drake.node('doughnut.proto')
+  global gendn, gendfs
   gendn = GRPCCxxGen(
     doughnut_proto,
     protoc = grpc.protoc,

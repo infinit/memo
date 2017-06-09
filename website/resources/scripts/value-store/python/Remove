@@ -1,0 +1,3 @@
+# Given an address `address`, remove the block at `address`.
+#
+stub.Remove(doughnut.RemoveRequest(address = address))
