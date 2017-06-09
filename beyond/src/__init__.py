@@ -50,14 +50,6 @@ def update_symbols():
     log('update_symbols: cannot pull git repo: {}', p.stderr)
     return
 
-  # The repo is up to date, prepare the symbols directory.
-  p = run([repo_dir + '/bin/make-symbols',
-           '--input', repo_dir + '/projects',
-           '--output', symbols_path)
-  if p.returncode:
-    log('update_symbols: cannot update symbols/: {}', p.stderr)
-    return
-
 
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
