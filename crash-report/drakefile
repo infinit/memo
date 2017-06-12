@@ -65,34 +65,96 @@ class SymbolsGenerator(drake.Builder):
   def __str__(self):
     return 'SymbolsGenerator(%s)' % self.__binary
 
-class SymbolsPackager(drake.debian.Packager):
+class SymbolsCommitter(drake.Builder):
 
-  def __init__(self, *args, **kwargs):
-    kwargs.setdefault('cleanup_source_directory', False)
-    super().__init__(*args, **kwargs)
+  '''Commit debug symbol files to their git repo.'''
+
+  def __init__(self, srcs,
+               repo = None, description = None, platform = None, project = None):
+    '''
+    - srcs: the *.sym files to commit.
+    - repo: in the source tree, where to find debug-symbols.
+    - description: git describe.
+    - platform: a string such as macosx, etc.
+    - project: name of the project, e.g., "memo".
+    '''
+    # Where the symbol files will be installed.  Yes, it's in the source tree.
+    self.__repo = str(drake.path_source() / repo)
+    self.__specs = ('{description}/{platform}'
+                    .format(description=description,
+                            platform=platform))
+    self.__dir = ('{repo}/projects/{project}/{description}/{platform}'
+                  .format(repo=self.__repo,
+                          description=description,
+                          platform=platform,
+                          project=project))
+    self.__witness = drake.node('witness')
+    super().__init__(srcs, [self.__witness])
+
+  @property
+  def witness(self):
+    return self.__witness
 
   def _sym_output_path(self, sym_file):
+    '''The path under which `sym_file` must be installed for breakpad.'''
     res = None
     with open(str(sym_file), 'r') as f:
       line = f.readline()
-      uid = line.split(' ')[3]
-      name = line.split(' ')[4].strip()
-      res = '%s/opt/infinit/lib/debug/symbols/%s/%s' % (self.path, name, uid)
-      # Make directories if they don't exist.
-      os.makedirs(res, exist_ok = True)
-    assert res is not None
-    return res
+      args = {
+        'dir': str(self.__dir),
+        'uid': line.split(' ')[3],
+        'name': line.split(' ')[4].strip(),
+      }
+      assert args['name'] + '.sym' == os.path.basename(str(sym_file))
+      return '{dir}/{name}/{uid}/{name}.sym'.format_map(args)
+
+  def _run(self, title, cmd):
+    '''Run a command in the repo directory.'''
+    # Cannot use self.cmd, as it checks that we are not messing in
+    # the source tree.
+    print(title)
+    import subprocess
+    p = subprocess.run(cmd, stderr=subprocess.PIPE, universal_newlines=True,
+                       cwd = self.__repo)
+    if p.returncode:
+      raise Exception('failed: {}: {}'.format(' '.join(cmd), p.stderr))
+
+  def _git(self, title, *args):
+    # Cannot use self.cmd, as it checks that we are not messing with
+    # the source tree.
+    self._run(title, ['git'] + list(args))
 
   def execute(self):
-    # Clean existing symbols
+    self._git('Fetching debug-symbols repository',
+              'fetch')
+    self._git('Updating debug-symbols repository',
+              'checkout', '--force', 'origin/master')
+
+    # The files added in the repo.
     import shutil
-    dest = '%s/opt' % self.path
-    if os.path.exists(dest):
-      shutil.rmtree(dest)
+    files = []
     for source in self.sources():
       if source.extension.split('.')[-1] == 'sym':
-        shutil.copy(str(source), self._sym_output_path(source))
-    return super().execute()
+        dst = self._sym_output_path(source)
+        os.makedirs(os.path.dirname(dst), exist_ok = True)
+        shutil.copy(str(source), dst)
+        # We will use -C repo, so remove repo from dst
+        files.append(os.path.relpath(dst, self.__repo))
+
+    self._git('Add new debug symbols',
+              'add', *files)
+    self._git('Committing new debug symbols',
+              'commit', '-m', 'Symbols for {}'.format(self.__specs))
+    self._run('Update symbols directory',
+              ['bin/make-symbols'])
+    self._git('Updating symbols directory',
+              'commit', '-m', 'Regen symbols.')
+    self._git('Pushing new debug symbols',
+              'push', 'origin', 'HEAD:master')
+    # touch the witness.
+    with open(str(self.witness), 'w'):
+      pass
+    return True
 
 def configure(cxx_toolkit = None,
               cxx_config = drake.cxx.Config()):

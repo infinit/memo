@@ -572,28 +572,16 @@ def configure(
       'debian').package
 
   if enable_crash_reporting:
-    # //debian-debug: generate the debug symbols for breakpad,
+    # //symbols-commit: publish the debug symbols for breakpad,
     # installed on Beyond.
-    rule_debian_debug = drake.Rule('debian-debug')
-    name = 'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description())
-    debian_debug_package = crash_report.SymbolsPackager(
-      name,
-      {
-        'Package': 'infinit-debug-symbols-%s-%s' % \
-          (platform, git.description()),
-        'Maintainer': 'Quentin Hocquet <mefyl@infinit.io>',
-        'Version': '0',
-        'Homepage': 'https://www.infinit.sh',
-        'Architecture': 'amd64',
-        'Description':
-          'Infinit distributed filesystem debug symbols.',
-        'Section': 'utils',
-        'Priority': 'optional',
-      },
+    rule_symbols_commit = drake.Rule('symbols-commit')
+    symbols_commit = crash_report.SymbolsCommitter(
       installed_symbols,
-      debian_debug_dir).package
-    rule_debian << debian_debug_package
-    rule_debian_debug << debian_debug_package
+      repo = 'crash-report/debug-symbols',
+      platform = platform,
+      description = git.description(),
+      project = 'memo').witness
+    rule_symbols_commit << symbols_commit
 
   ## ------- ##
   ## Red Hat ##
