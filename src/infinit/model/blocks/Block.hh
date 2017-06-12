@@ -82,7 +82,7 @@ namespace infinit
           if (auto g = _block_gauge())
           {
             ELLE_LOG_COMPONENT("infinit.model.blocks.Block.prometheus");
-            ELLE_DEBUG("increment: %s", Self::type);
+            ELLE_DUMP("increment: %s", Self::type);
             g->Increment();
           }
         }
@@ -94,7 +94,7 @@ namespace infinit
           if (auto g = _block_gauge())
           {
             ELLE_LOG_COMPONENT("infinit.model.blocks.Block.prometheus");
-            ELLE_DEBUG("decrement: %s", Self::type);
+            ELLE_DUMP("decrement: %s", Self::type);
             g->Decrement();
           }
         }

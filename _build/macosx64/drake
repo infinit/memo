@@ -8,11 +8,13 @@ import drake
 import drake.cxx
 
 def find_python3():
-  python3 = None
   for minor in range(9, 0, -1):
-    # /opt/local is MacPorts.
-    # /usr/local/Cellar/ is Brew.
-    for dir in ['/usr/local', '/opt/local/Library', '/usr/local/Cellar/python3/3.6.0']:
+    for dir in ['/usr/local',
+                # From MacPorts.
+                '/opt/local/Library',
+                # From Brew.
+                '/usr/local/Cellar/python3/3.5.1',
+                '/usr/local/Cellar/python3/3.6.0']:
       p = '{}/Frameworks/Python.framework/Versions/3.{}'.format(dir, minor)
       if os.path.isdir(p):
         return p
@@ -27,10 +29,11 @@ cfg.enable_debug_symbols()
 cfg.enable_optimization()
 
 # This is the configuration used to generate the Infinit packages.
-os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.7'
+#os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.7'
 cfg.use_local_libcxx = True
-for f in ('-ftemplate-depth=512', '-stdlib=libc++'):
-  cfg.flag(f)
+cfg.flag('-stdlib=libc++')
+cfg.flag('-ftemplate-depth=512')
+cfg.flag('-fsanitize=undefined')
 
 with drake.Drake('../..') as d:
   # When using MacPorts, valgrind/valgrind.h is in /opt/local/include,
@@ -39,7 +42,7 @@ with drake.Drake('../..') as d:
   # in our build tree, as a means to control includes.
   cfg.add_local_include_path('valgrind')
   d.run(
-    python = '/usr/local/Cellar/python3/3.6.0/Frameworks/Python.framework/Versions/3.6/',
+    python = python3,
     cxx_toolkit = tk,
     cxx_config = cfg,
     prefix = '_install',

@@ -10,9 +10,6 @@
 [submodule "sendwithus_python"]
 	path = sendwithus_python
 	url = https://github.com/infinit/sendwithus_python.git
-[submodule "crash_reporting/breakpad"]
-	path = crash_reporting/breakpad
-	url = https://chromium.googlesource.com/breakpad/breakpad
 [submodule "pjdfstest"]
 	path = pjdfstest
 	url = https://github.com/infinit/pjdfstest.git
@@ -22,3 +19,6 @@
 [submodule "prometheus-cpp"]
 	path = prometheus/prometheus-cpp
 	url = https://github.com/infinit/prometheus-cpp.git
+[submodule "crash-report/breakpad"]
+	path = crash-report/breakpad
+	url = https://chromium.googlesource.com/breakpad/breakpad

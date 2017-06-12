@@ -186,10 +186,10 @@ def configure(
     'src/infinit/Version.hh',
     'src/infinit/Volume.cc',
     'src/infinit/Volume.hh',
+    'src/infinit/crash-report.cc',
+    'src/infinit/crash-report.hh',
     'src/infinit/environ.cc',
     'src/infinit/environ.hh',
-    'src/infinit/report-crash.cc',
-    'src/infinit/report-crash.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/utility.hh',
@@ -273,14 +273,14 @@ def configure(
   if windows:
     enable_crash_reporting = False
   if enable_crash_reporting:
-    crash_reporting = drake.include('crash_reporting',
-                                    cxx_toolkit = cxx_toolkit,
-                                    cxx_config = cxx_config)
-    crash_reporter_lib = import_lib(crash_reporting)
-    minidump_stackwalk = crash_reporting.minidump_stackwalk_exe
-    cxx_config.define('INFINIT_ENABLE_CRASH_REPORTER')
-    cxx_config_infinit.define('INFINIT_ENABLE_CRASH_REPORTER')
-    cxx_config_infinit.add_local_include_path('crash_reporting/src')
+    crash_report = drake.include('crash-report',
+                                 cxx_toolkit = cxx_toolkit,
+                                 cxx_config = cxx_config)
+    crash_report_lib = import_lib(crash_report)
+    minidump_stackwalk = crash_report.minidump_stackwalk_exe
+    cxx_config.define('INFINIT_ENABLE_CRASH_REPORT')
+    cxx_config_infinit.define('INFINIT_ENABLE_CRASH_REPORT')
+    cxx_config_infinit.add_local_include_path('crash-report/src')
   else:
     minidump_stackwalk = None
 
@@ -316,7 +316,7 @@ def configure(
         elle_lib,
      ]
      + extra_libs
-     + ([crash_reporter_lib] if enable_crash_reporting else [])),
+     + ([crash_report_lib] if enable_crash_reporting else [])),
     cxx_toolkit,
     cxx_config_infinit,
     strip = windows)
@@ -496,7 +496,7 @@ def configure(
     if enable_prometheus:
       infinit_cli_deps.append(prometheus_lib)
   if enable_crash_reporting:
-    infinit_cli_deps.append(crash_reporter_lib)
+    infinit_cli_deps.append(crash_report_lib)
 
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',
@@ -521,9 +521,9 @@ def configure(
   if enable_crash_reporting:
     for f in installed_libraries | set(installed_binaries):
       sym = drake.node('%s.sym' % f.path())
-      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       f, sym,
-                                       cxx_toolkit = cxx_toolkit)
+      crash_report.SymbolsGenerator(crash_report.dump_syms_exe,
+                                    f, sym,
+                                    cxx_toolkit = cxx_toolkit)
       installed_symbols.append(sym)
     if prefix:
       symbols_dir = '%s/%s' % (prefix, git.version())
@@ -605,7 +605,7 @@ def configure(
     # installed on Beyond.
     rule_debian_debug = drake.Rule('debian-debug')
     name = 'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description())
-    debian_debug_package = crash_reporting.SymbolsPackager(
+    debian_debug_package = crash_report.SymbolsPackager(
       name,
       {
         'Package': 'infinit-debug-symbols-%s-%s' % \
@@ -810,7 +810,7 @@ def configure(
       )
       if enable_crash_reporting:
         crash_test_libs = [
-            crash_reporter_lib,
+            crash_report_lib,
             cryptography_lib,
             elle_lib,
             reactor_lib,
@@ -1013,7 +1013,7 @@ def configure(
   cxx_config_tests.add_local_include_path('.')
   cxx_config_tests += grpc.grpc.cxx_config
   if enable_crash_reporting:
-    cxx_config_tests.add_local_include_path('crash_reporting/src') # functional/bin/crasher
+    cxx_config_tests.add_local_include_path('crash-report/src') # functional/bin/crasher
   if grpc.grpc_lib:
     cxx_config_tests.library_add(grpc_lib)
   if not windows:

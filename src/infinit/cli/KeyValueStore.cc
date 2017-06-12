@@ -365,11 +365,11 @@ namespace infinit
         listen_address, {});
       hook_stats_signals(*dht);
       elle::reactor::Thread::unique_ptr dht_grpc_thread;
-      auto const eps = model::Endpoints("0.0.0.0", 0);
       int dht_grpc_port = 0;
       dht_grpc_thread.reset(new elle::reactor::Thread("DHT gRPC",
-        [dht = dht.get(), ep = *eps.begin(), &dht_grpc_port] {
-          infinit::grpc::serve_grpc(*dht, boost::none, ep, &dht_grpc_port);
+        [dht = dht.get(), &dht_grpc_port] {
+          infinit::grpc::serve_grpc(
+            *dht, boost::none, "127.0.0.1:0", &dht_grpc_port);
       }));
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)

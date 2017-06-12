@@ -287,7 +287,7 @@ namespace infinit
             _fetch(Address address,
                   boost::optional<int> local_version) const override;
             void
-            _register_rpcs(RPCServer& rpcs) override;
+            _register_rpcs(Connection& rpcs) override;
             using Addresses = elle::unordered_map<Address, Decision>;
             ELLE_ATTRIBUTE(Addresses, addresses);
           private:

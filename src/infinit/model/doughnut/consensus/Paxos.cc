@@ -768,41 +768,37 @@ namespace infinit
                   }
                   else
                     ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
-                  elle::With<elle::reactor::Scope>() <<
-                  [&] (elle::reactor::Scope& scope)
-                  {
-                    std::unordered_set<overlay::Overlay::Member> new_owners;
-                    std::unordered_set<overlay::Overlay::Member> owners;
-                    for (auto id: new_q)
-                      if (id != this->doughnut().id())
-                        if (auto peer = this->doughnut().overlay()->
-                            lookup_node(id).lock())
-                        {
-                          owners.emplace(peer);
-                          if (!elle::find(q.quorum, peer->id()))
-                            new_owners.emplace(peer);
-                        };
-                    elle::reactor::for_each_parallel(
-                      new_owners,
-                      [&] (overlay::Overlay::Member peer)
+                  std::unordered_set<overlay::Overlay::Member> new_owners;
+                  std::unordered_set<overlay::Overlay::Member> owners;
+                  for (auto id: new_q)
+                    if (id != this->doughnut().id())
+                      if (auto peer = this->doughnut().overlay()->
+                          lookup_node(id).lock())
                       {
-                        peer->store(*block.block, STORE_INSERT);
-                        this->_quorums.modify(
-                          this->_quorums.find(address),
-                          [&] (BlockRepartition& r)
-                          { r.quorum.insert(peer->id()); });
-                        this->_node_blocks.emplace(peer->id(), address);
-                      });
-                    elle::reactor::for_each_parallel(
-                      owners,
-                      [&] (overlay::Overlay::Member peer)
-                      {
-                        ELLE_ENFORCE(
-                          std::dynamic_pointer_cast<Paxos::Peer>(peer))
-                          ->confirm(new_q, address, PaxosClient::Proposal());
-                      });
-                    this->_rebalanced(address);
-                  };
+                        owners.emplace(peer);
+                        if (!elle::find(q.quorum, peer->id()))
+                          new_owners.emplace(peer);
+                      };
+                  elle::reactor::for_each_parallel(
+                    new_owners,
+                    [&] (overlay::Overlay::Member peer)
+                    {
+                      peer->store(*block.block, STORE_INSERT);
+                      this->_quorums.modify(
+                        this->_quorums.find(address),
+                        [&] (BlockRepartition& r)
+                        { r.quorum.insert(peer->id()); });
+                      this->_node_blocks.emplace(peer->id(), address);
+                    });
+                  elle::reactor::for_each_parallel(
+                    owners,
+                    [&] (overlay::Overlay::Member peer)
+                    {
+                      ELLE_ENFORCE(
+                        std::dynamic_pointer_cast<Paxos::Peer>(peer))
+                        ->confirm(new_q, address, PaxosClient::Proposal());
+                    });
+                  this->_rebalanced(address);
                 }
               }
               catch (MissingBlock const&)
@@ -1069,9 +1065,10 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::_register_rpcs(RPCServer& rpcs)
+        Paxos::LocalPeer::_register_rpcs(Connection& connection)
         {
-          Local::_register_rpcs(rpcs);
+          auto& rpcs = connection.rpcs();
+          Local::_register_rpcs(connection);
           namespace ph = std::placeholders;
           rpcs.add(
             "propose",
@@ -1887,8 +1884,10 @@ namespace infinit
                   .equal_range(this->doughnut().id())));
             for (auto nb: blocks)
             {
-              done = false;
               auto address = nb.block;
+              if (!address.mutable_block())
+                continue;
+              done = false;
               ELLE_TRACE_SCOPE("rebalance %f out", address);
               auto quorum =
                 ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;

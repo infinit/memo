@@ -22,7 +22,7 @@
 #include <infinit/cli/Error.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/environ.hh>
-#include <infinit/report-crash.hh>
+#include <infinit/crash-report.hh>
 #include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("cli");

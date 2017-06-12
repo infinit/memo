@@ -233,6 +233,7 @@ def configure(
 
   ubuntu_dependencies = [
     'couchdb',
+    'git',
     'libjpeg-dev',
     'python3',
     'python3-boto3',
@@ -240,13 +241,6 @@ def configure(
     'python3-httplib2',
     'python3-pil',
     'python3-requests',
-  ]
-  # Depend on our debian packages that contain the debug symbols (for
-  # crash-report).
-  crash_report_dependencies = [
-    'infinit-debug-symbols-{os}-{v}'.format(os=os, v=v)
-    for os in ['centos', 'macosx', 'debian']
-    for v in ['0.7.0', '0.7.1', '0.7.2', '0.7.3']
   ]
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
@@ -280,7 +274,6 @@ def configure(
       'Depends': ', '.join(
         ubuntu_dependencies
         + ['infinit (= %s)' % version]
-        + crash_report_dependencies
       ),
       'Description': 'Infinit beyond server.',
     },

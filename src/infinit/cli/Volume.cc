@@ -14,7 +14,6 @@
 #ifdef INFINIT_MACOSX
 # include <elle/reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
-//# include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
@@ -1105,9 +1104,8 @@ namespace infinit
                              );
         if (grpc)
         {
-          auto const ep = *model::Endpoints(*grpc).begin();
-          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), ep] {
-              infinit::grpc::serve_grpc(dht, *fs, ep);
+          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), grpc] {
+              infinit::grpc::serve_grpc(dht, *fs, *grpc);
           });
         }
 #if INFINIT_ENABLE_PROMETHEUS

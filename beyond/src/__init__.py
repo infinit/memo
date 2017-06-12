@@ -17,12 +17,39 @@ host_os = os.environ.get('OS', '')
 def log(fmt, *args):
   print('beyond:', fmt.format(*args), file=sys.stderr)
 
+def run(*args, **kwargs):
+  kwargs.setdefault('stdout', subprocess.PIPE)
+  kwargs.setdefault('stderr', subprocess.PIPE)
+  kwargs['universal_newlines'] = True
+  return subprocess.run(*args, **kwargs)
+
 ## ------------ ##
 ## Crash report ##
 ## ------------ ##
 
 # Where the symbol files are.
-symbols_path = '/opt/infinit/lib/debug/symbols/'
+symbols_path = 'symbols/'
+
+# Where the git repo for debug symbols is checkout.
+repo_dir = 'debug-symbols'
+
+def update_symbols():
+  '''Create or update the symbols/ directory.'''
+  # If the repository directory does not exist, clone it.
+  if not os.path.exists(repo_dir):
+    p = run(['git', 'clone',
+             'git@git.infinit.sh:infinit/debug-symbols.git',
+             repo_dir])
+    if p.returncode:
+      log('update_symbols: cannot clone git repo: {}', p.stderr)
+      return
+
+  # The repo is there.  Update it.
+  p = run(['git', '-C', repo_dir, 'pull', '--rebase'])
+  if p.returncode:
+    log('update_symbols: cannot pull git repo: {}', p.stderr)
+    return
+
 
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
@@ -32,7 +59,7 @@ def symbolize_dump(in_, out = None):
     out = in_
   try:
     with open(out + '.tmp', 'wb') as o:
-      p = subprocess.run(['minidump_stackwalk', in_, symbols_path], stdout=o)
+      p = run(['minidump_stackwalk', in_, symbols_path], stdout=o)
       if p.returncode:
         log("symbolize: error: {}", p.stderr)
       else:

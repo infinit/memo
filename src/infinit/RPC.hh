@@ -249,7 +249,7 @@ namespace infinit
 
     ~RPCServer()
     {
-      _destroying(this);
+      this->_destroying();
     }
 
     template <typename R, typename ... Args>
@@ -450,8 +450,7 @@ namespace infinit
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
     boost::optional<elle::cryptography::SecretKey> _key;
-    boost::signals2::signal<void(RPCServer*)> _destroying;
-    boost::signals2::signal<void(RPCServer*)> _ready;
+    boost::signals2::signal<void()> _destroying;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
 

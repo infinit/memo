@@ -5,11 +5,11 @@
 
 #include <boost/filesystem.hpp>
 
-#include <crash_reporting/fwd.hh>
+#include <crash-report/fwd.hh>
 
 #include <elle/attribute.hh>
 
-namespace crash_reporting
+namespace crash_report
 {
   namespace bfs = boost::filesystem;
   namespace breakpad = google_breakpad;
