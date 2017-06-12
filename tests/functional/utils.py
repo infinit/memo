@@ -540,3 +540,69 @@ class SharedLogicCLITests():
       assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 1)
       bob.run(['infinit', entity, 'delete', '--as', 'bob', e_name2, '--pull'])
       assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 0)
+
+class KeyValueStoreInfrastructure():
+
+  def __init__(self, usr, uname = 'bob', kvname = 'kv'):
+    self.__usr = usr
+    self.__uname = uname
+    self.__kvname = kvname
+    self.__proc = None
+    self.__stub = None
+    self.__endpoint = None
+
+  @property
+  def usr(self):
+    return self.__usr
+
+  @property
+  def uname(self):
+    return self.__uname
+
+  @property
+  def kvname(self):
+    return self.__kvname
+
+  @property
+  def stub(self):
+    return self.__stub
+
+  @property
+  def endpoint(self):
+    return self.__endpoint
+
+  def __enter__(self):
+    self.usr.run(['infinit', 'user', 'create',  self.uname])
+    self.usr.run(['infinit', 'silo', 'create', 'filesystem', 's'])
+    self.usr.run(['infinit', 'network', 'create', 'n', '-S', 's',
+                  '--as', self.uname])
+    self.usr.run(['infinit', 'key-value-store', 'create', self.kvname,
+                  '-N', 'n', '--as', self.uname])
+    port_file = '%s/port' % self.usr.dir
+    self.__proc = self.usr.spawn(
+      ['infinit', 'key-value-store', 'run', self.kvname, '--as', self.uname,
+       '--allow-root-creation',
+       '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
+    while not os.path.exists(port_file):
+      time.sleep(0.1)
+    self.__endpoint = '127.0.0.1:'
+    with open(port_file, 'r') as f:
+      self.__endpoint += f.readline().strip()
+    import grpc
+    import service_pb2_grpc
+    channel = grpc.insecure_channel(self.__endpoint)
+    self.__stub = service_pb2_grpc.kvStub(channel)
+    return self
+
+  def __exit__(self, *args, **kwargs):
+    if self.__proc:
+      self.__proc.terminate()
+      out, err = self.__proc.communicate(timeout = 30)
+      if os.environ.get('OS') != 'windows':
+        try:
+          # SIGTERM is not caught on windows. Might be wine related.
+          assertEq(self.__proc.wait(), 0)
+        except:
+          print('STDOUT: %s' % out)
+          print('STDERR: %s' % err)
+          raise
