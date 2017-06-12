@@ -148,7 +148,8 @@ namespace infinit
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p) = 0;
+                    PaxosClient::Proposal const& p,
+                    bool insert) = 0;
             virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
@@ -186,7 +187,8 @@ namespace infinit
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p) override;
+                    PaxosClient::Proposal const& p,
+                    bool insert) override;
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,
@@ -252,7 +254,8 @@ namespace infinit
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p) override;
+                    PaxosClient::Proposal const& p,
+                    bool insert) override;
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,

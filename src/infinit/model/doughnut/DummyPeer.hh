@@ -51,9 +51,10 @@ namespace infinit
         }
 
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
-        propose(consensus::Paxos::PaxosServer::Quorum const& peers,
-                Address address,
-                consensus::Paxos::PaxosClient::Proposal const& p) override
+        propose(consensus::Paxos::PaxosServer::Quorum const&,
+                Address,
+                consensus::Paxos::PaxosClient::Proposal const&,
+                bool) override
         {
           throw elle::athena::paxos::Unavailable();
         }

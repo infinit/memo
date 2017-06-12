@@ -1029,7 +1029,6 @@ namespace rebalancing
       b1 = std::dynamic_pointer_cast<blocks::MutableBlock>(
         dht_a.dht->fetch(b1->address()));
       BOOST_TEST(b1->data() == elle::Buffer("extend_and_write 1"));
-      ELLE_ERR("VERSION: {}", b1->version());
       auto bb = dht_b.dht->fetch(b1->address());
       BOOST_TEST(bb->data() == elle::Buffer("extend_and_write 1"));
     }
@@ -1302,13 +1301,14 @@ namespace rebalancing
     boost::optional<Paxos::PaxosClient::Accepted>
     propose(PaxosServer::Quorum const& peers,
             Address address,
-            PaxosClient::Proposal const& p) override
+            PaxosClient::Proposal const& p,
+            bool insert) override
     {
       this->_proposing(address, p);
       elle::reactor::wait(this->all_barrier());
       if (!this->_propose_bypass)
         elle::reactor::wait(this->propose_barrier());
-      auto res = Super::propose(peers, address, p);
+      auto res = Super::propose(peers, address, p, insert);
       this->_proposed(address, p);
       return res;
     }
@@ -1944,6 +1944,72 @@ namespace rebalancing
         BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
       }
   }
+
+  ELLE_TEST_SCHEDULED(update_while_evicting)
+  {
+    auto dht_a = make_dht(0);
+    auto dht_b = make_dht(1);
+    dht_b->overlay->connect(*dht_a->overlay);
+    auto dht_c = make_dht(2);
+    auto id_c = dht_c->dht->id();
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = [&]
+      {
+        ELLE_LOG_SCOPE("write block");
+        auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+          std::string("update_while_evicting"));
+        dht_a->dht->seal_and_insert(*b);
+        return b;
+      }();
+    elle::reactor::Barrier finish_rebalancing;
+    elle::reactor::Barrier update;
+    local_c.proposing().connect(
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (p.sender == dht_a->dht->id())
+          elle::reactor::wait(update);
+      });
+    // local_c.proposed().connect(
+    //   [&] (Address, Paxos::PaxosClient::Proposal const& p)
+    //   {
+    //     if (p.sender == dht_a->dht->id())
+    //     {
+    //       ELLE_ERR("BBY");
+    //       finish_rebalancing.open();
+    //     }
+    //   });
+    local_c.confirmed().connect(
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (p.sender == id_c)
+        {
+          update.open();
+          // elle::reactor::wait(finish_rebalancing);
+        }
+      });
+    ELLE_LOG("resign and update");
+    elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
+    {
+      scope.run_background(
+        elle::print("update %f", dht_c),
+        [&]
+        {
+          block->data(elle::Buffer("update_while_evicting'"));
+          dht_a->dht->seal_and_update(*block);
+          ELLE_WARN("BYE 1");
+        });
+      scope.run_background(
+        elle::print("resign %f", dht_c),
+        [&]
+        {
+          dht_c->dht->resign();
+          ELLE_WARN("BYE 2");
+        });
+      elle::reactor::wait(scope);
+    };
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -2242,6 +2308,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
       auto resign_insist = &rebalancing::resign_insist;
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
+      auto update_while_evicting = &rebalancing::update_while_evicting;
+      rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
     }
     {
       auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
