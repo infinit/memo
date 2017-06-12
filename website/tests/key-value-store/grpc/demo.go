@@ -5,7 +5,7 @@ import (
   "golang.org/x/net/context"
   "google.golang.org/grpc"
   "google.golang.org/grpc/grpclog"
-  kv "kv"
+  kvs "kvs"
   "os"
 )
 
@@ -15,27 +15,27 @@ func main() {
     grpclog.Fatalf("failed to dial: %v", err)
   }
   defer conn.Close()
-  client := kv.NewKvClient(conn)
+  store := kvs.NewKeyValueStoreClient(conn)
   cmd := os.Args[2]
   switch cmd {
   default:
     grpclog.Fatalf("unknown command: %v", cmd)
   case "insert":
-    insert(client, os.Args[3], os.Args[4])
+    insert(store, os.Args[3], os.Args[4])
   case "update":
-    update(client, os.Args[3], os.Args[4])
+    update(store, os.Args[3], os.Args[4])
   case "upsert":
-    upsert(client, os.Args[3], os.Args[4])
-  case "get":
-    value, err := get(client, os.Args[3])
+    upsert(store, os.Args[3], os.Args[4])
+  case "fetch":
+    value, err := fetch(store, os.Args[3])
     if err != nil {
       grpclog.Fatalf("unable to get: %v", err)
     }
     fmt.Printf("%s\n", value)
-  case "remove":
-    remove(client, os.Args[3])
+  case "delete":
+    delete_(store, os.Args[3])
   case "list":
-    list, err := list(client)
+    list, err := list(store)
     if err != nil {
       grpclog.Fatalf("unable to list: %v", err)
     }
@@ -43,36 +43,36 @@ func main() {
   }
 }
 
-func insert(client kv.KvClient, key string, value string) error {
-  _, err := client.Insert(context.Background(), &kv.InsertRequest{Key: key, Value: []byte(value)})
+func insert(store kvs.KeyValueStoreClient, key string, value string) error {
+  _, err := store.Insert(context.Background(), &kvs.InsertRequest{Key: key, Value: []byte(value)})
   return err
 }
 
-func update(client kv.KvClient, key string, value string) error {
-  _, err := client.Update(context.Background(), &kv.UpdateRequest{Key: key, Value: []byte(value)})
+func update(store kvs.KeyValueStoreClient, key string, value string) error {
+  _, err := store.Update(context.Background(), &kvs.UpdateRequest{Key: key, Value: []byte(value)})
   return err
 }
 
-func upsert(client kv.KvClient, key string, value string) error {
-  _, err := client.Upsert(context.Background(), &kv.UpsertRequest{Key: key, Value: []byte(value)})
+func upsert(store kvs.KeyValueStoreClient, key string, value string) error {
+  _, err := store.Upsert(context.Background(), &kvs.UpsertRequest{Key: key, Value: []byte(value)})
   return err
 }
 
-func get(client kv.KvClient, key string) (string, error) {
-  res, err := client.Get(context.Background(), &kv.GetRequest{Key: key})
+func fetch(store kvs.KeyValueStoreClient, key string) (string, error) {
+  res, err := store.Fetch(context.Background(), &kvs.FetchRequest{Key: key})
   if err != nil {
     return "", err
   }
   return string(res.Value), nil
 }
 
-func remove(client kv.KvClient, key string) error {
-  _, err := client.Remove(context.Background(), &kv.RemoveRequest{Key: key})
+func delete_(store kvs.KeyValueStoreClient, key string) error {
+  _, err := store.Delete(context.Background(), &kvs.DeleteRequest{Key: key})
   return err
 }
 
-func list(client kv.KvClient) ([]string, error) {
-  res, err := client.List(context.Background(), &kv.ListRequest{})
+func list(store kvs.KeyValueStoreClient) ([]string, error) {
+  res, err := store.List(context.Background(), &kvs.ListRequest{})
   if err != nil {
     return nil, err
   }

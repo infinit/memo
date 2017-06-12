@@ -984,7 +984,9 @@ def configure(
     toolkit = go_toolkit,
     config = drake.go.Config(),
     sources = drake.copy(
-      key_value_store.gen_go.targets(),
+      drake.copy(key_value_store.gen_go.targets(),
+                 drake.Path(go_toolkit.path) / 'src/kvs',
+                 strip_prefix = True),
       drake.Path(go_toolkit.path) / 'src/kv',
       strip_prefix = True),
     target = 'tests/key-value-store/grpc/bin/demo_go')

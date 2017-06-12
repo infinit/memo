@@ -1,49 +1,9 @@
-#include <service.grpc.pb.h>
+#include <memo_kvs.grpc.pb.h>
 #include <grpc++/grpc++.h>
 
-std::unique_ptr<kv::service::kv::Stub> key_value_store;
+using namespace memo::kvs;
 
-void
-insert(std::string const& key, std::string const& value);
-void
-update(std::string const& key, std::string const& value);
-void
-upsert(std::string const& key, std::string const& value);
-std::string
-get(std::string const& key);
-void
-remove_(std::string const& key);
-std::vector<std::string>
-list();
-
-int
-main(int argc, char** argv)
-{
-  auto chan = grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials());
-  key_value_store = kv::service::kv::NewStub(chan);
-  std::string cmd = argv[2];
-  if (cmd == "insert")
-    insert(argv[3], argv[4]);
-  else if (cmd == "update")
-    update(argv[3], argv[4]);
-  else if (cmd == "upsert")
-    upsert(argv[3], argv[4]);
-  else if (cmd == "get")
-    std::cout << get(argv[3]) << std::endl;
-  else if (cmd == "remove")
-    remove_(argv[3]);
-  else if (cmd == "list")
-  {
-    auto l = list();
-    std::cout << "[";
-    for (int i = 0; i < l.size(); i++)
-      std::cout << l[i] << (i < l.size() - 1 ? ", " : "");
-    std::cout << "]" << std::endl;
-  }
-  else
-    std::cerr << "unknown command: " << argv[2] << std::endl;
-  return 0;
-}
+std::unique_ptr<KeyValueStore::Stub> store;
 
 void
 check_status(::grpc::Status const& status)
@@ -58,13 +18,13 @@ check_status(::grpc::Status const& status)
 void
 insert(std::string const& key, std::string const& value)
 {
-  kv::service::InsertResponse res;
+  InsertResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::InsertRequest req;
+    InsertRequest req;
     req.set_key(key);
     req.set_value(value);
-    auto status = key_value_store->insert(&ctx, req, &res);
+    auto status = store->Insert(&ctx, req, &res);
     check_status(status);
   }
 }
@@ -72,13 +32,13 @@ insert(std::string const& key, std::string const& value)
 void
 update(std::string const& key, std::string const& value)
 {
-  kv::service::UpdateResponse res;
+  UpdateResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::UpdateRequest req;
+    UpdateRequest req;
     req.set_key(key);
     req.set_value(value);
-    auto status = key_value_store->update(&ctx, req, &res);
+    auto status = store->Update(&ctx, req, &res);
     check_status(status);
   }
 }
@@ -86,40 +46,40 @@ update(std::string const& key, std::string const& value)
 void
 upsert(std::string const& key, std::string const& value)
 {
-  kv::service::UpsertResponse res;
+  UpsertResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::UpsertRequest req;
+    UpsertRequest req;
     req.set_key(key);
     req.set_value(value);
-    auto status = key_value_store->upsert(&ctx, req, &res);
+    auto status = store->Upsert(&ctx, req, &res);
     check_status(status);
   }
 }
 
 std::string
-get(std::string const& key)
+fetch(std::string const& key)
 {
-  kv::service::GetResponse res;
+  FetchResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::GetRequest req;
+    FetchRequest req;
     req.set_key(key);
-    auto status = key_value_store->get(&ctx, req, &res);
+    auto status = store->Fetch(&ctx, req, &res);
     check_status(status);
   }
   return res.value();
 }
 
 void
-remove_(std::string const& key)
+delete_(std::string const& key)
 {
-  kv::service::RemoveResponse res;
+  DeleteResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::RemoveRequest req;
+    DeleteRequest req;
     req.set_key(key);
-    auto status = key_value_store->remove(&ctx, req, &res);
+    auto status = store->Delete(&ctx, req, &res);
     check_status(status);
   }
 }
@@ -127,11 +87,11 @@ remove_(std::string const& key)
 std::vector<std::string>
 list()
 {
-  kv::service::ListResponse res;
+  ListResponse res;
   {
     grpc::ClientContext ctx;
-    kv::service::ListRequest req;
-    auto status = key_value_store->list(&ctx, req, &res);
+    ListRequest req;
+    auto status = store->List(&ctx, req, &res);
   }
   std::vector<std::string> list;
   for (int i = 0; i < res.items_size(); i++)
@@ -139,3 +99,31 @@ list()
   return list;
 }
 
+int
+main(int argc, char** argv)
+{
+  auto chan = grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials());
+  store = KeyValueStore::NewStub(chan);
+  std::string cmd = argv[2];
+  if (cmd == "insert")
+    insert(argv[3], argv[4]);
+  else if (cmd == "update")
+    update(argv[3], argv[4]);
+  else if (cmd == "upsert")
+    upsert(argv[3], argv[4]);
+  else if (cmd == "fetch")
+    std::cout << fetch(argv[3]) << std::endl;
+  else if (cmd == "delete")
+    delete_(argv[3]);
+  else if (cmd == "list")
+  {
+    auto l = list();
+    std::cout << "[";
+    for (int i = 0; i < l.size(); i++)
+      std::cout << l[i] << (i < l.size() - 1 ? ", " : "");
+    std::cout << "]" << std::endl;
+  }
+  else
+    std::cerr << "unknown command: " << argv[2] << std::endl;
+  return 0;
+}

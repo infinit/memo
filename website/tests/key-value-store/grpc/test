@@ -21,7 +21,13 @@ for lang in ['go', 'cc', 'py']:
       keys.append(key)
       value = 'value%d' % j
       check(['insert', key, value])
-      assertEq(check(['get', key]), value)
+      assertEq(check(['fetch', key]), value)
 
     l = check(['list'])
     assertEq(l, '[%s]' % ' '.join(keys))
+
+    for j in range(0, 5):
+      check(['delete', 'key%d' % j])
+
+    l = check(['list'])
+    assertEq(l, '[]')
