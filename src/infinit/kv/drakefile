@@ -5,15 +5,20 @@ import drake.go
 
 header = None
 library = None
-service_proto = None
 rule_build = None
+
+service_proto = None
+gen_cpp = None
+gen_go = None
+gen_py = None
 
 def configure(
   go_toolkit,
   go_config,
   grpc,
 ):
-  global header, library, service_proto, rule_build
+  global header, library, rule_build
+  global service_proto, gen_cpp, gen_go, gen_py
 
   windows = go_toolkit.os == 'windows'
 
@@ -26,10 +31,10 @@ def configure(
   doughnut_grpc = drake.copy(gen_doughnut.targets(), 'src/doughnut',
                              strip_prefix = True)
   service_proto = drake.node('protobuf/service.proto')
-  gen_kv_service = grpc.GRPCGoGen(service_proto,
-                                  grpc.grpc.protoc,
-                                  toolkit = go_toolkit)
-  kv_grpc = drake.copy(gen_kv_service.targets(), 'src/kv/service',
+  gen_go = grpc.GRPCGoGen(service_proto,
+                          grpc.grpc.protoc,
+                          toolkit = go_toolkit)
+  kv_grpc = drake.copy(gen_go.targets(), 'src/kv/service',
                        strip_prefix = True)
   gen_kv_data = grpc.GRPCGoGen(drake.node('protobuf/data.proto'),
                                grpc.grpc.protoc,
@@ -99,3 +104,12 @@ def configure(
   library = kv_lib_builder.library
   rule_build << header
   rule_build << library
+
+  gen_cpp = grpc.GRPCCxxGen(
+    service_proto,
+    grpc.grpc.protoc,
+    drake.node(grpc.grpc.grpc_cpp_plugin))
+  gen_py = grpc.GRPCPyGen(
+    service_proto,
+    grpc.grpc.protoc,
+    drake.node(grpc.grpc.grpc_python_plugin))
