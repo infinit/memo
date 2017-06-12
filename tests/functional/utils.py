@@ -589,9 +589,9 @@ class KeyValueStoreInfrastructure():
     with open(port_file, 'r') as f:
       self.__endpoint += f.readline().strip()
     import grpc
-    import service_pb2_grpc
+    import memo_kvs_pb2_grpc
     channel = grpc.insecure_channel(self.__endpoint)
-    self.__stub = service_pb2_grpc.kvStub(channel)
+    self.__stub = memo_kvs_pb2_grpc.KeyValueStoreStub(channel)
     return self
 
   def __exit__(self, *args, **kwargs):
