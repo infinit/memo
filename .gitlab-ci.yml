@@ -37,6 +37,7 @@ x86_64-centos6-gcc4:
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
     - DESC=$(git describe)
+    - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time scl enable devtoolset-4 rh-python34 "./buildenv --pick-build-tree --branch $CI_BUILD_REF_NAME --link-build-tree $BUILD_DIR --build-trees-root /cache/$CI_PROJECT_NAME"
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
     - mkdir -p "$INSTALL_DIR"
@@ -48,12 +49,9 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
     - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
     - ssh buildslave@packages.infinit.sh 'make yum'
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
-    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
-    - if git -C "$SOURCE_DIR" describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
+    - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit"; fi
     - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
-    - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 $SOURCE_DIR/note-bench-stats ./bench"
     - git -C "$SOURCE_DIR" push --force git@git.infinit.io:${CI_PROJECT_NAME} refs/notes/bench
@@ -157,6 +155,7 @@ x86_64-jessie-gcc4:
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
     - DESC=$(git describe)
+    - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - mkdir -p "$INSTALL_DIR"
@@ -167,9 +166,9 @@ x86_64-jessie-gcc4:
     - time python3 drake --website=false --beyond=false -j $(nproc) //install
     - time python3 drake --website=false --beyond=false -j $(nproc) //debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
+    - time if $IS_RELEASE; then python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit; fi
     - time scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - rm "infinit_${DESC}_amd64.deb"
-    - time if git -C "$SOURCE_DIR" describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - time ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
@@ -217,14 +216,15 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - SOURCE_DIR=${CI_PROJECT_DIR}
-    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
-    - INSTALL_DIR=$SOURCE_DIR/_install
-    - DESC=$(git describe)
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - SOURCE_DIR=${CI_PROJECT_DIR}
+    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
+    - INSTALL_DIR=$SOURCE_DIR/_install
+    - DESC=$(git describe)
+    - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - mkdir -p "$BUILD_DIR"
     - farm/configure --arch x86_64 --os osx --compiler clang --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
@@ -238,9 +238,7 @@ x86_64-osx-clang:
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - ssh debian@debian.infinit.io 'make brew'
     - rm "$TARBALL"
-    - python3 drake -j 4 //debian-debug
-    - scp "$BUILD_DIR"/infinit-debug-symbols-macosx-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian
-    - ssh buildslave@packages.infinit.sh 'make debian'
+    - time if $IS_RELEASE; then python3 drake -j 4 //symbols-commit; fi
   tags:
     - x86_64
     - osx
