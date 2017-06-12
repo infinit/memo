@@ -985,7 +985,7 @@ def configure(
     config = drake.go.Config(),
     sources = drake.copy(
       drake.copy(key_value_store.gen_go.targets(),
-                 drake.Path(go_toolkit.path) / 'src/kvs',
+                 drake.Path(go_toolkit.path) / 'src/memo/kvs',
                  strip_prefix = True),
       drake.Path(go_toolkit.path) / 'src/kv',
       strip_prefix = True),

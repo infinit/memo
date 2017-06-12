@@ -5,7 +5,7 @@ import (
   "golang.org/x/net/context"
   "google.golang.org/grpc"
   "google.golang.org/grpc/grpclog"
-  kvs "kvs"
+  kvs "memo/kvs"
   "os"
 )
 
