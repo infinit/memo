@@ -1990,7 +1990,7 @@ ELLE_TEST_SUITE()
 
 #define BOOST_NAMED_TEST_CASE(name, test_function)                      \
   boost::unit_test::make_test_case(                                     \
-    boost::function<void ()>(test_function), name, __FILE__, __LINE__ ) \
+    test_function, name, __FILE__, __LINE__ )                           \
 
 #define TEST(Suite, Overlay, Name, Timeout, Function, ...)              \
   Suite->add(BOOST_NAMED_TEST_CASE(                                     \
