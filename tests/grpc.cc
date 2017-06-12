@@ -510,157 +510,6 @@ ELLE_TEST_SCHEDULED(protogen)
   }
 }
 
-ELLE_TEST_SCHEDULED(filesystem)
-{
-  DHTs dhts(3);
-  auto client = dhts.client();
-  infinit::model::Endpoints eps("127.0.0.1", 0);
-  auto ep = *eps.begin();
-  elle::reactor::Barrier b;
-  int listening_port;
-  auto t = std::make_unique<elle::reactor::Thread>("grpc",
-    [&] {
-      b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, ep, &listening_port);
-    });
-  elle::reactor::wait(b);
-  ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
-  elle::reactor::background([&] {
-  auto chan = grpc::CreateChannel(
-      elle::sprintf("127.0.0.1:%s", listening_port),
-      grpc::InsecureChannelCredentials());
-  auto stub = FileSystem::NewStub(chan);
-  ::Path path;
-  ::FsStatus status;
-  { // list /
-    path.set_path("/");
-    ::DirectoryContent dc;
-    grpc::ClientContext context;
-    ELLE_DEBUG("invoking ListDir...");
-    stub->ListDir(&context, path, &dc);
-    ELLE_DEBUG("...ListDir returned");
-    BOOST_CHECK_EQUAL(dc.status().code(), 0);
-    BOOST_CHECK_EQUAL(dc.content_size(), 2);
-  }
-  // dirs
-  path.set_path("/foo");
-  { // mkdir
-    grpc::ClientContext context;
-    stub->MkDir(&context, path, &status);
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // check
-    path.set_path("/");
-    ::DirectoryContent dc;
-    grpc::ClientContext context;
-    stub->ListDir(&context, path, &dc);
-    BOOST_CHECK_EQUAL(dc.status().code(), 0);
-    BOOST_CHECK_EQUAL(dc.content_size(), 3);
-    BOOST_CHECK_EQUAL(dc.content(2).name(), "foo");
-    BOOST_CHECK_EQUAL(dc.content(2).type(), ENTRY_DIRECTORY);
-  }
-  { // rmdir
-    path.set_path("/foo");
-    grpc::ClientContext context;
-    stub->RmDir(&context, path, &status);
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // check
-    path.set_path("/");
-    ::DirectoryContent dc;
-    grpc::ClientContext context;
-    stub->ListDir(&context, path, &dc);
-    BOOST_CHECK_EQUAL(dc.status().code(), 0);
-    BOOST_CHECK_EQUAL(dc.content_size(), 2);
-  }
-  // files
-  ::Handle handle;
-  ::StatusHandle sh;
-  ::HandleBuffer hb;
-  ::StatusBuffer sb;
-  ::HandleRange hr;
-  { // open
-    path.set_path("/bar");
-    grpc::ClientContext context;
-    stub->OpenFile(&context, path, &sh);
-    BOOST_CHECK_EQUAL(sh.status().code(), 0);
-  }
-  { // write
-    hb.mutable_handle()->set_handle(sh.handle().handle());
-    hb.mutable_buffer()->set_data("barbarbar");
-    grpc::ClientContext context;
-    stub->Write(&context, hb, &status);
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // close
-    grpc::ClientContext context;
-    stub->CloseFile(&context, sh.handle(), &status);
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // open
-    grpc::ClientContext context;
-    stub->OpenFile(&context, path, &sh);
-    BOOST_CHECK_EQUAL(sh.status().code(), 0);
-  }
-  { // read
-    hr.mutable_handle()->set_handle(sh.handle().handle());
-    hr.mutable_range()->set_size(1000);
-    hr.mutable_range()->set_offset(1);
-    grpc::ClientContext context;
-    stub->Read(&context, hr, &sb);
-    BOOST_CHECK_EQUAL(sb.status().code(), 0);
-    BOOST_CHECK_EQUAL(sb.buffer().data(), "arbarbar");
-  }
-  { // open
-    path.set_path("/stream");
-    grpc::ClientContext context;
-    stub->OpenFile(&context, path, &sh);
-    BOOST_CHECK_EQUAL(sh.status().code(), 0);
-  }
-  { // write stream
-    grpc::ClientContext context;
-    std::unique_ptr<grpc::ClientWriter< ::HandleBuffer> > writer(
-      stub->WriteStream(&context, &status));
-    hb.mutable_handle()->set_handle(sh.handle().handle());
-    for (int i = 0; i< 67; ++i)
-    {
-      hb.mutable_buffer()->set_offset(16384 * i);
-      hb.mutable_buffer()->set_data(std::string(16384, 'a'));
-      writer->Write(hb);
-    }
-    writer->WritesDone();
-    writer->Finish();
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // close
-    grpc::ClientContext context;
-    stub->CloseFile(&context, sh.handle(), &status);
-    BOOST_CHECK_EQUAL(status.code(), 0);
-  }
-  { // open
-    grpc::ClientContext context;
-    stub->OpenFile(&context, path, &sh);
-    BOOST_CHECK_EQUAL(sh.status().code(), 0);
-  }
-  { // read stream
-    hr.mutable_handle()->set_handle(sh.handle().handle());
-    hr.mutable_range()->set_size(-1);
-    hr.mutable_range()->set_offset(1);
-    grpc::ClientContext context;
-    std::unique_ptr<grpc::ClientReader< ::StatusBuffer> > reader(
-      stub->ReadStream(&context, hr));
-    std::string payload;
-    while (reader->Read(&sb))
-    {
-      BOOST_CHECK_EQUAL(sb.status().code(), 0);
-      payload += sb.buffer().data();
-    }
-    reader->Finish();
-    BOOST_CHECK_EQUAL(payload.size(), 67 * 16384 - 1);
-  }
-  });
-}
-
 ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 {
   // Test GRPC API with multiple concurrent clients
@@ -694,7 +543,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*servers[0]->dht, boost::none, ep, &listening_port);
+      infinit::grpc::serve_grpc(*servers[0]->dht, ep, &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
@@ -786,7 +635,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep, &listening_port);
+      infinit::grpc::serve_grpc(*client.dht.dht, ep, &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
@@ -1064,53 +913,6 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
     }
 #endif
 
-    // NB
-    ::memo::vs::Block nb;
-    { // make
-      grpc::ClientContext context;
-      ::memo::vs::MakeNamedBlockRequest str;
-      str.set_key("uid");
-      stub->MakeNamedBlock(&context, str, &nb);
-    }
-    { // insert
-      ::memo::vs::InsertRequest insert;
-      insert.mutable_block()->CopyFrom(nb);
-      insert.mutable_block()->set_data("coin");
-      grpc::ClientContext context;
-      ::memo::vs::InsertResponse status;
-      auto res = stub->Insert(&context, insert, &status);
-      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
-    }
-    ::memo::vs::NamedBlockAddressResponse nba;
-    { // ask for address
-      grpc::ClientContext context;
-      ::memo::vs::NamedBlockAddressRequest str;
-      str.set_key("uid");
-      stub->NamedBlockAddress(&context, str, &nba);
-    }
-    { // fetch
-      grpc::ClientContext context;
-      ::memo::vs::FetchRequest fetch;
-      fetch.set_address(nba.address());
-      ::memo::vs::FetchResponse ab;
-      stub->Fetch(&context, fetch, &ab);
-      BOOST_CHECK(ab.has_block());
-      BOOST_CHECK_EQUAL(ab.block().data(), "coin");
-    }
-    { // dummy address
-      grpc::ClientContext context;
-      ::memo::vs::NamedBlockAddressRequest str;
-      str.set_key("invalidid");
-      stub->NamedBlockAddress(&context, str, &nba);
-    }
-    { // fetch
-      grpc::ClientContext context;
-      ::memo::vs::FetchResponse ab;
-      ::memo::vs::FetchRequest fetch;
-      fetch.set_address(nba.address());
-      auto res = stub->Fetch(&context, fetch, &ab);
-      BOOST_CHECK_EQUAL(res, ::grpc::NOT_FOUND);
-    }
   });
 }
 
@@ -1123,11 +925,5 @@ ELLE_TEST_SUITE()
   master.add(BOOST_TEST_CASE(memo_ValueStore), 0, valgrind(20));
   master.add(BOOST_TEST_CASE(memo_ValueStore_parallel), 0, valgrind(60));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
-#ifndef INFINIT_WINDOWS
-  // Test runs fine on native windows, but sometimes get stuck on wine
-  // between the return of the grpc service callback and the return of
-  // the client function call (both running in system threads).
-  master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
-#endif
   atexit(google::protobuf::ShutdownProtobufLibrary);
 }

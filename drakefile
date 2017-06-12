@@ -19,12 +19,16 @@ git = None
 elle = None
 installed_binaries = []
 
+# //build: Build libraries and binaries.
 rule_build = None
+# //tests: Build tests.
+rule_tests = None
+# //check: Build and run tests.
 rule_check = None
+# //install: Install binaries under <prefix>.
 rule_install = None
 # //symbols: prepare the symbol files for crash-reporter.
 rule_symbols = None
-rule_tests = None
 
 description_regex = '^.{0,2048}$'
 email_regex = '^[^@]+@[^@]+\.[^@]+$'
@@ -878,7 +882,7 @@ def configure(
       else:
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc' and cxx_toolkit.os is drake.os.linux:
-      that_test_libs += grpc.gendn.targets() + grpc.genfs.targets()
+      that_test_libs += grpc.gendn.targets()
       that_test_libs.append(grpc.grpc.protobuf_lib)
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()

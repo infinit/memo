@@ -184,18 +184,12 @@ def configure(
     memo_vs_proto,
     protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
-  genfs = GRPCCxxGen(
-    drake.node('fs.proto'),
-    protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin))
-  srcs = genfs.targets() + gendn.targets() + drake.nodes(
+  sources = gendn.targets() + drake.nodes(
     'memo_vs.cc',
     'grpc.cc',
-    'filesystem.cc',
     'serializer.cc',
     'serializer.hh'
   )
-  sources = srcs
   # make a convenience grpc lib with all libgrpc stuff
   protobuf_lib = drake.copy(
     grpc.protobuf_lib, '.', strip_prefix = True)

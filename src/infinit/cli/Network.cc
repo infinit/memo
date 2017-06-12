@@ -922,7 +922,7 @@ namespace infinit
           int grpc_port = -1;
           grpc_thread.reset(new elle::reactor::Thread("grpc",
             [dht=dht.get(), ep, &grpc_port] {
-              infinit::grpc::serve_grpc(*dht, boost::none, ep, &grpc_port);
+              infinit::grpc::serve_grpc(*dht, ep, &grpc_port);
           }));
           if (grpc_port_file)
           {
