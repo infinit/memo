@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package kv.data;
+package memo.kvs.data;
 
 message ValueStore {
   bytes address = 1;

@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
-	data "kv/data"
-	service "kv/service"
+	data "kvs/data"
+	service "kvs/service"
 	"sort"
 	"strings"
 )
@@ -129,7 +129,7 @@ func (server *kvServer) Upsert(ctx context.Context, req *service.UpsertRequest) 
 	return &service.UpsertResponse{}, nil
 }
 
-func (server *kvServer) Get(ctx context.Context, req *service.GetRequest) (*service.GetResponse, error) {
+func (server *kvServer) Fetch(ctx context.Context, req *service.FetchRequest) (*service.FetchResponse, error) {
 	grpclog.Printf("get %s\n", req.GetKey())
 	key := req.GetKey()
 	if key == "" {
@@ -151,10 +151,10 @@ func (server *kvServer) Get(ctx context.Context, req *service.GetRequest) (*serv
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "unable to fetch value: %v", err)
 	}
-	return &service.GetResponse{Value: chb.GetBlock().GetData()}, nil
+	return &service.FetchResponse{Value: chb.GetBlock().GetData()}, nil
 }
 
-func (server *kvServer) Remove(ctx context.Context, req *service.RemoveRequest) (*service.RemoveResponse, error) {
+func (server *kvServer) Delete(ctx context.Context, req *service.DeleteRequest) (*service.DeleteResponse, error) {
 	grpclog.Printf("remove %s\n", req.GetKey())
 	key := req.GetKey()
 	if key == "" {
@@ -167,7 +167,7 @@ func (server *kvServer) Remove(ctx context.Context, req *service.RemoveRequest) 
 		}
 		return nil, err
 	}
-	return &service.RemoveResponse{}, nil
+	return &service.DeleteResponse{}, nil
 }
 
 func (server *kvServer) List(ctx context.Context, req *service.ListRequest) (*service.ListResponse, error) {

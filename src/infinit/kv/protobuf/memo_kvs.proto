@@ -1,14 +1,14 @@
 syntax = "proto3";
 
-package kv.service;
+package memo.kvs;
 
-service kv {
-  rpc insert(InsertRequest) returns (InsertResponse) {}
-  rpc update(UpdateRequest) returns (UpdateResponse) {}
-  rpc upsert(UpsertRequest) returns (UpsertResponse) {}
-  rpc get(GetRequest) returns (GetResponse) {}
-  rpc remove(RemoveRequest) returns (RemoveResponse) {}
-  rpc list(ListRequest) returns (ListResponse) {}
+service KeyValueStore {
+  rpc Insert(InsertRequest) returns (InsertResponse) {}
+  rpc Update(UpdateRequest) returns (UpdateResponse) {}
+  rpc Upsert(UpsertRequest) returns (UpsertResponse) {}
+  rpc Fetch(FetchRequest) returns (FetchResponse) {}
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+  rpc List(ListRequest) returns (ListResponse) {}
 };
 
 message InsertRequest {
@@ -35,19 +35,19 @@ message UpsertRequest {
 message UpsertResponse {
 };
 
-message GetRequest {
+message FetchRequest {
   string key = 1;
 };
 
-message GetResponse {
+message FetchResponse {
   bytes value = 1;
 };
 
-message RemoveRequest {
+message DeleteRequest {
   string key = 1;
 };
 
-message RemoveResponse {
+message DeleteResponse {
 };
 
 message ListRequest {

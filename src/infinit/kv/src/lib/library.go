@@ -5,7 +5,7 @@ import (
 	"doughnut"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	kv "kv/service"
+	kv "kvs/service"
 	"net"
 	"server"
 )
@@ -35,7 +35,7 @@ func RunServer(name string, vStoreEnpoint string, grpcEndpoint string, bootstrap
 	*grpcPort = kvConn.Addr().(*net.TCPAddr).Port
 
 	grpcServer = grpc.NewServer()
-	kv.RegisterKvServer(grpcServer, server.NewServer(client, name, bootstrap))
+	kv.RegisterKeyValueStoreServer(grpcServer, server.NewServer(client, name, bootstrap))
 	grpcServer.Serve(kvConn)
 }
 

@@ -30,16 +30,16 @@ def configure(
                                 toolkit = go_toolkit)
   doughnut_grpc = drake.copy(gen_doughnut.targets(), 'src/doughnut',
                              strip_prefix = True)
-  service_proto = drake.node('protobuf/service.proto')
+  service_proto = drake.node('protobuf/memo_kvs.proto')
   gen_go = grpc.GRPCGoGen(service_proto,
                           grpc.grpc.protoc,
                           toolkit = go_toolkit)
-  kv_grpc = drake.copy(gen_go.targets(), 'src/kv/service',
+  kv_grpc = drake.copy(gen_go.targets(), 'src/kvs/service',
                        strip_prefix = True)
-  gen_kv_data = grpc.GRPCGoGen(drake.node('protobuf/data.proto'),
+  gen_kv_data = grpc.GRPCGoGen(drake.node('protobuf/memo_kvs_data.proto'),
                                grpc.grpc.protoc,
                                toolkit = go_toolkit)
-  kv_data = drake.copy(gen_kv_data.targets(), 'src/kv/data',
+  kv_data = drake.copy(gen_kv_data.targets(), 'src/kvs/data',
                        strip_prefix = True)
   local_config.add_include_path(drake.path_build())
 
