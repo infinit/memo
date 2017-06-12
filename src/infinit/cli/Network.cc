@@ -924,9 +924,9 @@ namespace infinit
         );
         hook_stats_signals(*dht);
         elle::reactor::Thread::unique_ptr grpc_thread;
+        int grpc_port = -1;
         if (grpc)
         {
-          int grpc_port = -1;
           grpc_thread.reset(new elle::reactor::Thread("grpc",
             [dht=dht.get(), grpc, &grpc_port] {
               infinit::grpc::serve_grpc(*dht, boost::none, *grpc, &grpc_port);
