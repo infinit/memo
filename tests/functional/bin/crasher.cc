@@ -4,7 +4,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/reactor/Thread.hh>
 
-#include <crash_reporting/CrashReporter.hh>
+#include <crash-report/CrashReporter.hh>
 
 namespace po = boost::program_options;
 
@@ -60,7 +60,7 @@ main(int argc, char** argv)
     // Enable crash handling.
     elle::os::setenv("INFINIT_CRASH_REPORTER", "1");
     auto crash_reporter =
-      std::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
+      std::make_unique<crash_report::CrashReporter>(server, dumps, version);
     if (crash)
       do_crash();
     elle::reactor::Scheduler sched;

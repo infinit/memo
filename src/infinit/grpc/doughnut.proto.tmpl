@@ -1,0 +1,87 @@
+<%!
+  def documentation(elem, prefix):
+    def comment_prefix(prefix):
+      return prefix + "// "
+
+    def comment_join(prefix):
+     return "\n" + comment_prefix(prefix)
+
+    def wrapper(prefix):
+      import textwrap
+      return textwrap.TextWrapper(80 - len(comment_prefix(prefix)))
+
+    def insert_comment(comment, format = "%s"):
+      ret = comment_prefix(prefix)
+      if isinstance(comment, list):
+        comment = ", ".join(comment)
+      ret += comment_join(prefix).join(wrapper(prefix).wrap(format % comment))
+      return ret + "\n"
+
+    doc = elem.get('documentation', {})
+    return (comment_prefix(prefix) + "\n").join(
+      map(lambda args: insert_comment(doc.get(args[0]), *args[1:]),
+          filter(lambda entry: doc.get(entry[0]),
+                 [
+                   ('abstract',),
+                   ('description',),
+                   ('specific', 'This attribute is specific to %s.'),
+                   ('related', 'Related: %s.'),
+                 ])))
+
+  def print_rpcs(elems, prefix = ''):
+
+    def print_rpc(elem, prefix):
+      res = documentation(elem, prefix)
+      res += prefix + "rpc %s(%s) returns (%s) {}" % (
+        elem["name"], " ".join(elem["arguments"]), elem["returns"]
+      )
+      return res
+    return "\n\n".join(map(lambda elem: print_rpc(elem, prefix + '  '), elems))
+
+  def print_messages(elems, prefix = ''):
+
+    def print_message(elem, prefix = ''):
+
+      def rule(elem):
+        if elem.get('rule', ''):
+          return elem['rule'] + ' '
+        return ''
+
+      def print_attribute(elem, prefix = '  '):
+        return "%s%s%s%s %s = %s;" % (
+          documentation(elem, prefix),
+          prefix, rule(elem), elem['type'], elem['name'], elem['index']
+        )
+
+      def print_oneof(elem, prefix):
+        return "%s%s%s %s {\n%s\n%s}" % (
+          documentation(elem, prefix),
+          prefix, elem['type'], elem['name'],
+         '\n\n'.join(map(lambda attribute: print_attribute(attribute, prefix + '  '),
+                       elem['values'])),
+          prefix
+       )
+
+      def print_(elem,  prefix = '  '):
+        if elem['type'] == 'oneof':
+          return print_oneof(elem, prefix)
+        else:
+          return print_attribute(elem, prefix)
+
+      return "%smessage %s {\n%s%s\n}" % (
+        documentation(elem, prefix),
+        elem['name'],
+        '\n\n'.join(map(lambda attribute: print_(attribute, prefix + '  '),
+                        elem.get('attributes', []))),
+        prefix
+      )
+
+    return "\n\n".join(map(lambda elem: print_message(elem, prefix), elems))
+%>
+syntax = "${proto["syntax"]}";
+
+service ${proto["service"]["name"]} {
+${print_rpcs(proto["service"]["rpcs"])}
+}
+
+${print_messages(proto["messages"])}

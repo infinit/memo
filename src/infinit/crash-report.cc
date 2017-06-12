@@ -1,4 +1,4 @@
-#include <infinit/report-crash.hh>
+#include <infinit/crash-report.hh>
 
 #include <elle/log.hh>
 
@@ -6,13 +6,13 @@ ELLE_LOG_COMPONENT("CrashReporter");
 
 #if INFINIT_ENABLE_CRASH_REPORTER
 
-#include <crash_reporting/CrashReporter.hh>
+#include <crash-report/CrashReporter.hh>
 
 #include <infinit/utility.hh> //canonical_folder, etc.
 
 namespace infinit
 {
-  using CrashReporter = crash_reporting::CrashReporter;
+  using CrashReporter = crash_report::CrashReporter;
 
   /// Crash reporter.
   auto
