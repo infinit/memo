@@ -1,6 +1,6 @@
 {
   "syntax": "proto3",
-  "package": "memo",
+  "package": "memo.vs",
   "services": [{
     "name": "ValueStore",
     "rpcs": [
@@ -70,12 +70,12 @@
         }
       },
       {
-        "name": "Remove",
-        "arguments": ["RemoveRequest"],
-        "returns": "RemoveResponse",
+        "name": "Delete",
+        "arguments": ["DeleteRequest"],
+        "returns": "DeleteResponse",
         "documentation": {
           "abstract": "Erase the block at the given address",
-          "description": "The address of the Block is given by the RemoveRequest. The ability to remove a Block is determined by two factors: The existence of the Block and the permission to delete it. The RemoveResponse will contain the information related to result of the deletion attempt"
+          "description": "The address of the Block is given by the DeleteRequest. The ability to remove a Block is determined by two factors: The existence of the Block and the permission to delete it. The DeleteResponse will contain the information related to result of the deletion attempt"
         }
       }
     ]
@@ -231,7 +231,7 @@
       ]
     },
     {
-      "name": "RemoveRequest",
+      "name": "DeleteRequest",
       "documentation": {
         "abstract": "A request to remove a Block"
       },
@@ -681,9 +681,9 @@
       ]
     },
     {
-      "name": "RemoveResponse",
+      "name": "DeleteResponse",
       "documentation": {
-        "abstract": "The response to a RemoveRequest"
+        "abstract": "The response to a DeleteRequest"
       },
       "attributes": [
         {

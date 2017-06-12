@@ -878,12 +878,7 @@ def configure(
       else:
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc' and cxx_toolkit.os is drake.os.linux:
-      that_test_libs += drake.nodes(
-        'src/infinit/grpc/memo.grpc.pb.cc',
-        'src/infinit/grpc/memo.pb.cc',
-        'src/infinit/grpc/fs.grpc.pb.cc',
-        'src/infinit/grpc/fs.pb.cc',
-      )
+      that_test_libs += grpc.gendn.targets() + grpc.genfs.targets()
       that_test_libs.append(grpc.grpc.protobuf_lib)
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()

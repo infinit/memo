@@ -80,6 +80,8 @@
 %>
 syntax = "${proto["syntax"]}";
 
+package ${proto["package"]};
+
 service ${proto["service"]["name"]} {
 ${print_rpcs(proto["service"]["rpcs"])}
 }

@@ -3,7 +3,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/serialization/json.hh>
 
-#include <infinit/grpc/memo.grpc.pb.h>
+#include <infinit/grpc/memo_vs.grpc.pb.h>
 #include <infinit/grpc/serializer.hh>
 
 # include <elle/athena/paxos/Client.hh>
@@ -290,29 +290,24 @@ namespace infinit
       // We need to store our wrapper somewhere
       static std::vector<std::shared_ptr<UpdateNamed>> update_wrappers;
       auto ptr = std::make_unique<Service>();
-      ptr->AddMethod<::memo::FetchRequest, ::memo::FetchResponse>
-        (dht.fetch, dht, "/memo.ValueStore/Fetch");
-      ptr->AddMethod<::memo::InsertRequest, ::memo::InsertResponse>
-        (dht.insert, dht, "/memo.ValueStore/Insert");
+      ptr->AddMethod<::memo::vs::FetchRequest, ::memo::vs::FetchResponse>
+        (dht.fetch, dht, "/memo.vs.ValueStore/Fetch");
+      ptr->AddMethod<::memo::vs::InsertRequest, ::memo::vs::InsertResponse>
+        (dht.insert, dht, "/memo.vs.ValueStore/Insert");
       Update update = dht.update.function();
       update_wrappers.emplace_back(new UpdateNamed(
         make_update_wrapper(dht.update.function()),
         infinit::model::block,
         infinit::model::conflict_resolver = nullptr,
         infinit::model::decrypt_data = false));
-      ptr->AddMethod<::memo::UpdateRequest, ::memo::UpdateResponse>
-        (*update_wrappers.back(), dht, "/memo.ValueStore/Update");
-      ptr->AddMethod<::memo::MakeMutableBlockRequest, ::memo::Block, true>
-        (dht.make_mutable_block, dht, "/memo.ValueStore/MakeMutableBlock");
-      ptr->AddMethod<::memo::MakeImmutableBlockRequest, ::memo::Block, true>
-        (dht.make_immutable_block, dht,"/memo.ValueStore/MakeImmutableBlock");
-      ptr->AddMethod<::memo::MakeNamedBlockRequest, ::memo::Block, true>
-        (dht.make_named_block, dht, "/memo.ValueStore/MakeNamedBlock");
-      ptr->AddMethod<::memo::NamedBlockAddressRequest,
-                     ::memo::NamedBlockAddressResponse , true>
-        (dht.named_block_address, dht, "/memo.ValueStore/NamedBlockAddress");
-      ptr->AddMethod<::memo::RemoveRequest, ::memo::RemoveResponse>
-        (dht.remove, dht, "/memo.ValueStore/Remove");
+      ptr->AddMethod<::memo::vs::UpdateRequest, ::memo::vs::UpdateResponse>
+        (*update_wrappers.back(), dht, "/memo.vs.ValueStore/Update");
+      ptr->AddMethod<::memo::vs::MakeMutableBlockRequest, ::memo::vs::Block, true>
+        (dht.make_mutable_block, dht, "/memo.vs.ValueStore/MakeMutableBlock");
+      ptr->AddMethod<::memo::vs::MakeImmutableBlockRequest, ::memo::vs::Block, true>
+        (dht.make_immutable_block, dht,"/memo.vs.ValueStore/MakeImmutableBlock");
+      ptr->AddMethod<::memo::vs::DeleteRequest, ::memo::vs::DeleteResponse>
+        (dht.remove, dht, "/memo.vs.ValueStore/Delete");
       return std::move(ptr);
     }
   }
