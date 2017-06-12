@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+import json
+import subprocess
+
+for lang in ['go', 'cc', 'py']:
+  print('test: %s' % lang)
+
+  with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+
+    bin = '%s/demo%s%s' % (os.environ['KV_DEMO_DIR'], '.' if lang == 'py' else '_', lang)
+
+    def check(args):
+      return subprocess.check_output([bin, i.endpoint] + args).decode('utf-8').strip().replace('\'','').replace(',', '')
+
+    keys = list()
+    for j in range(0, 5):
+      key = 'key%d' % j
+      keys.append(key)
+      value = 'value%d' % j
+      check(['insert', key, value])
+      assertEq(check(['get', key]), value)
+
+    l = check(['list'])
+    assertEq(l, '[%s]' % ' '.join(keys))

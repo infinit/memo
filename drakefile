@@ -945,6 +945,8 @@ def configure(
       website = drake.include(
         'website',
         python = elle.python3,
+        go_toolkit = go_toolkit,
+        cxx_toolkit = cxx_toolkit,
         prefix = prefix,
         git = git,
         bottle = bottle,
@@ -952,6 +954,7 @@ def configure(
         PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
         doughnut_json = grpc.doughnut_json,
+        key_value_store = kv,
         infinit = infinit_cli,
         grpc = grpc,
       )
