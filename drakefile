@@ -838,9 +838,7 @@ def configure(
       utils = drake.node('tests/functional/utils.py')
       if with_kvs:
         kv_grpc = drake.copy(
-          grpc.GRPCPyGen(kv.service_proto,
-                         grpc.grpc.protoc,
-                         drake.node(grpc.grpc.grpc_python_plugin)).targets(),
+          kv.gen_py.targets(),
           'tests/functional/lib', strip_prefix = True)
       tests = list(
         map(lambda x: functional_test(x),
