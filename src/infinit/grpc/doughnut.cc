@@ -188,7 +188,12 @@ namespace infinit
       {
         return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
       }
-      sched.mt_run<void>("invoke", [&] {
+      sched.mt_run<void>(
+        elle::print("invoke %r", elle::type_info<REQ>().name()),
+        [&] {
+          auto& thread = *ELLE_ENFORCE(elle::reactor::scheduler().current());
+          thread.name(elle::print(
+                        "{} ({})", thread.name(), static_cast<void*>(&thread)));
           try
           {
             ELLE_TRACE("invoking some method: %s -> %s",
