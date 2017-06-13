@@ -954,7 +954,7 @@ def configure(
         PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
         doughnut_json = grpc.doughnut_json,
-        key_value_store = kv,
+        key_value_store = kv if with_kvs else False,
         infinit = infinit_cli,
         grpc = grpc,
       )
