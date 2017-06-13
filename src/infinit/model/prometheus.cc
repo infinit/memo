@@ -126,6 +126,37 @@ namespace infinit
     }
 
     auto
+    Prometheus::make_counter_family(std::string const& name,
+                                  std::string const& help)
+      -> Family<Counter>*
+    {
+      ELLE_TRACE("creating gauge family %s", name);
+      // Add a new member gauge family to the registry.
+      if (auto reg = registry())
+      {
+        auto& res = ::prometheus::BuildCounter()
+          .Name(name)
+          .Help(help)
+          .Register(*reg);
+        return &res;
+      }
+      else
+        return {};
+    }
+
+    auto
+    Prometheus::make(Family<Counter>* family,
+                     Labels const& labels)
+      -> UniquePtr<Counter>
+    {
+      ELLE_TRACE("creating counter: %s", labels);
+      if (family)
+        return {&family->Add(labels), Deleter<Counter>{family}};
+      else
+        return {};
+    }
+
+    auto
     Prometheus::make(Family<Gauge>* family,
                      Labels const& labels)
       -> UniquePtr<Gauge>

@@ -61,8 +61,6 @@ namespace infinit
           }
           catch (MissingBlock const& e)
           {
-            if (!missing)
-              throw;
             ELLE_TRACE("weak error in paxos: %s", e);
             throw elle::athena::paxos::WeakError(std::current_exception());
           }
@@ -194,12 +192,14 @@ namespace infinit
         public:
           PaxosPeer(overlay::Overlay::WeakMember member,
                     Address address,
-                    boost::optional<int> local_version = {})
+                    boost::optional<int> local_version,
+                    bool insert)
             : Paxos::PaxosClient::Peer((ELLE_ASSERT(member.lock()),
                                         member.lock()->id()))
             , _member(std::dynamic_pointer_cast<Paxos::Peer>(std::move(member)))
             , _address(address)
             , _local_version(local_version)
+            , _insert(insert)
           {
             if (!this->_member.lock())
               ELLE_ABORT("invalid paxos peer: %s", member);
@@ -226,7 +226,7 @@ namespace infinit
             return network_exception_to_unavailable(
               [&]
               {
-                return member->propose(q, this->_address, p);
+                return member->propose(q, this->_address, p, this->_insert);
               });
           }
 
@@ -274,6 +274,7 @@ namespace infinit
           ELLE_ATTRIBUTE_R(std::ambivalent_ptr<Paxos::Peer>, member);
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
+          ELLE_ATTRIBUTE(bool, insert);
         };
 
         static
@@ -281,14 +282,20 @@ namespace infinit
         lookup_nodes(Doughnut& dht,
                      Paxos::PaxosServer::Quorum const& q,
                      Address address,
-                     boost::optional<int> local_version = boost::optional<int>())
+                     boost::optional<int> local_version = boost::none,
+                     bool insert = false)
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
             // If the overlay yields, the member can be deleted in between.
             if (auto lock = member.lock())
-              res.push_back(std::make_unique<PaxosPeer>(
-                              std::move(member), address, local_version));
+            {
+              res.emplace_back(std::make_unique<PaxosPeer>(
+                                 std::move(member),
+                                 address,
+                                 local_version,
+                                 insert));
+            }
           return res;
         }
 
@@ -307,15 +314,29 @@ namespace infinit
         boost::optional<Paxos::PaxosClient::Accepted>
         Paxos::RemotePeer::propose(PaxosServer::Quorum const& peers,
                                    Address address,
-                                   PaxosClient::Proposal const& p)
+                                   PaxosClient::Proposal const& p,
+                                   bool insert)
         {
           return network_exception_to_unavailable([&] {
-            auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
-              PaxosServer::Quorum,
-              Address,
-              PaxosClient::Proposal const&)>("propose");
-            propose.set_context<Doughnut*>(&this->_doughnut);
-            return propose(peers, address, p);
+              if (this->doughnut().version() >= elle::Version(0, 9, 0))
+              {
+                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
+                  PaxosServer::Quorum,
+                  Address,
+                  PaxosClient::Proposal const&,
+                  bool)>("propose");
+                propose.set_context<Doughnut*>(&this->_doughnut);
+                return propose(peers, address, p, insert);
+              }
+              else
+              {
+                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
+                  PaxosServer::Quorum,
+                  Address,
+                  PaxosClient::Proposal const&)>("propose");
+                propose.set_context<Doughnut*>(&this->_doughnut);
+                return propose(peers, address, p);
+              }
           });
         }
 
@@ -715,9 +736,11 @@ namespace infinit
           if (auto value = paxos.current_value())
             ELLE_DEBUG("propagate block value")
             {
+              // FIXME: this could re-create the block on some nodes if it was
+              // deleted in-between.
               PaxosClient c(
                 this->doughnut().id(),
-                lookup_nodes(this->doughnut(), q, a));
+                lookup_nodes(this->doughnut(), q, a, boost::none, true));
               // FIXME: do something in case of conflict
               c.choose(
                 paxos.current_version() + 1,
@@ -875,8 +898,8 @@ namespace infinit
                     ELLE_DEBUG("elect new quorum")
                     {
                       PaxosClient c(
-                      this->doughnut().id(),
-                      lookup_nodes(this->doughnut(), quorum, target.address));
+                        this->doughnut().id(),
+                        lookup_nodes(this->doughnut(), quorum, target.address));
                       quorum.insert(address);
                       // FIXME: do something in case of conflict
                       c.choose(paxos.current_version() + 1, quorum);
@@ -918,11 +941,14 @@ namespace infinit
         boost::optional<Paxos::PaxosClient::Accepted>
         Paxos::LocalPeer::propose(PaxosServer::Quorum const& peers,
                                   Address address,
-                                  Paxos::PaxosClient::Proposal const& p)
+                                  Paxos::PaxosClient::Proposal const& p,
+                                  bool insert)
         {
-          ELLE_TRACE_SCOPE("%s: get proposal at %f: %s",
-                           *this, address, p);
-          auto& decision = this->_load_paxos(address, peers);
+          ELLE_TRACE_SCOPE("%s: get proposal at %f: %s%s",
+                           *this, address, p, insert ? " (insert)" : "");
+          auto& decision = this->_load_paxos(
+            address, insert ? boost::optional<PaxosServer::Quorum>(peers)
+                            : boost::optional<PaxosServer::Quorum>());
           auto res = decision.paxos.propose(peers, p);
           BlockOrPaxos data(&decision);
           this->storage()->set(
@@ -1070,14 +1096,27 @@ namespace infinit
           auto& rpcs = connection.rpcs();
           Local::_register_rpcs(connection);
           namespace ph = std::placeholders;
-          rpcs.add(
-            "propose",
-                [this, &rpcs](PaxosServer::Quorum q, Address a,
-                              Paxos::PaxosClient::Proposal const& p)
-                {
-                  this->_require_auth(rpcs, true);
-                  return this->propose(std::move(q), a, p);
-                });
+          if (this->doughnut().version() >= elle::Version(0, 9, 0))
+            rpcs.add(
+              "propose",
+              [this, &rpcs](PaxosServer::Quorum q,
+                            Address a,
+                            Paxos::PaxosClient::Proposal const& p,
+                            bool insert)
+              {
+                this->_require_auth(rpcs, true);
+                return this->propose(std::move(q), a, p, insert);
+              });
+          else
+            rpcs.add(
+              "propose",
+              [this, &rpcs](PaxosServer::Quorum q,
+                            Address a,
+                            Paxos::PaxosClient::Proposal const& p)
+              {
+                this->_require_auth(rpcs, true);
+                return this->propose(std::move(q), a, p, true);
+              });
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             rpcs.add(
               "accept",
@@ -1403,7 +1442,8 @@ namespace infinit
               {
                 peers_id.insert(peer->id());
                 peers.push_back(
-                  std::make_unique<PaxosPeer>(wpeer, b->address()));
+                  std::make_unique<PaxosPeer>(
+                    wpeer, b->address(), boost::none, mode == STORE_INSERT));
               }
             }
             if (peers.empty())
@@ -1567,7 +1607,8 @@ namespace infinit
           auto peers = std::unordered_map<Address, PaxosClient::Peers>{};
           for (auto r: hits)
             peers[r.first].emplace_back(
-              std::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
+              std::make_unique<PaxosPeer>(
+                r.second, r.first, versions.at(r.first), false));
           elle::reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
@@ -1695,7 +1736,7 @@ namespace infinit
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
-              std::make_unique<PaxosPeer>(peer, address, local_version));
+              std::make_unique<PaxosPeer>(peer, address, local_version, false));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }
@@ -1884,8 +1925,10 @@ namespace infinit
                   .equal_range(this->doughnut().id())));
             for (auto nb: blocks)
             {
-              done = false;
               auto address = nb.block;
+              if (!address.mutable_block())
+                continue;
+              done = false;
               ELLE_TRACE_SCOPE("rebalance %f out", address);
               auto quorum =
                 ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;

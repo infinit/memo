@@ -755,41 +755,97 @@ public:
   bool fail;
 };
 
-ELLE_TEST_SCHEDULED(wrong_quorum)
-{
-  auto stonehenge = static_cast<WrongQuorumStonehenge*>(nullptr);
-  auto dhts = DHTs(
-    make_overlay =
-    [&stonehenge] (int dht,
-                   infinit::model::NodeLocations peers,
-                   std::shared_ptr<infinit::model::doughnut::Local> local,
-                   infinit::model::doughnut::Doughnut& d)
-    {
-      if (dht == 0)
-      {
-        stonehenge = new WrongQuorumStonehenge(peers, std::move(local), &d);
-        return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
-      }
-      else
-        return std::make_unique<infinit::overlay::Stonehenge>(
-          peers, std::move(local), &d);
-    });
-  auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
-  {
-    auto data = elle::Buffer("\\_o<");
-    block->data(elle::Buffer(data));
-    ELLE_LOG("store block")
-      dhts.dht_a->seal_and_insert(*block);
-    auto updated = elle::Buffer(">o_/");
-    block->data(elle::Buffer(updated));
-    stonehenge->fail = true;
-    ELLE_LOG("store updated block")
-      dhts.dht_a->seal_and_update(*block);
-  }
-}
-
 namespace tests_paxos
 {
+  ELLE_TEST_SCHEDULED(wrong_quorum)
+  {
+    auto stonehenge = static_cast<WrongQuorumStonehenge*>(nullptr);
+    auto dhts = DHTs(
+      make_overlay =
+      [&stonehenge] (int dht,
+                     infinit::model::NodeLocations peers,
+                     std::shared_ptr<infinit::model::doughnut::Local> local,
+                     infinit::model::doughnut::Doughnut& d)
+      {
+        if (dht == 0)
+        {
+          stonehenge = new WrongQuorumStonehenge(peers, std::move(local), &d);
+          return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
+        }
+        else
+          return std::make_unique<infinit::overlay::Stonehenge>(
+            peers, std::move(local), &d);
+      });
+    auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
+    {
+      auto data = elle::Buffer("\\_o<");
+      block->data(elle::Buffer(data));
+      ELLE_LOG("store block")
+        dhts.dht_a->seal_and_insert(*block);
+      auto updated = elle::Buffer(">o_/");
+      block->data(elle::Buffer(updated));
+      stonehenge->fail = true;
+      ELLE_LOG("store updated block")
+        dhts.dht_a->seal_and_update(*block);
+    }
+  }
+
+  ELLE_TEST_SCHEDULED(batch_quorum)
+  {
+    auto owner_key = elle::cryptography::rsa::keypair::generate(512);
+    auto dht_a = DHT(keys=owner_key, owner=owner_key);
+    auto dht_b = DHT(keys=owner_key, owner=owner_key);
+    auto dht_c = DHT(keys=owner_key, owner=owner_key);
+    dht_b.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_a.overlay);
+    dht_b.overlay->connect(*dht_c.overlay);
+    std::vector<infinit::model::Model::AddressVersion> addrs;
+    for (int i=0; i<10; ++i)
+    {
+      auto block = dht_a.dht->make_block<blocks::ACLBlock>();
+      block->data(std::string("foo"));
+      addrs.push_back(std::make_pair(block->address(), boost::optional<int>()));
+      const_cast<Overlay&>(dynamic_cast<Overlay const&>(*dht_a.overlay)).
+        partial_addresses()[block->address()] = 1 + (i % 3);
+      dht_b.dht->seal_and_insert(*block);
+    }
+    int hit = 0;
+    auto handler = [&](infinit::model::Address,
+                       std::unique_ptr<blocks::Block> b,
+                       std::exception_ptr ex)
+      {
+        if (ex)
+        {
+          try
+          {
+            std::rethrow_exception(ex);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_ERR("boum %s", e);
+          }
+        }
+        BOOST_CHECK(b);
+        if (b)
+          BOOST_CHECK_EQUAL(b->data(), std::string("foo"));
+        if (b && !ex)
+          ++hit;
+      };
+    dht_b.dht->multifetch(addrs, handler);
+    BOOST_CHECK_EQUAL(hit, 10);
+    hit = 0;
+    dht_a.dht->multifetch(addrs, handler);
+    BOOST_CHECK_EQUAL(hit, 10);
+    dht_c.overlay->disconnect(*dht_a.overlay);
+    dht_c.overlay->disconnect(*dht_b.overlay);
+    hit = 0;
+    dht_b.dht->multifetch(addrs, handler);
+    BOOST_CHECK_EQUAL(hit, 10);
+    hit = 0;
+    dht_a.dht->multifetch(addrs, handler);
+    BOOST_CHECK_EQUAL(hit, 10);
+  }
+
   ELLE_TEST_SCHEDULED(CHB_no_peer)
   {
     auto dht = DHT(storage = nullptr);
@@ -1029,7 +1085,6 @@ namespace rebalancing
       b1 = std::dynamic_pointer_cast<blocks::MutableBlock>(
         dht_a.dht->fetch(b1->address()));
       BOOST_TEST(b1->data() == elle::Buffer("extend_and_write 1"));
-      ELLE_ERR("VERSION: {}", b1->version());
       auto bb = dht_b.dht->fetch(b1->address());
       BOOST_TEST(bb->data() == elle::Buffer("extend_and_write 1"));
     }
@@ -1302,13 +1357,14 @@ namespace rebalancing
     boost::optional<Paxos::PaxosClient::Accepted>
     propose(PaxosServer::Quorum const& peers,
             Address address,
-            PaxosClient::Proposal const& p) override
+            PaxosClient::Proposal const& p,
+            bool insert) override
     {
       this->_proposing(address, p);
       elle::reactor::wait(this->all_barrier());
       if (!this->_propose_bypass)
         elle::reactor::wait(this->propose_barrier());
-      auto res = Super::propose(peers, address, p);
+      auto res = Super::propose(peers, address, p, insert);
       this->_proposed(address, p);
       return res;
     }
@@ -1944,6 +2000,72 @@ namespace rebalancing
         BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
       }
   }
+
+  ELLE_TEST_SCHEDULED(update_while_evicting)
+  {
+    auto dht_a = make_dht(0);
+    auto dht_b = make_dht(1);
+    dht_b->overlay->connect(*dht_a->overlay);
+    auto dht_c = make_dht(2);
+    auto id_c = dht_c->dht->id();
+    auto& local_c = dynamic_cast<Local&>(*dht_c->dht->local());
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+    auto block = [&]
+      {
+        ELLE_LOG_SCOPE("write block");
+        auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+          std::string("update_while_evicting"));
+        dht_a->dht->seal_and_insert(*b);
+        return b;
+      }();
+    elle::reactor::Barrier finish_rebalancing;
+    elle::reactor::Barrier update;
+    local_c.proposing().connect(
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (p.sender == dht_a->dht->id())
+          elle::reactor::wait(update);
+      });
+    // local_c.proposed().connect(
+    //   [&] (Address, Paxos::PaxosClient::Proposal const& p)
+    //   {
+    //     if (p.sender == dht_a->dht->id())
+    //     {
+    //       ELLE_ERR("BBY");
+    //       finish_rebalancing.open();
+    //     }
+    //   });
+    local_c.confirmed().connect(
+      [&] (Address, Paxos::PaxosClient::Proposal const& p)
+      {
+        if (p.sender == id_c)
+        {
+          update.open();
+          // elle::reactor::wait(finish_rebalancing);
+        }
+      });
+    ELLE_LOG("resign and update");
+    elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
+    {
+      scope.run_background(
+        elle::print("update %f", dht_c),
+        [&]
+        {
+          block->data(elle::Buffer("update_while_evicting'"));
+          dht_a->dht->seal_and_update(*block);
+          ELLE_WARN("BYE 1");
+        });
+      scope.run_background(
+        elle::print("resign %f", dht_c),
+        [&]
+        {
+          dht_c->dht->resign();
+          ELLE_WARN("BYE 2");
+        });
+      elle::reactor::wait(scope);
+    };
+  }
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -1965,62 +2087,6 @@ static void no_cheating(dht::Doughnut* d, std::unique_ptr<blocks::Block>& b)
     elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
       is, true, ctx);
   b.reset(res.release());
-}
-
-ELLE_TEST_SCHEDULED(batch_quorum)
-{
-  auto owner_key = elle::cryptography::rsa::keypair::generate(512);
-  auto dht_a = DHT(keys=owner_key, owner=owner_key);
-  auto dht_b = DHT(keys=owner_key, owner=owner_key);
-  auto dht_c = DHT(keys=owner_key, owner=owner_key);
-  dht_b.overlay->connect(*dht_a.overlay);
-  dht_c.overlay->connect(*dht_a.overlay);
-  dht_b.overlay->connect(*dht_c.overlay);
-  std::vector<infinit::model::Model::AddressVersion> addrs;
-  for (int i=0; i<10; ++i)
-  {
-    auto block = dht_a.dht->make_block<blocks::ACLBlock>();
-    block->data(std::string("foo"));
-    addrs.push_back(std::make_pair(block->address(), boost::optional<int>()));
-    const_cast<Overlay&>(dynamic_cast<Overlay const&>(*dht_a.overlay)).
-      partial_addresses()[block->address()] = 1 + (i % 3);
-    dht_b.dht->seal_and_insert(*block);
-  }
-  int hit = 0;
-  auto handler = [&](infinit::model::Address,
-                     std::unique_ptr<blocks::Block> b,
-                     std::exception_ptr ex)
-    {
-      if (ex)
-      {
-        try
-        {
-          std::rethrow_exception(ex);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_ERR("boum %s", e);
-        }
-      }
-      BOOST_CHECK(b);
-      if (b)
-        BOOST_CHECK_EQUAL(b->data(), std::string("foo"));
-      if (b && !ex)
-        ++hit;
-    };
-  dht_b.dht->multifetch(addrs, handler);
-  BOOST_CHECK_EQUAL(hit, 10);
-  hit = 0;
-  dht_a.dht->multifetch(addrs, handler);
-  BOOST_CHECK_EQUAL(hit, 10);
-  dht_c.overlay->disconnect(*dht_a.overlay);
-  dht_c.overlay->disconnect(*dht_b.overlay);
-  hit = 0;
-  dht_b.dht->multifetch(addrs, handler);
-  BOOST_CHECK_EQUAL(hit, 10);
-  hit = 0;
-  dht_a.dht->multifetch(addrs, handler);
-  BOOST_CHECK_EQUAL(hit, 10);
 }
 
 ELLE_TEST_SCHEDULED(admin_keys)
@@ -2181,13 +2247,12 @@ ELLE_TEST_SUITE()
     TEST(serialize_ACB_remove);
   }
 #undef TEST
-  paxos->add(BOOST_TEST_CASE(admin_keys));
-  paxos->add(BOOST_TEST_CASE(batch_quorum));
-  paxos->add(BOOST_TEST_CASE(wrong_quorum));
-  paxos->add(BOOST_TEST_CASE(disabled_crypto));
+  suite.add(BOOST_TEST_CASE(admin_keys));
+  suite.add(BOOST_TEST_CASE(disabled_crypto));
   {
-    using namespace tests_paxos;
-    paxos->add(BOOST_TEST_CASE(CHB_no_peer));
+    paxos->add(ELLE_TEST_CASE(&tests_paxos::wrong_quorum, "wrong_quorum"));
+    paxos->add(ELLE_TEST_CASE(&tests_paxos::batch_quorum, "batch_quorum"));
+    paxos->add(ELLE_TEST_CASE(&tests_paxos::CHB_no_peer, "CHB_no_peer"));
   }
   {
     boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
@@ -2242,6 +2307,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
       auto resign_insist = &rebalancing::resign_insist;
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
+      auto update_while_evicting = &rebalancing::update_while_evicting;
+      rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
     }
     {
       auto* evict_chain = BOOST_TEST_SUITE("evict_chain");

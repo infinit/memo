@@ -4,6 +4,7 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/grpc/memo_vs.grpc.pb.h>
+#include <infinit/grpc/grpc.hh>
 #include <infinit/grpc/serializer.hh>
 
 # include <elle/athena/paxos/Client.hh>
@@ -165,6 +166,11 @@ namespace infinit
     {
       ::grpc::Status status = ::grpc::Status::OK;
       ::grpc::StatusCode code = ::grpc::INTERNAL;
+      Task task;
+      if (!task.proceed())
+      {
+        return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
+      }
       sched.mt_run<void>("invoke", [&] {
           try
           {
@@ -208,6 +214,14 @@ namespace infinit
       : public ::grpc::Service
     {
     public:
+      Service()
+      {
+#if INFINIT_ENABLE_PROMETHEUS
+        _family = infinit::prometheus::instance().make_counter_family(
+          "memo_grpc_calls",
+          "How many grpc calls are made");
+#endif
+      }
       /// Register a Remote Procedure Call.
       ///
       /// @tparam GArg The RPC argument type.
@@ -228,19 +242,32 @@ namespace infinit
       {
         auto& sched = elle::reactor::scheduler();
         this->_method_names.push_back(std::make_unique<std::string>(route));
+        int index = 0;
+#if INFINIT_ENABLE_PROMETHEUS
+        _counters.push_back(infinit::prometheus::instance()
+          .make(_family,
+            {{"call", route}}));
+        index = _counters.size()-1;
+#endif
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
-          this->_method_names.back()->c_str(),
+                                     this->_method_names.back()->c_str(),
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
-            [&](Service*,
+            [&, index](Service*,
                 ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
-              return invoke_named<NF, GArg, GRet, NOEXCEPT>(
-                sched, dht, nf, ctx, arg, ret);
+#if INFINIT_ENABLE_PROMETHEUS
+              _counters[index]->Increment();
+#endif
+              return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
             },
             this)));
       }
     private:
+#if INFINIT_ENABLE_PROMETHEUS
+      prometheus::Family<prometheus::Counter>* _family;
+      std::vector<prometheus::CounterPtr> _counters;
+#endif
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
 

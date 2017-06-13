@@ -536,14 +536,13 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   discover(*client, *servers[0], false);
   elle::reactor::wait(client->dht->overlay()->on_discovery(),
     [&](NodeLocation, bool) { return true;});
-  infinit::model::Endpoints eps("127.0.0.1", 0);
-  auto ep = *eps.begin();
   elle::reactor::Barrier b;
   int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*servers[0]->dht, ep, &listening_port);
+      infinit::grpc::serve_grpc(*servers[0]->dht, "127.0.0.1:0",
+                                &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
@@ -628,14 +627,13 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   client.dht.dht->insert(std::move(ubf));
   client.dht.dht->insert(std::move(ubr));
 
-  auto eps = infinit::model::Endpoints("127.0.0.1", 0);
-  auto ep = *eps.begin();
   elle::reactor::Barrier b;
   int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, ep, &listening_port);
+      infinit::grpc::serve_grpc(*client.dht.dht, "127.0.0.1:0",
+                                &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
