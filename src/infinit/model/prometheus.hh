@@ -22,10 +22,10 @@ namespace infinit
     /// A family of metrics.
     template <typename Metric>
     using Family = ::prometheus::Family<Metric>;
+    /// A monotonic counter.
+    using Counter = ::prometheus::Counter;
     /// A non-monotonic (i.e., increasing/decreasing) counter.
     using Gauge = ::prometheus::Gauge;
-    /// A monotonic counter
-    using Counter = ::prometheus::Counter;
 
     /// Delete a metric, i.e. remove it from its family.
     template <typename Metric>
@@ -42,9 +42,10 @@ namespace infinit
     template <typename Metric>
     using UniquePtr = std::unique_ptr<Metric, Deleter<Metric>>;
 
+    /// A managed counter.
+    using CounterPtr = UniquePtr<Counter>;
     /// A managed gauge.
     using GaugePtr = UniquePtr<Gauge>;
-    using CounterPtr = UniquePtr<Counter>;
 
     class Prometheus
     {
@@ -57,21 +58,16 @@ namespace infinit
 
       /// Create a family of gauges.
       Family<Gauge>*
-      make_gauge_family(std::string const& name,
-                        std::string const& help);
-
+      make_gauge_family(std::string const& name, std::string const& help);
       /// Create a family of counters.
       Family<Counter>*
-      make_counter_family(std::string const& name,
-                        std::string const& help);
+      make_counter_family(std::string const& name, std::string const& help);
       /// Create a new member to a family.
       /// Should be removed eventually.
       UniquePtr<Gauge>
-      make(Family<Gauge>* family,
-           Labels const& labels);
+      make(Family<Gauge>* family, Labels const& labels);
       UniquePtr<Counter>
-      make(Family<Counter>* family,
-           Labels const& labels);
+      make(Family<Counter>* family, Labels const& labels);
 
       /// The http exposer.
       std::unique_ptr<::prometheus::Exposer> _exposer;
