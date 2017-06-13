@@ -254,8 +254,8 @@ def configure(
       strip_prefix = True
     ),
     drake.copy(
-      drake.nodes('etc/rsyslog.d/10-infinit.conf'),
-      'debian',
+      drake.nodes('etc/rsyslog.d/10-beyond.conf'),
+      'debian/opt/infinit/beyond',
     ),
     drake.copy(
       drake.nodes('etc/uwsgi/beyond.xml'),

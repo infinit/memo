@@ -58,7 +58,7 @@ main(int argc, char** argv)
     auto const version =
       vm.count("version") ? option_str(vm, "version") : "test_version";
     // Enable crash handling.
-    elle::os::setenv("INFINIT_CRASH_REPORTER", "1");
+    elle::os::setenv("INFINIT_CRASH_REPORT", "1");
     auto crash_reporter =
       std::make_unique<crash_report::CrashReporter>(server, dumps, version);
     if (crash)

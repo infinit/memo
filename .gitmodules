@@ -22,3 +22,6 @@
 [submodule "crash-report/breakpad"]
 	path = crash-report/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
+[submodule "crash-report/debug-symbols"]
+	path = crash-report/debug-symbols
+	url = ../debug-symbols

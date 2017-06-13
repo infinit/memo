@@ -584,21 +584,12 @@
       },
       "attributes": [
         {
-          "name": "type",
-          "type": "string",
-          "documentation": {
-            "abstract": "<unknown>",
-            "description": "Always empty"
-          },
-          "index": 1
-        },
-        {
           "name": "block",
           "type": "Block",
           "documentation": {
             "abstract": "The fetched Block, at it latest version"
           },
-          "index": 2
+          "index": 1
         }
       ]
     },
@@ -607,25 +598,7 @@
       "documentation": {
         "abstract": "The response to a InsertRequest"
       },
-      "attributes": [
-        {
-          "name": "type",
-          "type": "string",
-          "documentation": {
-            "abstract": "<unknown>",
-            "description": "Always empty"
-          },
-          "index": 1
-        },
-        {
-          "name": "bool",
-          "type": "bool",
-          "documentation": {
-            "abstract": "Whether the update succeeded"
-          },
-          "index": 2
-        }
-      ]
+      "attributes": []
     },
     {
       "name": "UpdateResponse",
@@ -658,14 +631,6 @@
             "abstract": "The current block stored at the address"
           },
           "index": 3
-        },
-        {
-          "name": "bool",
-          "type": "bool",
-          "documentation": {
-            "abstract": "Whether the update succeeded"
-          },
-          "index": 4
         }
       ]
     },
@@ -674,25 +639,7 @@
       "documentation": {
         "abstract": "The response to a RemoveRequest"
       },
-      "attributes": [
-        {
-          "name": "type",
-          "type": "string",
-          "documentation": {
-            "abstract": "<unknown>",
-            "description": "Always empty"
-          },
-          "index": 1
-        },
-        {
-          "name": "bool",
-          "type": "bool",
-          "documentation": {
-            "abstract": "Whether the update succeeded"
-          },
-          "index": 2
-        }
-      ]
+      "attributes": []
     }
   ]
 }
