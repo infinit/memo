@@ -33,13 +33,13 @@ namespace infinit
 
     Task::Task()
     {
-      std::unique_lock<std::mutex> lock(this->_stop_mutex);
-      if (!this->_serving)
+      std::unique_lock<std::mutex> lock(_stop_mutex);
+      if (!_serving)
         this->_proceed = false;
       else
       {
         this->_proceed = true;
-        ++this->_tasks;
+        ++_tasks;
       }
     }
 
@@ -47,9 +47,9 @@ namespace infinit
     {
       if (this->_proceed)
       {
-        std::unique_lock<std::mutex> lock(this->_stop_mutex);
-        if (!--this->_tasks)
-          this->_stop_cond.notify_all();
+        std::unique_lock<std::mutex> lock(_stop_mutex);
+        if (!--_tasks)
+          _stop_cond.notify_all();
       }
     }
 
@@ -58,7 +58,7 @@ namespace infinit
                std::string const& ep,
                int* effective_port)
     {
-      this->_serving = true;
+      _serving = true;
       auto ds = doughnut_service(dht);
       ::grpc::ServerBuilder builder;
       builder.AddListeningPort(ep, ::grpc::InsecureServerCredentials(),
@@ -68,11 +68,11 @@ namespace infinit
        ELLE_TRACE("serving grpc on %s (effective %s)", ep,
          effective_port ? *effective_port : 0);
       elle::SafeFinally shutdown([&] {
-          this->_serving = false;
+          _serving = false;
           elle::reactor::background([&] {
-              std::unique_lock<std::mutex> lock(this->_stop_mutex);
-              while (this->_tasks)
-                this->_stop_cond.wait(lock);
+              std::unique_lock<std::mutex> lock(_stop_mutex);
+              while (_tasks)
+                _stop_cond.wait(lock);
           });
       });
       elle::reactor::sleep();
