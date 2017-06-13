@@ -226,24 +226,47 @@ namespace infinit
     class Service: public ::grpc::Service
     {
     public:
+      Service()
+      {
+#if INFINIT_ENABLE_PROMETHEUS
+        _family = infinit::prometheus::instance().make_counter_family(
+          "infinit_grpc_calls",
+          "How many grpc calls are made");
+#endif
+      }
       template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
         auto& sched = elle::reactor::scheduler();
         _method_names.push_back(std::make_unique<std::string>(
           underscore_to_uppercase(name)));
+        int index = 0;
+#if INFINIT_ENABLE_PROMETHEUS
+        _counters.push_back(infinit::prometheus::instance()
+          .make(_family,
+            {{"call", name}}));
+        index = _counters.size()-1;
+#endif
+
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
           _method_names.back()->c_str(),
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
-            [&](Service*,
+            [&, index](Service*,
                 ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
+#if INFINIT_ENABLE_PROMETHEUS
+              _counters[index]->Increment();
+#endif
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
             },
             this)));
       }
     private:
+#if INFINIT_ENABLE_PROMETHEUS
+      prometheus::Family<prometheus::Counter>* _family;
+      std::vector<prometheus::CounterPtr> _counters;
+#endif
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
 
