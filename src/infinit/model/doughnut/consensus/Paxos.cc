@@ -1735,8 +1735,10 @@ namespace infinit
             address, this->_factor, address.mutable_block());
           PaxosClient::Peers peers;
           for (auto peer: owners)
-            peers.push_back(
-              std::make_unique<PaxosPeer>(peer, address, local_version, false));
+            // If the overlay yields, the member can be deleted in between.
+            if (auto lock = peer.lock())
+              peers.emplace_back(std::make_unique<PaxosPeer>(
+                                   peer, address, local_version, false));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }
