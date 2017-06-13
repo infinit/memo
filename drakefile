@@ -53,7 +53,7 @@ def configure(
     codesign = False,
     beyond: bool = True,
     website: bool = True,
-    enable_crash_reporting: bool = True,
+    enable_crash_report: bool = True,
     cxx_toolkit_host = None,
     go_toolkit = drake.go.Toolkit(
       path = os.path.realpath(str(drake.path_build('go-dependencies')))),
@@ -271,8 +271,8 @@ def configure(
   ## Crash report.  ##
   ## -------------- ##
   if windows:
-    enable_crash_reporting = False
-  if enable_crash_reporting:
+    enable_crash_report = False
+  if enable_crash_report:
     crash_report = drake.include('crash-report',
                                  cxx_toolkit = cxx_toolkit,
                                  cxx_config = cxx_config)
@@ -316,7 +316,7 @@ def configure(
         elle_lib,
      ]
      + extra_libs
-     + ([crash_report_lib] if enable_crash_reporting else [])),
+     + ([crash_report_lib] if enable_crash_report else [])),
     cxx_toolkit,
     cxx_config_infinit,
     strip = windows)
@@ -495,7 +495,7 @@ def configure(
     ]
     if enable_prometheus:
       infinit_cli_deps.append(prometheus_lib)
-  if enable_crash_reporting:
+  if enable_crash_report:
     infinit_cli_deps.append(crash_report_lib)
 
   infinit_cli = drake.cxx.Executable(
@@ -518,7 +518,7 @@ def configure(
       b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)
     installed_binaries.append(b)
-  if enable_crash_reporting:
+  if enable_crash_report:
     for f in installed_libraries | set(installed_binaries):
       sym = drake.node('%s.sym' % f.path())
       crash_report.SymbolsGenerator(crash_report.dump_syms_exe,
@@ -600,7 +600,7 @@ def configure(
       debian_nodes,
       'debian').package
 
-  if enable_crash_reporting:
+  if enable_crash_report:
     # //symbols-commit: publish the debug symbols for breakpad,
     # installed on Beyond.
     rule_symbols_commit = drake.Rule('symbols-commit')
@@ -796,7 +796,7 @@ def configure(
         },
         minidump_stackwalk = minidump_stackwalk,
       )
-      if enable_crash_reporting:
+      if enable_crash_report:
         crash_test_libs = [
             crash_report_lib,
             cryptography_lib,
@@ -868,7 +868,7 @@ def configure(
                     ).path().dirname())
                   ))))
       tests.append(doctor_configuration_test)
-      if enable_crash_reporting:
+      if enable_crash_report:
         tests.append(functional_test('crash-reporter'))
       if linux:
         pjdfstest = drake.include(
@@ -888,7 +888,7 @@ def configure(
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
-        if enable_crash_reporting:
+        if enable_crash_report:
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
@@ -901,7 +901,7 @@ def configure(
                                              absolute = True))
         extra_path = [binaries_path]
         extra_path += t.get('paths', [])
-        if enable_crash_reporting:
+        if enable_crash_report:
           extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
@@ -1000,7 +1000,7 @@ def configure(
   cxx_config_tests.add_local_include_path('bin')
   cxx_config_tests.add_local_include_path('.')
   cxx_config_tests += grpc.grpc.cxx_config
-  if enable_crash_reporting:
+  if enable_crash_report:
     cxx_config_tests.add_local_include_path('crash-report/src') # functional/bin/crasher
   if grpc.grpc_lib:
     cxx_config_tests.library_add(grpc_lib)

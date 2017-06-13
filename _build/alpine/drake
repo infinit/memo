@@ -17,5 +17,5 @@ cfg.define('_SYS_SYSMACROS_H')
 with drake.Drake('../..') as d:
   d.run(
     cxx_config = cfg,
-    enable_crash_reporting = False,
+    enable_crash_report = False,
   )
