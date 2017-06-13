@@ -66,11 +66,11 @@ class SymbolsGenerator(drake.Builder):
   def __str__(self):
     return 'SymbolsGenerator(%s)' % self.__binary
 
-class SymbolsCommitter(drake.Builder):
+class SymbolsCommit(drake.Builder):
 
   '''Commit debug symbol files to their git repo.'''
 
-  def __init__(self, srcs,
+  def __init__(self, name, srcs,
                repo = None, description = None, platform = None, project = None):
     '''
     srcs -- the *.sym files to commit.
@@ -89,12 +89,7 @@ class SymbolsCommitter(drake.Builder):
                           description=description,
                           platform=platform,
                           project=project))
-    self.__witness = drake.node('witness')
-    super().__init__(srcs, [self.__witness])
-
-  @property
-  def witness(self):
-    return self.__witness
+    super().__init__(srcs, [name])
 
   def _sym_output_path(self, sym_file):
     '''The path under which `sym_file` must be installed for breakpad.'''
@@ -129,18 +124,22 @@ class SymbolsCommitter(drake.Builder):
 
     git('Add new debug symbols',
         'add', *files)
+    if not self.__git.can_commit():
+      # Nothing to commit.
+      return True
     git('Committing new debug symbols',
         'commit', '-m', 'Symbols for {}'.format(self.__specs))
+
     self.cmd('Update symbols directory',
              ['bin/make-symbols'],
              cwd = self.__git.path())
+    if not self.__git.can_commit():
+      # Nothing to commit.
+      return True
     git('Updating symbols directory',
         'commit', '-m', 'Regen symbols.')
     git('Pushing new debug symbols',
         'push', 'origin', 'HEAD:master')
-    # touch the witness.
-    with open(str(self.witness), 'w'):
-      pass
     return True
 
 def configure(cxx_toolkit = None,
@@ -247,9 +246,10 @@ def configure(cxx_toolkit = None,
     breakpad_sources = \
       drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, sources)))
     # Fix build with GCC.
+    # This piece of code seems to be dead.
     if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.gcc:
       local_cxx_config.flag('-include')
-      local_cxx_config.flag('crash_reporting/gcc_fix.hh')
+      local_cxx_config.flag('crash-report/gcc_fix.hh')
 
     # The dump_syms tool is built with Xcode on Mac. Rather do it manually.
     dump_syms_sources = [
