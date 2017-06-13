@@ -318,13 +318,25 @@ namespace infinit
                                    bool insert)
         {
           return network_exception_to_unavailable([&] {
-            auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
-              PaxosServer::Quorum,
-              Address,
-              PaxosClient::Proposal const&,
-              bool)>("propose");
-            propose.set_context<Doughnut*>(&this->_doughnut);
-            return propose(peers, address, p, insert);
+              if (this->doughnut().version() >= elle::Version(0, 9, 0))
+              {
+                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
+                  PaxosServer::Quorum,
+                  Address,
+                  PaxosClient::Proposal const&,
+                  bool)>("propose");
+                propose.set_context<Doughnut*>(&this->_doughnut);
+                return propose(peers, address, p, insert);
+              }
+              else
+              {
+                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
+                  PaxosServer::Quorum,
+                  Address,
+                  PaxosClient::Proposal const&)>("propose");
+                propose.set_context<Doughnut*>(&this->_doughnut);
+                return propose(peers, address, p);
+              }
           });
         }
 
@@ -1084,16 +1096,27 @@ namespace infinit
           auto& rpcs = connection.rpcs();
           Local::_register_rpcs(connection);
           namespace ph = std::placeholders;
-          rpcs.add(
-            "propose",
-                [this, &rpcs](PaxosServer::Quorum q,
-                              Address a,
-                              Paxos::PaxosClient::Proposal const& p,
-                              bool insert)
-                {
-                  this->_require_auth(rpcs, true);
-                  return this->propose(std::move(q), a, p, insert);
-                });
+          if (this->doughnut().version() >= elle::Version(0, 9, 0))
+            rpcs.add(
+              "propose",
+              [this, &rpcs](PaxosServer::Quorum q,
+                            Address a,
+                            Paxos::PaxosClient::Proposal const& p,
+                            bool insert)
+              {
+                this->_require_auth(rpcs, true);
+                return this->propose(std::move(q), a, p, insert);
+              });
+          else
+            rpcs.add(
+              "propose",
+              [this, &rpcs](PaxosServer::Quorum q,
+                            Address a,
+                            Paxos::PaxosClient::Proposal const& p)
+              {
+                this->_require_auth(rpcs, true);
+                return this->propose(std::move(q), a, p, true);
+              });
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             rpcs.add(
               "accept",
