@@ -10,7 +10,7 @@
 [submodule "sendwithus_python"]
 	path = sendwithus_python
 	url = https://github.com/infinit/sendwithus_python.git
-[submodule "crash_reporting/breakpad"]
+[submodule "crash-report/breakpad"]
 	path = crash-report/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
 [submodule "pjdfstest"]
