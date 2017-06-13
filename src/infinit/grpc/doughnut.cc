@@ -192,26 +192,30 @@ namespace infinit
           try
           {
             ELLE_TRACE("invoking some method: %s -> %s",
-                       elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
+                       elle::type_info<REQ>().name(),
+                       elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
             code = ::grpc::INVALID_ARGUMENT;
             auto call = typename NF::Call(sin);
             code = ::grpc::INTERNAL;
             auto res = nf(std::move(call));
-            ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
+            ELLE_DUMP("adapter with %s",
+                      elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
-            if (NOEXCEPT) // it will compile anyway no need for static switch
+            if (NOEXCEPT) // It will compile anyway no need for static switch
             {
-              auto* adapted = OptionFirst<typename NF::Result::Super>::value(res, status);
+              auto* adapted =
+                OptionFirst<typename NF::Result::Super>::value(res, status);
               if (status.ok() && !decltype(res)::is_void::value)
                 sout.serialize_forward(*adapted);
             }
             else
             {
               ExceptionExtracter<typename NF::Result::Super>::value(
-                sout, res, status, dht.version(), decltype(res)::is_void::value);
+                sout, res, status, dht.version(),
+                decltype(res)::is_void::value);
             }
           }
           catch (elle::Error const& e)
