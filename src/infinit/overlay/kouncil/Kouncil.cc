@@ -318,6 +318,8 @@ namespace infinit
       Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
       {
         if (k == "stats")
+        {
+          auto rb = reachable_blocks();
           return elle::json::Object
             {
               {"peers", this->peer_list()},
@@ -334,7 +336,21 @@ namespace infinit
                            };
                        })
                 },
+              {"mutable_blocks", rb.mutable_blocks},
+              {"immutable_blocks", rb.immutable_blocks},
+              {"underreplicated_immutable_blocks", rb.underreplicated_immutable_blocks},
+              {"underreplicated_mutable_blocks", rb.underreplicated_mutable_blocks},
+              {"overreplicated_immutable_blocks", rb.overreplicated_immutable_blocks},
+              {"under_quorum_mutable_blocks", rb.under_quorum_mutable_blocks},
+              {"sample_underreplicated", elle::json::make_array(
+                  rb.sample_underreplicated,
+                  [](auto& addr) -> std::string
+                  {
+                    return elle::sprintf("%s", addr);
+                  })
+              },
             };
+        }
         else
           return {};
       }
