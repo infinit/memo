@@ -145,7 +145,7 @@ class CouchDBDatastore:
                     ('per_network_id', self.__drives_per_network_id_map),
                     ('per_volume_id', self.__drives_per_volume_id_map),
                   ])
-    self.__design('key-value-stores',
+    self.__design('kvs',
                   updates = [('update', self.__key_value_store_update)],
                   views = [
                     ('per_network_id',
@@ -446,13 +446,13 @@ class CouchDBDatastore:
 
   def networks_key_value_stores_fetch(self, networks):
     return (doc.value for doc in
-            self.__couchdb['key-value-stores'].view(
+            self.__couchdb['kvs'].view(
               'beyond/per_network_id',
               keys = list(map(lambda n: n.id, networks))))
 
   def user_key_value_stores_fetch(self, user):
     return (doc.value for doc in
-            self.__couchdb['key-value-stores'].view(
+            self.__couchdb['kvs'].view(
               'beyond/per_owner_key', key = user.public_key))
 
   def __network_update(network, req):
@@ -660,21 +660,21 @@ class CouchDBDatastore:
     json = kvs.json()
     json['_id'] = kvs.name
     try:
-      self.__couchdb['key-value-stores'].save(json)
+      self.__couchdb['kvs'].save(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.KeyValueStore.Duplicate()
 
   def key_value_store_fetch(self, owner, name):
     try:
-      json = self.__couchdb['key-value-stores']['%s/%s' % (owner, name)]
+      json = self.__couchdb['kvs']['%s/%s' % (owner, name)]
       return json
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.KeyValueStore.NotFound()
 
   def key_value_store_delete(self, owner, name):
     try:
-      json = self.__couchdb['key-value-stores']['%s/%s' % (owner, name)]
-      self.__couchdb['key-value-stores'].delete(json)
+      json = self.__couchdb['kvs']['%s/%s' % (owner, name)]
+      self.__couchdb['kvs'].delete(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.KeyValueStore.Duplicate()
 

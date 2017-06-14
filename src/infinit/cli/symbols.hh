@@ -219,7 +219,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(invite);
     ELLE_DAS_SYMBOL(join);
     ELLE_DAS_SYMBOL(journal);
-    ELLE_DAS_SYMBOL(key_value_store);
+    ELLE_DAS_SYMBOL(kvs);
     ELLE_DAS_SYMBOL(ldap);
     ELLE_DAS_SYMBOL(link);
     ELLE_DAS_SYMBOL(list);

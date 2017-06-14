@@ -18,11 +18,11 @@ class Test(unittest.TestCase):
       network = Network(name = 'server1-server2', owner = user)
       network.put(beyond)
       kvs = KeyValueStore(name = 'business', network = network)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name']),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name']),
              404,
              json = False)
       kvs.put(beyond)
-      res = beyond.get('key-value-stores/%s' % kvs['name']).json()
+      res = beyond.get('kvs/%s' % kvs['name']).json()
       assertEq(res['name'], kvs['name'])
       assertEq(res['network'], network['name'])
       assert 'owner' not in res
@@ -36,11 +36,11 @@ class Test(unittest.TestCase):
       network = Network(name = 'server1-server2', owner = user)
       network.put(beyond)
       kvs = KeyValueStore(name = 'business', network = network, owner = user2)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name']),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name']),
              404,
              json = False)
       kvs.put(beyond)
-      res = beyond.get('key-value-stores/%s' % kvs['name']).json()
+      res = beyond.get('kvs/%s' % kvs['name']).json()
       assertEq(res['name'], kvs['name'])
       assertEq(res['network'], network['name'])
       assert 'owner' in res

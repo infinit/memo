@@ -5,7 +5,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/grpc/grpc.hh>
-#include <infinit/kv/lib/libkv.h>
+#include <infinit/kvs/lib/libkvs.h>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/silo/Silo.hh>
@@ -108,7 +108,7 @@ namespace infinit
         ifnt.key_value_store_save(kvs);
       }
       if (push || push_key_value_store)
-        ifnt.beyond_push("key-value-store", name, kvs, owner);
+        ifnt.beyond_push("kvs", name, kvs, owner);
     }
 
     /*---------------.
@@ -129,7 +129,7 @@ namespace infinit
       if (purge)
       { /* Do nothing */ }
       if (pull)
-        ifnt.beyond_delete("key-value-store", name, owner, true, purge);
+        ifnt.beyond_delete("kvs", name, owner, true, purge);
       ifnt.key_value_store_delete(kvs);
     }
 
@@ -152,7 +152,7 @@ namespace infinit
         auto s = elle::serialization::json::SerializerOut(*output, false);
         s.serialize_forward(kvs);
       }
-      cli.report_exported(*output, "key-value store", kvs.name);
+      cli.report_exported(*output, "kvs", kvs.name);
     }
 
     /*--------------.
@@ -173,7 +173,7 @@ namespace infinit
       {
         auto name = ifnt.qualified_name(*unqualified_name, owner);
         auto desc =
-          ifnt.beyond_fetch<infinit::KeyValueStore>("key-value-store", name);
+          ifnt.beyond_fetch<infinit::KeyValueStore>("kvs", name);
         ifnt.key_value_store_save(std::move(desc));
       }
       else if (network_name)
@@ -181,21 +181,21 @@ namespace infinit
         // Fetch all key-value stores for network.
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto res = ifnt.beyond_fetch<KeyValueStoresMap>(
-            elle::sprintf("networks/%s/key-value-stores", net_name),
-            "key-value stores for network",
+            elle::sprintf("networks/%s/kvs", net_name),
+            "kvs for network",
             net_name);
-        for (auto const& k: res["key-value-stores"])
+        for (auto const& k: res["kvs"])
           ifnt.key_value_store_save(k);
       }
       else
       {
         // Fetch all key-value stores for owner.
         auto res = ifnt.beyond_fetch<KeyValueStoresMap>(
-            elle::sprintf("users/%s/key-value-stores", owner.name),
-            "key-value stores for user",
+            elle::sprintf("users/%s/kvs", owner.name),
+            "kvs for user",
             owner.name,
             owner);
-        for (auto const& k: res["key-value-stores"])
+        for (auto const& k: res["kvs"])
           ifnt.key_value_store_save(k, true);
       }
     }
@@ -214,7 +214,7 @@ namespace infinit
       auto s = elle::serialization::json::SerializerIn(*input, false);
       auto kvs = infinit::KeyValueStore(s);
       ifnt.key_value_store_save(kvs);
-      cli.report_imported("key-value store", kvs.name);
+      cli.report_imported("kvs", kvs.name);
     }
 
 
@@ -268,7 +268,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto const name = ifnt.qualified_name(unqualified_name, owner);
-      ifnt.beyond_delete("key-value-store", name, owner, false, purge);
+      ifnt.beyond_delete("kvs", name, owner, false, purge);
     }
 
 
@@ -286,7 +286,7 @@ namespace infinit
       auto const name = ifnt.qualified_name(unqualified_name, owner);
       auto kvs = ifnt.key_value_store_get(name);
       auto network = ifnt.network_get(kvs.network, owner);
-      ifnt.beyond_push("key-value-store", name, kvs, owner);
+      ifnt.beyond_push("kvs", name, kvs, owner);
 
     }
 
@@ -353,7 +353,7 @@ namespace infinit
       if (!grpc)
         elle::err("please specify gRPC endpoint using --grpc");
 
-      network.ensure_allowed(owner, "run", "key-value store");
+      network.ensure_allowed(owner, "run", "kvs");
       cache |= (cache_ram_size || cache_ram_ttl
                 || cache_ram_invalidation || cache_disk_size);
       auto const listen_address = boost::optional<boost::asio::ip::address>{};
@@ -461,12 +461,12 @@ namespace infinit
             s,
             []
             {
-              ELLE_DEBUG("stopping key-value store");
+              ELLE_DEBUG("stopping kvs");
               StopServer();
             });
         }
         elle::reactor::background([&] {
-          cli.report_action("running", "key-value store", name);
+          cli.report_action("running", "kvs", name);
           RunServer(
             go_str(name), go_str(dht_ep), go_str(*grpc), allow_root_creation,
             &kv_grpc_port);

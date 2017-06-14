@@ -10,10 +10,12 @@ for lang in ['go', 'cc', 'py']:
 
   with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
 
-    bin = '%s/demo%s%s' % (os.environ['KV_DEMO_DIR'], '.' if lang == 'py' else '_', lang)
+    bin = '%s/demo%s%s' % \
+      (os.environ['KVS_DEMO_DIR'], '.' if lang == 'py' else '_', lang)
 
     def check(args):
-      return subprocess.check_output([bin, i.endpoint] + args).decode('utf-8').strip().replace('\'','').replace(',', '')
+      out = subprocess.check_output([bin, i.endpoint] + args)
+      return out.decode('utf-8').strip().replace('\'','').replace(',', '')
 
     keys = list()
     for j in range(0, 5):

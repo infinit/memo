@@ -980,7 +980,7 @@ def configure(
 
   if key_value_store is not False:
     # Key-Value Store gRPC API.
-    kv_go_bin = drake.go.Executable(
+    kvs_go_bin = drake.go.Executable(
       source = drake.go.Source('tests/key-value-store/grpc/demo.go'),
       toolkit = go_toolkit,
       config = drake.go.Config(),
@@ -988,25 +988,25 @@ def configure(
         drake.copy(key_value_store.gen_go.targets(),
                    drake.Path(go_toolkit.path) / 'src/memo/kvs',
                    strip_prefix = True),
-        drake.Path(go_toolkit.path) / 'src/kv',
+        drake.Path(go_toolkit.path) / 'src/kvs',
         strip_prefix = True),
       target = 'tests/key-value-store/grpc/bin/demo_go')
-    config.add_local_include_path('../src/infinit/kv/protobuf')
-    kv_cpp_bin = drake.cxx.Executable(
+    config.add_local_include_path('../src/infinit/kvs/protobuf')
+    kvs_cpp_bin = drake.cxx.Executable(
       'tests/key-value-store/grpc/bin/demo_cc',
       drake.nodes('tests/key-value-store/grpc/demo.cc') +
       key_value_store.gen_cpp.targets() +
       [grpc.grpc_lib, grpc.grpc.protobuf_lib],
       cxx_toolkit,
       config)
-    kv_python_bin = drake.copy(
+    kvs_python_bin = drake.copy(
       drake.node('tests/key-value-store/grpc/demo.py'),
       'tests/key-value-store/grpc/bin',
       strip_prefix = True)
-    kv_runner = drake.Runner(
+    kvs_runner = drake.Runner(
       exe = drake.node('tests/key-value-store/grpc/test'),
       sources = key_value_store.gen_py.targets()
-              + [infinit, kv_go_bin, kv_cpp_bin, kv_python_bin],
+              + [infinit, kvs_go_bin, kvs_cpp_bin, kvs_python_bin],
       env = {
         'PYTHONPATH': ':'.join([
           str(key_value_store.gen_py.targets()[0].path(
@@ -1015,11 +1015,11 @@ def configure(
           str(drake.path_source('../tests/functional')),
           str(drake.path_build('../tests/functional/lib')),
          ]),
-        'KV_DEMO_DIR': str(kv_go_bin.path(absolute = True).dirname()),
+        'KVS_DEMO_DIR': str(kvs_go_bin.path(absolute = True).dirname()),
         'BUILD_DIR': str(drake.path_build('..')),
       }
     )
-    rule_check << kv_runner.status
+    rule_check << kvs_runner.status
 
   # Local Variables:
   # mode: python

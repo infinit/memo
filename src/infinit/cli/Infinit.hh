@@ -135,7 +135,7 @@ namespace infinit
       Drive drive = *this;
       Journal journal = *this;
 #if INFINIT_WITH_KEY_VALUE_STORE
-      KeyValueStore key_value_store = *this;
+      KeyValueStore kvs = *this;
 #endif
 #if INFINIT_WITH_LDAP
       LDAP ldap = *this;
@@ -157,7 +157,7 @@ namespace infinit
                                     cli::drive,
                                     cli::journal,
 #if INFINIT_WITH_KEY_VALUE_STORE
-                                    cli::key_value_store,
+                                    cli::kvs,
 #endif
 #if INFINIT_WITH_LDAP
                                     cli::ldap,

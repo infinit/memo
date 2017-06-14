@@ -322,9 +322,9 @@ def configure(
     strip = windows)
   rule_build << infinit_lib
 
-  ## ---- ##
-  ## kv.  ##
-  ## ---- ##
+  ## ----- ##
+  ## kvs.  ##
+  ## ----- ##
 
   # XXX: Go cross compiling requires go > 1.6 (tested with 1.8.3).
   # XXX: Re-enable key-value store for Windows when the build farm has been
@@ -332,8 +332,8 @@ def configure(
   with_kvs = not windows
 
   if with_kvs:
-    kv = drake.include(
-      'src/infinit/kv',
+    kvs = drake.include(
+      'src/infinit/kvs',
       go_toolkit = go_toolkit,
       go_config = go_config,
       grpc = grpc,
@@ -383,7 +383,7 @@ def configure(
     cli_cxx_config.library_add(elle.boost.program_options_static)
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
   if with_kvs:
-    cli_cxx_config.library_add(drake.copy(kv.library, libdir, True))
+    cli_cxx_config.library_add(drake.copy(kvs.library, libdir, True))
   if entreprise_edition:
     cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
 
@@ -825,8 +825,8 @@ def configure(
         return t
       utils = drake.node('tests/functional/utils.py')
       if with_kvs:
-        kv_grpc = drake.copy(
-          kv.gen_py.targets(),
+        kvs_grpc = drake.copy(
+          kvs.gen_py.targets(),
           'tests/functional/lib', strip_prefix = True)
       tests = list(
         map(lambda x: functional_test(x),
@@ -896,7 +896,7 @@ def configure(
         test.dependency_add(infinit_cli)
         test.dependency_add(drake.node('tests/functional/utils.py'))
         if with_kvs:
-          test.dependencies_add(kv_grpc)
+          test.dependencies_add(kvs_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                              absolute = True))
         extra_path = [binaries_path]
@@ -942,7 +942,7 @@ def configure(
         PatchAndInstall = PatchAndInstall,
         doughnut_proto = grpc.doughnut_proto,
         doughnut_json = grpc.doughnut_json,
-        key_value_store = kv if with_kvs else False,
+        key_value_store = kvs if with_kvs else False,
         infinit = infinit_cli,
         grpc = grpc,
       )

@@ -17,20 +17,19 @@ class Test(unittest.TestCase):
       network = Network(name = 'server1-server2', owner = user)
       network.put(beyond)
       kvs = KeyValueStore(name = 'business', network = network)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name']),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name']),
              404,
              json = False)
       kvs.put(beyond)
-      res = beyond.get('key-value-stores/%s' % kvs['name']).json()
+      res = beyond.get('kvs/%s' % kvs['name']).json()
       assertEq(res['name'], kvs['name'])
       assertEq(res['network'], network['name'])
-      res = beyond.get('networks/%s/key-value-stores' % network['name']).json()
-      assertEq(len(res['key-value-stores']), 1)
-      assertEq(res['key-value-stores'][0]['name'], kvs['name'])
-      res = beyond.get('users/%s/key-value-stores' % user['name'],
-                       auth = user).json()
-      assertEq(len(res['key-value-stores']), 1)
-      assertEq(res['key-value-stores'][0]['name'], kvs['name'])
+      res = beyond.get('networks/%s/kvs' % network['name']).json()
+      assertEq(len(res['kvs']), 1)
+      assertEq(res['kvs'][0]['name'], kvs['name'])
+      res = beyond.get('users/%s/kvs' % user['name'], auth = user).json()
+      assertEq(len(res['kvs']), 1)
+      assertEq(res['kvs'][0]['name'], kvs['name'])
 
   def test_all(self):
     with Beyond() as beyond:
@@ -42,9 +41,8 @@ class Test(unittest.TestCase):
       kvs.put(beyond)
       kvs2 = KeyValueStore(name = 'fun', network = network)
       kvs2.put(beyond)
-      res = beyond.get('users/%s/key-value-stores' % user['name'],
-                       auth = user).json()
-      kvss = sorted(res['key-value-stores'], key = itemgetter('name'))
+      res = beyond.get('users/%s/kvs' % user['name'], auth = user).json()
+      kvss = sorted(res['kvs'], key = itemgetter('name'))
       assertEq(len(kvss), 2)
       assertEq(kvss[0]['network'], kvss[1]['network'], network['name'])
       assertEq(kvss[0]['name'], kvs['name'])
@@ -62,9 +60,8 @@ class Test(unittest.TestCase):
       kvs.put(beyond)
       kvs2 = KeyValueStore(name = 'business2', network = network, owner = user2)
       kvs2.put(beyond)
-      res = beyond.get('users/%s/key-value-stores' % user2['name'],
-                       auth = user2).json()
-      kvss = sorted(res['key-value-stores'], key = itemgetter('name'))
+      res = beyond.get('users/%s/kvs' % user2['name'], auth = user2).json()
+      kvss = sorted(res['kvs'], key = itemgetter('name'))
       print(kvss)
       assertEq(len(kvss), 2)
       assertEq(kvss[0]['network'], kvss[1]['network'], network['name'])

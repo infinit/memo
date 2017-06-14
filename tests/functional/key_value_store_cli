@@ -3,7 +3,7 @@
 from utils import *
 import json
 
-tests = SharedLogicCLITests('key-value-store')
+tests = SharedLogicCLITests('kvs')
 tests.run()
 
 import grpc

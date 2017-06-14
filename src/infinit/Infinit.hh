@@ -421,6 +421,11 @@ namespace infinit
                 bool beyond_error = false,
                 bool update = false) const;
 
+  private:
+    std::string
+    _type_plural(std::string const& type) const;
+
+
     /// report_local_action is triggered when a local resource is edited:
     /// - saved
     /// - updated

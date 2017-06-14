@@ -67,8 +67,7 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
-                                json = False),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name'], json = False),
              404)
 
   def test_purge_with_a_volume_on_a_network_we_do_not_own(self):
@@ -96,8 +95,7 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
-                                json = False),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name'], json = False),
              404)
 
   # Ensure that only the user who does the purge has their objects removed.
@@ -132,12 +130,11 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
              404)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs1['name'],
-                                json = False),
+      throws(lambda: beyond.get('kvs/%s' % kvs1['name'], json = False),
              404)
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
-      beyond.get('key-value-stores/%s' % kvs2['name'])
+      beyond.get('kvs/%s' % kvs2['name'])
 
   def test_admin(self):
     with Beyond() as beyond:

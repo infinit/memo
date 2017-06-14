@@ -28,6 +28,6 @@ namespace infinit
   void
   KeyValueStore::print(std::ostream& out) const
   {
-    out << "Volume(" << this->name << ")";
+    out << "KVS(" << this->name << ")";
   }
 }

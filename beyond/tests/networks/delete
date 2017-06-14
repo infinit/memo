@@ -95,8 +95,7 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
-                                json = False),
+      throws(lambda: beyond.get('kvs/%s' % kvs['name'], json = False),
              404)
 
   # Check that we don't skip drives when a volume has already been pulled.
@@ -151,13 +150,13 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
              404)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs1['name'],
+      throws(lambda: beyond.get('kvs/%s' % kvs1['name'],
                                 json = False),
              404)
       # Ensure that alice's objects are still on Beyond.
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
-      beyond.get('key-value-stores/%s' % kvs2['name'])
+      beyond.get('kvs/%s' % kvs2['name'])
 
 if __name__ == '__main__':
   unittest.main()

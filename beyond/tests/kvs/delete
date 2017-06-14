@@ -19,9 +19,9 @@ class Test(unittest.TestCase):
       network.put(beyond)
       kvs = KeyValueStore(name = 'business', network = network)
       kvs.put(beyond)
-      beyond.get('key-value-stores/%s' % kvs['name'])
-      beyond.delete('key-value-stores/%s' % kvs['name'], auth = user)
-      throws(lambda: beyond.get('key-value-stores/%s' % kvs['name'],
+      beyond.get('kvs/%s' % kvs['name'])
+      beyond.delete('kvs/%s' % kvs['name'], auth = user)
+      throws(lambda: beyond.get('kvs/%s' % kvs['name'],
                                 json = False),
              404)
 

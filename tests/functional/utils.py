@@ -576,11 +576,11 @@ class KeyValueStoreInfrastructure():
     self.usr.run(['infinit', 'silo', 'create', 'filesystem', 's'])
     self.usr.run(['infinit', 'network', 'create', 'n', '-S', 's',
                   '--as', self.uname])
-    self.usr.run(['infinit', 'key-value-store', 'create', self.kvname,
+    self.usr.run(['infinit', 'kvs', 'create', self.kvname,
                   '-N', 'n', '--as', self.uname])
     port_file = '%s/port' % self.usr.dir
     self.__proc = self.usr.spawn(
-      ['infinit', 'key-value-store', 'run', self.kvname, '--as', self.uname,
+      ['infinit', 'kvs', 'run', self.kvname, '--as', self.uname,
        '--allow-root-creation',
        '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
     while not os.path.exists(port_file):
