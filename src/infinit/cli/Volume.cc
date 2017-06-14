@@ -411,9 +411,10 @@ namespace infinit
     namespace
     {
       /// These two arguments are aliases.  Make them consistent.
+      template <typename BoolOpt1, typename BoolOpt2>
       void
-      resolve_aliases(std::string const& opt1, elle::Defaulted<bool>& arg1,
-                      std::string const& opt2, elle::Defaulted<bool>& arg2)
+      resolve_aliases(std::string const& opt1, BoolOpt1& arg1,
+                      std::string const& opt2, BoolOpt2& arg2)
       {
         if (arg1 && !arg2)
           arg2 = *arg1;
@@ -495,19 +496,19 @@ namespace infinit
 #define MOUNT_OPTIONS_MERGE(Options)                                    \
     do {                                                                \
       namespace imo = infinit::mount_options;                           \
-      merge_(Options, imo::fuse_options, fuse_option);                  \
-      merge_(Options, imo::peers, peer);                                \
-      MERGE(Options, mountpoint);                                       \
-      MERGE(Options, readonly);                                         \
-      MERGE(Options, fetch);                                            \
-      MERGE(Options, push);                                             \
-      MERGE(Options, publish);                                          \
-      MERGE(Options, cache);                                            \
       MERGE(Options, async);                                            \
+      MERGE(Options, cache);                                            \
+      MERGE(Options, cache_disk_size);                                  \
+      MERGE(Options, cache_ram_invalidation);                           \
       MERGE(Options, cache_ram_size);                                   \
       MERGE(Options, cache_ram_ttl);                                    \
-      MERGE(Options, cache_ram_invalidation);                           \
-      MERGE(Options, cache_disk_size);                                  \
+      MERGE(Options, mountpoint);                                       \
+      MERGE(Options, publish);                                          \
+      MERGE(Options, readonly);                                         \
+      merge_(Options, cli::fetch, fetch_endpoints);                     \
+      merge_(Options, cli::push, push_endpoints);                       \
+      merge_(Options, imo::fuse_options, fuse_option);                  \
+      merge_(Options, imo::peers, peer);                                \
       merge_(Options, imo::poll_beyond, fetch_endpoints_interval);      \
       if (listen)                                                       \
         merge_(Options, imo::listen_address,                            \
@@ -570,7 +571,7 @@ namespace infinit
 
       // Normalize options *before* merging them into MountOptions.
       resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
-      resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
+      resolve_aliases("--push", push, "--push-volume", push_volume);
 
       auto mo = infinit::MountOptions{};
       MOUNT_OPTIONS_MERGE(mo);
@@ -621,7 +622,7 @@ namespace infinit
         }
         ifnt.volume_save(volume);
       }
-      if (*push || *push_volume)
+      if (*push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
     }
 
@@ -1011,6 +1012,11 @@ namespace infinit
       auto owner = cli.as_user();
 
       // Normalize options *before* merging them into MountOptions.
+      if (*publish)
+      {
+        fetch_endpoints = true;
+        push_endpoints = true;
+      }
       resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
       resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
@@ -1078,8 +1084,7 @@ namespace infinit
         model->service_add("volumes", name, volume);
       }
       // Only push if we are contributing storage.
-      bool push_p = mo.push.value_or(mo.publish.value_or(false)) &&
-        model->local();
+      bool const push_p = push_endpoints && model->local();
       auto local_endpoint = boost::optional<model::Endpoint>{};
       if (model->local())
       {
@@ -1809,13 +1814,8 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
-      // In update mode, push is an alias for push_endpoint, not
-      // push_volume.  So keep push_volume's original value to decide
-      // whether to push the volume.
-      auto push_volume = *push;
       // Normalize options *before* merging them into MountOptions.
       resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
-      resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
       auto const name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
@@ -1826,7 +1826,7 @@ namespace infinit
       if (block_size)
         volume.block_size = block_size;
       ifnt.volume_save(volume, true);
-      if (push_volume)
+      if (push)
         ifnt.beyond_push("volume", name, volume, owner);
     }
 
