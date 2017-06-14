@@ -3,8 +3,6 @@ syntax = "proto3";
 service Doughnut {
    rpc MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block) {}
    rpc MakeMutableBlock(MakeMutableBlockRequest) returns (Block) {}
-   rpc MakeNamedBlock(MakeNamedBlockRequest) returns (Block) {}
-   rpc NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse) {}
    rpc Fetch(FetchRequest) returns (FetchResponse) {}
    rpc Insert(InsertRequest) returns (InsertResponse) {}
    rpc Update(UpdateRequest) returns (UpdateResponse) {}
@@ -12,14 +10,6 @@ service Doughnut {
 }
 
 message MakeMutableBlockRequest {
-}
-
-message MakeNamedBlockRequest {
-  bytes key = 1;
-}
-
-message NamedBlockAddressRequest {
-  bytes key = 1;
 }
 
 message InsertRequest {
@@ -39,10 +29,6 @@ message MakeImmutableBlockRequest {
 message FetchRequest {
   bytes address = 1;
   bool decrypt_data = 2;
-}
-
-message NamedBlockAddressResponse {
-  bytes address = 1;
 }
 
 message RemoveRequest {
