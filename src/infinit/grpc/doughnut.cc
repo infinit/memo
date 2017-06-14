@@ -261,7 +261,7 @@ namespace infinit
                        ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
 #if INFINIT_ENABLE_PROMETHEUS
-              if (auto c = _counters[index])
+              if (auto& c = _counters[index])
                 c->Increment();
 #endif
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
