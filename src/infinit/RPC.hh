@@ -21,15 +21,22 @@
 
 namespace infinit
 {
+  /// Exception representing the attempt of invoking an unknown RPC.
   class UnknownRPC
     : public elle::Error
   {
   public:
+    /// Construct an UnknownRPC with the given name.
+    ///
+    /// @param name The name of the RPC.
     UnknownRPC(std::string name)
       : elle::Error(elle::sprintf("unknown RPC: %s", name))
       , _name(std::move(name))
     {}
 
+    /// Deserialize an UnknownRPC.
+    ///
+    /// @param s The serializer to deserialize the UnknownRPC from.
     UnknownRPC(elle::serialization::SerializerIn& s)
       : elle::Error(s)
       , _name()
@@ -37,6 +44,10 @@ namespace infinit
       this->_serialize(s);
     }
 
+    /// Serialize or deserialize an UnknownRPC.
+    ///
+    /// @param The serializer to serialize to or deserialize from.
+    /// @param version The serialization version.
     void
     serialize(elle::serialization::Serializer& s,
               elle::Version const& version) override
@@ -45,6 +56,9 @@ namespace infinit
       this->_serialize(s);
     }
 
+    /// Serialize or deserialize an UnknownRPC.
+    ///
+    /// @param The serializer to serialize to or deserialize from.
     void
     _serialize(elle::serialization::Serializer& s)
     {
@@ -58,9 +72,13 @@ namespace infinit
   | Server |
   `-------*/
 
+  /// Handler for a RPC.
+  ///
+  /// XXX
   class RPCHandler
   {
   public:
+    /// Construct
     RPCHandler(std::string name)
       : _name(std::move(name))
     {}
@@ -239,6 +257,7 @@ namespace infinit
     }
   };
 
+  ///
   class RPCServer
   {
   public:
@@ -252,6 +271,12 @@ namespace infinit
       this->_destroying();
     }
 
+    /// Add a RPC to the server.
+    ///
+    /// @tparam R The return type of the RPC.
+    /// @tparam Args The arguments of the RPC.
+    /// @param name The name of the RPC.
+    /// @param f The method to call.
     template <typename R, typename ... Args>
     void
     add(std::string const& name, std::function<R (Args...)> f)
@@ -260,6 +285,11 @@ namespace infinit
         std::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
+    /// Add an RPC to the server.
+    ///
+    /// @tparam Fun The signature of the RPC.
+    /// @param name The name of the RPC.
+    /// @param fun The method to call.
     template <typename Fun>
     void
     add(std::string const& name, Fun fun)
@@ -267,6 +297,13 @@ namespace infinit
       add(name, std::function<std::get_signature<Fun>>(fun));
     }
 
+    /// An umbrella to cover common exceptions related to RPCs, such as
+    /// closed sockets, etc.
+    ///
+    /// @tparam F The type of the function to wrap.
+    /// @tparam Args The types of the arguments of the function.
+    /// @param f The function to wrap.
+    /// @param args The arguments.
     template <typename F, typename ... Args>
     static
     void
@@ -287,6 +324,10 @@ namespace infinit
       }
     }
 
+    /// Start serving RPCs on the given input stream, wrapped on the umbrella
+    /// method.
+    ///
+    /// @param s The stream.
     void
     serve(std::iostream& s)
     {
@@ -299,12 +340,20 @@ namespace infinit
         });
     }
 
+    /// Start serving RPCs on the given serializer, wrapped on the umbrella
+    /// method.
+    ///
+    /// @param serializer The serializer.
     void
     serve(elle::protocol::Serializer& serializer)
     {
       umbrella([&] { this->_serve(serializer); });
     }
 
+    /// Start serving RPCs on the given serializer after building a
+    /// ChanneledStream, wrapped on the umbrella method.
+    ///
+    /// @param serializer The serializer.
     void
     _serve(elle::protocol::Serializer& serializer)
     {
@@ -312,12 +361,17 @@ namespace infinit
       this->serve(chans);
     }
 
+    /// Start serving RPCs on the given ChanneledStream, wrapped on the umbrella
+    /// method.
+    ///
+    /// @param channels The channeled stream.
     void
     serve(elle::protocol::ChanneledStream& channels)
     {
       umbrella([&] { this->_serve(channels); });
     }
 
+    /// Start serving RPCs on the given ChanneledStream.
     void
     _serve(elle::protocol::ChanneledStream& channels)
     {
@@ -334,7 +388,8 @@ namespace infinit
             this->_serve(channel);
           else
           {
-            auto schannel = std::make_shared<decltype(channel)>(std::move(channel));
+            auto schannel = std::make_shared<decltype(channel)>(
+              std::move(channel));
             s.run_background(elle::sprintf("serve %s", *schannel),
               [&, schannel]
               {
@@ -346,6 +401,7 @@ namespace infinit
       };
     }
 
+    /// Start serving RPCs on a specific channel.
     void
     _serve(elle::protocol::Channel& channel)
     {
@@ -358,8 +414,8 @@ namespace infinit
         ELLE_DEBUG_SCOPE("decipher RPC");
         try
         {
-          static auto bench
-            = elle::Bench("bench.rpcserve.decipher", std::chrono::seconds(10000));
+          static auto bench = elle::Bench("bench.rpcserve.decipher",
+                                          std::chrono::seconds(10000));
           auto bs = elle::Bench::BenchScope(bench);
           if (request.size() > 262144)
           {
@@ -440,6 +496,10 @@ namespace infinit
       channel.write(response);
     }
 
+    /// Upsert a value of type \T to the context.
+    ///
+    /// @tparam T The type of the value to add.
+    /// @param value The value to add.
     template <typename T>
     void
     set_context(T value)
@@ -458,15 +518,27 @@ namespace infinit
   | Client |
   `-------*/
 
+  /// Base class of RPCs.
+  ///
+  ///
   class BaseRPC
   {
   public:
     using Passport = infinit::model::doughnut::Passport;
+    /// Construct a new RPC.
+    ///
+    /// @param name The name of the method.
+    /// @param channels The channels to perform the RPC.
+    /// @param version The version used.
+    /// @param key An optional key, validated by the other side.
     BaseRPC(std::string name,
             elle::protocol::ChanneledStream& channels,
             elle::Version const& version,
             boost::optional<elle::cryptography::SecretKey> key = {});
 
+    /// Return the credentials, if applicable.
+    ///
+    /// @returns A buffer, empty or containing a secret key.
     elle::Buffer
     credentials()
     {
@@ -476,6 +548,10 @@ namespace infinit
         return {};
     }
 
+    /// Upsert a value of type \T to the context.
+    ///
+    /// @tparam T The type of the value to add.
+    /// @param value The value to add.
     template <typename T>
     void
     set_context(T value)
@@ -498,11 +574,15 @@ namespace infinit
   class RPC
   {};
 
+  /// A
   template <typename R, typename ... Args>
   class RPC<R (Args...)>
     : public BaseRPC
   {
   public:
+    /// Construct a RPC.
+    ///
+    /// @see BaseRPC::BaseRPC.
     RPC(std::string name,
         elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
@@ -510,6 +590,11 @@ namespace infinit
       : BaseRPC(std::move(name), channels, version, std::move(key))
     {}
 
+    /// Construct a RPC.
+    ///
+    /// @see BaseRPC::BaseRPC, except for the argument credentials.
+    ///
+    /// @param credentials A pointer to buffer, that could contain credential.
     RPC(std::string name,
         elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
@@ -523,6 +608,12 @@ namespace infinit
         boost::optional<elle::cryptography::SecretKey>())
     {}
 
+    /// Call the RPC.
+    ///
+    /// @tparam R The return type of the RPC.
+    /// @tparam Args The types of the arguments of the RPC.
+    /// @param args The arguments of the RPC.
+    /// @return The response, as an instance of type R.
     R
     operator ()(Args const& ... args);
     using result_type = R;

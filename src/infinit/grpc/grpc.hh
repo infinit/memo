@@ -20,7 +20,9 @@ namespace infinit
                int* effective_port = nullptr);
     std::unique_ptr<::grpc::Service>
     doughnut_service(infinit::model::Model& dht);
-    /** GRPC tasks (invoked by grpc callbacks) should acquire a Task
+
+    /**
+     *  GRPC tasks (invoked by grpc callbacks) should acquire a Task
      * from the callback thread, and abort if proceed() returns false
     */
     class Task
@@ -28,6 +30,7 @@ namespace infinit
     public:
       Task();
       ~Task();
+    public:
       bool
       proceed() const;
     private:
