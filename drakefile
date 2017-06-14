@@ -367,6 +367,14 @@ def configure(
 
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
+  #  _____ _____  ____  __ _____
+  # |  ___|_ _\ \/ /  \/  | ____|
+  # | |_   | | \  /| |\/| |  _|
+  # |  _|  | | /  \| |  | | |___
+  # |_|   |___/_/\_\_|  |_|_____|
+  #
+  # XXX / FIXME: Daemon is disabled for now.
+  with_daemon = False
   cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
   binaries = []
   global installed_binaries
