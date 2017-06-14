@@ -411,14 +411,17 @@ namespace infinit
     namespace
     {
       /// These two arguments are aliases.  Make them consistent.
-      void resolve_aliases(elle::Defaulted<bool>& arg1,
-                           elle::Defaulted<bool>& arg2)
+      void
+      resolve_aliases(std::string const& opt1, elle::Defaulted<bool>& arg1,
+                      std::string const& opt2, elle::Defaulted<bool>& arg2)
       {
         if (arg1 && !arg2)
           arg2 = *arg1;
         else if (!arg1 && arg2)
           arg1 = *arg2;
-        assert(*arg1 == *arg2);
+        else if (*arg1 != *arg2)
+          elle::err<CLIError>("inconsistent options: %s=%s and %s=%d",
+                              opt1, *arg1, opt2, *arg2);
       }
     }
 
@@ -566,8 +569,8 @@ namespace infinit
       auto network = ifnt.network_get(network_name, owner);
 
       // Normalize options *before* merging them into MountOptions.
-      resolve_aliases(fetch, fetch_endpoints);
-      resolve_aliases(push, push_endpoints);
+      resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
+      resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
       auto mo = infinit::MountOptions{};
       MOUNT_OPTIONS_MERGE(mo);
@@ -1008,8 +1011,8 @@ namespace infinit
       auto owner = cli.as_user();
 
       // Normalize options *before* merging them into MountOptions.
-      resolve_aliases(fetch, fetch_endpoints);
-      resolve_aliases(push, push_endpoints);
+      resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
+      resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
       auto const name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
@@ -1816,8 +1819,8 @@ namespace infinit
       // whether to push the volume.
       auto push_volume = *push;
       // Normalize options *before* merging them into MountOptions.
-      resolve_aliases(fetch, fetch_endpoints);
-      resolve_aliases(push, push_endpoints);
+      resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
+      resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
       auto name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);

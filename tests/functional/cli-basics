@@ -76,3 +76,9 @@ with Infinit() as bob:
            "\n"
            "Options:\n"
            "  -h, --help                show this help message\n")
+
+  bob.run(['infinit', 'user', 'create', 'bob'])
+  xfail(['volume', 'run',
+         '--fetch', '--fetch-endpoints=false', '--name', 'name', '--as', 'bob'],
+        "./bin/infinit: command line error: inconsistent options: --fetch=true and --fetch-endpoints=false\n"
+        "Try './bin/infinit volume run --help' for more information.\n")
