@@ -111,10 +111,10 @@ namespace infinit
                                   std::string const& help)
       -> Family<Gauge>*
     {
-      ELLE_TRACE("creating gauge family %s", name);
       // Add a new member gauge family to the registry.
       if (auto reg = registry())
       {
+        ELLE_TRACE("creating gauge family %s", name);
         auto& res = ::prometheus::BuildGauge()
           .Name(name)
           .Help(help)
@@ -130,10 +130,10 @@ namespace infinit
                                     std::string const& help)
       -> Family<Counter>*
     {
-      ELLE_TRACE("creating counter family %s", name);
       // Add a counter and register it.
       if (auto reg = registry())
       {
+        ELLE_TRACE("creating counter family %s", name);
         auto& res = ::prometheus::BuildCounter()
           .Name(name)
           .Help(help)
@@ -148,9 +148,11 @@ namespace infinit
     Prometheus::make(Family<Counter>* family, Labels const& labels)
       -> UniquePtr<Counter>
     {
-      ELLE_TRACE("creating counter: %s", labels);
       if (family)
+      {
+        ELLE_TRACE("creating %s counter: %s", family->name(), labels);
         return {&family->Add(labels), Deleter<Counter>{family}};
+      }
       else
         return {};
     }
@@ -159,9 +161,11 @@ namespace infinit
     Prometheus::make(Family<Gauge>* family, Labels const& labels)
       -> UniquePtr<Gauge>
     {
-      ELLE_TRACE("creating gauge: %s", labels);
       if (family)
+      {
+        ELLE_TRACE("creating %s gauge: %s", family->name(), labels);
         return {&family->Add(labels), Deleter<Gauge>{family}};
+      }
       else
         return {};
     }
