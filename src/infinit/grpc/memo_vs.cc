@@ -116,42 +116,39 @@ namespace infinit
             elle::Version const& version,
             bool is_void)
       {
-        ELLE_DEBUG("grpc call failed with exception %s",
-                   elle::exception_string(v.template get<E>()));
-        if (v.template is<E>())
-        {
-          try
-          {
-            std::rethrow_exception(v.template get<E>());
-          }
-          catch (infinit::model::MissingBlock const& mb)
-          {
-            err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
-          }
-          catch (infinit::model::doughnut::ValidationFailed const& vf)
-          {
-            err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
-          }
-          catch (elle::athena::paxos::TooFewPeers const& tfp)
-          {
-            err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
-          }
-          catch (infinit::model::Conflict const& c)
-          {
-            elle::unconst(c).serialize(sout, version);
-          }
-          catch (elle::Error const& e)
-          {
-            err = ::grpc::Status(::grpc::INTERNAL, e.what());
-          }
-        }
-        else
-        {
-          if (!is_void)
-            sout.serialize(
-              cxx_to_message_name(elle::type_info<A>().name()),
-              v.template get<A>());
-        }
+         if (v.template is<E>())
+         {
+           ELLE_DEBUG("grpc call failed with exception %s",
+                      elle::exception_string(v.template get<E>()));
+           try
+           {
+             std::rethrow_exception(v.template get<E>());
+           }
+           catch (infinit::model::MissingBlock const& mb)
+           {
+             err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+           }
+           catch (infinit::model::doughnut::ValidationFailed const& vf)
+           {
+             err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
+           }
+           catch (elle::athena::paxos::TooFewPeers const& tfp)
+           {
+             err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
+           }
+           catch (infinit::model::Conflict const& c)
+           {
+             elle::unconst(c).serialize(sout, version);
+           }
+           catch (elle::Error const& e)
+           {
+             err = ::grpc::Status(::grpc::INTERNAL, e.what());
+           }
+         }
+         else if (!is_void)
+           sout.serialize(
+             cxx_to_message_name(elle::type_info<A>().name()),
+             v.template get<A>());
       }
     };
 
@@ -164,14 +161,17 @@ namespace infinit
                  const REQ* request,
                  RESP* response)
     {
-      ::grpc::Status status = ::grpc::Status::OK;
-      ::grpc::StatusCode code = ::grpc::INTERNAL;
+      auto status = ::grpc::Status::OK;
+      auto code = ::grpc::INTERNAL;
       Task task;
       if (!task.proceed())
-      {
         return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
-      }
-      sched.mt_run<void>("invoke", [&] {
+      sched.mt_run<void>(
+        elle::print("invoke %r", elle::type_info<REQ>().name()),
+        [&] {
+          auto& thread = *ELLE_ENFORCE(elle::reactor::scheduler().current());
+          thread.name(elle::print(
+                        "{} ({})", thread.name(), static_cast<void*>(&thread)));
           try
           {
             ELLE_TRACE("invoking some method: %s -> %s",
@@ -187,10 +187,10 @@ namespace infinit
                       elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
-            if (NOEXCEPT) // it will compile anyway no need for static switch
+            if (NOEXCEPT) // It will compile anyway no need for static switch
             {
-              auto* adapted = OptionFirst<typename NF::Result::Super>::value(
-                res, status);
+              auto* adapted =
+                OptionFirst<typename NF::Result::Super>::value(res, status);
               if (status.ok() && !decltype(res)::is_void::value)
                 sout.serialize_forward(*adapted);
             }
@@ -222,6 +222,7 @@ namespace infinit
           "How many grpc calls are made");
 #endif
       }
+
       /// Register a Remote Procedure Call.
       ///
       /// @tparam GArg The RPC argument type.
@@ -254,15 +255,17 @@ namespace infinit
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             [&, index](Service*,
-                ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
 #if INFINIT_ENABLE_PROMETHEUS
-              _counters[index]->Increment();
+              if (auto& c = _counters[index])
+                c->Increment();
 #endif
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
             },
             this)));
       }
+
     private:
 #if INFINIT_ENABLE_PROMETHEUS
       prometheus::Family<prometheus::Counter>* _family;

@@ -546,14 +546,14 @@ def configure(
   if enable_crash_report:
     # //symbols-commit: publish the debug symbols for breakpad,
     # installed on Beyond.
-    rule_symbols_commit = drake.Rule('symbols-commit')
-    symbols_commit = crash_report.SymbolsCommitter(
+    symbols_commit = drake.node('//symbols-commit')
+    symbols_commit_builder = crash_report.SymbolsCommit(
+      symbols_commit,
       installed_symbols,
       repo = 'crash-report/debug-symbols',
       platform = platform,
       description = git.description(),
-      project = 'memo').witness
-    rule_symbols_commit << symbols_commit
+      project = 'memo')
 
   ## ------- ##
   ## Red Hat ##
@@ -594,7 +594,6 @@ def configure(
                                          'el6', 'x86_64',
                                          drake.path_build('redhat'),
                                          redhat_nodes).package
-  print(redhat_package)
   redhat_rule << redhat_package
 
   redhat_repo_version = '0.1'

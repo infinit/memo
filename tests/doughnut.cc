@@ -728,35 +728,31 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   }
 }
 
-/*--------------------.
-| Paxos: wrong quorum |
-`--------------------*/
-
-/// Make one of the overlay return a partial quorum, missing one of the three
-/// members, and check it gets fixed.
-class WrongQuorumStonehenge
-  : public infinit::overlay::Stonehenge
-{
-public:
-  template <typename ... Args>
-  WrongQuorumStonehenge(Args&& ... args)
-    : infinit::overlay::Stonehenge(std::forward<Args>(args)...)
-    , fail(false)
-  {}
-
-  elle::reactor::Generator<infinit::overlay::Overlay::WeakMember>
-  _lookup(infinit::model::Address address, int n, bool fast) const override
-  {
-    return infinit::overlay::Stonehenge::_lookup(address,
-                                                 fail ? n - 1 : n,
-                                                 fast);
-  }
-
-  bool fail;
-};
-
 namespace tests_paxos
 {
+  /// Make one of the overlay return a partial quorum, missing one of the three
+  /// members, and check it gets fixed.
+  class WrongQuorumStonehenge
+    : public infinit::overlay::Stonehenge
+  {
+  public:
+    template <typename ... Args>
+    WrongQuorumStonehenge(Args&& ... args)
+      : infinit::overlay::Stonehenge(std::forward<Args>(args)...)
+      , fail(false)
+    {}
+
+    elle::reactor::Generator<infinit::overlay::Overlay::WeakMember>
+    _lookup(infinit::model::Address address, int n, bool fast) const override
+    {
+      return infinit::overlay::Stonehenge::_lookup(address,
+                                                   fail ? n - 1 : n,
+                                                   fast);
+    }
+
+    bool fail;
+  };
+
   ELLE_TEST_SCHEDULED(wrong_quorum)
   {
     auto stonehenge = static_cast<WrongQuorumStonehenge*>(nullptr);

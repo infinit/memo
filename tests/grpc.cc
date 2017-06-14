@@ -555,11 +555,11 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     auto chan = grpc::CreateChannel(
         elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
-    ::memo::vs::Block b;
-    ELLE_TRACE("%s: create stup", id);
+    ELLE_TRACE("%s: create stub", id);
     auto stub = ::memo::vs::ValueStore::NewStub(chan);
     ELLE_TRACE("%s: fetch block", id);
     // Fetch mutable_block
+    ::memo::vs::Block b;
     {
       grpc::ClientContext context;
       ::memo::vs::FetchResponse abs;
@@ -569,10 +569,11 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
       stub->Fetch(&context, addr, &abs);
       b.CopyFrom(abs.block());
     }
-    std::unordered_map<std::string, int> payload;
-    payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
-    std::string sid = elle::sprintf("%s", id);
-    // Multiple updates on same block
+    using Payload = std::unordered_map<std::string, int>;
+    namespace json = elle::serialization::json;
+    auto payload = json::deserialize<Payload>(b.data_plain());
+    auto const sid = elle::sprintf("%s", id);
+    // Multiple updates on same block.
     ELLE_LOG("%s update start", id);
     int conflicts = 0;
     for (int i=0; i<20; ++i)
@@ -580,7 +581,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
       while (true)
       {
         payload[sid] = i;
-        b.set_data_plain(elle::serialization::json::serialize(payload).string());
+        b.set_data_plain(json::serialize(payload).string());
         grpc::ClientContext context;
         ::memo::vs::UpdateResponse repl;
         ::memo::vs::UpdateRequest update;
@@ -592,7 +593,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
         {
           b.CopyFrom(repl.current());
           ++conflicts;
-          payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
+          payload = json::deserialize<Payload>(b.data_plain());
           if (i != 0)
             BOOST_CHECK_EQUAL(payload[sid], i-1);
         }
@@ -632,8 +633,8 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, "127.0.0.1:0",
-                                &listening_port);
+      infinit::grpc::serve_grpc(*client.dht.dht,
+                                "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
