@@ -162,13 +162,10 @@ namespace infinit
              err = ::grpc::Status(::grpc::INTERNAL, e.what());
            }
          }
-         else
-         {
-           if (!is_void)
-             sout.serialize(
-               cxx_to_message_name(elle::type_info<A>().name()),
-               v.template get<A>());
-         }
+         else if (!is_void)
+           sout.serialize(
+             cxx_to_message_name(elle::type_info<A>().name()),
+             v.template get<A>());
       }
     };
 
@@ -181,13 +178,11 @@ namespace infinit
                  const REQ* request,
                  RESP* response)
     {
-      ::grpc::Status status = ::grpc::Status::OK;
-      ::grpc::StatusCode code = ::grpc::INTERNAL;
+      auto status = ::grpc::Status::OK;
+      auto code = ::grpc::INTERNAL;
       Task task;
       if (!task.proceed())
-      {
         return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
-      }
       sched.mt_run<void>(
         elle::print("invoke %r", elle::type_info<REQ>().name()),
         [&] {
@@ -243,6 +238,7 @@ namespace infinit
           "How many grpc calls are made");
 #endif
       }
+
       template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
@@ -262,15 +258,17 @@ namespace infinit
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             [&, index](Service*,
-                ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
 #if INFINIT_ENABLE_PROMETHEUS
-              _counters[index]->Increment();
+              if (auto& c = _counters[index])
+                c->Increment();
 #endif
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
             },
             this)));
       }
+
     private:
 #if INFINIT_ENABLE_PROMETHEUS
       prometheus::Family<prometheus::Counter>* _family;

@@ -519,7 +519,9 @@ ELLE_TEST_SCHEDULED(filesystem)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, "127.0.0.1:0", &listening_port);
+      infinit::grpc::serve_grpc(*client.dht.dht,
+                                *client.fs,
+                                "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
@@ -690,7 +692,9 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*servers[0]->dht, boost::none, "127.0.0.1:0", &listening_port);
+      infinit::grpc::serve_grpc(*servers[0]->dht,
+                                boost::none,
+                                "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
@@ -703,11 +707,11 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
     auto chan = grpc::CreateChannel(
         elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
-    ::Block b;
-    ELLE_TRACE("%s: create stup", id);
+    ELLE_TRACE("%s: create stub", id);
     auto stub = Doughnut::NewStub(chan);
     ELLE_TRACE("%s: fetch block", id);
     // Fetch mutable_block
+    ::Block b;
     {
       grpc::ClientContext context;
       ::FetchResponse abs;
@@ -717,10 +721,11 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       stub->Fetch(&context, addr, &abs);
       b.CopyFrom(abs.block());
     }
-    std::unordered_map<std::string, int> payload;
-    payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
-    std::string sid = elle::sprintf("%s", id);
-    // Multiple updates on same block
+    using Payload = std::unordered_map<std::string, int>;
+    namespace json = elle::serialization::json;
+    auto payload = json::deserialize<Payload>(b.data_plain());
+    auto const sid = elle::sprintf("%s", id);
+    // Multiple updates on same block.
     ELLE_LOG("%s update start", id);
     int conflicts = 0;
     for (int i=0; i<20; ++i)
@@ -728,7 +733,7 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
       while (true)
       {
         payload[sid] = i;
-        b.set_data_plain(elle::serialization::json::serialize(payload).string());
+        b.set_data_plain(json::serialize(payload).string());
         grpc::ClientContext context;
         ::UpdateResponse repl;
         ::UpdateRequest update;
@@ -740,7 +745,7 @@ ELLE_TEST_SCHEDULED(doughnut_parallel)
         {
           b.CopyFrom(repl.current());
           ++conflicts;
-          payload = elle::serialization::json::deserialize<decltype(payload)>(b.data_plain());
+          payload = json::deserialize<Payload>(b.data_plain());
           if (i != 0)
             BOOST_CHECK_EQUAL(payload[sid], i-1);
         }
@@ -780,7 +785,9 @@ ELLE_TEST_SCHEDULED(doughnut)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, "127.0.0.1:0", &listening_port);
+      infinit::grpc::serve_grpc(*client.dht.dht,
+                                boost::none,
+                                "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("connecting to 127.0.0.1:%s", listening_port);
