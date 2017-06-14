@@ -92,9 +92,6 @@ x86_64-ubuntu-gcc4:
     - time docker push infinit/infinit:${DESC}
     - docker rmi {,infinit/}infinit:${DESC}
     - time python3 drake --website=false //beyond/docker
-    - docker tag infinit-beyond:${DESC} infinit/infinit-beyond:${DESC}
-    - time docker push infinit/infinit-beyond:${DESC}
-    - docker rmi {,infinit/}infinit-beyond:${DESC}
     - if [ -n "$SIBYLFS" ]; then time python3 drake --website=false //sibylfs; fi
   tags:
     - x86_64
