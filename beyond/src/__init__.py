@@ -21,17 +21,20 @@ def run(*args, **kwargs):
   kwargs.setdefault('stdout', subprocess.PIPE)
   kwargs.setdefault('stderr', subprocess.PIPE)
   kwargs['universal_newlines'] = True
-  return subprocess.run(*args, **kwargs)
+  log('run: {}'.format(' '.join(cmd)))
+  res = subprocess.run(*args, **kwargs)
+  log('ran: {}'.format(res))
+  return res
 
 ## ------------ ##
 ## Crash report ##
 ## ------------ ##
 
-# Where the symbol files are.
-symbols_path = 'symbols/'
-
 # Where the git repo for debug symbols is checkout.
 repo_dir = 'debug-symbols'
+
+# Where the symbol files are.
+symbols_dir = repo_dir + '/symbols'
 
 def update_symbols():
   '''Create or update the symbols/ directory.'''
@@ -45,7 +48,7 @@ def update_symbols():
       return
 
   # The repo is there.  Update it.
-  p = run(['git', '-C', repo_dir, 'pull', '--rebase'])
+  p = run(['git', '-C', repo_dir, 'checkout', '--force', 'origin/master'])
   if p.returncode:
     log('update_symbols: cannot pull git repo: {}', p.stderr)
     return
@@ -59,7 +62,7 @@ def symbolize_dump(in_, out = None):
     out = in_
   try:
     with open(out + '.tmp', 'wb') as o:
-      p = run(['minidump_stackwalk', in_, symbols_path], stdout=o)
+      p = run(['minidump_stackwalk', in_, symbols_dir], stdout=o)
       if p.returncode:
         log("symbolize: error: {}", p.stderr)
       else:

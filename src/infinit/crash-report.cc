@@ -4,7 +4,7 @@
 
 ELLE_LOG_COMPONENT("CrashReporter");
 
-#if INFINIT_ENABLE_CRASH_REPORTER
+#if INFINIT_ENABLE_CRASH_REPORT
 
 #include <crash-report/CrashReporter.hh>
 
@@ -62,7 +62,7 @@ namespace infinit
   }
 }
 
-#else // INFINIT_ENABLE_CRASH_REPORTER
+#else // ! INFINIT_ENABLE_CRASH_REPORT
 
 namespace infinit
 {
