@@ -124,9 +124,9 @@ x86_64-alpine-gcc:
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - rm "$TARBALL"
     - python3 drake --website=false //src/infinit/grpc/docker
-    - docker tag memo-client-python:$DESC infinit/memo-client-python:$DESC
-    - docker push infinit/memo-client-python:$DESC
-    - docker rmi {,infinit/}memo-client-python:$DESC
+    - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
+    - docker push infinit/memo-vs-client-python:$DESC
+    - docker rmi {,infinit/}memo-vs-client-python:$DESC
   tags:
     - x86_64
     - alpine
