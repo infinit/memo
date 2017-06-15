@@ -3,18 +3,18 @@
 from utils import *
 
 with Infinit() as bob:
-  bob.run(['memo', 'user', 'create'])
-  bob.run(['memo', 'user', 'list',
+  bob.run(['user', 'create'])
+  bob.run(['user', 'list',
            '--compatibility-version', '0.3.0'])
-  bob.run(['memo', 'user', 'list',
+  bob.run(['user', 'list',
            '--compatibility-version', '0.5.2'])
   throws(lambda: bob.run(
-    ['memo', 'user', 'list', '--compatibility-version', '0.119.0']))
+    ['user', 'list', '--compatibility-version', '0.119.0']))
   throws(lambda: bob.run(
-    ['memo', 'user', 'list', '--compatibility-version', '1..']))
+    ['user', 'list', '--compatibility-version', '1..']))
   throws(lambda: bob.run(
-    ['memo', 'user', 'list', '--compatibility-version', ' ']))
+    ['user', 'list', '--compatibility-version', ' ']))
   throws(lambda: bob.run(
-    ['memo', 'user', 'list', '--compatibility-version', 'nekolas']))
+    ['user', 'list', '--compatibility-version', 'nekolas']))
   throws(lambda: bob.run(
-    ['memo', 'user', 'list', '--compatibility-version', '0..']))
+    ['user', 'list', '--compatibility-version', '0..']))

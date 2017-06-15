@@ -7,13 +7,13 @@ import re
 with Infinit() as bob:
   def neutralize(s):
     '''Fix gratuitous difference such as Window paths vs. Unix ones.'''
-    s = re.sub(r'Z:.*?\\(memo(?:-\w+)?).exe', r'./bin/\1', s)
+    s = re.sub(r'Z:.*?\\(%s(?:-\w+)?).exe' % binary, r'./bin/\1', s)
     # Gee...  Maybe do this in assertEq?
     s = s.replace('\r\n', '\n')
     return s
 
-  def xfail(command, message, binary='memo'):
-    err = neutralize(bob.run([binary] + command, return_code = 2)[1])
+  def xfail(command, message):
+    err = neutralize(bob.run(command, return_code = 2)[1])
     assertEq(message, err)
 
   xfail(['--foo'],

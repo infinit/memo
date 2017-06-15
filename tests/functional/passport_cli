@@ -5,52 +5,52 @@ import json
 
 # Using hub to retreive passports.
 with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
-  bob.run(['memo', 'user', 'signup',
+  bob.run(['user', 'signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
-  alice.run(['memo', 'user', 'signup',
+  alice.run(['user', 'signup',
              '--name', 'alice', '--email', 'alice@infinit.io',
            ])
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice'])
-  bob.run(['memo', 'user', 'fetch',
+  alice.run(['passport', 'fetch', '--as', 'alice'])
+  bob.run(['user', 'fetch',
            '--name', 'alice'])
   networks = set()
   for i in range(10):
     network = 'network%r' % i
     networks.add('bob/%s' % network)
-    bob.run(['memo', 'network', 'create', '--push',
+    bob.run(['network', 'create', '--push',
              '--name', network,
              '--as', 'bob'])
-    bob.run(['memo', 'passport', 'create', '--push',
+    bob.run(['passport', 'create', '--push',
              '--network', network,
              '--user', 'alice',
              '--as', 'bob'])
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice'])
+  alice.run(['passport', 'fetch', '--as', 'alice'])
   l = set(p['network'] for p in alice.run_json(
-    ['memo', 'passport', 'list', '--as', 'alice', '--script']))
+    ['passport', 'list', '--as', 'alice', '--script']))
   assertEq(l, networks)
   for network in networks:
-    alice.run(['memo', 'network', 'fetch',
+    alice.run(['network', 'fetch',
                '--name', network,
                '--as', 'alice'])
   for network in networks:
     try:
-      alice.run(['memo', 'network', 'run',
+      alice.run(['network', 'run',
                  '--name', network,
                  '--as', 'alice'])
       unreachable()
     except Exception as e:
       assert 'has not yet linked to the network' in e.args[0]
   for network in networks:
-    alice.run(['memo', 'network', 'link',
+    alice.run(['network', 'link',
                '--name', network,
                '--as', 'alice'])
 
 # Storing more than x passports.
 limit = 2
 with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as beyond, Infinit(beyond) as bob:
-  bob.run(['memo', 'user', 'signup',
+  bob.run(['user', 'signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
-  bob.run(['memo', 'network', 'create', '--push',
+  bob.run(['network', 'create', '--push',
            '--name', 'network',
            '--as', 'bob'])
   def push_passport(i):
@@ -58,10 +58,10 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
     user.__enter__()
     name = 'invitee%d' % i
     try:
-      user.run(['memo', 'user', 'signup',
+      user.run(['user', 'signup',
                 '--name', name, '--email', '%s@infinit.io' % name])
-      bob.run(['memo', 'user', 'fetch', '--as', 'bob', '--name', name])
-      return bob.run(['memo', 'passport', 'create', '--push',
+      bob.run(['user', 'fetch', '--as', 'bob', '--name', name])
+      return bob.run(['passport', 'create', '--push',
                       '--network', 'network',
                       '--user', name,
                       '--as', 'bob'])
@@ -79,24 +79,24 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
 with Beyond() as beyond, \
     Infinit(beyond = beyond) as bob, \
     Infinit(beyond = beyond) as alice:
-  bob.run(['memo', 'user', 'signup', 'bob', '--email', 'b@infinit.io'])
-  alice.run(['memo', 'user', 'signup', 'alice', '--email', 'a@infinit.io'])
-  bob.run(['memo', 'network', 'create', '--as', 'bob', 'n', '--push'])
-  bob.run(['memo', 'user', 'fetch', 'alice'])
-  bob.run(['memo', 'passport', 'create', '--as', 'bob',
+  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
+  bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
+  bob.run(['user', 'fetch', 'alice'])
+  bob.run(['passport', 'create', '--as', 'bob',
            '-u', 'alice', '-N', 'n', '--push'])
-  alice.run(['memo', 'network', 'fetch', '--as', 'alice', 'bob/n'])
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice'])
-  assertEq(len(alice.run_json(['memo', 'passport', 'list', '-s'])), 1)
+  alice.run(['network', 'fetch', '--as', 'alice', 'bob/n'])
+  alice.run(['passport', 'fetch', '--as', 'alice'])
+  assertEq(len(alice.run_json(['passport', 'list', '-s'])), 1)
   # Local and Beyond.
-  bob.run(['memo', 'passport', 'delete', '--as', 'bob',
+  bob.run(['passport', 'delete', '--as', 'bob',
            '-u', 'alice', '-N', 'n', '--pull'])
-  assertEq(len(bob.run_json(['memo', 'passport', 'list', '-s'])), 0)
+  assertEq(len(bob.run_json(['passport', 'list', '-s'])), 0)
   # Local only.
-  alice.run(['memo', 'passport', 'delete', '--as', 'alice',
+  alice.run(['passport', 'delete', '--as', 'alice',
              '-u', 'alice', '-N', 'bob/n', '--pull'])
-  assertEq(len(alice.run_json(['memo', 'passport', 'list', '-s'])), 0)
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice',
+  assertEq(len(alice.run_json(['passport', 'list', '-s'])), 0)
+  alice.run(['passport', 'fetch', '--as', 'alice',
              '-u', 'alice', '-N', 'n'], return_code = 1)
 
 # Push passport on an network you don't own.
@@ -104,27 +104,27 @@ with Beyond() as beyond, \
     Infinit(beyond = beyond) as bob, \
     Infinit(beyond = beyond) as alice, \
     Infinit(beyond = beyond) as eve:
-  bob.run(['memo', 'user', 'signup', 'bob', '--email', 'b@infinit.io'])
-  alice.run(['memo', 'user', 'signup', 'alice', '--email', 'a@infinit.io'])
-  eve.run(['memo', 'user', 'signup', 'eve', '--email', 'eve@infinit.io'])
-  bob.run(['memo', 'network', 'create', '--as', 'bob', 'n', '--push'])
-  bob.run(['memo', 'user', 'fetch', 'alice'])
-  bob.run(['memo', 'passport', 'create', '--as', 'bob',
+  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
+  eve.run(['user', 'signup', 'eve', '--email', 'eve@infinit.io'])
+  bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
+  bob.run(['user', 'fetch', 'alice'])
+  bob.run(['passport', 'create', '--as', 'bob',
            '-u', 'alice', '-N', 'n', '--push'])
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice'])
-  alice.run(['memo', 'network', 'fetch', '--as', 'alice'])
-  alice.run(['memo', 'user', 'fetch', 'eve'])
-  throws(lambda: alice.run(['memo', 'passport', 'create', '--as', 'alice',
+  alice.run(['passport', 'fetch', '--as', 'alice'])
+  alice.run(['network', 'fetch', '--as', 'alice'])
+  alice.run(['user', 'fetch', 'eve'])
+  throws(lambda: alice.run(['passport', 'create', '--as', 'alice',
                             '-u', 'eve', '-N', 'bob/n', '--push']),
          'Forbidden pushing passport')
   # Remove created passport.
-  alice.run(['memo', 'passport', 'delete', '--as', 'alice',
+  alice.run(['passport', 'delete', '--as', 'alice',
              '-u', 'eve', '-N', 'bob/n']),
   # Remove alice passport that cannot sign other passports.
-  bob.run(['memo', 'passport', 'delete', '--pull', '--as', 'bob',
+  bob.run(['passport', 'delete', '--pull', '--as', 'bob',
            '-u', 'alice', '-N', 'n'])
-  bob.run(['memo', 'passport', 'create', '--as', 'bob', '--allow-create-passport',
+  bob.run(['passport', 'create', '--as', 'bob', '--allow-create-passport',
            '-u', 'alice', '-N', 'n', '--push'])
-  alice.run(['memo', 'passport', 'fetch', '--as', 'alice'])
-  alice.run(['memo', 'passport', 'create', '--as', 'alice',
+  alice.run(['passport', 'fetch', '--as', 'alice'])
+  alice.run(['passport', 'create', '--as', 'alice',
              '-u', 'eve', '-N', 'bob/n', '--push'])

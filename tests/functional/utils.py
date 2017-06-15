@@ -17,6 +17,7 @@ import infinit.beyond.couchdb
 from datetime import timedelta
 
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
+binary = 'memo'
 
 class TemporaryDirectory:
 
@@ -185,8 +186,10 @@ class Infinit(TemporaryDirectory):
           gdb = False,
           valgrind = False,
           timeout = 600,
-          noscript = False):
+          noscript = False,
+          binary = binary):
     '''Return (stdout, stderr).'''
+    args = [binary] + args
     try:
       process = self.spawn(
         args, input, return_code, env,
@@ -217,7 +220,8 @@ class Infinit(TemporaryDirectory):
 
   def run_json(self, args, gdb = False, valgrind = False,
                *largs, **kwargs):
-    out, err = self.run(args, gdb = gdb, valgrind = valgrind,
+    out, err = self.run(args.split(' ') if isinstance(args, str) else args,
+                        gdb = gdb, valgrind = valgrind,
                         *largs, **kwargs)
     try:
       res = [json.loads(l) for l in out.split(cr) if l]

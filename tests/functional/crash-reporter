@@ -20,8 +20,8 @@ with TemporaryDirectory() as tmp, \
   def crash():
     # Crash returns 2 on OS X and 11 on Linux so work around with try except.
     try:
-      bob.run(['tests/functional/bin/crasher',
-               '--server', server, '--dumps', str(tmp), '--crash'])
+      bob.run(['--server', server, '--dumps', str(tmp), '--crash'],
+              binary = 'tests/functional/bin/crasher')
     except:
       pass
     # Leave some time for the minidump to be written.
@@ -29,8 +29,8 @@ with TemporaryDirectory() as tmp, \
     sleep(2)
 
   def upload(server = server):
-    bob.run(['tests/functional/bin/crasher',
-             '--server', server, '--dumps', str(tmp)])
+    bob.run(['--server', server, '--dumps', str(tmp)],
+            binary = 'tests/functional/bin/crasher')
 
   # Nothing uploaded as there are no crashes.
   upload()

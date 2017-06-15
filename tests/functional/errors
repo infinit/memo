@@ -20,7 +20,7 @@ with Infinit() as infinit:
     'replication_factor': 1,
     'version': '0.0.0'
   }
-  infinit.run(['memo', 'user', 'create', '--name', 'user'])
-  infinit.run(['memo', 'network', 'import'], input = descriptor)
-  infinit.run(['memo', 'network', 'run', '--name', 'clouds', '--as', 'user'],
+  infinit.run(['user', 'create', '--name', 'user'])
+  infinit.run(['network', 'import'], input = descriptor)
+  infinit.run(['network', 'run', '--name', 'clouds', '--as', 'user'],
               return_code = 1)

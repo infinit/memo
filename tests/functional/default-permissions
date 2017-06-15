@@ -4,30 +4,30 @@ from utils import *
 
 def run(perms):
   with TemporaryDirectory() as tmp, Infinit() as owner, Infinit() as user:
-    owner.run(['memo', 'user', 'create', 'owner'])
-    user.run(['memo', 'user', 'create', 'user'])
+    owner.run(['user', 'create', 'owner'])
+    user.run(['user', 'create', 'user'])
 
-    owner.run(['memo', 'storage', 'create', 'storage', '--filesystem',
+    owner.run(['storage', 'create', 'storage', '--filesystem',
                 '--path', tmp.dir])
-    owner.run(['memo', 'network', 'create', 'network', '--kelips',
+    owner.run(['network', 'create', 'network', '--kelips',
                '--silo', 'storage',
                '--as', 'owner'])
-    owner.run(['memo', 'volume', 'create', 'volume', '--network', 'network',
+    owner.run(['volume', 'create', 'volume', '--network', 'network',
                '--as', 'owner',
                '--default-permissions', perms])
 
-    uuser = user.run(['memo', 'user', 'export', 'user'])
-    owner.run(['memo', 'user', 'import'], input = uuser)
-    net = owner.run(['memo', 'network', 'export', '--as', 'owner', 'network'])
-    user.run(['memo', 'network', 'import'], input = net)
-    vol = owner.run(['memo', 'volume', 'export', 'volume', '--as', 'owner'])
-    user.run(['memo', 'volume', 'import'], input = vol)
-    puser = owner.run(['memo', 'passport', 'create', '--as', 'owner',
+    uuser = user.run(['user', 'export', 'user'])
+    owner.run(['user', 'import'], input = uuser)
+    net = owner.run(['network', 'export', '--as', 'owner', 'network'])
+    user.run(['network', 'import'], input = net)
+    vol = owner.run(['volume', 'export', 'volume', '--as', 'owner'])
+    user.run(['volume', 'import'], input = vol)
+    puser = owner.run(['passport', 'create', '--as', 'owner',
                        '--user', 'user',
                        '--network', 'owner/network',
                        '--output', '-'])
-    user.run(['memo', 'passport', 'import'], input = puser)
-    user.run(['memo', 'network', 'link', '--as', 'user', 'owner/network'])
+    user.run(['passport', 'import'], input = puser)
+    user.run(['network', 'link', '--as', 'user', 'owner/network'])
 
     response = owner.run_script(
       user = 'owner', operation = 'mkdir', path = '/beacon')
@@ -38,7 +38,7 @@ def run(perms):
         return '127.0.0.1:%s' % int(f.readline())
     def run_volume():
       owner.run([
-        'memo', 'volume', 'run', '--as', 'owner', 'volume',
+        'volume', 'run', '--as', 'owner', 'volume',
         '--port-file', portfile],
         return_code = 118)
     import threading

@@ -5,37 +5,37 @@ from utils import *
 
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
   # Device 1
-  infinit_1.run(['memo', 'user', 'create',  'user'])
+  infinit_1.run(['user', 'create',  'user'])
   user = infinit_1.run_json(
-    ['memo', 'user', 'export', 'user', '--full'])
+    ['user', 'export', 'user', '--full'])
   infinit_1.run([
-    'memo', 'silo', 'create', 'filesystem',
+    'silo', 'create', 'filesystem',
      'storage', '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
-    'memo', 'network', 'create',
+    'network', 'create',
     'network', '--silo', 'storage',
     '--no-consensus',
     '--as', 'user',
   ])
   network = infinit_1.run_json([
-    'memo', 'network', 'export',
+    'network', 'export',
      'network',
     '--as', 'user',
   ])
   infinit_1.run([
-    'memo', 'volume', 'create',
+    'volume', 'create',
      'volume', '--network', 'network',
     '--as', 'user',
   ])
   volume = infinit_1.run_json([
-    'memo', 'volume', 'export',
+    'volume', 'export',
      'volume',
     '--as', 'user',
   ])
   response = infinit_1.run_json(
     [
-      'memo', 'volume', 'run',
+      'volume', 'run',
       'volume',
       '--as', 'user',
       '--allow-root-creation',
@@ -45,22 +45,22 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     raise AssertionError('operation failed: %s' % response)
   # Device 2
   infinit_2.run(
-    ['memo', 'user', 'import'], input = user)
+    ['user', 'import'], input = user)
   infinit_2.run([
-    'memo', 'silo', 'create', 'filesystem', 'storage',
+    'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  infinit_2.run(['memo', 'network', 'import'], input = network)
+  infinit_2.run(['network', 'import'], input = network)
   infinit_2.run([
-    'memo', 'network', 'link',
+    'network', 'link',
      'network',
     '--silo', 'storage',
     '--as', 'user',
   ])
-  infinit_2.run(['memo', 'volume', 'import'], input = volume)
+  infinit_2.run(['volume', 'import'], input = volume)
   response = infinit_2.run_json(
     [
-      'memo', 'volume', 'run',
+      'volume', 'run',
       'volume',
       '--as', 'user',
     ],
