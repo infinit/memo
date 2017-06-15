@@ -1882,8 +1882,11 @@ namespace infinit
                   }
                 }
                 else
-                  ELLE_WARN(
-                    "someone else picked a value while we rebalanced");
+                {
+                  ELLE_TRACE("someone else picked a value while we rebalanced");
+                  ++version;
+                  continue;
+                }
                 return false;
               }
               else
