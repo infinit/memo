@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+from operator import itemgetter
+
+from utils import *
+
+class Test(unittest.TestCase):
+
+  def test_normal(self):
+    with Beyond() as beyond:
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'server1-server2', owner = user)
+      network.put(beyond)
+      kvs = KeyValueStore(name = 'business', network = network)
+      throws(lambda: beyond.get('kvs/%s' % kvs['name']),
+             404,
+             json = False)
+      kvs.put(beyond)
+      res = beyond.get('kvs/%s' % kvs['name']).json()
+      assertEq(res['name'], kvs['name'])
+      assertEq(res['network'], network['name'])
+      res = beyond.get('networks/%s/kvs' % network['name']).json()
+      assertEq(len(res['kvs']), 1)
+      assertEq(res['kvs'][0]['name'], kvs['name'])
+      res = beyond.get('users/%s/kvs' % user['name'], auth = user).json()
+      assertEq(len(res['kvs']), 1)
+      assertEq(res['kvs'][0]['name'], kvs['name'])
+
+  def test_all(self):
+    with Beyond() as beyond:
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'server1-server2', owner = user)
+      network.put(beyond)
+      kvs = KeyValueStore(name = 'business', network = network)
+      kvs.put(beyond)
+      kvs2 = KeyValueStore(name = 'fun', network = network)
+      kvs2.put(beyond)
+      res = beyond.get('users/%s/kvs' % user['name'], auth = user).json()
+      kvss = sorted(res['kvs'], key = itemgetter('name'))
+      assertEq(len(kvss), 2)
+      assertEq(kvss[0]['network'], kvss[1]['network'], network['name'])
+      assertEq(kvss[0]['name'], kvs['name'])
+      assertEq(kvss[1]['name'], kvs2['name'])
+
+  def test_on_network_you_dont_own(self):
+    with Beyond() as beyond:
+      user = User()
+      user2 = User()
+      user.put(beyond)
+      user2.put(beyond)
+      network = Network(name = 'server1-server2', owner = user)
+      network.put(beyond)
+      kvs = KeyValueStore(name = 'business', network = network, owner = user2)
+      kvs.put(beyond)
+      kvs2 = KeyValueStore(name = 'business2', network = network, owner = user2)
+      kvs2.put(beyond)
+      res = beyond.get('users/%s/kvs' % user2['name'], auth = user2).json()
+      kvss = sorted(res['kvs'], key = itemgetter('name'))
+      print(kvss)
+      assertEq(len(kvss), 2)
+      assertEq(kvss[0]['network'], kvss[1]['network'], network['name'])
+      assertEq(kvss[0]['name'], kvs['name'])
+      assertEq(kvss[1]['name'], kvs2['name'])
+
+if __name__ == '__main__':
+  unittest.main()

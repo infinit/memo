@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+tests = SharedLogicCLITests('kvs')
+tests.run()
+
+import grpc
+import memo_kvs_pb2 as kv
+
+# Simple.
+with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+
+  def throws_code(f, code):
+    try:
+      f()
+      assert False
+    except Exception as e:
+      assertEq(e.code(), code)
+
+  client = i.stub
+  key = 'some/key'
+  # Fetch value that doesn't exist.
+  throws_code(lambda: client.Fetch(kv.FetchRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+  # Remove value that doesn't exist.
+  throws_code(lambda: client.Delete(kv.DeleteRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+  # Update value that doesn't exist.
+  throws_code(lambda: client.Update(kv.UpdateRequest(
+                key = key, value = 'update'.encode('utf-8'))),
+              grpc.StatusCode.NOT_FOUND)
+  # Insert value that doesn't exist.
+  value1 = 'some data'
+  client.Insert(kv.InsertRequest(key = key, value = value1.encode('utf-8')))
+  # Fetch value.
+  assertEq(client.Fetch(kv.FetchRequest(key = key)).value.decode('utf-8'), value1)
+  # Insert value that already exists.
+  throws_code(lambda: client.Insert(kv.InsertRequest(
+                key = key, value = 'exists'.encode('utf-8'))),
+              grpc.StatusCode.ALREADY_EXISTS)
+  # Update value.
+  value2 = 'update data'
+  client.Update(kv.UpdateRequest(key = key, value = value2.encode('utf-8')))
+  assertEq(client.Fetch(kv.FetchRequest(key = key)).value.decode('utf-8'), value2)
+  # Upsert value.
+  value3 = 'upsert data'
+  client.Upsert(kv.UpsertRequest(key = key, value = value3.encode('utf-8')))
+  assertEq(client.Fetch(kv.FetchRequest(key = key)).value.decode('utf-8'), value3)
+  # Remove value.
+  client.Delete(kv.DeleteRequest(key = key))
+  throws_code(lambda: client.Fetch(kv.FetchRequest(key = key)),
+              grpc.StatusCode.NOT_FOUND)
+
+# List.
+with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+
+  def random_sequence(count = 100):
+    from random import SystemRandom
+    import string
+    return ''.join(SystemRandom().choice(
+      string.ascii_lowercase + string.digits) for _ in range(count))
+
+  client = i.stub
+  # Store tests data.
+  keys = list()
+  data = dict()
+  for j in range(0, 100):
+    prefix = 'dir_1/'
+    if j >= 50:
+      prefix = 'dir_2/'
+    if j % 2 == 0:
+      prefix += 'a'
+    else:
+      prefix += 'b'
+    k = '%s/%s' % (prefix, j)
+    keys.append(k)
+    v = random_sequence()
+    data[k] = v
+    client.Insert(kv.InsertRequest(key = k, value = v.encode('utf-8')))
+  keys.sort()
+  # Check test data.
+  for k in keys:
+    assertEq(client.Fetch(kv.FetchRequest(key = k)).value.decode('utf8'), data[k])
+  # All.
+  assertEq(len(client.List(kv.ListRequest()).items), 100)
+  # 10.
+  l = client.List(kv.ListRequest(maxKeys = 10))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  for j in range (0, 10):
+    assertEq(l.items[j].key, keys[j])
+  # Next 10.
+  l = client.List(kv.ListRequest(maxKeys = 10, marker = l.items[-1].key))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  for j in range (0, 10):
+    assertEq(l.items[j].key, keys[j + 10])
+  # Prefix.
+  l = client.List(kv.ListRequest(prefix = 'dir_1'))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  # Prefix 10.
+  l = client.List(kv.ListRequest(prefix = 'dir_1', maxKeys = 10))
+  assertEq(len(l.items), 10)
+  assertEq(l.truncated, True)
+  # Prefix 50.
+  l = client.List(kv.ListRequest(prefix = 'dir_1', maxKeys = 50))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  # Delimiter.
+  l = client.List(kv.ListRequest(delimiter = '/'))
+  assertEq(len(l.items), 100)
+  assertEq(l.prefixes, ['dir_1/', 'dir_2/'])
+  # Delimiter prefix.
+  l = client.List(kv.ListRequest(delimiter = '/', prefix = 'dir_1/'))
+  assertEq(len(l.items), 50)
+  assertEq(l.truncated, False)
+  assertEq(l.prefixes, ['a/', 'b/'])
+
+# Concurrent.
+with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+  import threading
+  client = i.stub
+
+  class Inserter(threading.Thread):
+
+    def __init__(self, key, value):
+      threading.Thread.__init__(self)
+      self.__key = key
+      self.__value = value
+
+    def run(self):
+      client.Insert(kv.InsertRequest(key = self.__key,
+                                     value = self.__value.encode('utf-8')))
+
+  # Generate test data.
+  data = dict()
+  for k in range(0, 10):
+    v = str(k) * 1024 * 1024
+    data[str(k)] = v
+  # Store concurrently.
+  threads = list()
+  for k, v in data.items():
+    t = Inserter(k, v)
+    threads.append(t)
+  for t in threads:
+    t.start()
+    t.join()
+  # Check data.
+  for k, v in data.items():
+    # XXX: assertEq prints out two values making log files large.
+    assert client.Fetch(kv.FetchRequest(key = k)).value.decode('utf-8') == v

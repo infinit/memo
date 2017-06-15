@@ -63,7 +63,8 @@ namespace infinit
   Infinit::beyond_fetch(std::string const& type,
                         std::string const& name) const
   {
-    return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
+    return beyond_fetch<T>(elle::sprintf("%s/%s", _type_plural(type), name),
+                           type, name);
   }
 
   template <typename Serializer, typename T>
@@ -98,8 +99,7 @@ namespace infinit
                        bool beyond_error,
                        bool update) const
   {
-    beyond_push<Serializer>(
-      elle::sprintf("%ss/%s", type, name),
-      type, name, o, self, beyond_error, update);
+    beyond_push<Serializer>(elle::sprintf("%s/%s", _type_plural(type), name),
+                            type, name, o, self, beyond_error, update);
   }
 }

@@ -20,6 +20,9 @@ namespace infinit
     class Drive;
     class Infinit;
     class Journal;
+#if INFINIT_WITH_KEY_VALUE_STORE
+    class KeyValueStore;
+#endif
 #if INFINIT_WITH_LDAP
     class LDAP;
 #endif

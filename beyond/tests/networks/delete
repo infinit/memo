@@ -84,6 +84,8 @@ class Test(unittest.TestCase):
       volume.put(beyond)
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
+      kvs = KeyValueStore(name = 'k', network = network)
+      kvs.put(beyond)
       beyond.delete('networks/%s' % network['name'],
                     auth = user,
                     params = {'purge': 'true'})
@@ -92,6 +94,8 @@ class Test(unittest.TestCase):
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+      throws(lambda: beyond.get('kvs/%s' % kvs['name'], json = False),
              404)
 
   # Check that we don't skip drives when a volume has already been pulled.
@@ -133,6 +137,10 @@ class Test(unittest.TestCase):
       drive1.put(beyond)
       drive2 = Drive(name = 'd2', owner = alice, volume = volume2)
       drive2.put(beyond)
+      kvs1 = KeyValueStore(name = 'k', owner = bob, network = network)
+      kvs1.put(beyond)
+      kvs2 = KeyValueStore(name = 'k2', owner = alice, network = network)
+      kvs2.put(beyond)
       beyond.delete('networks/%s' % network['name'],
                     auth = bob,
                     params = {'purge': 'true'})
@@ -142,9 +150,13 @@ class Test(unittest.TestCase):
              404)
       throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
              404)
+      throws(lambda: beyond.get('kvs/%s' % kvs1['name'],
+                                json = False),
+             404)
       # Ensure that alice's objects are still on Beyond.
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
+      beyond.get('kvs/%s' % kvs2['name'])
 
 if __name__ == '__main__':
   unittest.main()

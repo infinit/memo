@@ -3,7 +3,10 @@
 from utils import *
 import json
 
-# Creating and deleting volumes.
+tests = SharedLogicCLITests('volume')
+tests.run()
+
+# Ensure state directory is cleared on delete.
 with Infinit() as bob:
   bob.run(['infinit-user', '--create',  'bob'])
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob'])
@@ -16,39 +19,6 @@ with Infinit() as bob:
   bob.run(['infinit-volume', '--delete', '--name', 'volume', '--as', 'bob'])
   # Ensure volume root block cache directory is removed.
   assertEq(len(os.listdir('%s/bob/network/bob' % state_dir)), 0)
-
-# Push to the hub.
-with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
-  bob.run(['infinit-user', '--signup',  '--name', 'bob', '--email', 'bob@infinit.io'])
-  bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
-  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'bob/network', '--description', 'something', '--as', 'bob', '--push'])
-  try:
-    bob.run(['infinit-volume', '--push', '--name', 'volume'])
-    unreachable()
-  except Exception as e:
-    pass
-  alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'alice@infinit.sh'])
-  alice.run(['infinit-volume', '--fetch', 'bob/volume', '--as', 'alice'])
-  v = alice.run_json(['infinit-volume', '--export', 'bob/volume', '--as', 'alice'])
-  assertEq(v['description'], 'something')
-
-# Pull and delete.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob:
-  bob.run(['infinit-user', '--signup', 'bob', '--email', 'b@infinit.io'])
-  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
-  # Local and Beyond.
-  bob.run(['infinit-volume', '--create', '--as', 'bob',
-           'v', '--network', 'n', '--push'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
-  bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v', '--pull'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
-  bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
-  # Local only.
-  bob.run(['infinit-volume', '--create', '--as', 'bob', 'v2', '--network', 'n'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
-  bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v2', '--pull'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
 
 # Purge.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob:

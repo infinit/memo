@@ -107,6 +107,8 @@ namespace infinit
           return "volume descriptor";
         else if (object == "drive")
           return "drive descriptor";
+        else if (object == "kvs")
+          return "kvs descriptor";
         else
           return object;
       }
