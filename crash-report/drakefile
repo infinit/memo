@@ -73,22 +73,19 @@ class SymbolsCommit(drake.Builder):
   def __init__(self, name, srcs,
                repo = None, description = None, platform = None, project = None):
     '''
+    name -- name of the virtual node, say //symbols-commit.
     srcs -- the *.sym files to commit.
-    repo -- in the source tree, where to find debug-symbols.
+    repo -- the URL of the repository to use (read/write).
     description -- git describe.
     platform -- a string such as "macosx", etc.
     project -- name of the project, e.g., "memo".
     '''
     # Where the symbol files will be installed.
-    self.__git = drake.git.Git(path = repo)
+    self.__url = repo
+    self.__project = project
     self.__specs = ('{description}/{platform}'
                     .format(description=description,
                             platform=platform))
-    self.__dir = ('{repo}/projects/{project}/{description}/{platform}'
-                  .format(repo=self.__git.path(),
-                          description=description,
-                          platform=platform,
-                          project=project))
     super().__init__(srcs, [name])
 
   def _sym_output_path(self, sym_file):
@@ -97,49 +94,67 @@ class SymbolsCommit(drake.Builder):
     with open(str(sym_file), 'r') as f:
       line = f.readline()
       args = {
-        'dir': str(self.__dir),
+        'project': self.__project,
+        'specs': self.__specs,
         'uid': line.split(' ')[3],
         'name': line.split(' ')[4].strip(),
       }
       assert args['name'] + '.sym' == os.path.basename(str(sym_file))
-      return '{dir}/{name}/{uid}/{name}.sym'.format_map(args)
+      return 'projects/{project}/{specs}/{name}/{uid}/{name}.sym'.format_map(args)
 
   def execute(self):
-    git = lambda title, *args: self.__git.run(list(args))
-    git('Fetching debug-symbols repository',
-        'fetch')
-    git('Updating debug-symbols repository',
-        'checkout', '--force', 'origin/master')
+    import tempfile
+    with tempfile.TemporaryDirectory() as repo:
+      self.cmd('Clone symbols directory',
+               ['git', 'clone', self.__url, repo],
+               throw = True)
 
-    # The files added in the repo.
-    import shutil
-    files = []
-    for source in self.sources():
-      if source.extension.split('.')[-1] == 'sym':
-        dst = self._sym_output_path(source)
-        os.makedirs(os.path.dirname(dst), exist_ok = True)
-        shutil.copy(str(source), dst)
-        # We will use -C repo, so remove repo from dst
-        files.append(os.path.relpath(dst, str(self.__git.path())))
+      # Returns True iff there are no diffs in the repo.
+      no_diff = lambda: self.cmd('Check if there are diffs',
+                                 ['git', '-C', repo,
+                                  'diff', '--cached', '--quiet'])
 
-    git('Add new debug symbols',
-        'add', *files)
-    if not self.__git.can_commit():
-      # Nothing to commit.
-      return True
-    git('Committing new debug symbols',
-        'commit', '-m', 'Symbols for {}'.format(self.__specs))
+      # The files added in the repo.
+      import shutil
+      files = []
+      for source in self.sources():
+        if source.extension.split('.')[-1] == 'sym':
+          # Name relative to the repo.
+          file = self._sym_output_path(source)
+          files.append(file)
+          # Path into the repo.
+          dst = os.path.join(repo, file)
+          os.makedirs(os.path.dirname(dst), exist_ok = True)
+          shutil.copy(str(source), dst)
 
-    self.cmd('Update symbols directory',
-             ['bin/make-symbols'],
-             cwd = self.__git.path())
-    if not self.__git.can_commit():
-      # Nothing to commit.
-      return True
-    git('Updating symbols directory',
-        'commit', '-m', 'Regen symbols.')
-    git('Pushing new debug symbols',
-        'push', 'origin', 'HEAD:master')
+      self.cmd('Add new debug symbols',
+               ['git', '-C', repo, 'add', *files],
+               throw = True)
+      if no_diff():
+        # Nothing to commit.
+        return True
+
+      self.cmd('Commit new debug symbols',
+               ['git', '-C', repo,
+                'commit', '-m', 'Symbols for {}'.format(self.__specs)],
+               throw = True)
+
+      self.cmd('Update symbols directory',
+               ['bin/make-symbols'],
+               cwd = repo)
+
+      if no_diff():
+        # Nothing to commit.
+        return True
+
+      self.cmd('Commit symbols directory',
+               ['git', '-C', repo,
+                'commit', '-m', 'Regen symbols.'],
+               throw = True)
+      self.cmd('Push new debug symbols',
+               ['git', '-C', repo,
+                'push', 'origin', 'HEAD:master'],
+               throw = True)
     return True
 
 def configure(cxx_toolkit = None,

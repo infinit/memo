@@ -607,7 +607,7 @@ def configure(
     symbols_commit_builder = crash_report.SymbolsCommit(
       symbols_commit,
       installed_symbols,
-      repo = 'crash-report/debug-symbols',
+      repo = 'git@git.infinit.sh:infinit/debug-symbols.git',
       platform = platform,
       description = git.description(),
       project = 'memo')
