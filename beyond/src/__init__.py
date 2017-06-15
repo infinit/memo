@@ -21,7 +21,7 @@ def run(*args, **kwargs):
   kwargs.setdefault('stdout', subprocess.PIPE)
   kwargs.setdefault('stderr', subprocess.PIPE)
   kwargs['universal_newlines'] = True
-  log('run: {}'.format(' '.join(cmd)))
+  log('run: {}'.format(' '.join(args)))
   res = subprocess.run(*args, **kwargs)
   log('ran: {}'.format(res))
   return res

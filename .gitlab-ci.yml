@@ -90,13 +90,10 @@ x86_64-ubuntu-gcc4:
     - ssh buildslave@packages.infinit.sh 'make debian'
     - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
     - time python3 drake --website=false //docker
-    - docker tag infinit:${DESC} mefyl/infinit:${DESC}
-    - time docker push mefyl/infinit:${DESC}
-    - docker rmi {,mefyl/}infinit:${DESC}
+    - docker tag infinit:${DESC} infinit/infinit:${DESC}
+    - time docker push infinit/infinit:${DESC}
+    - docker rmi {,infinit/}infinit:${DESC}
     - time python3 drake --website=false //beyond/docker
-    - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
-    - time docker push mefyl/infinit-beyond:${DESC}
-    - docker rmi {,mefyl/}infinit-beyond:${DESC}
     - if [ -n "$SIBYLFS" ]; then time python3 drake --website=false //sibylfs; fi
   tags:
     - x86_64
@@ -132,13 +129,13 @@ x86_64-alpine-gcc:
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - rm "$TARBALL"
     - python3 drake --website=false //docker-alpine
-    - docker tag infinit-alpine:$DESC mefyl/infinit-alpine:$DESC
-    - docker push mefyl/infinit-alpine:$DESC
-    - docker rmi {,mefyl/}infinit-alpine:$DESC
+    - docker tag infinit-alpine:$DESC infinit/infinit-alpine:$DESC
+    - docker push infinit/infinit-alpine:$DESC
+    - docker rmi {,infinit/}infinit-alpine:$DESC
     - python3 drake --website=false //src/infinit/grpc/docker
-    - docker tag infinit-client-python:$DESC mefyl/infinit-client-python:$DESC
-    - docker push mefyl/infinit-client-python:$DESC
-    - docker rmi {,mefyl/}infinit-client-python:$DESC
+    - docker tag infinit-client-python:$DESC infinit/infinit-client-python:$DESC
+    - docker push infinit/infinit-client-python:$DESC
+    - docker rmi {,infinit/}infinit-client-python:$DESC
   tags:
     - x86_64
     - alpine

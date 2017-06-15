@@ -237,6 +237,7 @@ namespace infinit
         int overreplicated_immutable_blocks;
         int underreplicated_mutable_blocks;
         int under_quorum_mutable_blocks;
+        std::vector<model::Address> sample_underreplicated;
       };
 
     protected:
