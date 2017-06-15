@@ -533,6 +533,7 @@ class Beyond:
       'platform': platform,
       'version': version,
     }
+    update_symbols()
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
       tfile = '%s/client.dmp' % temp_dir
