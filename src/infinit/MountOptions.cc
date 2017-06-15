@@ -85,6 +85,16 @@ namespace infinit
       args("--as", *as);
   }
 
+  auto
+  MountOptions::to_commandline() const
+    -> Strings
+  {
+    auto res = Strings{};
+    auto dummy = Environ{};
+    to_commandline(res, dummy);
+    return res;
+  }
+
   std::ostream&
   operator<<(std::ostream& os, MountOptions const& mo)
   {

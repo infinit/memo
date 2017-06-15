@@ -11,6 +11,7 @@
 # include <sys/mount.h>
 #endif
 
+#include <elle/algorithm.hh>
 #include <elle/log.hh>
 #include <elle/system/PIDFile.hh>
 #include <elle/system/Process.hh>
@@ -418,18 +419,12 @@ namespace infinit
         volume.name,
       };
       if (!m.options.as && !this->default_user().empty())
-      {
-        args.emplace_back("--as");
-        args.emplace_back(this->default_user());
-      }
+        elle::push_back(args, "--as", this->default_user());
       auto env = elle::os::Environ{};
       m.options.to_commandline(args, env);
       for (auto const& host: _advertise_host)
-      {
-        args.emplace_back("--advertise-host");
-        args.emplace_back(host);
-      }
-      args.insert(args.end(), extra_args.begin(), extra_args.end());
+        elle::push_back(args, "--advertise-host", host);
+      elle::push_back(args, extra_args);
       if (this->_log_level)
         env.emplace("ELLE_LOG_LEVEL", _log_level.get());
       if (this->_log_path)
@@ -698,9 +693,7 @@ namespace infinit
           if (this->_push)
             mo.push = true;
           mo.as = username;
-          auto env = elle::os::Environ{};
-          mo.to_commandline(args, env);
-          return std::make_unique<elle::system::Process>(args, true);
+          return std::make_unique<elle::system::Process>(mo.to_commandline(), true);
         }();
       if (process->wait())
         elle::err("volume creation failed");
