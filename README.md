@@ -1,12 +1,12 @@
-memo is project combining a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
+The memo project combines a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
 
-memo is a project supported by the Docker's Infinit team and serves at backend for the Infinit Storage Platform project.
+`memo` is supported by the Docker's Infinit team and is the backend of the Infinit Storage Platform project.
 
-## What the difference between the value store and the key-value store.
+## What is the difference between the value store and the key-value store
 
-The key-value store uses the value store to provide an higher-level interface like common key-value stores (etcd, zookeeper, etc.), where an arbitrary data can be stored under an arbitrary name.
+The key-value store uses the value store to provide a higher-level interface like common key-value stores (etcd, ZooKeeper, etc.), where arbitrary data can be stored under an arbitrary name.
 
-The value store is the lowest brick of the architecture, providing the fundamental object named `Blocks`, declined in a few flavors. Those blocks are cryptographically protected, their address is chosen randomly to guarantee an homogeneous distribution and prevent XXX(squating) and all operations are atomic, but the caller is responsible for keeping addresses.
+The value store is the lowest brick of the architecture, providing the fundamental object named `blocks`, declined in a few flavors. Those blocks are cryptographically protected, their addresses are chosen randomly to guarantee a homogeneous distribution and prevent XXX(squating) and all operations are atomic, but the caller is responsible for keeping addresses.
 
 For more details you can consult [XXX: When shoould I use the value store against the key-value store]().
 
@@ -29,17 +29,17 @@ git clone https://github.com/infinit/memo --recursive # Clone memo and its submo
 
 #### Core library
 
-memo use [Elle](https://github.com/infinit/drake), Infinit's core library.
+`memo` uses [Elle](https://github.com/infinit/drake), Infinit's core library.
 
 #### Build system
 
-memo uses [Drake](https://github.com/infinit/drake) and has it as a submodule.
+`memo` uses [Drake](https://github.com/infinit/drake) and has it as a submodule.
 
 ### How to compile
 
 For a detailed procedure, visit our [wiki: How to build](https://github.com/infinit/memo/wiki/How-to-build).
 
-First you need to install python dependencies.
+First you need to install Python dependencies.
 
 ```bash
 sudo pip3 install -r requirements.txt -r drake/requirements.txt
