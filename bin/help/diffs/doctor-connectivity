@@ -1,4 +1,4 @@
-doctor: connectivity: Usage: _build/macosx64/bin/infinit-doctor --connectivity	doctor: connectivity: Usage: infinit-doctor doctor connectivity [OPTIONS]
+doctor: connectivity: Usage: _build/macosx64/bin/infinit-doctor --connectivity	doctor: connectivity: Usage: infinit doctor connectivity [OPTIONS]
 										Perform connectivity checks
 Perform connectivity checks:
 										Options:

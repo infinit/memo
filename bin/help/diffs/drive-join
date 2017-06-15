@@ -1,4 +1,4 @@
-drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE [OPTI drive: join: Usage: infinit-drive drive join [OPTIONS]
+drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE [OPTI drive: join: Usage: infinit drive join [OPTIONS]
 										Join a drive you were invited to (Hub operation)
 Join a drive you were invited to (Hub operation):
 										Options:

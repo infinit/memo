@@ -1,5 +1,5 @@
-device: receive: Usage: _build/macosx64/bin/infinit-device --receive [OPTIONS.. device: receive: Usage: infinit-device device receive [OPTIONS]
-										Receive an object from another device using https://beyond.infinit.sh
+device: receive: Usage: _build/macosx64/bin/infinit-device --receive [OPTIONS.. device: receive: Usage: infinit device receive [OPTIONS]
+										Receive an object from another device using the Hub
 Receive an object from another device using the Hub:
 										Options:
 Receive options:								  -h, --help		    show this help message

@@ -1,4 +1,4 @@
-doctor: all: Usage: _build/macosx64/bin/infinit-doctor --all [OPTIONS...]	doctor: all: Usage: infinit-doctor doctor all [OPTIONS]
+doctor: all: Usage: _build/macosx64/bin/infinit-doctor --all [OPTIONS...]	doctor: all: Usage: infinit doctor all [OPTIONS]
 										Perform all possible checks
 Perform all possible checks:
 										Options:

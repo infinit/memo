@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-doctor MODE [OPTIONS...]			Usage: infinit-doctor doctor [MODE|--help]
+Usage: _build/macosx64/bin/infinit-doctor MODE [OPTIONS...]			Usage: infinit doctor [MODE|--help]
 										Infinit doctor management utility.
 Infinit diagnostic utility:
 										Modes:

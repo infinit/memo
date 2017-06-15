@@ -1,4 +1,4 @@
-volume: mount: Usage: _build/macosx64/bin/infinit-volume --mount --name VOLUME	volume: mount: Usage: infinit-volume volume mount [OPTIONS]
+volume: mount: Usage: _build/macosx64/bin/infinit-volume --mount --name VOLUME	volume: mount: Usage: infinit volume mount [OPTIONS]
 										Mount a volume
 Mount a volume:
 										Options:
@@ -22,15 +22,15 @@ Mount options:									  -h, --help		    show this help message
   --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5
 					seconds (default: 15 seconds)		      --cache-ram-invalidation arg  RAM block cache invalidation time in second
   --cache-disk-size arg			Size of disk cache for immutable data	      --cache-disk-size arg  size of disk cache for immutable data in bytes (de
-					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from https://beyond.infinit.sh (de
-  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from https://beyond.infinit.sh (defaul
+					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from the Hub (default: false)
   -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --peer arg	    peer address or file with list of peer addresses (h
   --peer arg				Peer address or file with list of peer	      --peers-file arg	    Periodically write list of known peers to given fil
-					addresses (host:port)			      --push-endpoints arg  push endpoints to https://beyond.infinit.sh (defaul
+					addresses (host:port)			      --push-endpoints arg  push endpoints to the Hub (default: false)
   --peers-file arg			Periodically write list of known peers	  -r, --register-service    register volume in the network
 					to given file				      --no-local-endpoints  Disable automatic detection of local endpoints
   --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --no-public-endpoints  Disable automatic detection of public endpoints
-  -r [ --register-service ] [=arg(=true)]					  -p, --push arg	    push volume to https://beyond.infinit.sh (default:
+  -r [ --register-service ] [=arg(=true)]					  -p, --push arg	    push volume to the Hub (default: false)
 					Register volume in the network		      --map-other-permissions  allow chmod to set world permissions
   --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --publish arg	    alias for --fetch-endpoints --push-endpoints (defau
 					endpoints				      --advertise-host arg  advertise extra endpoint using given host (default:

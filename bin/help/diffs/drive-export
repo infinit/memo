@@ -1,4 +1,4 @@
-drive: export: Usage: _build/macosx64/bin/infinit-drive --export --name DRIVE [ drive: export: Usage: infinit-drive drive export [OPTIONS]
+drive: export: Usage: _build/macosx64/bin/infinit-drive --export --name DRIVE [ drive: export: Usage: infinit drive export [OPTIONS]
 										Export a drive
 Export a drive:
 										Options:

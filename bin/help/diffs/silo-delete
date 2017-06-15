@@ -1,4 +1,4 @@
-storage: delete: Usage: _build/macosx64/bin/infinit-storage --delete --name STO storage: delete: Usage: infinit-storage silo delete [OPTIONS]
+storage: delete: Usage: _build/macosx64/bin/infinit-storage --delete --name STO storage: delete: Usage: infinit silo delete [OPTIONS]
 										Delete local silo
 Delete a storage:
 										Options:

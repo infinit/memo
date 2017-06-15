@@ -1,4 +1,4 @@
-journal: stat: Usage: _build/macosx64/bin/infinit-journal --stat [--network NET journal: stat: Usage: infinit-journal journal stat [OPTIONS]
+journal: stat: Usage: _build/macosx64/bin/infinit-journal --stat [--network NET journal: stat: Usage: infinit journal stat [OPTIONS]
 										Show the remaining asynchronous operations count and size
 Show the remaining asynchronous operations count and size:
 										Options:

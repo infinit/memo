@@ -1,4 +1,4 @@
-passport: import: Usage: _build/macosx64/bin/infinit-passport --import [--input passport: import: Usage: infinit-passport passport import [OPTIONS]
+passport: import: Usage: _build/macosx64/bin/infinit-passport --import [--input passport: import: Usage: infinit passport import [OPTIONS]
 										Import a passport for a user to a network
 Import a passport for a user to a network:
 										Options:

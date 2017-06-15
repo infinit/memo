@@ -1,5 +1,5 @@
-network: push: Usage: _build/macosx64/bin/infinit-network --push --name NETWORK network: push: Usage: infinit-network network push [OPTIONS]
-										Push a network to https://beyond.infinit.sh
+network: push: Usage: _build/macosx64/bin/infinit-network --push --name NETWORK network: push: Usage: infinit network push [OPTIONS]
+										Push a network to the Hub
 Push a network to the Hub:
 										Options:
 Push options:									  -h, --help		    show this help message

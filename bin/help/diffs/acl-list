@@ -1,4 +1,4 @@
-acl: list: Usage: _build/macosx64/bin/infinit-acl --list --path PATHS [OPTIONS. acl: list: Usage: infinit-acl acl list [OPTIONS]
+acl: list: Usage: _build/macosx64/bin/infinit-acl --list --path PATHS [OPTIONS. acl: list: Usage: infinit acl list [OPTIONS]
 										List ACLs
 List current ACL:
 										Options:

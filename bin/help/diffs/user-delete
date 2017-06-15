@@ -1,4 +1,4 @@
-user: delete: Usage: _build/macosx64/bin/infinit-user --delete [OPTIONS...]	user: delete: Usage: infinit-user user delete [OPTIONS]
+user: delete: Usage: _build/macosx64/bin/infinit-user --delete [OPTIONS...]	user: delete: Usage: infinit user delete [OPTIONS]
 										Delete local user
 Delete a user locally:
 										Options:

@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-journal MODE [OPTIONS...]			Usage: infinit-journal journal [MODE|--help]
+Usage: _build/macosx64/bin/infinit-journal MODE [OPTIONS...]			Usage: infinit journal [MODE|--help]
 										Infinit journal management utility.
 Infinit journal utility:
 										Modes:

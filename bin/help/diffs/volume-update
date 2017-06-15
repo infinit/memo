@@ -1,4 +1,4 @@
-volume: update: Usage: _build/macosx64/bin/infinit-volume --update --name VOLUM volume: update: Usage: infinit-volume volume update [OPTIONS]
+volume: update: Usage: _build/macosx64/bin/infinit-volume --update --name VOLUM volume: update: Usage: infinit volume update [OPTIONS]
 										Update a volume with default run options
 Update a volume with default run options:
 										Options:
@@ -23,8 +23,8 @@ Update options:									  -h, --help		    show this help message
   --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5
 					seconds (default: 15 seconds)		      --cache-ram-invalidation arg  RAM block cache invalidation time in second
   --cache-disk-size arg			Size of disk cache for immutable data	      --cache-disk-size arg  size of disk cache for immutable data in bytes (de
-					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from https://beyond.infinit.sh (de
-  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from https://beyond.infinit.sh (defaul
+					in bytes (default: 512 MB)		      --fetch-endpoints arg  fetch endpoints from the Hub (default: false)
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch arg	    fetch volume from the Hub (default: false)
   -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --peer arg	    peer address or file with list of peer addresses (h
   --peer arg				Peer address or file with list of peer	      --push-endpoints arg  push endpoints to the Hub (default: false)
 					addresses (host:port)			  -p, --push arg	    push volume to the Hub (default: false)

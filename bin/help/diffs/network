@@ -1,11 +1,11 @@
-Usage: _build/macosx64/bin/infinit-network MODE [OPTIONS...]			Usage: infinit-network network [MODE|--help]
+Usage: _build/macosx64/bin/infinit-network MODE [OPTIONS...]			Usage: infinit network [MODE|--help]
 										Infinit network management utility.
 Infinit network management utility:
 										Modes:
 Modes:										  create     Create a network
   --create		       Create a network					  delete     Delete a network locally
   --update		       Update a network					  export     Export a network
-  --export		       Export a network					  fetch	     Fetch a network from https://beyond.infinit.sh
+  --export		       Export a network					  fetch	     Fetch a network from the Hub
   --fetch		       Fetch a network from the Hub			  import     Fetch a network
   --import		       Import a network					  inspect    Get information about a running network
   --link		       Link this device to a network			  link	     Link this device to a network
@@ -13,10 +13,10 @@ Modes:										  create     Create a network
   --list		       List networks					  unlink     Unlink this device from a network
   --push		       Push a network to the Hub			  list-services List network registered services
   --delete		       Delete a network locally				  list-silos List all silos contributed by this device to a network
-  --pull		       Remove a network from the Hub			  pull	     Remove a network from https://beyond.infinit.sh
-  --run			       Run a network					  push	     Push a network to https://beyond.infinit.sh
+  --pull		       Remove a network from the Hub			  pull	     Remove a network from the Hub
+  --run			       Run a network					  push	     Push a network to the Hub
   --list-services	       List network registered services			  run	     Run a network
-  --list-storage	       List all storage contributed by this device to a	  stat	     Fetch stats of a network on https://beyond.infinit.sh
+  --list-storage	       List all storage contributed by this device to a	  stat	     Fetch stats of a network on the Hub
 			       network						  update     Update a network
   --stats		       Fetch stats of a network on the Hub
   --inspect		       Get information about a running network		Options:

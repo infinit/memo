@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-storage MODE [OPTIONS...]			Usage: infinit-storage silo [MODE|--help]
+Usage: _build/macosx64/bin/infinit-storage MODE [OPTIONS...]			Usage: infinit silo [MODE|--help]
 										Infinit silo management utility.
 Infinit storage management utility:
 										Modes:

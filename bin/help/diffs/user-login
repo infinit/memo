@@ -1,5 +1,5 @@
-user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]	user: login: Usage: infinit-user user login [OPTIONS]
-										Login user to https://beyond.infinit.sh
+user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]	user: login: Usage: infinit user login [OPTIONS]
+										Login user to the Hub
 Log the user to the Hub:
 										Options:
 Login options:									  -h, --help		    show this help message

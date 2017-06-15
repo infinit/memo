@@ -32,6 +32,7 @@ Options:
       --no-public-endpoints  Disable automatic detection of public endpoints
       --advertise-host arg  advertise extra endpoint using given host (default: [])
       --grpc arg            start grpc server on given endpoint (default: null)
+      --grpc-port-file arg  write gRPC listening port to file (default: null)
       --prometheus arg      start Prometheus server on given endpoint (default: null)
       --paxos-rebalancing-auto-expand arg  whether to automatically rebalance under-replicated blocks (default: null)
       --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup and trigger rebalancing (default: null)

@@ -1,4 +1,4 @@
-Usage: _build/macosx64/bin/infinit-acl MODE [OPTIONS...]			Usage: infinit-acl acl [MODE|--help]
+Usage: _build/macosx64/bin/infinit-acl MODE [OPTIONS...]			Usage: infinit acl [MODE|--help]
 										Infinit acl management utility.
 Infinit access control list utility:
 										Modes:

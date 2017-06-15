@@ -1,4 +1,4 @@
-daemon: status: Usage: _build/macosx64/bin/infinit-daemon --status [OPTIONS...] daemon: status: Usage: infinit-daemon daemon status [OPTIONS]
+daemon: status: Usage: _build/macosx64/bin/infinit-daemon --status [OPTIONS...] daemon: status: Usage: infinit daemon status [OPTIONS]
 										Query daemon status
 Query daemon status:
 										Options:

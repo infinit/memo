@@ -1,10 +1,10 @@
-Usage: _build/macosx64/bin/infinit-daemon MODE [OPTIONS...]			Usage: infinit-daemon daemon [MODE|--help]
+Usage: _build/macosx64/bin/infinit-daemon MODE [OPTIONS...]			Usage: infinit daemon [MODE|--help]
 										Infinit daemon management utility.
 Infinit daemon:
 										Modes:
 Modes:										  disable-storage Disable storage on associated network
   --status		       Query daemon status				  enable-storage Enable storage on associated network
-  --run			       Run daemon in the foreground			  fetch	     Fetch volume and its dependencies from https://beyond.infinit.sh
+  --run			       Run daemon in the foreground			  fetch	     Fetch volume and its dependencies from the Hub
   --start		       Start daemon in the background			  run	     Run daemon in the foreground
   --stop		       Stop daemon					  start	     Start daemon in the background
 										  status     Query daemon status

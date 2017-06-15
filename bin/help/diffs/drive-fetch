@@ -1,5 +1,5 @@
-drive: fetch: Usage: _build/macosx64/bin/infinit-drive --fetch [OPTIONS...]	drive: fetch: Usage: infinit-drive drive fetch [OPTIONS]
-										Fetch drive from https://beyond.infinit.sh
+drive: fetch: Usage: _build/macosx64/bin/infinit-drive --fetch [OPTIONS...]	drive: fetch: Usage: infinit drive fetch [OPTIONS]
+										Fetch drive from the Hub
 Fetch drive from the Hub:
 										Options:
 Fetch options:									  -h, --help		    show this help message

@@ -1,4 +1,4 @@
-volume: status: Usage: _build/macosx64/bin/infinit-volume --status --name VOLUM volume: status: Usage: infinit-volume volume status [OPTIONS]
+volume: status: Usage: _build/macosx64/bin/infinit-volume --status --name VOLUM volume: status: Usage: infinit volume status [OPTIONS]
 										Get volume status
 Get volume status:
 										Options:

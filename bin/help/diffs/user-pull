@@ -1,5 +1,5 @@
-user: pull: Usage: _build/macosx64/bin/infinit-user --pull [OPTIONS...]		user: pull: Usage: infinit-user user pull [OPTIONS]
-										Pull a user from https://beyond.infinit.sh
+user: pull: Usage: _build/macosx64/bin/infinit-user --pull [OPTIONS...]		user: pull: Usage: infinit user pull [OPTIONS]
+										Pull a user from the Hub
 Remove a user from the Hub:
 										Options:
 Pull options:									  -h, --help		    show this help message

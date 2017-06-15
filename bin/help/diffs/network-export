@@ -1,4 +1,4 @@
-network: export: Usage: _build/macosx64/bin/infinit-network --export --name NET network: export: Usage: infinit-network network export [OPTIONS]
+network: export: Usage: _build/macosx64/bin/infinit-network --export --name NET network: export: Usage: infinit network export [OPTIONS]
 										Export a network
 Export a network:
 										Options:

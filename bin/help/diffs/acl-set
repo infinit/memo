@@ -1,4 +1,4 @@
-acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USE acl: set: Usage: infinit-acl acl set [OPTIONS]
+acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USE acl: set: Usage: infinit acl set [OPTIONS]
 										Set ACLs
 Set ACL:
 										Options:
@@ -16,7 +16,7 @@ Set options:									  -h, --help		    show this help message
   --traverse		    Add read permissions to parent directories		  -R, --recursive	    set acl recursively
   --verbose		    Verbose output					  -t, --traverse	    set read permission on parent directories
   --fetch		    Fetch users from the Hub if needed			  -v, --verbose		    use verbose output
-										  -f, --fetch		    fetch acl from https://beyond.infinit.sh
+										  -f, --fetch		    fetch acl from the Hub
 Hidden options:									      --fallback-xattrs	    use fallback special file if extended attributes ar
   --fallback-xattrs	    Fallback to alternate xattr mode if system xattrs
 			    are not suppported

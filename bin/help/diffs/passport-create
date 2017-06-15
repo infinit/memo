@@ -1,4 +1,4 @@
-passport: create: Usage: _build/macosx64/bin/infinit-passport --create --networ passport: create: Usage: infinit-passport passport create [OPTIONS]
+passport: create: Usage: _build/macosx64/bin/infinit-passport --create --networ passport: create: Usage: infinit passport create [OPTIONS]
 										Create a passport for a user to a network
 Create a passport for a user to a network:
 										Options:
@@ -8,8 +8,8 @@ Create options:									  -h, --help		    show this help message
   --push-passport	    Push the passport to the Hub			  -a, --as arg		    user to run commands as (default: john-doe)
   -p [ --push ]		    Alias for --push-passport				  -N, --network arg	    network to create passport for
   --deny-write		    Deny user write access to the network		  -u, --user arg	    user to create passport for
-  --deny-storage	    Deny user ability to contribute storage to the	      --push-passport	    push passport to https://beyond.infinit.sh
-			    network						  -p, --push		    push passport to https://beyond.infinit.sh
+  --deny-storage	    Deny user ability to contribute storage to the	      --push-passport	    push passport to the Hub
+			    network						  -p, --push		    push passport to the Hub
   --allow-create-passport   Allow user to create passports for network		      --deny-write	    deny user write access to the network
   -o [ --output ] arg	    File to write the passport to			      --deny-storage	    deny user ability to contribute storage to the netw
 			    (default: stdout)					      --allow-create-passport  allow user to create passports for network

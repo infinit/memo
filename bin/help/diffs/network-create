@@ -1,4 +1,4 @@
-network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAM network: create: Usage: infinit-network network create [OPTIONS]
+network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAM network: create: Usage: infinit network create [OPTIONS]
 										Create a network
 Create a network:
 										Options:
@@ -13,8 +13,8 @@ Create options:									  -h, --help		    show this help message
 				   (default: 10 min)				  -r, --replication-factor arg	data replication factor (default: 1) (default:
   -o [ --output ] arg		   File to write the network to			  -e, --eviction-delay arg  missing servers eviction delay (default: 10min) (de
 				   (default: stdout)				  -o, --output arg	    file to write the network to (default: null)
-  --push-network		   Push the network to the Hub			      --push-network	    push the network to https://beyond.infinit.sh
-  -p [ --push ]			   Alias for --push-network			  -p, --push		    push network to https://beyond.infinit.sh
+  --push-network		   Push the network to the Hub			      --push-network	    push the network to the Hub
+  -p [ --push ]			   Alias for --push-network			  -p, --push		    push network to the Hub
   --admin-r arg			   Set admin users that can read all data	      --admin-r arg	    Set admin users that can read all data (default: []
   --admin-rw arg		   Set admin users that can read and write all	      --admin-rw arg	    Set admin users that can read and write all data (d
 				   data						      --peer arg	    peer address or file with list of peer addresses (h

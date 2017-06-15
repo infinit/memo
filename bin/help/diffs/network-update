@@ -1,4 +1,4 @@
-network: update: Usage: _build/macosx64/bin/infinit-network --update --name NAM network: update: Usage: infinit-network network update [OPTIONS]
+network: update: Usage: _build/macosx64/bin/infinit-network --update --name NAM network: update: Usage: infinit network update [OPTIONS]
 										Update a network
 Update a network:
 										Options:
@@ -10,8 +10,8 @@ Update options:									  -h, --help		    show this help message
 			   (default: stdout)					      --description arg	    network description (default: null)
   --push-network	   Push the updated network to the Hub			      --port arg	    outbound port to use (default: null)
   -p [ --push ]		   Alias for --push-network				  -o, --output arg	    file to write the network to (default: null)
-  --admin-r arg		   Add an admin user that can read all data		      --push-network	    push the network to https://beyond.infinit.sh
-			   (prefix: @<group>, requires mountpoint)		  -p, --push		    push network to https://beyond.infinit.sh
+  --admin-r arg		   Add an admin user that can read all data		      --push-network	    push the network to the Hub
+			   (prefix: @<group>, requires mountpoint)		  -p, --push		    push network to the Hub
   --admin-rw arg	   Add an admin user that can read and write all data	      --admin-r arg	    Set admin users that can read all data (default: []
 			   (prefix: @<group>, requires mountpoint)		      --admin-rw arg	    Set admin users that can read and write all data (d
   --admin-remove arg	   Remove given users from all admin lists		      --admin-remove arg    Remove given users from all admin lists (prefix: @<

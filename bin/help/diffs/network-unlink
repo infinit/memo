@@ -1,4 +1,4 @@
-network: unlink: Usage: _build/macosx64/bin/infinit-network --unlink --name NET network: unlink: Usage: infinit-network network unlink [OPTIONS]
+network: unlink: Usage: _build/macosx64/bin/infinit-network --unlink --name NET network: unlink: Usage: infinit network unlink [OPTIONS]
 										Unlink this device from a network
 Unlink this device from a network:
 										Options:

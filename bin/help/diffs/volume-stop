@@ -1,4 +1,4 @@
-volume: stop: Usage: _build/macosx64/bin/infinit-volume --stop --name VOLUME [O volume: stop: Usage: infinit-volume volume stop [OPTIONS]
+volume: stop: Usage: _build/macosx64/bin/infinit-volume --stop --name VOLUME [O volume: stop: Usage: infinit volume stop [OPTIONS]
 										Stop a volume
 Stop a volume:
 										Options:
