@@ -724,24 +724,19 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(install_nodes(docker_path), '/usr')
-  docker_file.add(
-    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
-               docker_path / 'bin', strip_prefix = True),
-    '/usr')
-  docker_file.add(
-    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
-               docker_path / 'bin', strip_prefix = True),
-    '/usr')
-  docker_file.add(
-    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
-               docker_path / 'bin', strip_prefix = True),
-    '/usr')
+  for f in ['share/infinit/docker/infinit-static.sh',
+            'share/infinit/docker/infinit-service-runner.py',
+            'share/infinit/docker/infinit-context.sh']:
+    docker_file.add(
+      drake.copy(drake.node(f),
+                 docker_path / 'bin', strip_prefix = True),
+      '/usr')
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
   docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
   drake.docker.DockerBuilder(docker_image, docker_file)
 
-  #deployment script image
+  # deployment script image
   docker_path = drake.Path('docker-deploy')
   docker_image = drake.docker.DockerImage(
     'docker-deploy', 'infinit-deploy', git.description())
@@ -756,8 +751,12 @@ def configure(
     drake.copy(drake.node('share/infinit/docker/infinit-deploy/entry.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
-  docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip && pip install awscli && apk --purge -v del py-pip && rm -rf /var/cache/apk/*')
-  docker_file.run(' mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2')
+  docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip'
+                  ' && pip install awscli'
+                  ' && apk --purge -v del py-pip'
+                  ' && rm -rf /var/cache/apk/*')
+  docker_file.run('mkdir /lib64'
+                  ' && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
