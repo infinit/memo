@@ -94,11 +94,10 @@ namespace infinit
 
     Device::Device(Infinit& infinit)
       : Object(infinit)
-      , receive(
-        *this,
+      , receive(*this,
                 "Receive an object from another device using {hub}",
                 elle::das::cli::Options{
-                  {"user", {'u', "{action} user identity to "
+                  {"user", {'u', "{action} user identity from "
                                  "another device using {hub}", false}}
                 },
                 cli::user = false,
