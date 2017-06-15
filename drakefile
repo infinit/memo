@@ -3,6 +3,7 @@ import drake.cxx
 import drake.debian
 import drake.docker
 import drake.git
+import drake.go
 import drake.license_file
 import drake.python
 import drake.redhat
