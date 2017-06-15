@@ -322,6 +322,7 @@ namespace infinit
           auto rb = reachable_blocks();
           return elle::json::Object
             {
+              {"type", this->type_name()},
               {"peers", this->peer_list()},
               {"id", elle::sprintf("%s", this->doughnut()->id())},
               {"infos", elle::json::make_array(_infos,
@@ -727,11 +728,8 @@ namespace infinit
       elle::json::Object
       Kouncil::stats() const
       {
-        return
-          {
-            {"type", this->type_name()},
-            {"id", elle::sprintf("%s", this->doughnut()->id())},
-          };
+        return boost::any_cast<elle::json::Object>(
+          elle::unconst(this)->query("stats", boost::none));
       }
 
       void
