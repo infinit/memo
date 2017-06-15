@@ -22,6 +22,7 @@
 
 ELLE_LOG_COMPONENT("infinit.grpc.doughnut");
 
+namespace prom = infinit::prometheus;
 
 namespace elle
 {
@@ -77,7 +78,6 @@ namespace infinit
 {
   namespace grpc
   {
-
     namespace
     {
       std::string
@@ -100,6 +100,7 @@ namespace infinit
     }
 
     class Service;
+
     template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
     ::grpc::Status
     invoke_named(Service& service,
@@ -113,26 +114,6 @@ namespace infinit
     class Service: public ::grpc::Service
     {
     public:
-      Service()
-      {
-#if INFINIT_ENABLE_PROMETHEUS
-        _family = infinit::prometheus::instance().make_counter_family(
-          "infinit_grpc_calls",
-          "How many grpc calls are made");
-      auto errf = infinit::prometheus::instance().make_counter_family(
-          "infinit_grpc_result",
-          "Result type of grpc call");
-      auto& inst = infinit::prometheus::instance();
-      errOk = inst.make(errf, {{"result", "ok"}});
-      errPermission = inst.make(errf, {{"result", "permission_denied"}});
-      errTooFewPeers = inst.make(errf, {{"result", "too_few_peers"}});
-      errConflict = inst.make(errf, {{"result", "conflict"}});
-      errOther = inst.make(errf, {{"result", "other_failure"}});
-      errMissingMutable = inst.make(errf, {{"result", "missing_mutable"}});
-      errMissingImmutable = inst.make(errf, {{"result", "missing_immutable"}});
-#endif
-      }
-
       template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
@@ -140,24 +121,17 @@ namespace infinit
         _method_names.push_back(std::make_unique<std::string>(
           underscore_to_uppercase(name)));
         int index = 0;
-#if INFINIT_ENABLE_PROMETHEUS
-        _counters.push_back(infinit::prometheus::instance()
-          .make(_family,
-            {{"call", name}}));
+        _counters.push_back(prom::make(_call_f, {{"call", name}}));
         index = _counters.size()-1;
-#endif
 
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
           _method_names.back()->c_str(),
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             [&, index, this](Service*,
-                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+                             ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
-#if INFINIT_ENABLE_PROMETHEUS
-              if (auto& c = _counters[index])
-                c->Increment();
-#endif
+              increment(_counters[index]);
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(*this, sched, dht,
                 nf, ctx, arg, ret);
             },
@@ -165,18 +139,26 @@ namespace infinit
       }
 
     private:
-#if INFINIT_ENABLE_PROMETHEUS
-      prometheus::Family<prometheus::Counter>* _family;
-      std::vector<prometheus::CounterPtr> _counters;
+      /// Counter family for method calls.
+      prom::Family<prom::Counter>* _call_f
+        = prom::make_counter_family("infinit_grpc_calls",
+                                    "How many grpc calls are made");
+      /// Call counters for methods.  One per method.
+      std::vector<prom::CounterPtr> _counters;
+
+      /// Counter family for method results.
+      prom::Family<prom::Counter>* _res_f
+        = prom::make_counter_family("infinit_grpc_result",
+                                    "Result type of grpc call");
     public:
-      prometheus::CounterPtr errOk;
-      prometheus::CounterPtr errPermission;
-      prometheus::CounterPtr errTooFewPeers;
-      prometheus::CounterPtr errConflict;
-      prometheus::CounterPtr errOther;
-      prometheus::CounterPtr errMissingMutable;
-      prometheus::CounterPtr errMissingImmutable;
-#endif
+      prom::CounterPtr errOk = prom::make(_res_f, {{"result", "ok"}});
+      prom::CounterPtr errPermission = prom::make(_res_f, {{"result", "permission_denied"}});
+      prom::CounterPtr errTooFewPeers = prom::make(_res_f, {{"result", "too_few_peers"}});
+      prom::CounterPtr errConflict = prom::make(_res_f, {{"result", "conflict"}});
+      prom::CounterPtr errOther = prom::make(_res_f, {{"result", "other_failure"}});
+      prom::CounterPtr errMissingMutable = prom::make(_res_f, {{"result", "missing_mutable"}});
+      prom::CounterPtr errMissingImmutable = prom::make(_res_f, {{"result", "missing_immutable"}});
+
     private:
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
@@ -227,52 +209,35 @@ namespace infinit
            catch (infinit::model::MissingBlock const& mb)
            {
              err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
-#if INFINIT_ENABLE_PROMETHEUS
-             if (mb.address().mutable_block() && service.errMissingMutable)
-               service.errMissingMutable->Increment();
-             if (!mb.address().mutable_block() && service.errMissingImmutable)
-               service.errMissingImmutable->Increment();
-#endif
+             if (mb.address().mutable_block())
+               increment(service.errMissingMutable);
+             if (!mb.address().mutable_block())
+               increment(service.errMissingImmutable);
            }
            catch (infinit::model::doughnut::ValidationFailed const& vf)
            {
-#if INFINIT_ENABLE_PROMETHEUS
-             if (service.errPermission)
-               service.errPermission->Increment();
-#endif
+             increment(service.errPermission);
              err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
            }
            catch (elle::athena::paxos::TooFewPeers const& tfp)
            {
-#if INFINIT_ENABLE_PROMETHEUS
-             if (service.errTooFewPeers)
-               service.errTooFewPeers->Increment();
-#endif
+             increment(service.errTooFewPeers);
              err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
            }
            catch (infinit::model::Conflict const& c)
            {
-#if INFINIT_ENABLE_PROMETHEUS
-             if (service.errConflict)
-               service.errConflict->Increment();
-#endif
+             increment(service.errConflict);
              elle::unconst(c).serialize(sout, version);
            }
            catch (elle::Error const& e)
            {
-#if INFINIT_ENABLE_PROMETHEUS
-             if (service.errOther)
-               service.errOther->Increment();
-#endif
+             increment(service.errOther);
              err = ::grpc::Status(::grpc::INTERNAL, e.what());
            }
          }
          else
          {
-#if INFINIT_ENABLE_PROMETHEUS
-           if (service.errOk)
-             service.errOk->Increment();
-#endif
+           increment(service.errOk);
            if (!is_void)
              sout.serialize(
                cxx_to_message_name(elle::type_info<A>().name()),
@@ -356,9 +321,9 @@ namespace infinit
         std::unique_ptr<infinit::model::ConflictResolver> resolver,
         bool decrypt_data)
       {
-        auto addr = block->address();
+        auto const addr = block->address();
+        auto mutex = MutexPtr{};
         auto it = map->find(addr);
-        std::shared_ptr<elle::reactor::Mutex> mutex;
         if (it == map->end())
         {
           mutex = MutexPtr(new elle::reactor::Mutex(),
@@ -398,7 +363,7 @@ namespace infinit
         (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
       ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
         (dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse , true>
+      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse, true>
         (dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
         (dht.remove, dht, "/Doughnut/remove");
