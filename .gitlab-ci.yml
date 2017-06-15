@@ -21,7 +21,7 @@ variables:
   DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
 #  DRAKE_RAW: "1"     # debuging cmake issues
   LC_ALL: "C.UTF-8"
-  PROJECT: "Filesystem"
+  PROJECT: "memo"
   PYTHONUNBUFFERED: "1"
 
 x86_64-centos6-gcc4:
