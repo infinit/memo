@@ -318,8 +318,11 @@ namespace infinit
       Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
       {
         if (k == "stats")
+        {
+          auto rb = reachable_blocks();
           return elle::json::Object
             {
+              {"type", this->type_name()},
               {"peers", this->peer_list()},
               {"id", elle::sprintf("%s", this->doughnut()->id())},
               {"infos", elle::json::make_array(_infos,
@@ -334,7 +337,21 @@ namespace infinit
                            };
                        })
                 },
+              {"mutable_blocks", rb.mutable_blocks},
+              {"immutable_blocks", rb.immutable_blocks},
+              {"underreplicated_immutable_blocks", rb.underreplicated_immutable_blocks},
+              {"underreplicated_mutable_blocks", rb.underreplicated_mutable_blocks},
+              {"overreplicated_immutable_blocks", rb.overreplicated_immutable_blocks},
+              {"under_quorum_mutable_blocks", rb.under_quorum_mutable_blocks},
+              {"sample_underreplicated", elle::json::make_array(
+                  rb.sample_underreplicated,
+                  [](auto& addr) -> std::string
+                  {
+                    return elle::sprintf("%s", addr);
+                  })
+              },
             };
+        }
         else
           return {};
       }
@@ -711,11 +728,8 @@ namespace infinit
       elle::json::Object
       Kouncil::stats() const
       {
-        return
-          {
-            {"type", this->type_name()},
-            {"id", elle::sprintf("%s", this->doughnut()->id())},
-          };
+        return boost::any_cast<elle::json::Object>(
+          elle::unconst(this)->query("stats", boost::none));
       }
 
       void
@@ -839,12 +853,20 @@ namespace infinit
           if (idcount.second > rf)
             res.overreplicated_immutable_blocks++;
           else if (idcount.second < rf)
+          {
             res.underreplicated_immutable_blocks++;
+            if (res.sample_underreplicated.size() < 10)
+              res.sample_underreplicated.push_back(idcount.first);
+          }
         }
         for (auto const& idcount: ids_mutable)
         {
           if (idcount.second < rf)
+          {
             res.underreplicated_mutable_blocks++;
+            if (res.sample_underreplicated.size() < 10)
+              res.sample_underreplicated.push_back(idcount.first);
+          }
           if (idcount.second < quorum)
             res.under_quorum_mutable_blocks++;
         }

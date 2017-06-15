@@ -79,6 +79,88 @@ namespace infinit
 {
   namespace grpc
   {
+    class Service;
+    template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
+    ::grpc::Status
+    invoke_named(Service& service,
+                 elle::reactor::Scheduler& sched,
+                 model::doughnut::Doughnut& dht,
+                 NF& nf,
+                 ::grpc::ServerContext* ctx,
+                 const REQ* request,
+                 RESP* response);
+
+    class Service: public ::grpc::Service
+    {
+    public:
+      Service()
+      {
+#if INFINIT_ENABLE_PROMETHEUS
+        _family = infinit::prometheus::instance().make_counter_family(
+          "infinit_grpc_calls",
+          "How many grpc calls are made");
+      auto errf = infinit::prometheus::instance().make_counter_family(
+          "infinit_grpc_result",
+          "Result type of grpc call");
+      auto& inst = infinit::prometheus::instance();
+      errOk = inst.make(errf, {{"result", "ok"}});
+      errPermission = inst.make(errf, {{"result", "permission_denied"}});
+      errTooFewPeers = inst.make(errf, {{"result", "too_few_peers"}});
+      errConflict = inst.make(errf, {{"result", "conflict"}});
+      errOther = inst.make(errf, {{"result", "other_failure"}});
+      errMissingMutable = inst.make(errf, {{"result", "missing_mutable"}});
+      errMissingImmutable = inst.make(errf, {{"result", "missing_immutable"}});
+#endif
+      }
+
+      template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
+      void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
+      {
+        auto& sched = elle::reactor::scheduler();
+        _method_names.push_back(std::make_unique<std::string>(
+          underscore_to_uppercase(name)));
+        int index = 0;
+#if INFINIT_ENABLE_PROMETHEUS
+        _counters.push_back(infinit::prometheus::instance()
+          .make(_family,
+            {{"call", name}}));
+        index = _counters.size()-1;
+#endif
+
+        ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
+          _method_names.back()->c_str(),
+          ::grpc::RpcMethod::NORMAL_RPC,
+          new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
+            [&, index, this](Service*,
+                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+            {
+#if INFINIT_ENABLE_PROMETHEUS
+              if (auto& c = _counters[index])
+                c->Increment();
+#endif
+              return invoke_named<NF, GArg, GRet, NOEXCEPT>(*this, sched, dht,
+                nf, ctx, arg, ret);
+            },
+            this)));
+      }
+
+    private:
+#if INFINIT_ENABLE_PROMETHEUS
+      prometheus::Family<prometheus::Counter>* _family;
+      std::vector<prometheus::CounterPtr> _counters;
+    public:
+      prometheus::CounterPtr errOk;
+      prometheus::CounterPtr errPermission;
+      prometheus::CounterPtr errTooFewPeers;
+      prometheus::CounterPtr errConflict;
+      prometheus::CounterPtr errOther;
+      prometheus::CounterPtr errMissingMutable;
+      prometheus::CounterPtr errMissingImmutable;
+#endif
+    private:
+      std::vector<std::unique_ptr<std::string>> _method_names;
+    };
+
     template <typename T>
     struct OptionFirst
     {};
@@ -112,7 +194,8 @@ namespace infinit
       template <typename T>
       static
       void
-      value(SerializerOut& sout, T& v, ::grpc::Status& err,
+      value(Service& service, SerializerOut& sout, T& v,
+            ::grpc::Status& err,
             elle::Version const& version,
             bool is_void)
       {
@@ -127,34 +210,64 @@ namespace infinit
            catch (infinit::model::MissingBlock const& mb)
            {
              err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+#if INFINIT_ENABLE_PROMETHEUS
+             if (mb.address().mutable_block() && service.errMissingMutable)
+               service.errMissingMutable->Increment();
+             if (!mb.address().mutable_block() && service.errMissingImmutable)
+               service.errMissingImmutable->Increment();
+#endif
            }
            catch (infinit::model::doughnut::ValidationFailed const& vf)
            {
+#if INFINIT_ENABLE_PROMETHEUS
+             if (service.errPermission)
+               service.errPermission->Increment();
+#endif
              err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
            }
            catch (elle::athena::paxos::TooFewPeers const& tfp)
            {
+#if INFINIT_ENABLE_PROMETHEUS
+             if (service.errTooFewPeers)
+               service.errTooFewPeers->Increment();
+#endif
              err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
            }
            catch (infinit::model::Conflict const& c)
            {
+#if INFINIT_ENABLE_PROMETHEUS
+             if (service.errConflict)
+               service.errConflict->Increment();
+#endif
              elle::unconst(c).serialize(sout, version);
            }
            catch (elle::Error const& e)
            {
+#if INFINIT_ENABLE_PROMETHEUS
+             if (service.errOther)
+               service.errOther->Increment();
+#endif
              err = ::grpc::Status(::grpc::INTERNAL, e.what());
            }
          }
-         else if (!is_void)
-           sout.serialize(
-             cxx_to_message_name(elle::type_info<A>().name()),
-             v.template get<A>());
+         else
+         {
+#if INFINIT_ENABLE_PROMETHEUS
+           if (service.errOk)
+             service.errOk->Increment();
+#endif
+           if (!is_void)
+             sout.serialize(
+               cxx_to_message_name(elle::type_info<A>().name()),
+               v.template get<A>());
+         }
       }
     };
 
     template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
     ::grpc::Status
-    invoke_named(elle::reactor::Scheduler& sched,
+    invoke_named(Service& service,
+                 elle::reactor::Scheduler& sched,
                  model::doughnut::Doughnut& dht,
                  NF& nf,
                  ::grpc::ServerContext* ctx,
@@ -197,7 +310,7 @@ namespace infinit
             else
             {
               ExceptionExtracter<typename NF::Result::Super>::value(
-                sout, res, status, dht.version(),
+                service, sout, res, status, dht.version(),
                 decltype(res)::is_void::value);
             }
           }
@@ -210,74 +323,9 @@ namespace infinit
       return status;
     }
 
-    class Service
-      : public ::grpc::Service
-    {
-    public:
-      Service()
-      {
-#if INFINIT_ENABLE_PROMETHEUS
-        _family = infinit::prometheus::instance().make_counter_family(
-          "memo_grpc_calls",
-          "How many grpc calls are made");
-#endif
-      }
-
-      /// Register a Remote Procedure Call.
-      ///
-      /// @tparam GArg The RPC argument type.
-      /// @tparam GRet The RPC return type.
-      /// @tparam NOEXCEPT Whether a failure will cause the method not to raise
-      ///                  an exception.
-      /// @tparam NF The type of the method bound.
-      /// @param nf The method to bind.
-      /// @param dht The Doughnut instance to call the bound method to.
-      /// @param name The route of the RPC.
-      ///
-      /// Note. The route can be found in the generated the .bp file.
-      ///       The format is (<package>.)<service>/<method>.
-      template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
-      void
-      AddMethod(NF& nf, model::doughnut::Doughnut& dht,
-                std::string const& route)
-      {
-        auto& sched = elle::reactor::scheduler();
-        this->_method_names.push_back(std::make_unique<std::string>(route));
-        int index = 0;
-#if INFINIT_ENABLE_PROMETHEUS
-        _counters.push_back(infinit::prometheus::instance()
-          .make(_family,
-            {{"call", route}}));
-        index = _counters.size()-1;
-#endif
-        ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
-                                     this->_method_names.back()->c_str(),
-          ::grpc::RpcMethod::NORMAL_RPC,
-          new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
-            [&, index](Service*,
-                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
-            {
-#if INFINIT_ENABLE_PROMETHEUS
-              if (auto& c = _counters[index])
-                c->Increment();
-#endif
-              return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
-            },
-            this)));
-      }
-
-    private:
-#if INFINIT_ENABLE_PROMETHEUS
-      prometheus::Family<prometheus::Counter>* _family;
-      std::vector<prometheus::CounterPtr> _counters;
-#endif
-      std::vector<std::unique_ptr<std::string>> _method_names;
-    };
-
-    using Update = std::function<void (
-      std::unique_ptr<infinit::model::blocks::Block>,
-      std::unique_ptr<infinit::model::ConflictResolver>,
-      bool)>;
+    using Update =
+      std::function<void(std::unique_ptr<infinit::model::blocks::Block>,
+         std::unique_ptr<infinit::model::ConflictResolver>, bool)>;
 
     Update
     make_update_wrapper(Update f)
