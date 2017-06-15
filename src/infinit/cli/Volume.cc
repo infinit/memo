@@ -1090,7 +1090,7 @@ namespace infinit
           endpoints_to_file(model->local()->server_endpoints(),
                             *endpoints_file);
       }
-      auto run = [&, push_p]
+      auto run = [&]
       {
         elle::reactor::Thread::unique_ptr stat_thread;
         if (push_p)
@@ -1109,11 +1109,9 @@ namespace infinit
 #endif
                              );
         if (grpc)
-        {
-          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), grpc] {
+          elle::reactor::run_later("grpc", [&dht, fs=fs.get(), grpc] {
               infinit::grpc::serve_grpc(dht, *fs, *grpc);
-          });
-        }
+            });
 #if INFINIT_ENABLE_PROMETHEUS
         if (prometheus)
           infinit::prometheus::endpoint(*prometheus);
@@ -1185,13 +1183,10 @@ namespace infinit
         }
 #ifdef INFINIT_MACOSX
         if (finder_sidebar && mo.mountpoint)
-        {
-          auto mountpoint = mo.mountpoint;
-          elle::reactor::background([mountpoint]
+          elle::reactor::background([mountpoint = mo.mountpoint]
             {
               add_path_to_finder_sidebar(mountpoint.get());
             });
-        }
         auto reachability = std::unique_ptr<elle::reactor::network::Reachability>{};
 #endif
         elle::SafeFinally unmount([&]
@@ -1822,7 +1817,7 @@ namespace infinit
       resolve_aliases("--fetch", fetch, "--fetch-endpoints", fetch_endpoints);
       resolve_aliases("--push", push, "--push-endpoints", push_endpoints);
 
-      auto name = ifnt.qualified_name(volume_name, owner);
+      auto const name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
 
       MOUNT_OPTIONS_MERGE(volume.mount_options);
