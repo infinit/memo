@@ -19,6 +19,9 @@ namespace infinit
     class Doctor;
     class Memo;
     class Journal;
+#if MEMO_WITH_KEY_VALUE_STORE
+    class KeyValueStore;
+#endif
     class Network;
     class Passport;
     class Silo;

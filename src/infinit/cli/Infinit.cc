@@ -107,6 +107,8 @@ namespace infinit
           return "identity for user";
         else if (object == "network")
           return "network descriptor";
+        else if (object == "kvs")
+          return "kvs descriptor";
         else
           return object;
       }

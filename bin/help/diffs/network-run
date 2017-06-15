@@ -32,11 +32,11 @@ Run options:									  -h, --help		    show this help message
   --port arg				Outbound port to use			      --no-public-endpoints  Disable automatic detection of public endpoints
   --peers-file arg			File to write peers to periodically	      --advertise-host arg  advertise extra endpoint using given host (default:
   --listen arg				Specify which IP address to listen on	      --grpc arg	    start grpc server on given endpoint (default: null)
-					(default: all)				      --prometheus arg	    start Prometheus server on given endpoint (default:
-  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the	      --paxos-rebalancing-auto-expand arg  whether to automatically rebalance u
-					Hub in seconds (default: 300s)		      --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup
-  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --resign-on-shutdown arg	rebalance blocks out when shutting down (defaul
-					endpoints
+					(default: all)				      --grpc-port-file arg  write gRPC listening port to file (default: null)
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the	      --prometheus arg	    start Prometheus server on given endpoint (default:
+					Hub in seconds (default: 300s)		      --paxos-rebalancing-auto-expand arg  whether to automatically rebalance u
+  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup
+					endpoints				      --resign-on-shutdown arg	rebalance blocks out when shutting down (defaul
   --no-public-endpoints [=arg(=true)]	Disable automatic detection of public
 					endpoints
   --advertise-host arg			Advertise extra endpoint using given

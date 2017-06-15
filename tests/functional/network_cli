@@ -3,6 +3,8 @@
 from utils import *
 import json
 
+with_kvs = os.environ.get('MEMO_WITH_KEY_VALUE_STORE', '1') == '1'
+
 # Creating and deleting networks locally.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
      Infinit(beyond = beyond) as alice:
@@ -403,10 +405,15 @@ with Beyond() as beyond, \
            '-u', 'bob', '-N', 'n', '-p'])
   bob.run(['passport', 'fetch', '--as', 'bob'])
   assertEq(len(bob.run_json(['passport', 'list', '-s', '--as', 'bob'])), 2)
+  if with_kvs:
+    bob.run(['kvs', 'create', '--as', 'bob', 'k', '-N', 'n', '-p'])
+    assertEq(len(bob.run_json(['kvs', 'list', '-s', '--as', 'bob'])), 1)
   bob.run(['network', 'delete', 'n', '--as', 'bob',
            '--purge', '--pull', '--unlink'])
   assertEq(len(bob.run_json(['network', 'list', '-s', '--as', 'bob'])), 0)
   assertEq(len(bob.run_json(['passport', 'list', '-s', '--as', 'bob'])), 1)
+  if with_kvs:
+    assertEq(len(bob.run_json(['kvs', 'list', '-s'])), 0)
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   bob.run(['network', 'fetch', '--as', 'bob', 'n'], return_code = 1)
   alice.run(['passport', 'fetch', '--as', 'alice', '-N', 'bob/n'],

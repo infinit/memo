@@ -318,6 +318,9 @@ def configure(
       'drives/put',
       'drives/icons',
       'drives/invitations',
+      'kvs/delete',
+      'kvs/get',
+      'kvs/put',
       # Higher level.
       'users/register_login',
       'credentials/oauth',

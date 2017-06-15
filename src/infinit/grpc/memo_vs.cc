@@ -114,16 +114,16 @@ namespace infinit
       }
 
       template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
-      void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
+      void AddMethod(NF& nf, model::doughnut::Doughnut& dht,
+                     std::string const& route)
       {
         auto& sched = elle::reactor::scheduler();
-        _method_names.push_back(std::make_unique<std::string>(
-          underscore_to_uppercase(name)));
+        _method_names.push_back(std::make_unique<std::string>(route));
         int index = 0;
 #if INFINIT_ENABLE_PROMETHEUS
         _counters.push_back(infinit::prometheus::instance()
           .make(_family,
-            {{"call", name}}));
+            {{"call", route}}));
         index = _counters.size()-1;
 #endif
 
@@ -386,6 +386,11 @@ namespace infinit
         (dht.make_immutable_block, dht,"/memo.vs.ValueStore/MakeImmutableBlock");
       ptr->AddMethod<::memo::vs::DeleteRequest, ::memo::vs::DeleteResponse>
         (dht.remove, dht, "/memo.vs.ValueStore/Delete");
+      ptr->AddMethod<::memo::vs::MakeNamedBlockRequest, ::memo::vs::Block, true>
+        (dht.make_named_block, dht, "/memo.vs.ValueStore/MakeNamedBlock");
+      ptr->AddMethod<::memo::vs::NamedBlockAddressRequest,
+        ::memo::vs::NamedBlockAddressResponse, true>
+        (dht.named_block_address, dht, "/memo.vs.ValueStore/NamedBlockAddress");
       return std::move(ptr);
     }
   }

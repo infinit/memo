@@ -280,6 +280,11 @@ class Beyond:
   def network_drives_get(self, network):
     return self.__datastore.network_drives_fetch(name = network.name)
 
+  def network_key_value_stores_get(self, network):
+    return (
+      KeyValueStore.from_json(self, json) for json in
+      self.__datastore.networks_key_value_stores_fetch(networks = [network]))
+
   def network_stats_get(self, name):
     return self.__datastore.network_stats_fetch(network = name)
 
@@ -294,6 +299,11 @@ class Beyond:
     for v in volumes:
       if v.owner_name == user.name:
         self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
+    key_value_stores = self.network_key_value_stores_get(network = network)
+    for k in key_value_stores:
+      if k.owner_name == user.name:
+        self.key_value_store_delete(owner = k.owner_name,
+                                    name = k.unqualified_name)
 
   ## ---- ##
   ## User ##
@@ -333,31 +343,43 @@ class Beyond:
     return (Network.from_json(self, json) for json in
             self.__datastore.user_networks_fetch(user = user))
 
+  class UniqueEntity:
+
+    def __init__(self):
+      self.found = set()
+
+    def __call__(self, x):
+      if x['name'] in self.found:
+        return True
+      self.found.add(x['name'])
+      return False
+
   def user_volumes_get(self, user):
     networks = (Network.from_json(self, json) for json in
                 self.__datastore.user_networks_fetch(user = user))
 
-    class Unique:
-
-      def __init__(self):
-        self.found = set()
-
-      def __call__(self, x):
-        if x['name'] in self.found:
-          return True
-        self.found.add(x['name'])
-        return False
-
     import itertools
     return (Volume.from_json(self, json) for json in
             itertools.filterfalse(
-              Unique(),
+              Beyond.UniqueEntity(),
               itertools.chain(
                 self.__datastore.networks_volumes_fetch(networks = networks),
                 self.__datastore.user_volumes_fetch(user))))
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
+
+  def user_key_value_stores_get(self, user):
+    networks = (Network.from_json(self, json) for json in
+                self.__datastore.user_networks_fetch(user = user))
+
+    import itertools
+    return (KeyValueStore.from_json(self, json) for json in
+            itertools.filterfalse(
+              Beyond.UniqueEntity(),
+              itertools.chain(
+                self.__datastore.networks_key_value_stores_fetch(networks),
+                self.__datastore.user_key_value_stores_fetch(user))))
 
   def user_purge(self, user):
     # Remove elements individually in case the user has already removed some.
@@ -370,6 +392,11 @@ class Beyond:
     for v in volumes:
       if v.owner_name == user.name:
         self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
+    key_value_stores = self.user_key_value_stores_get(user = user)
+    for k in key_value_stores:
+      if k.owner_name == user.name:
+        self.key_value_store_delete(owner = k.owner_name,
+                                    name = k.unqualified_name)
     networks = self.user_networks_get(user = user)
     for n in networks:
       if n.owner_name == user.name:
@@ -483,6 +510,18 @@ class Beyond:
         **self.template('Internal/Passport Generation Error')
       )
     return errors
+
+  ## --------------- ##
+  ## Key Value Store ##
+  ## --------------- ##
+
+  def key_value_store_get(self, owner, name):
+    return KeyValueStore.from_json(
+      self,
+      self.__datastore.key_value_store_fetch(owner = owner, name = name))
+
+  def key_value_store_delete(self, owner, name):
+    return self.__datastore.key_value_store_delete(owner = owner, name = name)
 
   ## ------------ ##
   ## Crash Report ##
@@ -1086,3 +1125,27 @@ class Drive(
           **beyond.template('Drive/Joined')
         )
       return True
+
+class KeyValueStore(metaclass = Entity,
+                    insert = 'key_value_store_insert',
+                    hasher = lambda kvs: hash(kvs.name),
+                    fields = fields('name', 'network',
+                                    owner = Optional(),
+                                    description = Optional())):
+
+  @property
+  def id(self):
+    return self.name
+
+  @property
+  def owner_name(self):
+    return self.name.split('/')[0]
+
+  @property
+  def unqualified_name(self):
+    return self.name.split('/')[1]
+
+  def __eq__(self, other):
+    if self.name != other.name or self.network != other.network:
+      return False
+    return True

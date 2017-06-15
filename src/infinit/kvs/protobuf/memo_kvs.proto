@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package memo.kvs;
+
+service KeyValueStore {
+  rpc Insert(InsertRequest) returns (InsertResponse) {}
+  rpc Update(UpdateRequest) returns (UpdateResponse) {}
+  rpc Upsert(UpsertRequest) returns (UpsertResponse) {}
+  rpc Fetch(FetchRequest) returns (FetchResponse) {}
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+  rpc List(ListRequest) returns (ListResponse) {}
+};
+
+message InsertRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message InsertResponse {
+};
+
+message UpdateRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message UpdateResponse {
+};
+
+message UpsertRequest {
+  string key = 1;
+  bytes value = 2;
+};
+
+message UpsertResponse {
+};
+
+message FetchRequest {
+  string key = 1;
+};
+
+message FetchResponse {
+  bytes value = 1;
+};
+
+message DeleteRequest {
+  string key = 1;
+};
+
+message DeleteResponse {
+};
+
+message ListRequest {
+  string prefix = 1;
+  string marker = 2;
+  string delimiter = 3;
+  uint64 maxKeys = 4;
+};
+
+message ListItem {
+  string key = 1;
+};
+
+message ListResponse {
+  repeated ListItem items = 1;
+  repeated string prefixes = 2;
+  bool truncated = 3;
+};

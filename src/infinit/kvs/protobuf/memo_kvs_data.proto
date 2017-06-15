@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package memo.kvs.data;
+
+message ValueStore {
+  bytes address = 1;
+}
+
+message ValueDescriptor {
+  ValueStore current = 1;
+  repeated ValueStore edits = 2;
+}
+
+message KeyMap {
+  map<string, ValueDescriptor> map = 1;
+}

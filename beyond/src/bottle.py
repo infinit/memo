@@ -163,6 +163,8 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.user_volumes_get)
     self.route('/users/<name>/drives',
                method = 'GET')(self.user_drives_get)
+    self.route('/users/<name>/kvs',
+               method = 'GET')(self.user_key_value_stores_get)
     self.route('/users/<name>/login', method = 'POST')(self.login)
     self.route('/users/<name>/pairing',
                method = 'PUT')(self.store_pairing_information)
@@ -193,6 +195,8 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.network_endpoint_delete)
     self.route('/networks/<owner>/<name>/volumes',
                method = 'GET')(self.network_volumes_get)
+    self.route('/networks/<owner>/<name>/kvs',
+               method = 'GET')(self.network_key_value_stores_get)
     self.route('/networks/<owner>/<name>/stat',
                method = 'GET')(self.network_stats_get)
     self.route('/networks/<owner>/<name>/stat/<user>/<node_id>',
@@ -223,6 +227,13 @@ class Bottle(bottle.Bottle):
       self.drive_icon_put)
     self.route('/drives/<owner>/<name>/icon', method = 'DELETE')(
       self.drive_icon_delete)
+    # KVS
+    self.route('/kvs/<owner>/<name>',
+               method = 'GET')(self.key_value_store_get)
+    self.route('/kvs/<owner>/<name>',
+               method = 'PUT')(self.key_value_store_put)
+    self.route('/kvs/<owner>/<name>',
+               method = 'DELETE')(self.key_value_store_delete)
     # Crash reports
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
 
@@ -590,6 +601,12 @@ class Bottle(bottle.Bottle):
     drives = self.__beyond.user_drives_get(name = user.name)
     return {'drives': list(map(lambda d: d.json(), drives))}
 
+  def user_key_value_stores_get(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
+    res = self.__beyond.user_key_value_stores_get(user = user)
+    return {'kvs': list(map(lambda k: k.json(), res))}
+
   def login(self, name):
     json = bottle.request.json
     if 'password_hash' not in json:
@@ -846,6 +863,11 @@ class Bottle(bottle.Bottle):
     network = self.network_from_name(owner = owner, name = name)
     volumes = self.__beyond.network_volumes_get(network = network)
     return {'volumes': list(map(lambda v: v.json(), volumes))}
+
+  def network_key_value_stores_get(self, owner, name):
+    network = self.network_from_name(owner = owner, name = name)
+    res = self.__beyond.network_key_value_stores_get(network = network)
+    return {'kvs': list(map(lambda v: v.json(), res))}
 
   def network_stats_get(self, owner, name):
     try:
@@ -1106,6 +1128,41 @@ class Bottle(bottle.Bottle):
 
   def __drive_icon_manipulate(self, name, f):
     return f('users', '%s/icon' % name)
+
+  ## --------------- ##
+  ## Key Value Store ##
+  ## --------------- ##
+
+  def key_value_store_from_name(self, owner, name, throws = True):
+    try:
+      return self.__beyond.key_value_store_get(owner = owner, name = name)
+    except KeyValueStore.NotFound:
+      raise self.__not_found('kvs', '%s/%s' % (owner, name))
+
+  def key_value_store_get(self, owner, name):
+    return self.key_value_store_from_name(owner = owner, name = name).json()
+
+  def key_value_store_put(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    try:
+      json = bottle.request.json
+      kvs = KeyValueStore(self.__beyond, **json)
+      kvs.create()
+      raise Response(201, {})
+    except KeyValueStore.Duplicate:
+      if kvs == self.key_value_store_from_name(owner = owner, name = name):
+        return {}
+      raise Response(409, {
+        'error': 'kvs/conflict',
+        'reason': 'kvs %r already exists' % name,
+      })
+
+  def key_value_store_delete(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    kvs = self.key_value_store_from_name(owner = owner, name = name)
+    self.__beyond.key_value_store_delete(owner = owner, name = name)
 
   ## ------------ ##
   ## Crash Report ##

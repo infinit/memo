@@ -3,6 +3,7 @@ import drake.cxx
 import drake.debian
 import drake.docker
 import drake.git
+import drake.go
 import drake.license_file
 import drake.python
 import drake.redhat
@@ -59,8 +60,9 @@ def configure(
     website: bool = True,
     enable_crash_report: bool = True,
     cxx_toolkit_host = None,
-    go_toolkit = None, # XXX placeholder for Go
-    go_config = None,  # XXX placeholder for Go
+    go_toolkit = drake.go.Toolkit(
+      path = os.path.realpath(str(drake.path_build('go-dependencies')))),
+    go_config = drake.go.Config()
 ):
   if python3 is not None:
     python = python3
@@ -131,7 +133,6 @@ def configure(
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
 
-
   ## --------------- ##
   ## Infinit library ##
   ## --------------- ##
@@ -172,6 +173,8 @@ def configure(
     'src/infinit/Infinit.cc',
     'src/infinit/Infinit.hh',
     'src/infinit/Infinit.hxx',
+    'src/infinit/KeyValueStore.cc',
+    'src/infinit/KeyValueStore.hh',
     'src/infinit/LoginCredentials.cc',
     'src/infinit/LoginCredentials.hh',
     'src/infinit/MountOptions.cc',
@@ -320,6 +323,23 @@ def configure(
     strip = windows)
   rule_build << memo_lib
 
+  ## ----- ##
+  ## kvs.  ##
+  ## ----- ##
+
+  # XXX: Go cross compiling requires go > 1.6 (tested with 1.8.3).
+  # XXX: Re-enable key-value store for Windows when the build farm has been
+  # XXX: updated.
+  with_kvs = not windows
+
+  if with_kvs:
+    kvs = drake.include(
+      'src/infinit/kvs',
+      go_toolkit = go_toolkit,
+      go_config = go_config,
+      grpc = grpc,
+    )
+
   ## -------- ##
   ## Binaries ##
   ## -------- ##
@@ -358,10 +378,13 @@ def configure(
     cli_cxx_config.lib('dbghelp')
     cli_cxx_config.lib('iphlpapi')
     cli_cxx_config.lib('crypt32')
+    cli_cxx_config.lib('winmm')
     cli_cxx_config.library_add(
       drake.copy(dokan_lib, libdir, True))
     cli_cxx_config.library_add(elle.boost.program_options_static)
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
+  if with_kvs:
+    cli_cxx_config.library_add(drake.copy(kvs.library, libdir, True))
   if entreprise_edition:
     cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
 
@@ -376,6 +399,7 @@ def configure(
   # XXX / FIXME: Daemon is disabled for now.
   with_daemon = False
   cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
+  cli_cxx_config.define('MEMO_WITH_KEY_VALUE_STORE', '1' if with_kvs else '0')
   binaries = []
   global installed_binaries
   installed_binaries = []
@@ -425,6 +449,12 @@ def configure(
       'silo',
       'user',
   ]
+  if with_kvs:
+    memo_cli_sources += drake.nodes(
+      'src/infinit/cli/KeyValueStore.cc',
+      'src/infinit/cli/KeyValueStore.hh',
+    )
+    memo_modes.append('key-value-store')
   if with_daemon:
     memo_modes.append('daemon')
     memo_cli_sources += drake.nodes(
@@ -439,7 +469,7 @@ def configure(
       memo_cli_instantiate_config.define('ELLE_LOG_DISABLE', 1)
     memo_cli_sources.append(
       drake.cxx.Object(
-        drake.node('src/infinit/cli/instantiate-%s.cc' % b),
+        drake.node('src/infinit/cli/instantiate-%s.cc' % b.replace('_', '-')),
         cxx_toolkit,
         memo_cli_instantiate_config))
   memo_cli_deps = [memo_lib]
@@ -694,6 +724,10 @@ def configure(
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
       utils = drake.node('tests/functional/utils.py')
+      if with_kvs:
+        kvs_grpc = drake.copy(
+          kvs.gen_py.targets(),
+          'tests/functional/lib', strip_prefix = True)
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -711,6 +745,10 @@ def configure(
               'storage_cli',
               'user_cli',
             ]))
+      if not windows:
+        # XXX: Hangs forever under wine, likely because of:
+        # https://bugs.winehq.org/show_bug.cgi?id=38272
+        tests.append(functional_test('key_value_store_cli'))
       doctor_configuration_test = functional_test(
         'doctor/configuration',
         env = {
@@ -738,6 +776,8 @@ def configure(
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(memo_cli)
         test.dependency_add(drake.node('tests/functional/utils.py'))
+        if with_kvs:
+          test.dependencies_add(kvs_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                              absolute = True))
         extra_path = [binaries_path]
@@ -750,11 +790,13 @@ def configure(
           'PYTHONPATH': ':'.join([
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
             str(drake.path_source('tests/functional')),
+            str(drake.path_build('tests/functional/lib')),
           ]),
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'MEMO_BINARIES': str(binaries_path)
+          'MEMO_BINARIES': str(binaries_path),
+          'MEMO_WITH_KEY_VALUE_STORE': str(with_kvs),
         }
         env.update(t.get('env', {}))
         if windows:

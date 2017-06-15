@@ -7,10 +7,9 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
-doughnut_proto = None
-doughnut_json = None
+memo_vs_proto = None
+memo_vs_json = None
 gendn = None
-genfs = None
 
 class GRPCGen(drake.Builder):
 
@@ -128,10 +127,19 @@ class GRPCGoGen(GRPCGen):
     srcs = []
     if plugin is None:
       if toolkit is not None:
-        plugin = drake.go.FetchPackage(
-          url = 'github.com/golang/protobuf/protoc-gen-go',
-          targets = drake.nodes('%s/bin/protoc-gen-go' % toolkit.path,),
-          toolkit = toolkit).targets()[0]
+        if toolkit.os == 'windows':
+          plugin = drake.node('%s/bin/%s/protoc-gen-go.exe' % (
+            toolkit.path, toolkit.platform_str()))
+        else:
+          plugin = drake.node('%s/bin/protoc-gen-go' % toolkit.path)
+        if not plugin.builder:
+          drake.go.FetchPackage(
+            url = 'github.com/golang/protobuf/protoc-gen-go',
+            toolkit = toolkit,
+            targets = [
+              plugin,
+            ],
+          )
       elif os.environ.get('GOPATH'):
         plugin = drake.node('%s/bin/protoc-gen-go' % os.environ['GOPATH'])
       elif os.environ.get('GOROOT'):
@@ -161,7 +169,7 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global doughnut_proto, doughnut_json, grpc_lib, grpc, sources
+  global memo_vs_proto, doughnut_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -179,7 +187,7 @@ def configure(
                                   sources = [memo_vs_json]):
       drake.node('memo_vs.proto.tmpl')
   memo_vs_proto = drake.node('memo_vs.proto')
-  global gendn, genfs
+  global gendn
   gendn = GRPCCxxGen(
     memo_vs_proto,
     protoc = grpc.protoc,

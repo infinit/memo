@@ -593,6 +593,57 @@ namespace infinit
     return res;
   }
 
+  bool
+  Infinit::key_value_store_has(std::string const& name)
+  {
+    bfs::ifstream f;
+    return exists(this->_key_value_store_path(name));
+  }
+
+  KeyValueStore
+  Infinit::key_value_store_get(std::string const& name)
+  {
+    bfs::ifstream f;
+    this->_open_read(
+      f, this->_key_value_store_path(name), name, "kvs");
+    return load<KeyValueStore>(f);
+  }
+
+  void
+  Infinit::key_value_store_save(KeyValueStore const& kvs, bool overwrite)
+  {
+    bfs::ofstream f;
+    bool existed = this->_open_write(
+      f, this->_key_value_store_path(kvs.name), kvs.name, "kvs",
+      overwrite);
+    save(f, kvs);
+    this->report_local_action()(
+      existed ? "updated" : "saved", "kvs", kvs.name);
+  }
+
+  bool
+  Infinit::key_value_store_delete(KeyValueStore const& kvs)
+  {
+    return this->_delete(
+      this->_key_value_store_path(kvs.name), "kvs", kvs.name);
+  }
+
+  std::vector<KeyValueStore>
+  Infinit::key_value_stores_get() const
+  {
+    auto res = std::vector<KeyValueStore>{};
+    for (auto const& p
+           : bfs::recursive_directory_iterator(this->_key_value_stores_path()))
+      if (is_visible_file(p))
+      {
+        bfs::ifstream f;
+        this->_open_read(
+          f, p.path(), p.path().filename().string(), "kvs");
+        res.emplace_back(load<KeyValueStore>(f));
+      }
+    return res;
+  }
+
   void
   Infinit::credentials_add(std::string const& name, std::unique_ptr<Credentials> a)
   {
@@ -830,6 +881,20 @@ namespace infinit
     return this->_users_path() / name;
   }
 
+  bfs::path
+  Infinit::_key_value_stores_path() const
+  {
+    auto root = xdg_data_home() / "kvs";
+    create_directories(root);
+    return root;
+  }
+
+  bfs::path
+  Infinit::_key_value_store_path(std::string const& name) const
+  {
+    return this->_key_value_stores_path() / name;
+  }
+
   void
   Infinit::_open_read(bfs::ifstream& f,
                     bfs::path const& path,
@@ -873,9 +938,22 @@ namespace infinit
                              });
   }
 
+  std::vector<KeyValueStore>
+  Infinit::key_value_stores_for_network(std::string const& network_name)
+  {
+    std::vector<KeyValueStore> res;
+    for (auto const& kvs: this->key_value_stores_get())
+    {
+      if (kvs.network == network_name)
+        res.push_back(kvs);
+    }
+    return res;
+  }
+
   /*-------.
   | Beyond |
   `-------*/
+
   elle::json::Json
   Infinit::hub_login(std::string const& name,
                         LoginCredentials const& o) const
@@ -1037,8 +1115,8 @@ namespace infinit
                          bool ignore_missing,
                          bool purge) const
   {
-    return hub_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
-                         ignore_missing, purge);
+    return hub_delete(elle::sprintf("%s/%s", _type_plural(type), name),
+                      type, name, self, ignore_missing, purge);
   }
 
   Infinit::PushResult
@@ -1136,5 +1214,11 @@ namespace infinit
         elle::err("unexpected HTTP error %s pushing %s:\n%s",
                   r.status(), type, error);
     }
+  }
+
+  std::string
+  Infinit::_type_plural(std::string const& type) const
+  {
+    return elle::sprintf("%s%s", type, type.back() == 's' ? "" : "s");
   }
 }

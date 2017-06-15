@@ -20,6 +20,9 @@
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Doctor.hh>
 #include <infinit/cli/Journal.hh>
+#if MEMO_WITH_KEY_VALUE_STORE
+# include <infinit/cli/KeyValueStore.hh>
+#endif
 #include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
@@ -123,6 +126,9 @@ namespace infinit
       Device device = *this;
       Doctor doctor = *this;
       Journal journal = *this;
+#if MEMO_WITH_KEY_VALUE_STORE
+      KeyValueStore kvs = *this;
+#endif
       Network network{*this};
       Passport passport = *this;
       Silo silo = *this;
@@ -136,6 +142,9 @@ namespace infinit
                                     cli::device,
                                     cli::doctor,
                                     cli::journal,
+#if MEMO_WITH_KEY_VALUE_STORE
+                                    cli::kvs,
+#endif
                                     cli::network,
                                     cli::passport,
                                     cli::silo,

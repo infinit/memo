@@ -489,6 +489,9 @@ namespace infinit
       }
       if (purge)
       {
+        auto key_value_stores = ifnt.key_value_stores_for_network(network.name);
+        for (auto const& k: key_value_stores)
+          ifnt.key_value_store_delete(k);
         for (auto const& user: ifnt.user_passports_for_network(network.name))
           ifnt.passport_delete(network.name, user);
       }

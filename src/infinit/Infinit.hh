@@ -6,6 +6,7 @@
 
 #include <elle/flat-set.hh>
 
+#include <infinit/KeyValueStore.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
 #include <infinit/User.hh>
@@ -168,6 +169,21 @@ namespace infinit
     std::unordered_map<std::string, std::vector<std::string>>
     silo_networks(std::string const& silo_name);
 
+    /*------------------.
+    | Key Value Store.  |
+    `------------------*/
+
+    bool
+    key_value_store_has(std::string const& name);
+    KeyValueStore
+    key_value_store_get(std::string const& name);
+    void
+    key_value_store_save(KeyValueStore const& kvs, bool overwrite = false);
+    bool
+    key_value_store_delete(KeyValueStore const& kvs);
+    std::vector<KeyValueStore>
+    key_value_stores_get() const;
+
     /*--------------.
     | Credentials.  |
     `--------------*/
@@ -251,6 +267,10 @@ namespace infinit
     _users_path() const;
     boost::filesystem::path
     _user_path(std::string const& name) const;
+    boost::filesystem::path
+    _key_value_stores_path() const;
+    boost::filesystem::path
+    _key_value_store_path(std::string const& name) const;
     static
     void
     _open_read(boost::filesystem::ifstream& f,
@@ -287,6 +307,8 @@ namespace infinit
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name);
+    std::vector<KeyValueStore>
+    key_value_stores_for_network(std::string const& network_name);
     // saving & loading
     template <typename T>
     static
@@ -511,6 +533,11 @@ namespace infinit
                User const& self,
                bool ignore_missing = false,
                bool purge = false) const;
+
+  private:
+    std::string
+    _type_plural(std::string const& type) const;
+
 
     /// report_local_action is triggered when a local resource is edited:
     /// - saved

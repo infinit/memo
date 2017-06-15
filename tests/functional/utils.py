@@ -118,7 +118,8 @@ class Infinit(TemporaryDirectory):
             env = {},
             noscript = False,
             gdb = False,
-            valgrind = False):
+            valgrind = False,
+            binary = binary):
     if isinstance(args, str):
       args = args.split(' ')
     if args[0][0] != '/':
@@ -460,3 +461,136 @@ class User():
 
   def fail(self, cli, **kargs):
     self.infinit.run(cli.split(' '), return_code = 1, **kargs)
+
+class SharedLogicCLITests():
+
+  def __init__(self, entity):
+    self.__entity = entity
+
+  def random_sequence(self, count = 10):
+    from random import SystemRandom
+    import string
+    return ''.join(SystemRandom().choice(
+      string.ascii_lowercase + string.digits) for _ in range(count))
+
+  def run(self):
+    entity = self.__entity
+    # Creating and deleting entity.
+    with Infinit() as bob:
+      e_name = self.random_sequence()
+      bob.run(['user', 'create',  'bob'])
+      bob.run(['network', 'create', 'network', '--as', 'bob'])
+      bob.run([entity, 'create', e_name, '-N', 'network',
+               '--as', 'bob'])
+      bob.run([entity, 'export', 'bob/%s' % e_name, '--as', 'bob'])
+      bob.run([entity, 'delete', e_name, '--as', 'bob'])
+
+    # Push to the hub.
+    with Beyond() as beyond, \
+        Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
+      e_name = self.random_sequence()
+      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+      bob.run(['network', 'create', 'network', '--as', 'bob',
+               '--push'])
+      bob.run([entity, 'create', e_name, '-N', 'network',
+               '--description', 'something', '--as', 'bob', '--push'])
+      try:
+        bob.run([entity, '--push', '--name', e_name])
+        unreachable()
+      except Exception as e:
+        pass
+      alice.run(['user', 'signup', 'alice',
+                 '--email', 'a@infinit.sh'])
+      alice.run([entity, 'fetch', 'bob/%s' % e_name,
+                 '--as', 'alice'])
+      e = alice.run_json([entity, 'export', 'bob/%s' % e_name,
+                          '--as', 'alice'])
+      assertEq(e['description'], 'something')
+
+    # Pull and delete.
+    with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+      e_name = self.random_sequence()
+      e_name2 = e_name
+      while e_name2 == e_name:
+        e_name2 = self.random_sequence()
+      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+      bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
+      # Local and Beyond.
+      bob.run([entity, 'create', '--as', 'bob', e_name,
+               '-N', 'n', '--push'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 1)
+      bob.run([entity, 'delete', '--as', 'bob', e_name, '--pull'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 0)
+      bob.run([entity, 'fetch', '--as', 'bob', e_name],
+              return_code = 1)
+      # Local only.
+      bob.run([entity, 'create', '--as', 'bob', e_name2, '-N', 'n'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 1)
+      bob.run([entity, 'delete', '--as', 'bob', e_name2, '--pull'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 0)
+
+class KeyValueStoreInfrastructure():
+
+  def __init__(self, usr, uname = 'bob', kvname = 'kv'):
+    self.__usr = usr
+    self.__uname = uname
+    self.__kvname = kvname
+    self.__proc = None
+    self.__stub = None
+    self.__endpoint = None
+
+  @property
+  def usr(self):
+    return self.__usr
+
+  @property
+  def uname(self):
+    return self.__uname
+
+  @property
+  def kvname(self):
+    return self.__kvname
+
+  @property
+  def stub(self):
+    return self.__stub
+
+  @property
+  def endpoint(self):
+    return self.__endpoint
+
+  def __enter__(self):
+    self.usr.run(['user', 'create',  self.uname])
+    self.usr.run(['silo', 'create', 'filesystem', 's'])
+    self.usr.run(['network', 'create', 'n', '-S', 's',
+                  '--as', self.uname])
+    self.usr.run(['kvs', 'create', self.kvname,
+                  '-N', 'n', '--as', self.uname])
+    port_file = '%s/port' % self.usr.dir
+    self.__proc = self.usr.spawn(
+      ['memo', 'kvs', 'run', self.kvname, '--as', self.uname,
+       '--allow-root-creation',
+       '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
+    while not os.path.exists(port_file):
+      time.sleep(0.1)
+    self.__endpoint = '127.0.0.1:'
+    with open(port_file, 'r') as f:
+      self.__endpoint += f.readline().strip()
+    import grpc
+    import memo_kvs_pb2_grpc
+    channel = grpc.insecure_channel(self.__endpoint)
+    self.__stub = memo_kvs_pb2_grpc.KeyValueStoreStub(channel)
+    return self
+
+  def __exit__(self, *args, **kwargs):
+    if self.__proc:
+      self.__proc.terminate()
+      out, err = self.__proc.communicate(timeout = 30)
+      if os.environ.get('OS') != 'windows':
+        try:
+          # SIGTERM is not caught on windows. Might be wine related.
+          assertEq(self.__proc.wait(), 0)
+        except:
+          print('STDOUT: %s' % out)
+          print('STDERR: %s' % err)
+          raise

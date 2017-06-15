@@ -489,6 +489,7 @@ namespace infinit
         {
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
+          this->_evict_threads.clear();
           Super::_cleanup();
         }
 
@@ -1882,8 +1883,11 @@ namespace infinit
                   }
                 }
                 else
-                  ELLE_WARN(
-                    "someone else picked a value while we rebalanced");
+                {
+                  ELLE_TRACE("someone else picked a value while we rebalanced");
+                  ++version;
+                  continue;
+                }
                 return false;
               }
               else

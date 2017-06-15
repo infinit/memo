@@ -63,7 +63,8 @@ namespace infinit
   Infinit::hub_fetch(std::string const& type,
                      std::string const& name) const
   {
-    return hub_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
+    return hub_fetch<T>(elle::sprintf("%s/%s", _type_plural(type), name),
+                        type, name);
   }
 
   template <typename Serializer, typename T>
@@ -98,8 +99,7 @@ namespace infinit
                     bool hub_error,
                     bool update) const
   {
-    hub_push<Serializer>(
-      elle::sprintf("%ss/%s", type, name),
-      type, name, o, self, hub_error, update);
+    hub_push<Serializer>(elle::sprintf("%s/%s", _type_plural(type), name),
+                         type, name, o, self, hub_error, update);
   }
 }
