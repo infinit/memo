@@ -22,4 +22,3 @@
 [submodule "prometheus-cpp"]
 	path = prometheus/prometheus-cpp
 	url = https://github.com/infinit/prometheus-cpp.git
-
