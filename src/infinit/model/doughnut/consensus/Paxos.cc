@@ -489,6 +489,7 @@ namespace infinit
         {
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
+          this->_evict_threads.clear();
           Super::_cleanup();
         }
 
