@@ -152,9 +152,12 @@ namespace infinit
           ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             [&, index, this](Service*,
-                             ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+                       ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
             {
-              increment(_counters[index]);
+#if INFINIT_ENABLE_PROMETHEUS
+              if (auto& c = _counters[index])
+                c->Increment();
+#endif
               return invoke_named<NF, GArg, GRet, NOEXCEPT>(*this, sched, dht,
                 nf, ctx, arg, ret);
             },
@@ -225,35 +228,41 @@ namespace infinit
            {
              err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
 #if INFINIT_ENABLE_PROMETHEUS
-             if (mb.address().mutable_block())
-               increment(service.errMissingMutable);
-             if (!mb.address().mutable_block())
-               increment(service.errMissingImmutable);
+             if (mb.address().mutable_block() && service.errMissingMutable)
+               service.errMissingMutable->Increment();
+             if (!mb.address().mutable_block() && service.errMissingImmutable)
+               service.errMissingImmutable->Increment();
 #endif
            }
            catch (infinit::model::doughnut::ValidationFailed const& vf)
            {
 #if INFINIT_ENABLE_PROMETHEUS
-             increment(service.errPermission);
+             if (service.errPermission)
+               service.errPermission->Increment();
 #endif
              err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
            }
            catch (elle::athena::paxos::TooFewPeers const& tfp)
            {
-             increment(service.errTooFewPeers);
+#if INFINIT_ENABLE_PROMETHEUS
+             if (service.errTooFewPeers)
+               service.errTooFewPeers->Increment();
+#endif
              err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
            }
            catch (infinit::model::Conflict const& c)
            {
 #if INFINIT_ENABLE_PROMETHEUS
-             increment(service.errConflict);
+             if (service.errConflict)
+               service.errConflict->Increment();
 #endif
              elle::unconst(c).serialize(sout, version);
            }
            catch (elle::Error const& e)
            {
 #if INFINIT_ENABLE_PROMETHEUS
-             increment(service.errOther);
+             if (service.errOther)
+               service.errOther->Increment();
 #endif
              err = ::grpc::Status(::grpc::INTERNAL, e.what());
            }
@@ -261,7 +270,8 @@ namespace infinit
          else
          {
 #if INFINIT_ENABLE_PROMETHEUS
-           increment(service.errOk);
+           if (service.errOk)
+             service.errOk->Increment();
 #endif
            if (!is_void)
              sout.serialize(
@@ -346,9 +356,9 @@ namespace infinit
         std::unique_ptr<infinit::model::ConflictResolver> resolver,
         bool decrypt_data)
       {
-        auto const addr = block->address();
-        auto mutex = MutexPtr{};
+        auto addr = block->address();
         auto it = map->find(addr);
+        std::shared_ptr<elle::reactor::Mutex> mutex;
         if (it == map->end())
         {
           mutex = MutexPtr(new elle::reactor::Mutex(),
@@ -388,7 +398,7 @@ namespace infinit
         (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
       ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
         (dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse, true>
+      ptr->AddMethod<::NamedBlockAddressRequest, ::NamedBlockAddressResponse , true>
         (dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
         (dht.remove, dht, "/Doughnut/remove");

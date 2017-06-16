@@ -81,44 +81,6 @@ namespace infinit
 
     /// The instance to use.
     Prometheus& instance();
-
-    /// Increment a counter or a gauge, if they are defined.
-    template <typename Metric>
-    void increment(UniquePtr<Metric>& p)
-    {
-      if (p)
-        p->Increment();
-    }
-
-    /// Increment a gauge, if they are defined.
-    inline
-    void decrement(UniquePtr<Gauge>& p)
-    {
-      if (p)
-        p->Decrement();
-    }
-  }
-}
-#else // !INFINIT_ENABLE_PROMETHEUS
-namespace infinit
-{
-  namespace prometheus
-  {
-    /// A managed metric.
-    template <typename Metric>
-    using UniquePtr = std::unique_ptr<Metric, Deleter<Metric>>;
-
-    struct Gauge{};
-
-    /// Increment a counter or a gauge, if they are defined.
-    template <typename Metric>
-    void increment(UniquePtr<Metric>&)
-    {}
-
-    /// Increment a gauge, if they are defined.
-    inline
-    void decrement(UniquePtr<Gauge>&);
-    {}
   }
 }
 #endif
