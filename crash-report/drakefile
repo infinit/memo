@@ -128,7 +128,7 @@ class SymbolsCommit(drake.Builder):
           shutil.copy(str(source), dst)
 
       self.cmd('Add new debug symbols',
-               ['git', '-C', repo, 'add', *files],
+               ['git', '-C', repo, 'add'] + files,
                throw = True)
       if no_diff():
         # Nothing to commit.
