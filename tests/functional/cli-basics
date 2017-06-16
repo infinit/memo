@@ -40,9 +40,3 @@ with Infinit() as bob:
   xfail(['user', 'create','--name'],
         "./bin/memo: command line error: option requires an argument: --name\n"
         "Try './bin/memo user create --help' for more information.\n")
-
-  bob.run(['infinit', 'user', 'create', 'bob'])
-  xfail(['network', 'run',
-         '--fetch', '--fetch-endpoints=false', '--name', 'name', '--as', 'bob'],
-        "./bin/infinit: command line error: inconsistent options: --fetch=true and --fetch-endpoints=false\n"
-        "Try './bin/infinit volume run --help' for more information.\n")
