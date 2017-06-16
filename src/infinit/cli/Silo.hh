@@ -34,13 +34,13 @@ namespace infinit
         using Super = Object<Create, Silo>;
         using Modes = decltype(elle::meta::list(
                                  cli::filesystem
-                                 INFINIT_ENTREPRISE(,cli::dropbox)
-                                 INFINIT_ENTREPRISE(,cli::gcs)
-                                 INFINIT_ENTREPRISE(,cli::google_drive)
-                                 INFINIT_ENTREPRISE(,cli::s3)));
+                                 MEMO_ENTREPRISE(,cli::dropbox)
+                                 MEMO_ENTREPRISE(,cli::gcs)
+                                 MEMO_ENTREPRISE(,cli::google_drive)
+                                 MEMO_ENTREPRISE(,cli::s3)));
         Create(Memo& memo);
 
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
 
         // Dropbox.
         Mode<Create,
@@ -78,7 +78,7 @@ namespace infinit
                         boost::optional<std::string> output,
                         boost::optional<std::string> path);
 
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
 
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,

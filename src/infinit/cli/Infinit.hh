@@ -14,7 +14,7 @@
 
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
 # include <infinit/cli/Daemon.hh>
 #endif
 #include <infinit/cli/Device.hh>
@@ -120,7 +120,7 @@ namespace infinit
       // Modes
       Block block = *this;
       Credentials credentials = *this;
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
       Daemon daemon = *this;
 #endif
       Device device = *this;
@@ -136,7 +136,7 @@ namespace infinit
       using Objects
         = decltype(elle::meta::list(cli::block,
                                     cli::credentials,
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
                                     cli::daemon,
 #endif
                                     cli::device,

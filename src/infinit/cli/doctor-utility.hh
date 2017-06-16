@@ -2005,7 +2005,7 @@ namespace
         // for the other items.
         auto& status = elem.second.second;
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
         if (auto s3config = dynamic_cast<S3SiloConfig const*>(
               silo.get()))
         {
@@ -2029,7 +2029,7 @@ namespace
           store(results.silos, silo->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(silo.get()))
         {
           status = any_of(gcs_credentials,

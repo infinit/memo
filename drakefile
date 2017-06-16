@@ -84,7 +84,7 @@ def configure(
   cxx_config.warnings.sign_compare = drake.cxx.Config.Warnings.Error;
   if production_build:
     cxx_config.enable_optimization()
-    cxx_config.define('INFINIT_PRODUCTION_BUILD')
+    cxx_config.define('MEMO_PRODUCTION_BUILD')
 
   global git
   git = drake.git.Git()
@@ -392,7 +392,7 @@ def configure(
   if with_kvs:
     cli_cxx_config.library_add(drake.copy(kvs.library, libdir, True))
   if entreprise_edition:
-    cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
+    cli_cxx_config.define('MEMO_ENTREPRISE_EDITION')
 
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
@@ -404,7 +404,7 @@ def configure(
   #
   # XXX / FIXME: Daemon is disabled for now.
   with_daemon = False
-  cli_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
+  cli_cxx_config.define('MEMO_WITH_DAEMON', '1' if with_daemon else '0')
   cli_cxx_config.define('MEMO_WITH_KEY_VALUE_STORE', '1' if with_kvs else '0')
   binaries = []
   global installed_binaries

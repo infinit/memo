@@ -121,7 +121,7 @@ namespace infinit
 
     Silo::Create::Create(Memo& memo)
       : Object(memo)
-      INFINIT_ENTREPRISE(
+      MEMO_ENTREPRISE(
       , dropbox(*this,
                 "Store blocks on Dropbox",
                 elle::das::cli::Options{
@@ -144,7 +144,7 @@ namespace infinit
                    cli::capacity = boost::none,
                    cli::output = boost::none,
                    cli::path = boost::none)
-      INFINIT_ENTREPRISE(
+      MEMO_ENTREPRISE(
       , gcs(*this,
             "Store blocks on Google Cloud Storage",
             elle::das::cli::Options{
@@ -201,7 +201,7 @@ namespace infinit
         cli.infinit().silo_save(config->name, config);
     }
 
-    INFINIT_ENTREPRISE(
+    MEMO_ENTREPRISE(
     void
     Silo::Create::mode_dropbox(std::string const& name,
                                std::string const& account_name,
@@ -252,7 +252,7 @@ namespace infinit
           std::move(description)));
     }
 
-    INFINIT_ENTREPRISE(
+    MEMO_ENTREPRISE(
     void
     Silo::Create::mode_gcs(std::string const& name,
                            std::string const& account_name,

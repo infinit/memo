@@ -1,9 +1,9 @@
 #pragma once
 
-#if defined INFINIT_ENTREPRISE_EDITION
-# define INFINIT_ENTREPRISE(...) __VA_ARGS__
+#if defined MEMO_ENTREPRISE_EDITION
+# define MEMO_ENTREPRISE(...) __VA_ARGS__
 #else
-# define INFINIT_ENTREPRISE(...)
+# define MEMO_ENTREPRISE(...)
 #endif
 
 namespace infinit
@@ -12,7 +12,7 @@ namespace infinit
   {
     class Block;
     class Credentials;
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
     class Daemon;
 #endif
     class Device;

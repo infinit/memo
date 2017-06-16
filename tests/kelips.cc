@@ -372,7 +372,7 @@ ELLE_TEST_SCHEDULED(basic)
 {
   auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -424,7 +424,7 @@ namespace
   {
     elle::filesystem::TemporaryDirectory d;
     auto tmp = d.path();
-    elle::os::setenv("INFINIT_HOME", tmp.string());
+    elle::os::setenv("MEMO_HOME", tmp.string());
     auto const kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
     auto fswrite = make_observer(tmp, kp, 1, replication_factor, true, false, false);
@@ -606,7 +606,7 @@ ELLE_TEST_SCHEDULED(conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -685,7 +685,7 @@ ELLE_TEST_SCHEDULED(times)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 1);
   auto fsp = make_observer(tmp, kp, 1, 1, false, false, false);
@@ -740,7 +740,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
@@ -777,7 +777,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   constexpr auto iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
@@ -803,7 +803,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("INFINIT_HOME", tmp.string());
+  elle::os::setenv("MEMO_HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
   auto const fss = node_to_fs(nodes);

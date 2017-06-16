@@ -68,7 +68,7 @@ namespace crash_report
     }
 
     bool constexpr production_build
-#ifdef INFINIT_PRODUCTION_BUILD
+#ifdef MEMO_PRODUCTION_BUILD
       = true;
 #else
       = false;

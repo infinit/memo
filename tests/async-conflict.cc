@@ -110,7 +110,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
@@ -263,7 +263,7 @@ ELLE_TEST_SCHEDULED(async_groups)
   auto const path = bfs::temp_directory_path() / bfs::unique_path();
   auto const kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
@@ -351,7 +351,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
@@ -414,7 +414,7 @@ ELLE_TEST_SCHEDULED(async_squash)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
@@ -445,7 +445,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);

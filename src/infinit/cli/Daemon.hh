@@ -9,7 +9,7 @@
 #include <infinit/symbols.hh>
 
 /// Whether to enable Docker support.
-#if !defined INFINIT_PRODUCTION_BUILD || defined INFINIT_LINUX
+#if !defined MEMO_PRODUCTION_BUILD || defined INFINIT_LINUX
 # define WITH_DOCKER
 #endif
 
