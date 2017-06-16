@@ -45,6 +45,7 @@ namespace infinit
     using Environ = std::unordered_map<std::string, std::string>;
 
     void to_commandline(Strings& arguments, Environ& env) const;
+    Strings to_commandline() const;
     void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;

@@ -81,6 +81,104 @@ namespace infinit
 
     /// The instance to use.
     Prometheus& instance();
+
+    /// Create a family of gauges.
+    inline
+    Family<Gauge>*
+    make_gauge_family(std::string const& name, std::string const& help)
+    {
+      return instance().make_gauge_family(name, help);
+    }
+
+    /// Create a family of counters.
+    inline
+    Family<Counter>*
+    make_counter_family(std::string const& name, std::string const& help)
+    {
+      return instance().make_counter_family(name, help);
+    }
+
+    /// Create a metric.
+    template <typename Metric>
+    UniquePtr<Metric>
+    make(Family<Metric>* family, Labels const& labels)
+    {
+      return instance().make(family, labels);
+    }
+
+    /// Increment a counter or a gauge, if they are defined.
+    template <typename Metric>
+    void increment(UniquePtr<Metric>& p)
+    {
+      if (p)
+        p->Increment();
+    }
+
+    /// Increment a gauge, if they are defined.
+    inline
+    void decrement(UniquePtr<Gauge>& p)
+    {
+      if (p)
+        p->Decrement();
+    }
+  }
+}
+#else // !INFINIT_ENABLE_PROMETHEUS
+namespace infinit
+{
+  namespace prometheus
+  {
+    /// A characteristic profile for a metric instance.
+    using Labels = std::map<std::string, std::string>;
+
+    /// A managed metric.
+    template <typename Metric>
+    using UniquePtr = std::unique_ptr<Metric>;
+
+    template <typename Metric>
+    struct Family {};
+
+    struct Counter {};
+    struct Gauge {};
+
+    /// A managed counter.
+    using CounterPtr = UniquePtr<Counter>;
+    /// A managed gauge.
+    using GaugePtr = UniquePtr<Gauge>;
+
+    /// Create a family of gauges.
+    inline
+    Family<Gauge>*
+    make_gauge_family(std::string const& name, std::string const& help)
+    {
+      return nullptr;
+    }
+
+    /// Create a family of counters.
+    inline
+    Family<Counter>*
+    make_counter_family(std::string const& name, std::string const& help)
+    {
+      return nullptr;
+    }
+
+    /// Create a metric.
+    template <typename Metric>
+    UniquePtr<Metric>
+    make(Family<Metric>* family, Labels const& labels)
+    {
+      return nullptr;
+    }
+
+    /// Increment a counter or a gauge, if they are defined.
+    template <typename Metric>
+    void increment(UniquePtr<Metric>&)
+    {}
+
+    /// Increment a gauge, if they are defined.
+    inline
+    void decrement(UniquePtr<Gauge>&)
+    {}
   }
 }
 #endif

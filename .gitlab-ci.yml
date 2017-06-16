@@ -1,3 +1,15 @@
+stages:
+  - build
+
+variables:
+  DRAKE_DEBUG_BACKTRACE: "1"
+  DRAKE_EXPLAIN: "1" # still testing the whole cache thing
+  DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
+#  DRAKE_RAW: "1"     # debuging cmake issues
+  LC_ALL: "C.UTF-8"
+  PROJECT: "memo"
+  PYTHONUNBUFFERED: "1"
+
 # To update the repository, we go through several steps.
 #
 # git submodule sync --recursive || git submodule sync
@@ -13,25 +25,17 @@
 #          cryptography/README.md
 #
 #   But --force is not supported on old versions of git.
-stages:
-  - build
 
-variables:
-  DRAKE_EXPLAIN: "1" # still testing the whole cache thing
-  DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
-#  DRAKE_RAW: "1"     # debuging cmake issues
-  LC_ALL: "C.UTF-8"
-  PROJECT: "memo"
-  PYTHONUNBUFFERED: "1"
+before_script:
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
+    - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
 
 x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - scl enable devtoolset-4 rh-python34 "pip3 install -r drake/requirements.txt"
     - scl enable devtoolset-4 rh-python34 "pip3 install -r requirements.txt"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -41,7 +45,6 @@ x86_64-centos6-gcc4:
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time scl enable devtoolset-4 rh-python34 "./buildenv --pick-build-tree --branch $CI_BUILD_REF_NAME --link-build-tree $BUILD_DIR --build-trees-root /cache/$CI_PROJECT_NAME"
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
-    - mkdir -p "$INSTALL_DIR"
     - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project $PROJECT --source-dir $SOURCE_DIR --build-dir $BUILD_DIR --install-dir $INSTALL_DIR"
     - cd "$BUILD_DIR"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //build"
@@ -64,10 +67,6 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
     - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -76,7 +75,6 @@ x86_64-ubuntu-gcc4:
     - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
-    - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 drake -j $(nproc) //build //beyond/build
@@ -100,10 +98,6 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
     - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -112,7 +106,6 @@ x86_64-alpine-gcc:
     - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
-    - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 drake --beyond=false -j $(nproc) //build
@@ -135,10 +128,6 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
     - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -148,7 +137,6 @@ x86_64-jessie-gcc4:
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
-    - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 drake --beyond=false -j $(nproc) //build
@@ -168,10 +156,6 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
     - pip3 install -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -180,7 +164,6 @@ x86_64-windows-mingw4:
     - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
-    - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 drake -j $(nproc) //build
@@ -203,16 +186,13 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
-    - git fetch origin --tags
-    - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
+    - pip3 install -r requirements.txt
     - SOURCE_DIR=${CI_PROJECT_DIR}
     - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
     - INSTALL_DIR=$SOURCE_DIR/_install
     - DESC=$(git describe)
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
-    - mkdir -p "$BUILD_DIR"
     - farm/configure --arch x86_64 --os osx --compiler clang --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 drake -j 4 //build
