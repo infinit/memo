@@ -661,6 +661,41 @@ def configure(
   redhat_rule << redhat_repo_package
 
   ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  # memo image
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'memo', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <open+memo@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apt-get update && apt-get install -y python3')
+  docker_file.add(install_nodes(docker_path), '/usr')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+  # memo alpine image
+  docker_path = drake.Path('docker-alpine')
+  docker_image = drake.docker.DockerImage(
+    'docker-alpine', 'memo-alpine', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <open+memo@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(install_nodes(docker_path), '/usr')
+  docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
+  docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+  ## ------ ##
   ## Beyond ##
   ## ------ ##
 
