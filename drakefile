@@ -56,8 +56,7 @@ def configure(
     website: bool = True,
     enable_crash_report: bool = True,
     cxx_toolkit_host = None,
-    go_toolkit = drake.go.Toolkit(
-      path = os.path.realpath(str(drake.path_build('go-dependencies')))),
+    go_toolkit = None,
     go_config = drake.go.Config()
 ):
   if python3 is not None:
@@ -128,6 +127,13 @@ def configure(
 
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
+
+  # Go.
+  if go_toolkit is None:
+    go_toolkit = drake.go.Toolkit(
+      path = os.path.realpath(str(drake.path_build('go-dependencies'))),
+      cxx_toolkit = cxx_toolkit,
+    )
 
   ## --------------- ##
   ## Infinit library ##
