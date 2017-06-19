@@ -3,6 +3,8 @@
 #include <functional>
 #include <utility>
 
+#include <boost/range/adaptor/filtered.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/sort.hpp>
 
 #include <elle/bench.hh>
@@ -46,6 +48,9 @@ namespace infinit
     {
       namespace consensus
       {
+        using boost::adaptors::filtered;
+        using boost::adaptors::transformed;
+
         template<typename F>
         auto network_exception_to_unavailable(F f, bool missing = false)
           -> decltype(f())
@@ -185,6 +190,17 @@ namespace infinit
         /*-----.
         | Peer |
         `-----*/
+
+        std::shared_ptr<Paxos::Peer>
+        to_paxos_peer(overlay::Overlay::WeakMember wpeer)
+        {
+          auto peer = wpeer.lock();
+          if (!peer)
+            return nullptr;
+          else
+            return ELLE_ENFORCE(
+              std::dynamic_pointer_cast<Paxos::Peer>(peer));
+        }
 
         class PaxosPeer
           : public Paxos::PaxosClient::Peer
@@ -793,11 +809,11 @@ namespace infinit
                   else
                     ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
                   std::unordered_set<overlay::Overlay::Member> new_owners;
-                  std::unordered_set<overlay::Overlay::Member> owners;
+                  std::unordered_set<std::shared_ptr<Paxos::Peer>> owners;
                   for (auto id: new_q)
                     if (id != this->doughnut().id())
-                      if (auto peer = this->doughnut().overlay()->
-                          lookup_node(id).lock())
+                      if (auto peer = to_paxos_peer(
+                            this->doughnut().overlay()->lookup_node(id)))
                       {
                         owners.emplace(peer);
                         if (!elle::find(q.quorum, peer->id()))
@@ -816,11 +832,9 @@ namespace infinit
                     });
                   elle::reactor::for_each_parallel(
                     owners,
-                    [&] (overlay::Overlay::Member peer)
+                    [&] (auto peer)
                     {
-                      ELLE_ENFORCE(
-                        std::dynamic_pointer_cast<Paxos::Peer>(peer))
-                        ->confirm(new_q, address, PaxosClient::Proposal());
+                      peer->confirm(new_q, address, PaxosClient::Proposal());
                     });
                   this->_rebalanced(address);
                 }
@@ -861,18 +875,16 @@ namespace infinit
                 {
                   if (target.immutable)
                   {
-                    auto peer =
-                      this->doughnut().overlay()-> lookup_node(address).lock();
+                    auto peer = to_paxos_peer(
+                      this->doughnut().overlay()-> lookup_node(address));
                     if (!peer)
                       // Peer left in the meantime.
                       continue;
                     auto b = this->_load(target.address);
                     ELLE_ASSERT(b.block);
                     peer->store(*b.block, STORE_INSERT);
-                    ELLE_ENFORCE(
-                      std::dynamic_pointer_cast<Paxos::Peer>(peer))
-                      ->confirm(target.quorum, target.address,
-                                PaxosClient::Proposal());
+                    peer->confirm(target.quorum, target.address,
+                                  PaxosClient::Proposal());
                     this->_quorums.modify(
                       this->_quorums.find(target.address),
                       [&] (BlockRepartition& r)
@@ -1512,31 +1524,37 @@ namespace infinit
           }
           else
           {
-            std::vector<std::shared_ptr<doughnut::Peer>> reached;
+            std::vector<std::shared_ptr<Paxos::Peer>> reached;
             PaxosClient::Quorum q;
-            elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
-            {
-              for (auto wpeer: owners)
+            elle::reactor::for_each_parallel(
+              owners | transformed(to_paxos_peer)
+              // FIXME: boost filtered does not play well with input iterator
+              // that move their value, since it dereferences it twice.  |
+              // filtered([] (auto peer) { return bool(peer); })
+              ,
+              [&] (auto peer)
               {
-                auto peer = wpeer.lock();
                 if (!peer)
-                  ELLE_WARN("peer was deleted while storing");
-                else
                 {
-                  peer->store(*b, mode);
-                  reached.push_back(peer);
-                  q.insert(peer->id());
+                  ELLE_WARN("peer was deleted while storing");
+                  return;
                 }
-              }
-            };
+                ELLE_DEBUG_SCOPE("send block to {}", peer);
+                peer->store(*b, mode);
+                reached.push_back(peer);
+                q.insert(peer->id());
+              });
             if (reached.size() == 0u)
               elle::err("no peer available for %s of %f",
                         mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
-              for (auto peer: reached)
-                ELLE_ENFORCE(std::dynamic_pointer_cast<Paxos::Peer>(peer))
-                  ->confirm(q, b->address(), PaxosClient::Proposal());
+              elle::reactor::for_each_parallel(
+                reached,
+                [&] (auto peer)
+                {
+                  peer->confirm(q, b->address(), PaxosClient::Proposal());
+                });
           }
         }
 

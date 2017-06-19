@@ -1348,6 +1348,15 @@ namespace rebalancing
       this->_propose_barrier.open();
       this->_accept_barrier.open();
       this->_confirm_barrier.open();
+      this->_store_barrier.open();
+    }
+
+    virtual
+    void
+    store(blocks::Block const& block, infinit::model::StoreMode mode) override
+    {
+      elle::reactor::wait(this->_store_barrier);
+      Super::store(block, mode);
     }
 
     boost::optional<Paxos::PaxosClient::Accepted>
@@ -1416,6 +1425,7 @@ namespace rebalancing
     ELLE_ATTRIBUTE_RX(Hook, confirming);
     ELLE_ATTRIBUTE_RX(Hook, confirmed);
     ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
+    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, store_barrier);
   };
 
   static constexpr
@@ -1479,6 +1489,8 @@ namespace rebalancing
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     auto dht_b = DHT(dht::consensus_builder = instrument(2));
+    auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
+    local_b.store_barrier().close();
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto client = DHT(storage = nullptr);
@@ -1488,6 +1500,7 @@ namespace rebalancing
       client.dht->seal_and_insert(*b);
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2)), 1u);
+    local_b.store_barrier().open();
     ELLE_LOG("wait for rebalancing")
       elle::reactor::wait(local_a.rebalanced(), b->address());
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 2u);
