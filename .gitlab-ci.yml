@@ -31,6 +31,10 @@ before_script:
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+# smv FROM TO-HOST TO-DIR -- scp $FROM $TO-HOST:$TO-DIR && rm -f $FROM.
+# Use a tmp to avoid partial upload when interrupted.
+# A single call to ssh, rather than scp and then ssh.
+    - function smv { dst=$3/$(basename "$1") && time ssh $2 "cat > '$dst.tmp' && mv '$dst.tmp' '$dst'" < "$1" && rm -f "$1"; }
 
 x86_64-centos6-gcc4:
   stage: build
@@ -51,11 +55,10 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //check"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //install"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //redhat"
-    - scp memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
+    - smv memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
     - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit"; fi
-    - rm memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 $SOURCE_DIR/note-bench-stats ./bench"
     - git -C "$SOURCE_DIR" push --force git@git.infinit.io:${CI_PROJECT_NAME} refs/notes/bench
@@ -82,9 +85,8 @@ x86_64-ubuntu-gcc4:
     - time python3 drake -j $(nproc) //install //beyond/install
     - time python3 drake -j $(nproc) //beyond/debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
-    - scp "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
+    - smv "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - ssh buildslave@packages.infinit.sh 'make debian'
-    - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
     - time python3 drake --website=false //docker
     - docker tag memo:${DESC} infinit/memo:${DESC}
     - time docker push infinit/memo:${DESC}
@@ -114,8 +116,11 @@ x86_64-alpine-gcc:
     - time python3 drake --beyond=false -j $(nproc) //install
     - TARBALL=/tmp/memo-x86_64-alpine-gcc-$DESC.tbz
     - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
-    - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
-    - rm "$TARBALL"
+    - smv "$TARBALL" buildslave@packages.infinit.sh tmp
+    - python3 drake --website=false //docker-alpine
+    - docker tag memo-alpine:$DESC infinit/memo-alpine:$DESC
+    - docker push infinit/memo-alpine:$DESC
+    - docker rmi {,infinit/}memo-alpine:$DESC
     - python3 drake --website=false //src/infinit/grpc/docker
     - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
     - docker push infinit/memo-vs-client-python:$DESC
@@ -145,8 +150,7 @@ x86_64-jessie-gcc4:
     - time python3 drake --beyond=false -j $(nproc) //debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - time if $IS_RELEASE; then python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit; fi
-    - time scp "memo_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
-    - rm "memo_${DESC}_amd64.deb"
+    - smv "memo_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - time ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
@@ -175,8 +179,7 @@ x86_64-windows-mingw4:
     - mv "$INSTALL_DIR" "memo-${DESC}"
     - zip -r "memo-${DESC}.zip" "memo-${DESC}"
     - mv "memo-${DESC}" "$INSTALL_DIR"
-    - scp "memo-${DESC}.zip" buildslave@packages.infinit.sh:tmp
-    - rm "memo-${DESC}.zip"
+    - smv "memo-${DESC}.zip" buildslave@packages.infinit.sh tmp
   tags:
     - x86_64
     - windows
@@ -202,9 +205,8 @@ x86_64-osx-clang:
     - python3 drake -j 4 //install
     - TARBALL=/tmp/memo-x86_64-osx-clang3-$DESC.tbz
     - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
-    - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
+    - smv "$TARBALL" buildslave@packages.infinit.sh tmp
     - ssh debian@debian.infinit.io 'make brew'
-    - rm "$TARBALL"
     - time if $IS_RELEASE; then python3 drake -j 4 //symbols-commit; fi
   tags:
     - x86_64
