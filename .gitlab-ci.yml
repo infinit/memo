@@ -55,7 +55,7 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //check"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //install"
     - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //redhat"
-    - smv memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh yum
+    - smv $PROJECT-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
     - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit"; fi
@@ -88,9 +88,9 @@ x86_64-ubuntu-gcc4:
     - smv "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - time python3 drake --website=false //docker
-    - docker tag memo:${DESC} infinit/memo:${DESC}
-    - time docker push infinit/memo:${DESC}
-    - docker rmi {,infinit/}memo:${DESC}
+    - docker tag $PROJECT:${DESC} infinit/$PROJECT:${DESC}
+    - time docker push infinit/$PROJECT:${DESC}
+    - docker rmi {,infinit/}$PROJECT:${DESC}
     - time python3 drake --website=false //beyond/docker
   tags:
     - x86_64
@@ -114,13 +114,13 @@ x86_64-alpine-gcc:
     - time python3 drake --beyond=false -j $(nproc) //check
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - time python3 drake --beyond=false -j $(nproc) //install
-    - TARBALL=/tmp/memo-x86_64-alpine-gcc-$DESC.tbz
-    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
+    - TARBALL=/tmp/$PROJECT-x86_64-alpine-gcc-$DESC.tbz
+    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
     - python3 drake --website=false //docker-alpine
-    - docker tag memo-alpine:$DESC infinit/memo-alpine:$DESC
-    - docker push infinit/memo-alpine:$DESC
-    - docker rmi {,infinit/}memo-alpine:$DESC
+    - docker tag $PROJECT-alpine:$DESC infinit/$PROJECT-alpine:$DESC
+    - docker push infinit/$PROJECT-alpine:$DESC
+    - docker rmi {,infinit/}$PROJECT-alpine:$DESC
     - python3 drake --website=false //src/infinit/grpc/docker
     - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
     - docker push infinit/memo-vs-client-python:$DESC
@@ -150,7 +150,7 @@ x86_64-jessie-gcc4:
     - time python3 drake --beyond=false -j $(nproc) //debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - time if $IS_RELEASE; then python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit; fi
-    - smv "memo_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
+    - smv "$PROJECT_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - time ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
@@ -176,10 +176,10 @@ x86_64-windows-mingw4:
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
     - cd "$SOURCE_DIR"
-    - mv "$INSTALL_DIR" "memo-${DESC}"
-    - zip -r "memo-${DESC}.zip" "memo-${DESC}"
-    - mv "memo-${DESC}" "$INSTALL_DIR"
-    - smv "memo-${DESC}.zip" buildslave@packages.infinit.sh tmp
+    - mv "$INSTALL_DIR" "$PROJECT-${DESC}"
+    - zip -r "$PROJECT-${DESC}.zip" "$PROJECT-${DESC}"
+    - mv "$PROJECT-${DESC}" "$INSTALL_DIR"
+    - smv "$PROJECT-${DESC}.zip" buildslave@packages.infinit.sh tmp
   tags:
     - x86_64
     - windows
@@ -203,8 +203,8 @@ x86_64-osx-clang:
     - python3 drake -j 4 //beyond/check
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j 4 //install
-    - TARBALL=/tmp/memo-x86_64-osx-clang3-$DESC.tbz
-    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
+    - TARBALL=/tmp/$PROJECT-x86_64-osx-clang3-$DESC.tbz
+    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
     - ssh debian@debian.infinit.io 'make brew'
     - time if $IS_RELEASE; then python3 drake -j 4 //symbols-commit; fi
