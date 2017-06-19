@@ -137,8 +137,8 @@ class Infinit(TemporaryDirectory):
     elif valgrind:
       args = ['/usr/bin/valgrind'] + args
     env_ = {
-      'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
+      'INFINIT_RDV': '',
     }
     if self.dir is not None:
       env_['MEMO_HOME'] = self.dir
@@ -169,9 +169,9 @@ class Infinit(TemporaryDirectory):
     process = subprocess.Popen(
       args,
       env = env_,
-      stdin =  subprocess.PIPE if not gdb else None,
-      stdout =  subprocess.PIPE if not gdb else None,
-      stderr =  subprocess.PIPE if not gdb else None,
+      stdin = subprocess.PIPE if not gdb else None,
+      stdout = subprocess.PIPE if not gdb else None,
+      stderr = subprocess.PIPE if not gdb else None,
     )
     self.process = process
     if input is not None:
@@ -573,9 +573,8 @@ class KeyValueStoreInfrastructure():
        '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
     while not os.path.exists(port_file):
       time.sleep(0.1)
-    self.__endpoint = '127.0.0.1:'
     with open(port_file, 'r') as f:
-      self.__endpoint += f.readline().strip()
+      self.__endpoint = '127.0.0.1:{}'.format(f.readline().strip())
     import grpc
     import memo_kvs_pb2_grpc
     channel = grpc.insecure_channel(self.__endpoint)
@@ -589,8 +588,10 @@ class KeyValueStoreInfrastructure():
       if os.environ.get('OS') != 'windows':
         try:
           # SIGTERM is not caught on windows. Might be wine related.
-          assertEq(self.__proc.wait(), 0)
+          assertEq(0, self.__proc.wait())
         except:
-          print('STDOUT: %s' % out)
-          print('STDERR: %s' % err)
+          out = self.__proc.stdout.read()
+          err = self.__proc.stderr.read()
+          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
+          print('STDERR: %s' % err.decode('utf-8'), flush=True)
           raise
