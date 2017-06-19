@@ -333,21 +333,19 @@ namespace infinit
       network.ensure_allowed(owner, "run", "kvs");
       cache |= (cache_ram_size || cache_ram_ttl
                 || cache_ram_invalidation || cache_disk_size);
-      auto const listen_address = boost::optional<boost::asio::ip::address>{};
       auto dht = network.run(
         owner,
         false,
         cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-        async, cache_disk_size, cli.compatibility_version(), {},
-        listen_address, {});
+        async, cache_disk_size, cli.compatibility_version());
       hook_stats_signals(*dht);
-      elle::reactor::Thread::unique_ptr dht_grpc_thread;
       int dht_grpc_port = 0;
-      dht_grpc_thread.reset(new elle::reactor::Thread("DHT gRPC",
+      auto dht_grpc_thread = std::make_unique<elle::reactor::Thread>
+        ("DHT gRPC",
         [dht = dht.get(), &dht_grpc_port] {
           infinit::grpc::serve_grpc(
             *dht, "127.0.0.1:0", &dht_grpc_port);
-      }));
+      });
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)
         elle::reactor::sleep(100_ms);
@@ -362,17 +360,12 @@ namespace infinit
         dht->overlay()->discover(parse_peers(peer));
       // Only push if we have are contributing storage.
       bool push_p = (push || publish)
-                  && dht->local() && dht->local()->storage();
+        && dht->local() && dht->local()->storage();
       if (!dht->local() && push_p)
-      {
         elle::err("network %s is client only since no storage is attached",
                   name);
-      }
-      if (dht->local())
-      {
-        if (endpoints_file)
-          endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
-      }
+      if (dht->local() && endpoints_file)
+        endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
       auto run = [&]
         {
           elle::reactor::Thread::unique_ptr poll_thread;
