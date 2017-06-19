@@ -13,6 +13,7 @@ from itertools import chain
 
 exe_ext = os.environ.get('EXE_EXT', '')
 host_os = os.environ.get('OS', '')
+tmp_dir = os.environ.get('TMPDIR', '/tmp')
 
 def log(fmt, *args):
   print('beyond:', fmt.format(*args), file=sys.stderr)
@@ -31,7 +32,7 @@ def run(*args, **kwargs):
 ## ------------ ##
 
 # Where the git repo for debug symbols is checkout.
-repo_dir = 'debug-symbols'
+repo_dir = os.path.join(tmp_dir, 'debug-symbols')
 
 # Where the symbol files are.
 symbols_dir = repo_dir + '/symbols'
