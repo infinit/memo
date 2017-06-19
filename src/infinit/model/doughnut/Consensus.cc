@@ -187,7 +187,7 @@ namespace infinit
           {
             for (auto p: peers)
             {
-              s.run_background("remove", [this, p, address, &count, &rs]
+              s.run_background("remove", [p, address, &count, &rs]
               {
                 if (auto lock = p.lock())
                 {
@@ -232,14 +232,7 @@ namespace infinit
                 }
               });
             }
-            try
-            {
-              elle::reactor::wait(s);
-            }
-            catch (...)
-            {
-              throw;
-            }
+            elle::reactor::wait(s);
           };
           if (!count)
             throw MissingBlock(address);
@@ -267,8 +260,7 @@ namespace infinit
                     {
                       try
                       {
-                        auto remote = std::dynamic_pointer_cast<Remote>(p);
-                        if (remote)
+                        if (auto remote = std::dynamic_pointer_cast<Remote>(p))
                           remote->safe_perform("connect", [&] { yield(p);});
                         else
                           yield(p);

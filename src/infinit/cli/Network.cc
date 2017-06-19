@@ -534,7 +534,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
-      auto save = [&ifnt,&owner,&cli] (infinit::NetworkDescriptor desc_) {
+      auto save = [&ifnt] (infinit::NetworkDescriptor desc_) {
         // Save or update network descriptor.
         ifnt.network_save(desc_, true);
         for (auto const& u: ifnt.network_linked_users(desc_.name))

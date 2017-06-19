@@ -396,7 +396,7 @@ namespace infinit
         if (endpoints_file)
           endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
       }
-      auto run = [&, push_p]
+      auto run = [&]
         {
           elle::reactor::Thread::unique_ptr poll_thread;
           if (fetch || publish)

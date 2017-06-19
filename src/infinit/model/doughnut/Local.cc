@@ -405,7 +405,7 @@ namespace infinit
                      this->remove(address, {});
                    });
         rpcs.add("ping",
-                 [this] (int i)
+                 [] (int i)
                  {
                    return i;
                  });
@@ -462,7 +462,7 @@ namespace infinit
         {
           rpcs.add(
             "auth_syn",
-            [this, auth_syn] (Passport const& p)
+            [auth_syn] (Passport const& p)
             {
               return auth_syn(p);
             });

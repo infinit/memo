@@ -492,12 +492,7 @@ namespace infinit
           this->_stale_endpoints.emplace(peer->connection()->location());
         // The peer can be missing from `_infos` for external discoveries.
         if (auto info = elle::find(this->_infos, peer->id()))
-          this->_infos.modify(
-            info,
-            [this] (PeerInfo& pi)
-            {
-              pi.storing(true);
-            });
+          this->_infos.modify(info, [] (PeerInfo& pi) {pi.storing(true);});
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
         ELLE_DUMP("%f: signaling connection to %f",
@@ -515,7 +510,7 @@ namespace infinit
         if (auto info = elle::find(this->_infos, id))
           this->_infos.modify(
             info,
-            [this] (PeerInfo& pi)
+            [] (PeerInfo& pi)
             {
               pi.disappearance().start();
               pi.storing(boost::none);
@@ -586,10 +581,10 @@ namespace infinit
       `-------*/
 
       auto
-      Kouncil::_allocate(Address address, int n) const
+      Kouncil::_allocate(Address, int n) const
         -> MemberGenerator
       {
-        return [this, address, n](MemberGenerator::yielder const& yield)
+        return [this, n](MemberGenerator::yielder const& yield)
           {
             if (this->doughnut()->version() < elle::Version(0, 8, 0))
             {
