@@ -353,6 +353,23 @@ namespace infinit
         f << ep << std::endl;
     }
 
+    std::vector<infinit::model::Endpoints>
+    parse_peers(std::vector<std::string> const& peers)
+    {
+      auto res = std::vector<infinit::model::Endpoints>{};
+      for (auto const& peer: peers)
+      {
+        auto const eps
+          = bfs::exists(peer)
+          ? model::endpoints_from_file(peer)
+          : elle::reactor::network::resolve_udp_repr(peer);
+        for (auto const& ep: eps)
+          res.emplace_back(infinit::model::Endpoints{ep});
+      }
+      return res;
+    }
+
+
     /*-----------.
     | Versions.  |
     `-----------*/

@@ -294,29 +294,6 @@ namespace infinit
     | Mode: run.  |
     `------------*/
 
-    /// Turn a list of addresses (e.g., `foo.bar.fr:http`) and/or
-    /// filenames that contains such addresses, into a list of
-    /// Endpoints.
-    ///
-    /// Yes, a list of Endpoints, not a list of Endpoint, because
-    /// foo.bar.fr might actually denote several hosts, and we want
-    /// to reach each one individually.
-    std::vector<infinit::model::Endpoints>
-    parse_peers(std::vector<std::string> const& peers)
-    {
-      auto res = std::vector<infinit::model::Endpoints>{};
-      for (auto const& peer: peers)
-      {
-        auto const eps
-          = bfs::exists(peer)
-          ? model::endpoints_from_file(peer)
-          : elle::reactor::network::resolve_udp_repr(peer);
-        for (auto const& ep: eps)
-          res.emplace_back(infinit::model::Endpoints{ep});
-      }
-      return res;
-    }
-
     void
     KeyValueStore::mode_run(std::string const& unqualified_name,
                             bool allow_root_creation,

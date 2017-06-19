@@ -123,11 +123,22 @@ namespace infinit
 
     void
     port_to_file(uint16_t port,
-                 boost::filesystem::path const& path_);
+                 bfs::path const& path_);
 
     void
     endpoints_to_file(infinit::model::Endpoints endpoints,
-                      boost::filesystem::path const& path_);
+                      bfs::path const& path_);
+
+
+    /// Turn a list of addresses (e.g., `foo.bar.fr:http`) and/or
+    /// filenames that contains such addresses, into a list of
+    /// Endpoints.
+    ///
+    /// Yes, a list of Endpoints, not a list of Endpoint, because
+    /// foo.bar.fr might actually denote several hosts, and we want
+    /// to reach each one individually.
+    std::vector<infinit::model::Endpoints>
+    parse_peers(std::vector<std::string> const& peers);
 
     void
     ensure_version_is_supported(elle::Version const& version);
