@@ -36,8 +36,8 @@ x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - scl enable devtoolset-4 rh-python34 "pip3 install -r drake/requirements.txt"
-    - scl enable devtoolset-4 rh-python34 "pip3 install -r requirements.txt"
+    - time scl enable devtoolset-4 rh-python34 "pip3 install -q -r drake/requirements.txt"
+    - time scl enable devtoolset-4 rh-python34 "pip3 install -q -r requirements.txt"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -67,8 +67,8 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
+    - time pip3 install -q -r drake/requirements.txt
+    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -98,8 +98,8 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
+    - time pip3 install -q -r drake/requirements.txt
+    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -128,8 +128,8 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
+    - time pip3 install -q -r drake/requirements.txt
+    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -156,8 +156,8 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
+    - time pip3 install -q -r drake/requirements.txt
+    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -186,8 +186,8 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
+    - time pip3 install -q -r drake/requirements.txt
+    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR=${CI_PROJECT_DIR}
     - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
     - INSTALL_DIR=$SOURCE_DIR/_install
