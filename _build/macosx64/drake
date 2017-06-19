@@ -33,7 +33,8 @@ cfg.enable_optimization()
 cfg.use_local_libcxx = True
 cfg.flag('-stdlib=libc++')
 cfg.flag('-ftemplate-depth=512')
-#cfg.flag('-fsanitize=undefined')
+cfg.flag('-fsanitize=undefined')
+cfg.flag('-fno-sanitize=vptr')  # Triggers plenty of errors, I dunno why ATM.
 
 with drake.Drake('../..') as d:
   # When using MacPorts, valgrind/valgrind.h is in /opt/local/include,
