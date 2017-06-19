@@ -10,8 +10,8 @@ namespace infinit
 {
   namespace cli
   {
-    Block::Block(Infinit& infinit)
-      : Object(infinit)
+    Block::Block(Memo& memo)
+      : Object(memo)
       , deserialize(*this,
                     "Deserialized block",
                     cli::output = boost::none,

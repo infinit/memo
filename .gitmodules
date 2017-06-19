@@ -13,9 +13,6 @@
 [submodule "crash-report/breakpad"]
 	path = crash-report/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
-[submodule "pjdfstest"]
-	path = pjdfstest
-	url = https://github.com/infinit/pjdfstest.git
 [submodule "src/infinit/grpc/grpc"]
 	path = src/infinit/grpc/grpc
 	url = https://github.com/infinit/grpc.git

@@ -264,22 +264,6 @@ namespace infinit
     });
   }
 
-  std::vector<Drive>
-  Infinit::drives_get() const
-  {
-    auto res = std::vector<Drive>{};
-    for (auto const& p
-           : bfs::recursive_directory_iterator(this->_drives_path()))
-      if (is_visible_file(p))
-      {
-        bfs::ifstream f;
-        this->_open_read(
-          f, p.path(), p.path().filename().string(), "drive");
-        res.emplace_back(load<Drive>(f));
-      }
-    return res;
-  }
-
   NetworkDescriptor
   Infinit::network_descriptor_get(std::string const& name_,
                                   User const& owner,
@@ -450,7 +434,7 @@ namespace infinit
   }
 
   User
-  Infinit::user_get(std::string const& user, bool beyond_fallback) const
+  Infinit::user_get(std::string const& user, bool hub_fallback) const
   {
     auto const path = this->_user_path(user);
     try
@@ -463,10 +447,10 @@ namespace infinit
     {
       ELLE_TRACE("%s: unable to load user %s from %s",
                  this, user, this->_user_path(user));
-      if (!beyond_fallback)
+      if (!hub_fallback)
         throw;
       ELLE_LOG("User %s not found locally, trying on %s", user, beyond());
-      auto u = beyond_fetch<User>("user", user);
+      auto u = hub_fetch<User>("user", user);
       return u;
     }
   }
@@ -606,57 +590,6 @@ namespace infinit
         }
       }
     }
-    return res;
-  }
-
-  bool
-  Infinit::volume_has(std::string const& name)
-  {
-    bfs::ifstream f;
-    return exists(this->_volume_path(name));
-  }
-
-  Volume
-  Infinit::volume_get(std::string const& name)
-  {
-    bfs::ifstream f;
-    this->_open_read(f, this->_volume_path(name), name, "volume");
-    return load<Volume>(f);
-  }
-
-  void
-  Infinit::volume_save(Volume const& volume, bool overwrite)
-  {
-    bfs::ofstream f;
-    bool existed = this->_open_write(
-      f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
-    save(f, volume);
-    this->report_local_action()(existed ? "updated" : "saved", "volume",
-                                volume.name);
-  }
-
-  bool
-  Infinit::volume_delete(Volume const& volume)
-  {
-    auto deleted =
-      this->_delete(this->_volume_path(volume.name), "volume", volume.name);
-    this->_delete_all(volume.root_block_cache_dir(), "root block for volume",
-                      volume.name);
-    return deleted;
-  }
-
-  std::vector<Volume>
-  Infinit::volumes_get() const
-  {
-    auto res = std::vector<Volume>{};
-    for (auto const& p
-           : bfs::recursive_directory_iterator(this->_volumes_path()))
-      if (is_visible_file(p))
-      {
-        bfs::ifstream f;
-        this->_open_read(f, p.path(), p.path().filename().string(), "volume");
-        res.emplace_back(load<Volume>(f));
-      }
     return res;
   }
 
@@ -949,20 +882,6 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_volumes_path() const
-  {
-    auto res = xdg_data_home() / "volumes";
-    create_directories(res);
-    return res;
-  }
-
-  bfs::path
-  Infinit::_volume_path(std::string const& name) const
-  {
-    return this->_volumes_path() / name;
-  }
-
-  bfs::path
   Infinit::_key_value_stores_path() const
   {
     auto root = xdg_data_home() / "kvs";
@@ -1009,67 +928,6 @@ namespace infinit
     return exists;
   }
 
-  bfs::path
-  Infinit::_drives_path() const
-  {
-    auto res = xdg_data_home() / "drives";
-    create_directories(res);
-    return res;
-  }
-
-  bfs::path
-  Infinit::_drive_path(std::string const& name) const
-  {
-    return this->_drives_path() / name;
-  }
-
-  void
-  Infinit::drive_save(Drive const& drive,
-                      bool overwrite)
-  {
-    bfs::ofstream f;
-    bool existed = this->_open_write(
-      f, this->_drive_path(drive.name), drive.name, "drive", overwrite);
-    save(f, drive);
-    this->report_local_action()(existed ? "updated" : "saved", "drive",
-                                drive.name);
-  }
-
-  Drive
-  Infinit::drive_get(std::string const& name)
-  {
-    bfs::ifstream f;
-    this->_open_read(f, this->_drive_path(name), name, "drive");
-    return load<Drive>(f);
-  }
-
-  bool
-  Infinit::drive_delete(Drive const& drive)
-  {
-    return this->_delete(this->_drive_path(drive.name), "drive", drive.name);
-  }
-
-  bfs::path
-  Infinit::_drive_icon_path() const
-  {
-    auto res = xdg_cache_home() / "icons";
-    create_directories(res);
-    return res;
-  }
-
-  bfs::path
-  Infinit::_drive_icon_path(std::string const& name) const
-  {
-    return this->_drive_icon_path() / name;
-  }
-
-  Drive
-  Infinit::drive_fetch(std::string const& name)
-  {
-    return beyond_fetch<Drive>("drive", name);
-  }
-
-
   std::vector<std::string>
   Infinit::user_passports_for_network(std::string const& network_name)
   {
@@ -1078,16 +936,6 @@ namespace infinit
                              {
                                return p.second;
                              });
-  }
-
-  std::vector<Volume>
-  Infinit::volumes_for_network(std::string const& network_name)
-  {
-    return elle::make_vector_if(this->volumes_get(),
-                                [&](auto const& v)
-                                {
-                                  return v.network == network_name;
-                                });
   }
 
   std::vector<KeyValueStore>
@@ -1102,22 +950,12 @@ namespace infinit
     return res;
   }
 
-  std::vector<Drive>
-  Infinit::drives_for_volume(std::string const& volume_name)
-  {
-    return elle::make_vector_if(this->drives_get(),
-                                [&](auto const& v)
-                                {
-                                  return v.volume == volume_name;
-                                });
-  }
-
-    /*-------.
-    | Beyond |
-    `-------*/
+  /*-------.
+  | Beyond |
+  `-------*/
 
   elle::json::Json
-  Infinit::beyond_login(std::string const& name,
+  Infinit::hub_login(std::string const& name,
                         LoginCredentials const& o) const
   {
     elle::reactor::http::Request::Configuration c;
@@ -1187,7 +1025,7 @@ namespace infinit
   }
 
   std::unique_ptr<elle::reactor::http::Request>
-  Infinit::beyond_fetch_data(std::string const& where,
+  Infinit::hub_fetch_request(std::string const& where,
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
@@ -1205,18 +1043,18 @@ namespace infinit
   }
 
   elle::json::Json
-  Infinit::beyond_fetch_json(std::string const& where,
+  Infinit::hub_fetch_json(std::string const& where,
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
                              Headers const& extra_headers) const
   {
-    auto r = beyond_fetch_data(where, type, name, self, extra_headers);
+    auto r = hub_fetch_request(where, type, name, self, extra_headers);
     return elle::json::read(*r);
   }
 
   bool
-  Infinit::beyond_delete(std::string const& where,
+  Infinit::hub_delete(std::string const& where,
                          std::string const& type,
                          std::string const& name,
                          User const& self,
@@ -1271,24 +1109,24 @@ namespace infinit
   }
 
   bool
-  Infinit::beyond_delete(std::string const& type,
+  Infinit::hub_delete(std::string const& type,
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
                          bool purge) const
   {
-    return beyond_delete(elle::sprintf("%s/%s", _type_plural(type), name),
-                         type, name, self, ignore_missing, purge);
+    return hub_delete(elle::sprintf("%s/%s", _type_plural(type), name),
+                      type, name, self, ignore_missing, purge);
   }
 
   Infinit::PushResult
-  Infinit::beyond_push_data(std::string const& where,
+  Infinit::hub_push_data(std::string const& where,
                             std::string const& type,
                             std::string const& name,
                             elle::ConstWeakBuffer const& object,
                             std::string const& content_type,
                             User const& self,
-                            bool beyond_error,
+                            bool hub_error,
                             bool update) const
   {
     elle::reactor::http::Request::Configuration c;
@@ -1331,7 +1169,7 @@ namespace infinit
     }
     else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
     {
-      if (beyond_error)
+      if (hub_error)
         read_error<BeyondError>(r, type, name);
       else
         read_error<MissingResource>(r, type, name);

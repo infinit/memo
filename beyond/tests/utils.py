@@ -213,6 +213,9 @@ class Emailer:
   def get_specifics(self, email, template):
     return self.get(email).setdefault(template, [])
 
+  def __str__(self):
+    return "Emailer: %s" % self.emails
+
 def url_parameters(url):
   params = urllib.parse.parse_qs(
     urllib.parse.urlparse(url).query)
@@ -272,7 +275,7 @@ class User(dict):
     import os
     import subprocess
     output = subprocess.check_output(
-      [infinit.beyond.binary_path + 'infinit-user', '--create',
+      [infinit.beyond.binary_path + 'memo', 'user', 'create',
        '--name', self['name'],
        '--output', '-'])
     import json

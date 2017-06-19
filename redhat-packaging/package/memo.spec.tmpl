@@ -1,0 +1,22 @@
+Name:           memo
+Version:        ${version}
+Release:        1%{?dist}
+Summary:        Elastic and resilient key-value store.
+
+Group:          Applications/File
+License:        Infinit License
+URL:            https://infinit.sh
+
+Requires:       glibc >= ${glibc_version}
+
+%%description
+Elastic and resilient key-value store.
+
+%%files
+${files}
+
+%%changelog
+${changelog}
+
+%%clean
+echo NOOP

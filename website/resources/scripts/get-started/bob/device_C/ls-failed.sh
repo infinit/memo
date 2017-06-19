@@ -1,1 +1,0 @@
-${ls_command} ${guide_mountpoint}

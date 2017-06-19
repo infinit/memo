@@ -30,7 +30,7 @@ namespace infinit
       {}
 
       void
-      apply(Infinit& infinit, std::vector<std::string>& args);
+      apply(Memo& infinit, std::vector<std::string>& args);
 
       std::string description;
       elle::das::cli::Options options;

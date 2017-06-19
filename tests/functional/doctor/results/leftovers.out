@@ -1,8 +1,6 @@
 [OK] User
 [OK] Silos
 [OK] Networks
-[OK] Volumes
-[OK] Drives
 [WARNING] Leftovers:
   [WARNING] foo
   [WARNING] linked_networks/bar

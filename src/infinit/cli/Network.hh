@@ -17,7 +17,7 @@ namespace infinit
     {
     public:
       using Self = Network;
-      Network(Infinit& infinit);
+      Network(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::create,
                                     cli::delete_,

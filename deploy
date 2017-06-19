@@ -1,30 +1,13 @@
 #!/usr/bin/env python3
 
 import datetime
-import infinit.beyond.gcs
 import os
 import requests
 import subprocess
 import sys
 
-gcs_login = '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif@developer.gserviceaccount.com'
-gcs_key = '''-----BEGIN PRIVATE KEY-----
-MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBALCm3D3cHlKYRygk
-vRgesY39WUGeUN/sCBsVaxMuga1bCAZ6fVoh58pQEmeBpkjaVdtB0nz9ZBVoeDtR
-PcfafaUW+UFXjRf2rJ3MoJ/J72mccSD08sjVX3Q9U5iydYhjZEx3uwhUcaHG6+Rq
-f4xhb/49jfFmDJ/9zCopsiPBJQgfAgMBAAECgYEAqxgByrxOdirdCGmE6D6aM+8E
-qwReSnL+atT0zzBFExVPEY9Dp6+dI5soKC4vUvJ9I45+AucdL4ruoG0QTGg3NbjC
-XCD88TL2UdSog/xxHAQ37EvnoPwK6v04FZHdm94eXkJMQzpf9pP8EyVEaXZWb8Uw
-2MDPGluTWgkUKZitkLECQQDjuLBFwtU9rdDZB3G00P3hMXuvomPPEHRvdpvwbxLG
-WX1XNPG1FlBbQhyBgUIVATn9sU28df7kANqhhnEthXY3AkEAxpaoR0rtZzPIt4c4
-3PQm+mclxxEUZozrRnO/t6bDc/wGvI7C69wIu4UI8j4zFtRRuC2qCDaTorXibFRb
-PKEJWQJAY8eNFUQlg30hwbbNT9kzJPU1qOOSsCwZmK1z7on8xAR6MzfzoNFCLHpv
-Wx90ARgkfNCvqyBYqzbklVn/RV7xSQJBAJluCPGb+DPGFIuHU+2STRMl4lAc6BAb
-TCOQhk0T8OqJi4LfIcYsqCqJLFJMsBgxTjnoPfg+gm4x7JAZ1KvRF3ECQFcwSrNV
-cun1SplfUKZQZywA8ueUU/ZuGj/XXwopPR5LgWW7sgkwdCklQUPjcecWEZFy/ODl
-e9FGZj7sEHpPuDE=
------END PRIVATE KEY-----
-'''
+
+gcs_login = ''
 
 tmp = os.environ.get('TMPDIR', '/tmp')
 
@@ -32,18 +15,32 @@ def parse_options():
   import argparse
   # Parse options
   parser = argparse.ArgumentParser(
-    description = 'deploy infinit packages')
+    description = 'deploy memo packages')
   parser.add_argument('--version',
                       metavar = 'VERSION',
                       required = True,
                       type = str,
                       help = 'version to deploy')
+  parser.add_argument('--gcs-login',
+                      metavar = 'LOGIN',
+                      required = True,
+                      type = str,
+                      help = 'The gcs login')
+  parser.add_argument('--gcs-key-file',
+                      metavar = 'KEYFILE',
+                      required = True,
+                      type = str,
+                      help = 'The path to the gcs key')
   return parser.parse_args()
 
 options = parse_options()
+gcs_login = options.gcs_login
 version = options.version
-url = 'https://debian.infinit.sh/pool/trusty/main/i/infinit'
-deb = 'infinit_%s_amd64.deb' % version
+with open(options.gcs_key_file, 'r') as keyfile:
+  gcs_key = keyfile.read().strip()
+
+url = 'https://debian.infinit.sh/pool/trusty/main/i/memo'
+deb = 'memo_%s_amd64.deb' % version
 
 deb_path = '%s/%s' % (tmp, deb)
 if not os.path.exists(deb_path):
@@ -58,24 +55,25 @@ if not os.path.exists(deb_path):
 
 print('Unpack %s' % deb_path)
 subprocess.check_call(['dpkg', '-x', deb_path,
-                       '%s/infinit-%s' % (tmp, version)])
+                       '%s/memo-%s' % (tmp, version)])
 reported = subprocess.check_output(
-  ['%s/infinit-%s/opt/infinit/bin/infinit-volume' % (tmp, version),
+  ['%s/memo-%s/opt/memo/bin/memo' % (tmp, version),
    '--version'])
 if reported.decode().strip() != version:
   raise Exception('reported version is different: %s' % reported)
 
-basename = 'Infinit-x86_64-linux_debian_oldstable-gcc4-%s' % version
+basename = 'memo-x86_64-linux_debian_oldstable-gcc4-%s' % version
 tarball = '%s/%s.tbz' % (tmp, basename)
 print('Pack %s' % tarball)
 subprocess.check_call([
   'tar', '-cjf', tarball,
-  '-C', '%s/infinit-%s/opt' % (tmp, version),
-  'infinit', '--transform', 's/^infinit/%s/' % basename,
+  '-C', '%s/memo-%s/opt' % (tmp, version),
+  'memo', '--transform', 's/^memo/%s/' % basename,
   '--show-stored-names'])
 
+import infinit.beyond.gcs
 gcs = infinit.beyond.gcs.GCS(
-  bucket_ns = 'sh_infinit',
+  bucket_ns = 'sh_memo',
   login = gcs_login,
   key = bytes(gcs_key, 'UTF-8'))
 

@@ -16,7 +16,7 @@ namespace infinit
       : public Object<Journal>
     {
     public:
-      Journal(Infinit& infinit);
+      Journal(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::describe,
                                     cli::export_,

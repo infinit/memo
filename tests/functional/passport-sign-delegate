@@ -11,53 +11,53 @@ def run(mode):
        Infinit() as adm, \
        Infinit() as user:
     # Three users, adm is granted sign delegation and signs for user
-    owner.run(['infinit-user', '--create', 'owner'])
-    adm.run(['infinit-user', '--create', 'adm'])
-    user.run(['infinit-user', '--create', 'user'])
+    owner.run(['user', 'create', 'owner'])
+    adm.run(['user', 'create', 'adm'])
+    user.run(['user', 'create', 'user'])
 
     owner.run(
-      ['infinit', 'silo', 'create', 'filesystem', 'storage',
+      ['silo', 'create', 'filesystem', 'storage',
        '--path', tmp.dir])
     owner.run(
-      ['infinit-network', '--create', 'network', '--kelips',
-       '--storage', 'storage', '--as', 'owner'])
+      ['network', 'create', 'network', '--kelips',
+       '--silo', 'storage', '--as', 'owner'])
 
-    uadm = adm.run_json(['infinit-user', '--export', 'adm'])
-    uuser = user.run_json(['infinit-user', '--export', 'user'])
+    uadm = adm.run_json(['user', 'export', 'adm'])
+    uuser = user.run_json(['user', 'export', 'user'])
 
-    owner.run(['infinit-user', '--import'], input = uadm)
-    owner.run(['infinit-user', '--import'], input = uuser)
-    adm.run(['infinit-user', '--import'], input = uuser)
+    owner.run(['user', 'import'], input = uadm)
+    owner.run(['user', 'import'], input = uuser)
+    adm.run(['user', 'import'], input = uuser)
 
     net = owner.run_json(
-      ['infinit-network', '--export', '--as', 'owner', 'network'])
-    adm.run(['infinit-network', '--import'], input = net)
-    user.run(['infinit-network', '--import'], input = net)
+      ['network', 'export', '--as', 'owner', 'network'])
+    adm.run(['network', 'import'], input = net)
+    user.run(['network', 'import'], input = net)
 
     padm = owner.run_json([
-      'infinit-passport', '--create', '--as', 'owner',
+      'passport', 'create', '--as', 'owner',
       '--user', 'adm',
       '--network', 'owner/network',
       '--allow-create-passport',
       '--output', '-'])
-    adm.run(['infinit-passport', '--import'], input = padm)
+    adm.run(['passport', 'import'], input = padm)
     puser = adm.run_json([
-      'infinit-passport', '--create', '--as', 'adm',
+      'passport', 'create', '--as', 'adm',
       '--user', 'user',
       '--network', 'owner/network',
       '--output', '-'])
-    user.run(['infinit-passport', '--import'], input = puser)
+    user.run(['passport', 'import'], input = puser)
 
-    adm.run(['infinit-network', '--link', '--as', 'adm', 'owner/network'])
-    user.run(['infinit-network', '--link', '--as', 'user', 'owner/network'])
+    adm.run(['network', 'link', '--as', 'adm', 'owner/network'])
+    user.run(['network', 'link', '--as', 'user', 'owner/network'])
 
     owner.run([
-      'infinit-volume', '--create', 'vol', '--as', 'owner',
+      'volume', 'create', 'vol', '--as', 'owner',
       '--network', 'network'])
     vol = owner.run_json(
-      ['infinit-volume', '--export', 'vol', '--as', 'owner'])
-    adm.run(['infinit-volume', '--import'], input = vol)
-    user.run(['infinit-volume', '--import'], input = vol)
+      ['volume', 'export', 'vol', '--as', 'owner'])
+    adm.run(['volume', 'import'], input = vol)
+    user.run(['volume', 'import'], input = vol)
 
     # READY!
     # extract keys
@@ -93,7 +93,7 @@ def run(mode):
         return '127.0.0.1:%s' % int(f.readline())
     def run_volume():
       owner.run([
-        'infinit-volume', '--run', '--as', 'owner', 'vol',
+        'volume', 'run', '--as', 'owner', 'vol',
         '--port-file', portfile],
         return_code = 118)
     import threading

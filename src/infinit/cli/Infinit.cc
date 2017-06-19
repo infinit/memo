@@ -27,15 +27,19 @@
 
 ELLE_LOG_COMPONENT("cli");
 
+#ifdef INFINIT_BINARY
+# define BIN "infinit"
+#else
+# define BIN "memo"
+#endif
+
 namespace bfs = boost::filesystem;
 
 namespace
 {
-  /// argv[0], for error messages, possibly `/bin/infinit-user`.
-  auto argv_0 = std::string("infinit");
-
-  /// The path to `infinit`, not to `infinit-user`.
-  auto infinit_exe = std::string("infinit");
+  /// The path to `memo`.
+  auto memo_exe = std::string(BIN);
+  auto argv_0 = std::string(BIN);
 }
 
 namespace infinit
@@ -45,7 +49,7 @@ namespace infinit
     namespace
     {
       void
-      install_signal_handlers(Infinit& cli)
+      install_signal_handlers(Memo& cli)
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
@@ -103,10 +107,6 @@ namespace infinit
           return "identity for user";
         else if (object == "network")
           return "network descriptor";
-        else if (object == "volume")
-          return "volume descriptor";
-        else if (object == "drive")
-          return "drive descriptor";
         else if (object == "kvs")
           return "kvs descriptor";
         else
@@ -118,8 +118,8 @@ namespace infinit
     | Infinit.  |
     `----------*/
 
-    Infinit::Infinit(infinit::Infinit& infinit)
-      : InfinitCallable(
+    Memo::Memo(infinit::Infinit& infinit)
+      : MemoCallable(
         elle::das::bind_method(*this, cli::call),
         cli::help = false,
         cli::version = false)
@@ -145,21 +145,21 @@ namespace infinit
     }
 
     std::string
-    Infinit::default_user_name()
+    Memo::default_user_name() const
     {
       static auto const res =
-        elle::os::getenv("INFINIT_USER", elle::system::username());
+        elle::os::getenv("MEMO_USER", elle::system::username());
       return res;
     }
 
     infinit::User
-    Infinit::default_user()
+    Memo::default_user()
     {
-      return this->infinit().user_get(Infinit::default_user_name());
+      return this->infinit().user_get(this->default_user_name());
     }
 
     infinit::User
-    Infinit::as_user()
+    Memo::as_user()
     {
       return this->infinit().user_get(this->_as.get());
     }
@@ -188,20 +188,20 @@ namespace infinit
     }
 
     void
-    Infinit::help(std::ostream& s) const
+    Memo::help(std::ostream& s) const
     {
       usage(s, "[OBJECT|--version|--help]");
-      s << "Infinit decentralized storage platform.\n"
+      s << "memo key-value store.\n"
         << "\n"
         << "Object types:\n";
-      infinit::cli::Infinit::Objects::map<help_object>::value(s);
+      infinit::cli::Memo::Objects::map<help_object>::value(s);
       s << "\n"
         << "Options:\n"
         << elle::das::cli::help(*this, options);
     }
 
     void
-    Infinit::call(bool help, bool version) const
+    Memo::call(bool help, bool version) const
     {
       if (help)
         this->help(std::cout);
@@ -213,41 +213,13 @@ namespace infinit
 
     namespace
     {
-      /// Filename, with possible `.exe` suffix removed.
-      std::string
-      program_name(std::string const& argv0)
-      {
-        // Possible suffix.
-        auto res = bfs::path(argv0).filename().string();
-        static auto const suffix = std::string(".exe");
-        if (boost::algorithm::ends_with(res, suffix))
-          res.resize(res.size() - suffix.size());
-        return res;
-      }
-
-      /// From an old executable name (e.g. `infinit-users`), extract
-      /// the object (e.g., `users`).
-      std::string
-      object_from(std::string const& argv0)
-      {
-        // Mandatory prefix.
-        static auto const prefix = std::string("infinit-");
-        if (!boost::algorithm::starts_with(argv0, prefix))
-          elle::err("unrecognized infinit executable name: %s", argv0);
-        auto res = argv0.substr(prefix.size());
-        // Renamed objects.
-        if (res == "storage")
-          res = "silo";
-        return res;
-      }
-
       /// Return true if we found (and ran) the command.
       bool
-      run_command(Infinit& cli, std::vector<std::string>& args)
+      run_command(Memo& cli, std::vector<std::string>& args)
       {
         cli.command_line(args);
         bool res = false;
-        infinit::cli::Infinit::Objects::map<mode_call, Infinit>::value(
+        infinit::cli::Memo::Objects::map<mode_call, Memo>::value(
           cli, cli, args, res);
         return res;
       }
@@ -255,37 +227,9 @@ namespace infinit
       void
       main_impl(std::vector<std::string>& args)
       {
-        // The name of the command typed by the user, say `infinit-users`.
-        auto prog = program_name(args[0]);
-        if (prog == "infinit")
-          args.erase(args.begin());
-        else
-        {
-          // The corresponding object, say `users`.
-          args[0] = object_from(prog);
-          if (args.size() > 1 && elle::das::cli::is_option(args[1]))
-            if (args[1] == "-v" || args[1] == "--version")
-              args.erase(args.begin());
-            else if (args[1] != "-h" && args[1] != "--help")
-              // This is the mode.  We no longer require a leading `--`.
-              args[1] = args[1].substr(2);
-          ELLE_WARN("%s is deprecated, please run: infinit %s",
-                    prog, boost::algorithm::join(args, " "));
-        }
-        if (args[0] == "network" && args[1] == "list-storage")
-          args[1] = "list-silos";
-        boost::transform(args, args.begin(),
-                         [] (std::string const& entry) -> std::string
-                         {
-                           if (entry == "--storage")
-                             return "--silo";
-                           else if (entry == "--storage-class")
-                             return "--silo-class";
-                           else
-                             return entry;
-                         });
+        args.erase(args.begin());
         auto infinit = infinit::Infinit{};
-        auto&& cli = Infinit(infinit);
+        auto&& cli = Memo(infinit);
         if (args.empty() || elle::das::cli::is_option(args[0], options))
           elle::das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
@@ -309,9 +253,9 @@ namespace infinit
     `--------*/
 
     void
-    Infinit::usage(std::ostream& s, std::string const& usage)
+    Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << infinit_exe << ' ' << usage << std::endl;
+      s << "Usage: " << memo_exe << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -319,7 +263,7 @@ namespace infinit
       std::unique_ptr<std::istream, std::function<void (std::istream*)>>;
 
     Input
-    Infinit::get_input(boost::optional<std::string> const& path)
+    Memo::get_input(boost::optional<std::string> const& path)
     {
       if (path && path.get() != "-")
       {
@@ -337,7 +281,7 @@ namespace infinit
     using Output =
       std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>;
     Output
-    Infinit::get_output(boost::optional<std::string> path, bool stdout_def)
+    Memo::get_output(boost::optional<std::string> path, bool stdout_def)
     {
       if (path)
         if (path.get() != "-")
@@ -358,7 +302,7 @@ namespace infinit
     }
 
     boost::optional<bfs::path>
-    Infinit::avatar_path(std::string const& name) const
+    Memo::avatar_path(std::string const& name) const
     {
       auto path = this->infinit()._avatar_path(name);
       if (exists(path))
@@ -373,7 +317,7 @@ namespace infinit
     `-------*/
 
     void
-    Infinit::report(std::string const& msg)
+    Memo::report(std::string const& msg)
     {
       if (!this->script())
       {
@@ -384,10 +328,10 @@ namespace infinit
     }
 
     void
-    Infinit::report_action(std::string const& action,
-                           std::string const& type,
-                           std::string const& name,
-                           std::string const& where)
+    Memo::report_action(std::string const& action,
+                        std::string const& type,
+                        std::string const& name,
+                        std::string const& where)
     {
       if (where.empty())
         report("%s %s \"\%s\"", action, type, name);
@@ -396,13 +340,13 @@ namespace infinit
     }
 
     void
-    Infinit::report_imported(std::string const& type, std::string const& name)
+    Memo::report_imported(std::string const& type, std::string const& name)
     {
       this->report_action("imported", type, name);
     }
 
     void
-    Infinit::report_action_output(std::ostream& output,
+    Memo::report_action_output(std::ostream& output,
                                   std::string const& action,
                                   std::string const& type,
                                   std::string const& name)
@@ -412,7 +356,7 @@ namespace infinit
     }
 
     void
-    Infinit::report_exported(std::ostream& output,
+    Memo::report_exported(std::ostream& output,
                              std::string const& type,
                              std::string const& name)
     {
@@ -466,7 +410,7 @@ namespace infinit
     }
 
     std::string
-    Infinit::read_secret(std::string const& prompt,
+    Memo::read_secret(std::string const& prompt,
                          std::string const& regex)
     {
       auto re = std::regex{regex.empty() ? ".*" : regex};
@@ -480,19 +424,19 @@ namespace infinit
     }
 
     std::string
-    Infinit::read_passphrase()
+    Memo::read_passphrase()
     {
       return _read_secret("Passphrase");
     }
 
     std::string
-    Infinit::read_password()
+    Memo::read_password()
     {
       return _read_secret("Password");
     }
 
     std::string
-    Infinit::hash_password(std::string const& password_,
+    Memo::hash_password(std::string const& password_,
                            std::string salt)
     {
       auto password = password_ + salt;
@@ -503,10 +447,10 @@ namespace infinit
     };
 
     std::string
-    Infinit::hub_password_hash(std::string const& password)
+    Memo::hub_password_hash(std::string const& password)
     {
       static auto const salt = std::string{"@a.Fl$4'x!"};
-      return Infinit::hash_password(password, salt);
+      return Memo::hash_password(password, salt);
     }
 
     // This overload is required, otherwise Infinit is printed as a
@@ -514,7 +458,7 @@ namespace infinit
     // BoundMethod<Infinit, call>, which prints its object, that is the Infinit,
     // which recurses indefinitely.
     void
-    Infinit::print(std::ostream& o) const
+    Memo::print(std::ostream& o) const
     {
       elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->_infinit);
     }
@@ -530,7 +474,7 @@ namespace
     auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  infinit_exe, obj);
+                  memo_exe, obj);
     return 2;
   }
 }
@@ -539,9 +483,9 @@ int
 main(int argc, char** argv)
 {
   argv_0 = argv[0];
-  infinit_exe = (bfs::path(argv_0).parent_path() / "infinit").string();
+  memo_exe = (bfs::path(argv_0).parent_path() / BIN).string();
   if (boost::algorithm::ends_with(argv_0, ".exe"))
-    infinit_exe += ".exe";
+    memo_exe += ".exe";
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);

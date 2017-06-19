@@ -17,6 +17,7 @@ import infinit.beyond.couchdb
 from datetime import timedelta
 
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
+binary = 'memo'
 
 class TemporaryDirectory:
 
@@ -68,7 +69,7 @@ class Infinit(TemporaryDirectory):
 
   @property
   def version(self):
-    return self.run(['infinit', '--version'])[0]
+    return self.run(['memo', '--version'])[0]
 
   @property
   def user(self):
@@ -80,11 +81,11 @@ class Infinit(TemporaryDirectory):
 
   @property
   def data_home(self):
-    return '%s/.local/share/infinit/filesystem' % self.dir
+    return '%s/.local/share/infinit/memo' % self.dir
 
   @property
   def state_path(self):
-    return '%s/.local/state/infinit/filesystem' % self.dir
+    return '%s/.local/state/infinit/memo' % self.dir
 
   @property
   def silos_path(self):
@@ -117,7 +118,8 @@ class Infinit(TemporaryDirectory):
             env = {},
             noscript = False,
             gdb = False,
-            valgrind = False):
+            valgrind = False,
+            binary = binary):
     if isinstance(args, str):
       args = args.split(' ')
     if args[0][0] != '/':
@@ -139,9 +141,9 @@ class Infinit(TemporaryDirectory):
       'INFINIT_BACKTRACE': '1',
     }
     if self.dir is not None:
-      env_['INFINIT_HOME'] = self.dir
+      env_['MEMO_HOME'] = self.dir
     if self.__user is not None:
-      env_['INFINIT_USER'] = self.__user
+      env_['MEMO_USER'] = self.__user
     env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
     for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
       if k in os.environ:
@@ -185,8 +187,10 @@ class Infinit(TemporaryDirectory):
           gdb = False,
           valgrind = False,
           timeout = 600,
-          noscript = False):
+          noscript = False,
+          binary = binary):
     '''Return (stdout, stderr).'''
+    args = [binary] + args
     try:
       process = self.spawn(
         args, input, return_code, env,
@@ -217,7 +221,8 @@ class Infinit(TemporaryDirectory):
 
   def run_json(self, args, gdb = False, valgrind = False,
                *largs, **kwargs):
-    out, err = self.run(args, gdb = gdb, valgrind = valgrind,
+    out, err = self.run(args.split(' ') if isinstance(args, str) else args,
+                        gdb = gdb, valgrind = valgrind,
                         *largs, **kwargs)
     try:
       res = [json.loads(l) for l in out.split(cr) if l]
@@ -229,23 +234,6 @@ class Infinit(TemporaryDirectory):
         return res
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
-
-  def run_script(self,
-                 user = None,
-                 volume = 'volume',
-                 seq = None,
-                 peer = None,
-                 gdb = False,
-                 valgrind = False,
-                 **kwargs):
-    cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
-    if user is not None:
-      cmd += ['--as', user]
-    if peer is not None:
-      cmd += ['--peer', peer]
-    response = self.run_json(cmd, gdb = gdb, valgrind = valgrind,
-                             input = seq or kwargs)
-    return response
 
 def assertEq(a, b):
   if a == b:
@@ -450,17 +438,17 @@ class User():
   def run(self, cli, **kargs):
     return self.infinit.run(
       cli.split(' ') if isinstance(cli, str) else cli,
-      env = { 'INFINIT_USER': self.name }, **kargs)
+      env = { 'MEMO_USER': self.name }, **kargs)
 
   def run_json(self, *args, **kwargs):
     if 'env' in kwargs:
-      env['INFINIT_USER'] = self.name
+      env['MEMO_USER'] = self.name
     else:
-      kwargs['env'] = { 'INFINIT_USER': self.name }
+      kwargs['env'] = { 'MEMO_USER': self.name }
     return self.infinit.run_json(*args, **kwargs)
 
   def run_split(self, args, **kargs):
-    return self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
+    return self.infinit.run(args, env = { 'MEMO_USER': self.name }, **kargs)
 
   def async(self, cli, **kargs):
     import threading
@@ -490,32 +478,32 @@ class SharedLogicCLITests():
     # Creating and deleting entity.
     with Infinit() as bob:
       e_name = self.random_sequence()
-      bob.run(['infinit', 'user', 'create',  'bob'])
-      bob.run(['infinit', 'network', 'create', 'network', '--as', 'bob'])
-      bob.run(['infinit', entity, 'create', e_name, '-N', 'network',
+      bob.run(['user', 'create',  'bob'])
+      bob.run(['network', 'create', 'network', '--as', 'bob'])
+      bob.run([entity, 'create', e_name, '-N', 'network',
                '--as', 'bob'])
-      bob.run(['infinit', entity, 'export', 'bob/%s' % e_name, '--as', 'bob'])
-      bob.run(['infinit', entity, 'delete', e_name, '--as', 'bob'])
+      bob.run([entity, 'export', 'bob/%s' % e_name, '--as', 'bob'])
+      bob.run([entity, 'delete', e_name, '--as', 'bob'])
 
     # Push to the hub.
     with Beyond() as beyond, \
         Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
       e_name = self.random_sequence()
-      bob.run(['infinit', 'user', 'signup', 'bob', '--email', 'bob@infinit.io'])
-      bob.run(['infinit', 'network', 'create', 'network', '--as', 'bob',
+      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+      bob.run(['network', 'create', 'network', '--as', 'bob',
                '--push'])
-      bob.run(['infinit', entity, 'create', e_name, '-N', 'network',
+      bob.run([entity, 'create', e_name, '-N', 'network',
                '--description', 'something', '--as', 'bob', '--push'])
       try:
-        bob.run(['infinit', entity, '--push', '--name', e_name])
+        bob.run([entity, '--push', '--name', e_name])
         unreachable()
       except Exception as e:
         pass
-      alice.run(['infinit', 'user', 'signup', 'alice',
+      alice.run(['user', 'signup', 'alice',
                  '--email', 'a@infinit.sh'])
-      alice.run(['infinit', entity, 'fetch', 'bob/%s' % e_name,
+      alice.run([entity, 'fetch', 'bob/%s' % e_name,
                  '--as', 'alice'])
-      e = alice.run_json(['infinit', entity, 'export', 'bob/%s' % e_name,
+      e = alice.run_json([entity, 'export', 'bob/%s' % e_name,
                           '--as', 'alice'])
       assertEq(e['description'], 'something')
 
@@ -525,21 +513,21 @@ class SharedLogicCLITests():
       e_name2 = e_name
       while e_name2 == e_name:
         e_name2 = self.random_sequence()
-      bob.run(['infinit', 'user', 'signup', 'bob', '--email', 'b@infinit.io'])
-      bob.run(['infinit', 'network', 'create', '--as', 'bob', 'n', '--push'])
+      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+      bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
       # Local and Beyond.
-      bob.run(['infinit', entity, 'create', '--as', 'bob', e_name,
+      bob.run([entity, 'create', '--as', 'bob', e_name,
                '-N', 'n', '--push'])
-      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 1)
-      bob.run(['infinit', entity, 'delete', '--as', 'bob', e_name, '--pull'])
-      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 0)
-      bob.run(['infinit', entity, 'fetch', '--as', 'bob', e_name],
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 1)
+      bob.run([entity, 'delete', '--as', 'bob', e_name, '--pull'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 0)
+      bob.run([entity, 'fetch', '--as', 'bob', e_name],
               return_code = 1)
       # Local only.
-      bob.run(['infinit', entity, 'create', '--as', 'bob', e_name2, '-N', 'n'])
-      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 1)
-      bob.run(['infinit', entity, 'delete', '--as', 'bob', e_name2, '--pull'])
-      assertEq(len(bob.run_json(['infinit', entity, 'list', '-s'])), 0)
+      bob.run([entity, 'create', '--as', 'bob', e_name2, '-N', 'n'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 1)
+      bob.run([entity, 'delete', '--as', 'bob', e_name2, '--pull'])
+      assertEq(len(bob.run_json([entity, 'list', '-s'])), 0)
 
 class KeyValueStoreInfrastructure():
 
@@ -572,15 +560,15 @@ class KeyValueStoreInfrastructure():
     return self.__endpoint
 
   def __enter__(self):
-    self.usr.run(['infinit', 'user', 'create',  self.uname])
-    self.usr.run(['infinit', 'silo', 'create', 'filesystem', 's'])
-    self.usr.run(['infinit', 'network', 'create', 'n', '-S', 's',
+    self.usr.run(['user', 'create',  self.uname])
+    self.usr.run(['silo', 'create', 'filesystem', 's'])
+    self.usr.run(['network', 'create', 'n', '-S', 's',
                   '--as', self.uname])
-    self.usr.run(['infinit', 'kvs', 'create', self.kvname,
+    self.usr.run(['kvs', 'create', self.kvname,
                   '-N', 'n', '--as', self.uname])
     port_file = '%s/port' % self.usr.dir
     self.__proc = self.usr.spawn(
-      ['infinit', 'kvs', 'run', self.kvname, '--as', self.uname,
+      ['memo', 'kvs', 'run', self.kvname, '--as', self.uname,
        '--allow-root-creation',
        '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
     while not os.path.exists(port_file):

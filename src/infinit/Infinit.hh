@@ -6,7 +6,6 @@
 
 #include <elle/flat-set.hh>
 
-#include <infinit/Drive.hh>
 #include <infinit/KeyValueStore.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
@@ -20,20 +19,24 @@ namespace infinit
 {
   namespace bfs = boost::filesystem;
 
+  /// This object is used to manipulate resources used by Infinit.
+  ///
+  ///
   class Infinit
   {
   public:
     /// ReportAction represents a signal Infinit will triggers when it perform
-    /// an action related to the resources / objects (e.g. Users, Networks, etc.)
+    /// an action related to the resources / objects (e.g. Users, Networks,
+    /// etc.)
     using ReportAction =
       boost::signals2::signal<void (std::string const& action,
                                     std::string const& type,
                                     std::string const& name)>;
   public:
-    /// Whether has a `/`.
+    /// Whether the resource name contains a `/`.
     static bool
     is_qualified_name(std::string const& object_name);
-    /// "<owner.name>/<object_name>" unless object_name is already
+    /// "<owner_name>/<object_name>" unless object_name is already
     /// qualified.
     static std::string
     qualified_name(std::string const& object_name, User const& owner);
@@ -45,17 +48,43 @@ namespace infinit
     | Network.  |
     `----------*/
 
-    /// Takes care of the `qualified_name` part.
+    /// Return a network for a given user and name.
+    ///
+    /// @param name The name of the network to get. If the name is unqualifed,
+    ///             it gets qualified by the user name.
+    /// @param user The potential owner of the network.
+    /// @param ensure_linked If true and the network is not linked, raise.
+    ///
+    /// @return The network.
+    ///
+    /// @raise MissingLocalResource if the network doesn't exist.
+    /// @raise elle::Error if ensure_linked is provided and the network is not
+    ///                    linked.
     Network
-    network_get(std::string const& name_,
+    network_get(std::string const& name,
                 User const& user,
-                bool require_model = true);
+                bool ensure_linked = true);
+    /// Return the networks associated with a user (or by default, by the
+    /// default memo user).
+    ///
+    /// @param self The user.
+    /// @param linked_only Filter non-linked networks.
+    ///
+    /// @return The list of networks.
     std::vector<Network>
     networks_get(boost::optional<infinit::User> self,
-                 bool require_linked = false) const;
+                 bool linked_only = false) const;
+    /// Return the list of users who linked the given network.
+    ///
+    /// @param name The name of the network.
+    /// @param user An optional user used to qualify unqualifed network names.
+    ///
+    /// @return The list of user.
     std::vector<User>
-    network_linked_users(std::string const& name_,
+    network_linked_users(std::string const& name,
                          boost::optional<User> user = boost::none);
+    ///
+    ///
     void
     network_unlink(std::string const& name_,
                    User const& user);
@@ -63,8 +92,6 @@ namespace infinit
     network_delete(std::string const& name_,
                    User const& user,
                    bool unlink);
-    std::vector<Drive>
-    drives_get() const;
     NetworkDescriptor
     network_descriptor_get(std::string const& name_,
                            User const& owner,
@@ -101,7 +128,7 @@ namespace infinit
     bool
     user_delete(User const& user);
     User
-    user_get(std::string const& user, bool beyond_fallback = false) const;
+    user_get(std::string const& user, bool hub_fallback = false) const;
     std::vector<User>
     users_get() const;
     boost::filesystem::path
@@ -142,23 +169,6 @@ namespace infinit
     std::unordered_map<std::string, std::vector<std::string>>
     silo_networks(std::string const& silo_name);
 
-
-    /*---------.
-    | Volume.  |
-    `---------*/
-
-    bool
-    volume_has(std::string const& name);
-    Volume
-    volume_get(std::string const& name);
-    void
-    volume_save(Volume const& volume, bool overwrite = false);
-    bool
-    volume_delete(Volume const& volume);
-    std::vector<Volume>
-    volumes_get() const;
-
-
     /*------------------.
     | Key Value Store.  |
     `------------------*/
@@ -173,7 +183,6 @@ namespace infinit
     key_value_store_delete(KeyValueStore const& kvs);
     std::vector<KeyValueStore>
     key_value_stores_get() const;
-
 
     /*--------------.
     | Credentials.  |
@@ -259,10 +268,6 @@ namespace infinit
     boost::filesystem::path
     _user_path(std::string const& name) const;
     boost::filesystem::path
-    _volumes_path() const;
-    boost::filesystem::path
-    _volume_path(std::string const& name) const;
-    boost::filesystem::path
     _key_value_stores_path() const;
     boost::filesystem::path
     _key_value_store_path(std::string const& name) const;
@@ -299,32 +304,11 @@ namespace infinit
                 std::string const& type,
                 bool overwrite = false,
                 std::ios_base::openmode mode = std::ios_base::out);
-    boost::filesystem::path
-    _drives_path() const;
-    boost::filesystem::path
-    _drive_path(std::string const& name) const;
-    void
-    drive_save(Drive const& drive,
-               bool overwrite = true);
-    Drive
-    drive_get(std::string const& name);
-    bool
-    drive_delete(Drive const& drive);
-    boost::filesystem::path
-    _drive_icon_path() const;
-    boost::filesystem::path
-    _drive_icon_path(std::string const& name) const;
-    Drive
-    drive_fetch(std::string const& name);
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name);
-    std::vector<Volume>
-    volumes_for_network(std::string const& network_name);
     std::vector<KeyValueStore>
     key_value_stores_for_network(std::string const& network_name);
-    std::vector<Drive>
-    drives_for_volume(std::string const& volume_name);
     // saving & loading
     template <typename T>
     static
@@ -353,73 +337,202 @@ namespace infinit
     };
 
     elle::json::Json
-    beyond_login(std::string const& name, LoginCredentials const& o) const;
+    hub_login(std::string const& name, LoginCredentials const& o) const;
 
-    std::unique_ptr<elle::reactor::http::Request>
-    beyond_fetch_data(std::string const& where,
-                      std::string const& type,
-                      std::string const& name,
-                      boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {}) const;
-    elle::json::Json
-    beyond_fetch_json(std::string const& where,
-                      std::string const& type,
-                      std::string const& name,
-                      boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {}) const;
-    bool
-    beyond_delete(std::string const& where,
+    /// Push a payload to the hub.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param payload The payload to push.
+    /// @param content_type The content type of the payload (e.g.
+    ///                     application/json)
+    /// @param self The user to perform the request as.
+    /// @param extra_headers Headers to add to the HTTP request.
+    ///
+    /// @return A PushResult, containing information related to the attempt.
+    PushResult
+    hub_push_data(std::string const& where,
                   std::string const& type,
                   std::string const& name,
+                  elle::ConstWeakBuffer const& object,
+                  std::string const& content_type,
                   User const& self,
-                  bool ignore_missing = false,
-                  bool purge = false) const;
+                  bool hub_error = false,
+                  bool update = false) const;
+
+    /// Push an arbitrary resource to the hub.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param o The resource.
+    /// @param self The user to that own the resource (who must be registered
+    ///             if the resource is not a user).
+    /// @param hub_error Turn exception to HubError.
+    /// @paran update Whether the operation is an update (and not an insertion).
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    template <typename Serializer = void, typename T>
+    void
+    hub_push(std::string const& where,
+             std::string const& type,
+             std::string const& name,
+             T const& o,
+             infinit::User const& self,
+             bool hub_error = false,
+             bool update = false) const;
+
+    /// Push an arbitrary resource to the hub.
+    ///
+    /// Compare to the other hub_push method, the `where` is computed using
+    /// `<type>s/<name>`, example:
+    /// for type = network and name = root/my_net, `where` will be equal to
+    /// `networks/root/my_net`.
+    ///
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param o The resource.
+    /// @param self The user to that own the resource (who must be registered
+    ///             if the resource is not a user).
+    /// @param hub_error Turn exception to HubError.
+    /// @paran update Whether the operation is an update (and not an insertion).
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    template <typename Serializer = void, typename T>
+    void
+    hub_push(std::string const& type,
+             std::string const& name,
+             T const& o,
+             infinit::User const& self,
+             bool hub_error = false,
+             bool update = false) const;
+
+    /// Perform a fetch request.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param self The user to perform the request as.
+    /// @param extra_headers Headers to add to the HTTP request.
+    ///
+    /// @return The request.
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    /// @raise ResourceProtected if you access is denied.
+    std::unique_ptr<elle::reactor::http::Request>
+    hub_fetch_request(std::string const& where,
+                      std::string const& type,
+                      std::string const& name,
+                      boost::optional<User const&> self = boost::none,
+                      Headers const& extra_headers = {}) const;
+
+    /// Perform a fetch request and return the extracted json.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param self The user to perform the request as.
+    /// @param extra_headers Headers to add to the HTTP request.
+    ///
+    /// @return The json.
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    /// @raise ResourceProtected if you access is denied.
+    elle::json::Json
+    hub_fetch_json(std::string const& where,
+                   std::string const& type,
+                   std::string const& name,
+                   boost::optional<User const&> self = boost::none,
+                   Headers const& extra_headers = {}) const;
+
+    /// Fetch a resource from the hub.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param self The user to perform the request as.
+    /// @param extra_headers Headers to add to the HTTP request.
+    ///
+    /// @return The fecthed resource.
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    /// @raise ResourceProtected if you access is denied.
+    template <typename T>
+    T
+    hub_fetch(std::string const& where,
+              std::string const& type,
+              std::string const& name,
+              boost::optional<infinit::User const&> self = boost::none,
+              infinit::Headers const& extra_headers = infinit::Headers{}) const;
+
+    /// Fetch a resource from the hub.
+    ///
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    ///
+    /// @return The fecthed resource.
+    ///
+    /// @raise HubError for all errors if hub_error is provided, otherwise if
+    ///        the error is not part of the following Errors.
+    /// @raise MissingResource if the resource doesn't exist on the hub.
+    /// @raise ResourceGone if the resource is gone from the hub.
+    /// @raise ResourceProtected if you access is denied.
+    template <typename T>
+    T
+    hub_fetch(std::string const& type,
+              std::string const& name) const;
+
+    /// Delete a resource from the hub.
+    ///
+    /// @param where The route to put the resource to (<hub_url>/<where>).
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param self The user to perform the request as.
+    /// @param ignore_missing Do not consider removing a resource already gone
+    ///                       an error.
+    /// @param purge Remove all resources depending on the one your deleting.
+    ///
+    /// @return Whether the resource was deleted.
     bool
-    beyond_delete(std::string const& type,
-                  std::string const& name,
-                  User const& self,
-                  bool ignore_missing = false,
-                  bool purge = false) const;
-    PushResult
-    beyond_push_data(std::string const& where,
-                     std::string const& type,
-                     std::string const& name,
-                     elle::ConstWeakBuffer const& object,
-                     std::string const& content_type,
-                     User const& self,
-                     bool beyond_error = false,
-                     bool update = false) const;
-    template <typename T>
-    T
-    beyond_fetch(std::string const& where,
-                 std::string const& type,
-                 std::string const& name,
-                 boost::optional<infinit::User const&> self = boost::none,
-                 infinit::Headers const& extra_headers = infinit::Headers{}) const;
+    hub_delete(std::string const& where,
+               std::string const& type,
+               std::string const& name,
+               User const& self,
+               bool ignore_missing = false,
+               bool purge = false) const;
 
-    template <typename T>
-    T
-    beyond_fetch(std::string const& type,
-                 std::string const& name) const;
-
-    template <typename Serializer = void, typename T>
-    void
-    beyond_push(std::string const& where,
-                std::string const& type,
-                std::string const& name,
-                T const& o,
-                infinit::User const& self,
-                bool beyond_error = false,
-                bool update = false) const;
-
-    template <typename Serializer = void, typename T>
-    void
-    beyond_push(std::string const& type,
-                std::string const& name,
-                T const& o,
-                infinit::User const& self,
-                bool beyond_error = false,
-                bool update = false) const;
+    /// Delete a resource from the hub.
+    ///
+    /// @param type The type of resource (e.g. network, volume. etc.).
+    /// @param name The name of the resource.
+    /// @param self The user to perform the request as.
+    /// @param ignore_missing Do not consider removing a resource already gone
+    ///                       an error.
+    /// @param purge Remove all resources depending on the one your deleting.
+    ///
+    /// @return Whether the resource was deleted.
+    bool
+    hub_delete(std::string const& type,
+               std::string const& name,
+               User const& self,
+               bool ignore_missing = false,
+               bool purge = false) const;
 
   private:
     std::string
@@ -431,7 +544,7 @@ namespace infinit
     /// - updated
     /// - deleted
     ELLE_ATTRIBUTE_RX(ReportAction, report_local_action);
-    /// report_remote_action is triggered when a resource is edited on the hub.
+    /// report_remote_action is triggered when a resource is edited on the hub:
     /// - saved
     /// - updated
     /// - deleted

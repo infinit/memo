@@ -20,8 +20,7 @@ with Infinit() as infinit:
     'replication_factor': 1,
     'version': '0.0.0'
   }
-  infinit.run(['infinit-user', '--create', '--name', 'user'])
-  infinit.run(['infinit-network', '--import'], input = descriptor)
-  infinit.run(['infinit-network',
-               '--run', '--name', 'clouds', '--as', 'user'],
+  infinit.run(['user', 'create', '--name', 'user'])
+  infinit.run(['network', 'import'], input = descriptor)
+  infinit.run(['network', 'run', '--name', 'clouds', '--as', 'user'],
               return_code = 1)

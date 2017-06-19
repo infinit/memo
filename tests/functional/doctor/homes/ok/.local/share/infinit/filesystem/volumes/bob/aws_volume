@@ -1,6 +1,0 @@
-{
-    "mount_options" : {
-    },
-    "name" : "bob/aws_volume",
-    "network" : "bob/aws_network"
-}

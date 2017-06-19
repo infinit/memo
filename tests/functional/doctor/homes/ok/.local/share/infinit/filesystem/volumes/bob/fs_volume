@@ -1,6 +1,0 @@
-{
-    "mount_options" : {
-    },
-    "name" : "bob/fs_volume",
-    "network" : "bob/fs_network"
-}

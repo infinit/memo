@@ -1,5 +1,0 @@
-// Given a block `block`, ins
-ert the block.
-//
-client.Insert(context.Background(),
-              &doughnut.InsertRequest{Block: block})

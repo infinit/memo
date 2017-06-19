@@ -1,1 +1,0 @@
-${cat_command} ${guide_mountpoint}${dir}awesome.txt

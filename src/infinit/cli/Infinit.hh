@@ -12,42 +12,36 @@
 
 #include <infinit/cli/Error.hh>
 
-#include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
 # include <infinit/cli/Daemon.hh>
 #endif
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Doctor.hh>
-#include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
-#if INFINIT_WITH_KEY_VALUE_STORE
+#if MEMO_WITH_KEY_VALUE_STORE
 # include <infinit/cli/KeyValueStore.hh>
-#endif
-#if INFINIT_WITH_LDAP
-# include <infinit/cli/LDAP.hh>
 #endif
 #include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
-#include <infinit/cli/Volume.hh>
 
 namespace infinit
 {
   namespace cli
   {
-    using InfinitCallable =
+    using MemoCallable =
       elle::das::named::Function<
         void (decltype(help = false), decltype(version = false))>;
 
-    class Infinit
+    class Memo
       : public elle::Printable::as<Infinit>
-      , public InfinitCallable
+      , public MemoCallable
     {
     public:
-      Infinit(infinit::Infinit& infinit);
+      Memo(infinit::Infinit& infinit);
 
       // Helpers
       infinit::User
@@ -62,9 +56,9 @@ namespace infinit
                  bool stdout_def = true);
       boost::optional<boost::filesystem::path>
       avatar_path(std::string const& name) const;
-      static
+      virtual
       std::string
-      default_user_name();
+      default_user_name() const;
       infinit::User
       default_user();
 
@@ -124,49 +118,37 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
-      ACL acl = *this;
       Block block = *this;
       Credentials credentials = *this;
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
       Daemon daemon = *this;
 #endif
       Device device = *this;
       Doctor doctor = *this;
-      Drive drive = *this;
       Journal journal = *this;
-#if INFINIT_WITH_KEY_VALUE_STORE
+#if MEMO_WITH_KEY_VALUE_STORE
       KeyValueStore kvs = *this;
-#endif
-#if INFINIT_WITH_LDAP
-      LDAP ldap = *this;
 #endif
       Network network{*this};
       Passport passport = *this;
       Silo silo = *this;
       User user = *this;
-      Volume volume = *this;
       using Objects
-        = decltype(elle::meta::list(cli::acl,
-                                    cli::block,
+        = decltype(elle::meta::list(cli::block,
                                     cli::credentials,
-#if INFINIT_WITH_DAEMON
+#if MEMO_WITH_DAEMON
                                     cli::daemon,
 #endif
                                     cli::device,
                                     cli::doctor,
-                                    cli::drive,
                                     cli::journal,
-#if INFINIT_WITH_KEY_VALUE_STORE
+#if MEMO_WITH_KEY_VALUE_STORE
                                     cli::kvs,
-#endif
-#if INFINIT_WITH_LDAP
-                                    cli::ldap,
 #endif
                                     cli::network,
                                     cli::passport,
                                     cli::silo,
-                                    cli::user,
-                                    cli::volume));
+                                    cli::user));
       void
       help(std::ostream& s) const;
       void

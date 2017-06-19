@@ -53,7 +53,6 @@ def update_symbols():
     log('update_symbols: cannot pull git repo: {}', p.stderr)
     return
 
-
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
   symbolized if possible.  It is safe to use in_ == out.'''
@@ -88,16 +87,16 @@ os.environ['INFINIT_CRASH_REPORTER'] = '0'
 
 def find_binaries():
   for path in chain(
-      [os.environ.get('INFINIT_BINARIES')],
+      [os.environ.get('MEMO_BINARIES')],
       os.environ.get('PATH', '').split(':'),
-      ['bin', '/opt/infinit/bin'],
+      ['bin', '/opt/memo/bin'],
   ):
     if not path:
       continue
     if not path.endswith('/'):
       path += '/'
     try:
-      args = [path + 'infinit' + exe_ext, '--version']
+      args = [path + 'memo' + exe_ext, '--version']
       subprocess.check_call(args)
       log('find_binaries: {} works', args)
       return path
@@ -105,10 +104,10 @@ def find_binaries():
       log('find_binaries: {} does not exist', args)
     except subprocess.CalledProcessError as e:
       log('find_binaries: {} failed: {}', args, e)
-  log('find_binaries: could not find `infinit`')
+  log('find_binaries: could not find `memo`')
   return None
 
-# Our bindir, with a trailing slash, or None if we can't find `infinit`.
+# Our bindir, with a trailing slash, or None if we can't find `memo`.
 binary_path = find_binaries()
 
 # Email templates.
@@ -442,8 +441,8 @@ class Beyond:
   def process_invitations(self, user, email, drives):
     if binary_path is None:
       raise NotImplementedError()
-    # The infinit executable (possibly infinit.exe).
-    infinit_path = binary_path + 'infinit' + exe_ext
+    # The infinit executable (possibly memo.exe).
+    memo_path = binary_path + 'memo' + exe_ext
     errors = []
     try:
       try:
@@ -453,13 +452,13 @@ class Beyond:
       import tempfile
       with tempfile.TemporaryDirectory() as directory:
         env = {
-          'INFINIT_DATA_HOME': str(directory),
-          'INFINIT_USER': self.delegate_user,
+          'MEMO_DATA_HOME': str(directory),
+          'MEMO_USER': self.delegate_user,
         }
         import os
         import json
         def import_data(type, data):
-          args = [infinit_path, type, 'import', '-s']
+          args = [memo_path, type, 'import', '-s']
           try:
             subprocess.check_output(
               args,
@@ -480,7 +479,7 @@ class Beyond:
             import_data('network', network.json())
             output = subprocess.check_output(
               [
-                infinit_path, 'passport', 'create',
+                memo_path, 'passport', 'create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,

@@ -1,7 +1,7 @@
 package server
 
 import (
-	dht "doughnut"
+	vs "memo/vs"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
@@ -15,20 +15,20 @@ import (
 )
 
 type kvServer struct {
-	vStore      dht.DoughnutClient
+	vStore      vs.ValueStoreClient
 	name        string
 	rootAddress []byte
 }
 
-func NewServer(vStore dht.DoughnutClient, name string, bootstrap bool) *kvServer {
+func NewServer(vStore vs.ValueStoreClient, name string, bootstrap bool) *kvServer {
 	s := new(kvServer)
 	s.vStore = vStore
 	s.name = name
-	nbAddr, err := vStore.NamedBlockAddress(context.Background(), &dht.NamedBlockAddressRequest{Key: []byte(name)})
+	nbAddr, err := vStore.NamedBlockAddress(context.Background(), &vs.NamedBlockAddressRequest{Key: []byte(name)})
 	if err != nil {
 		grpclog.Fatalf("unable to get named block address: %v\n", err)
 	}
-	if nb, err := vStore.Fetch(context.Background(), &dht.FetchRequest{Address: nbAddr.Address}); err == nil {
+	if nb, err := vStore.Fetch(context.Background(), &vs.FetchRequest{Address: nbAddr.Address}); err == nil {
 		// Fetch root block.
 		s.rootAddress = nb.GetBlock().GetData()
 		if _, err := s.rootBlock(); err != nil {
@@ -39,19 +39,19 @@ func NewServer(vStore dht.DoughnutClient, name string, bootstrap bool) *kvServer
 			grpclog.Fatalf("unable to find named block: %v\n", err)
 		}
 		// Create root block.
-		rb, err := vStore.MakeMutableBlock(context.Background(), &dht.MakeMutableBlockRequest{})
+		rb, err := vStore.MakeMutableBlock(context.Background(), &vs.MakeMutableBlockRequest{})
 		if err != nil {
 			grpclog.Fatalf("unable to create root block: %v\n", err)
 		}
-		nb, err := vStore.MakeNamedBlock(context.Background(), &dht.MakeNamedBlockRequest{Key: []byte(name)})
+		nb, err := vStore.MakeNamedBlock(context.Background(), &vs.MakeNamedBlockRequest{Key: []byte(name)})
 		if err != nil {
 			grpclog.Fatalf("unable to create named block: %v\n", err)
 		}
-		nb.Payload = &dht.Block_Data{rb.Address}
-		if _, err = vStore.Insert(context.Background(), &dht.InsertRequest{Block: nb}); err != nil {
+		nb.Payload = &vs.Block_Data{rb.Address}
+		if _, err = vStore.Insert(context.Background(), &vs.InsertRequest{Block: nb}); err != nil {
 			grpclog.Fatalf("unable to insert named block: %v\n", err)
 		}
-		if _, err = vStore.Insert(context.Background(), &dht.InsertRequest{Block: rb}); err != nil {
+		if _, err = vStore.Insert(context.Background(), &vs.InsertRequest{Block: rb}); err != nil {
 			grpclog.Fatalf("unable to insert root block: %v\n", err)
 		}
 		s.rootAddress = rb.Address
@@ -66,7 +66,7 @@ func (server *kvServer) put(key string, value []byte, update bool, atomic bool) 
 	if value == nil {
 		return grpc.Errorf(codes.InvalidArgument, "value is nil")
 	}
-	db, err := server.vStore.MakeImmutableBlock(context.Background(), &dht.MakeImmutableBlockRequest{Data: value})
+	db, err := server.vStore.MakeImmutableBlock(context.Background(), &vs.MakeImmutableBlockRequest{Data: value})
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "unable to make immutable block: %v", err)
 	}
@@ -88,7 +88,7 @@ func (server *kvServer) put(key string, value []byte, update bool, atomic bool) 
 		}
 		return grpc.Errorf(codes.Internal, "unable to store edit: %v", err)
 	}
-	if _, err := server.vStore.Insert(context.Background(), &dht.InsertRequest{Block: db}); err != nil {
+	if _, err := server.vStore.Insert(context.Background(), &vs.InsertRequest{Block: db}); err != nil {
 		server.store(operation{opType: CLEANUP_EDIT, key: key, store: store})
 		return grpc.Errorf(codes.Internal, "unable to store data block: %v", err)
 	}
@@ -147,7 +147,7 @@ func (server *kvServer) Fetch(ctx context.Context, req *service.FetchRequest) (*
 	if desc == nil || desc.GetCurrent() == nil || desc.GetCurrent().GetAddress() == nil {
 		return nil, grpc.Errorf(codes.NotFound, "no value for key: %v", key)
 	}
-	chb, err := server.vStore.Fetch(context.Background(), &dht.FetchRequest{Address: desc.GetCurrent().GetAddress()})
+	chb, err := server.vStore.Fetch(context.Background(), &vs.FetchRequest{Address: desc.GetCurrent().GetAddress()})
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "unable to fetch value: %v", err)
 	}
@@ -223,8 +223,8 @@ func (server *kvServer) List(ctx context.Context, req *service.ListRequest) (*se
 	return &service.ListResponse{Items: items, Prefixes: prefixes, Truncated: truncated}, nil
 }
 
-func (server *kvServer) rootBlock() (*dht.Block, error) {
-	rb, err := server.vStore.Fetch(context.Background(), &dht.FetchRequest{Address: server.rootAddress, DecryptData: true})
+func (server *kvServer) rootBlock() (*vs.Block, error) {
+	rb, err := server.vStore.Fetch(context.Background(), &vs.FetchRequest{Address: server.rootAddress, DecryptData: true})
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "unable to fetch root block: %v", err)
 	}
@@ -296,7 +296,7 @@ func (server *kvServer) store(op operation) error {
 			if op.commit == true {
 				if desc, ok := km.GetMap()[op.key]; ok {
 					if desc.GetCurrent().GetAddress() != nil {
-						server.vStore.Remove(context.Background(), &dht.RemoveRequest{Address: desc.GetCurrent().GetAddress()})
+						server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: desc.GetCurrent().GetAddress()})
 					}
 					desc.Current = &op.store
 					editIndex := -1
@@ -328,7 +328,7 @@ func (server *kvServer) store(op operation) error {
 			if desc, ok := km.GetMap()[op.key]; ok {
 				store := desc.GetCurrent()
 				if store != nil && store.GetAddress() != nil {
-					server.vStore.Remove(context.Background(), &dht.RemoveRequest{Address: store.GetAddress()})
+					server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: store.GetAddress()})
 					desc.Current.Address = nil
 					if len(desc.GetEdits()) == 0 {
 						delete(km.Map, op.key)
@@ -357,8 +357,8 @@ func (server *kvServer) store(op operation) error {
 		if err != nil {
 			return err
 		}
-		block.Payload = &dht.Block_DataPlain{payload}
-		status, err := server.vStore.Update(context.Background(), &dht.UpdateRequest{Block: block, DecryptData: true})
+		block.Payload = &vs.Block_DataPlain{payload}
+		status, err := server.vStore.Update(context.Background(), &vs.UpdateRequest{Block: block, DecryptData: true})
 		if err != nil {
 			return err
 		}
@@ -374,7 +374,7 @@ func (server *kvServer) store(op operation) error {
 	return nil
 }
 
-func getMap(block *dht.Block) (*data.KeyMap, error) {
+func getMap(block *vs.Block) (*data.KeyMap, error) {
 	res := &data.KeyMap{}
 	err := proto.Unmarshal(block.GetDataPlain(), res)
 	if err != nil {

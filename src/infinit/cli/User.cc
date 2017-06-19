@@ -38,11 +38,11 @@ namespace infinit
                  infinit::symbols::public_key,
                  infinit::symbols::ldap_dn))>;
 
-    User::User(Infinit& infinit)
-      : Object(infinit)
+    User::User(Memo& memo)
+      : Object(memo)
       , create(*this,
                "Create a user",
-               cli::name = Infinit::default_user_name(),
+               cli::name = memo.default_user_name(),
                cli::description = boost::none,
                cli::key = boost::none,
                cli::email = boost::none,
@@ -55,38 +55,38 @@ namespace infinit
                cli::full = false)
       , delete_(*this,
                 "Delete local user",
-                cli::name = Infinit::default_user_name(),
+                cli::name = memo.default_user_name(),
                 cli::pull = false,
                 cli::purge = false,
                 cli::force = false)
       , export_(*this,
                 "Export local user",
-                cli::name = Infinit::default_user_name(),
+                cli::name = memo.default_user_name(),
                 cli::full = false,
                 cli::output = boost::none)
       , fetch(*this,
               "Fetch users from {hub}",
               cli::name =
-                std::vector<std::string>{Infinit::default_user_name()},
+                std::vector<std::string>{memo.default_user_name()},
               cli::no_avatar = false)
       , hash(*this,
              "Get short hash of user's key",
-             cli::name = Infinit::default_user_name())
+             cli::name = memo.default_user_name())
       , import(*this,
                "Import local user",
                cli::input = boost::none)
       , list(*this, "List local users")
       , login(*this,
               "Login user to {hub}",
-              cli::name = Infinit::default_user_name(),
+              cli::name = memo.default_user_name(),
               cli::password = boost::none)
       , pull(*this,
              "Pull a user from {hub}",
-             cli::name = Infinit::default_user_name(),
+             cli::name = memo.default_user_name(),
              cli::purge = false)
       , push(*this,
              "Push a user from {hub}",
-             cli::name = Infinit::default_user_name(),
+             cli::name = memo.default_user_name(),
              cli::email = boost::none,
              cli::fullname = boost::none,
              cli::password = boost::none,
@@ -94,7 +94,7 @@ namespace infinit
              cli::full = false)
       , signup(*this,
                "Create and push a user to {hub}",
-               cli::name = Infinit::default_user_name(),
+               cli::name = memo.default_user_name(),
                cli::description = boost::none,
                cli::key = boost::none,
                cli::email = boost::none,
@@ -134,7 +134,7 @@ namespace infinit
           std::istreambuf_iterator<char>{});
         elle::ConstWeakBuffer data(s.data(), s.size());
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().infinit().beyond_push_data(
+        api.cli().infinit().hub_push_data(
           url, "avatar", self.name, data, "image/jpeg", self);
         save_avatar(api, self.name, data);
       }
@@ -143,7 +143,8 @@ namespace infinit
       fetch_avatar(User& api, std::string const& name)
       {
         auto url = elle::sprintf("users/%s/avatar", name);
-        auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
+        auto request = api.cli().infinit().hub_fetch_request(
+          url, "avatar", name);
         if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
@@ -159,7 +160,7 @@ namespace infinit
       pull_avatar(User& api, infinit::User& self)
       {
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().infinit().beyond_delete(url, "avatar", self.name, self);
+        api.cli().infinit().hub_delete(url, "avatar", self.name, self);
       }
 
       infinit::User
@@ -177,7 +178,7 @@ namespace infinit
         {
           if (keys_file)
           {
-            auto passphrase = Infinit::read_passphrase();
+            auto passphrase = Memo::read_passphrase();
             return elle::cryptography::rsa::pem::import_keypair(
                 *keys_file, passphrase);
           }
@@ -199,10 +200,10 @@ namespace infinit
         if (full)
         {
           if (!password)
-            password = Infinit::read_password();
+            password = Memo::read_password();
           if (!user.ldap_dn)
-            user.password_hash = Infinit::hub_password_hash(*password);
-          api.cli().infinit().beyond_push<elle::das::Serializer<PrivateUserPublish>>(
+            user.password_hash = Memo::hub_password_hash(*password);
+          api.cli().infinit().hub_push<elle::das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -210,7 +211,7 @@ namespace infinit
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          api.cli().infinit().beyond_push<elle::das::Serializer<PublicUserPublish>>(
+          api.cli().infinit().hub_push<elle::das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -291,28 +292,16 @@ namespace infinit
         try
         {
           auto self = this->cli().as_user();
-          ifnt.beyond_delete("user", name, self, true, purge);
+          ifnt.hub_delete("user", name, self, true, purge);
         }
         catch (MissingLocalResource const& e)
         {
           elle::err("unable to pull user, ensure the user has been set "
-                    "using --as or INFINIT_USER");
+                    "using --as or MEMO_USER");
         }
       }
       if (purge)
       {
-        // XXX Remove volumes and drives that are on network owned by this user.
-        // Currently only the owner of a network can create volumes/drives.
-        for (auto const& drive: ifnt.drives_get())
-        {
-          if (ifnt.owner_name(drive.name) == user.name)
-            ifnt.drive_delete(drive);
-        }
-        for (auto const& volume: ifnt.volumes_get())
-        {
-          if (ifnt.owner_name(volume.name) == user.name)
-            ifnt.volume_delete(volume);
-        }
         for (auto const& pair: ifnt.passports_get())
         {
           auto network = pair.first.network();
@@ -386,7 +375,7 @@ namespace infinit
         };
         try
         {
-          auto user = this->cli().infinit().beyond_fetch<infinit::User>(
+          auto user = this->cli().infinit().hub_fetch<infinit::User>(
             "user", elle::reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
@@ -481,10 +470,10 @@ namespace infinit
                      boost::optional<std::string> const& password)
     {
       ELLE_TRACE_SCOPE("login");
-      auto pass = password.value_or(Infinit::read_password());
-      auto hashed_pass = Infinit::hub_password_hash(pass);
-      auto c = LoginCredentials{ name, hashed_pass, pass };
-      auto json = this->cli().infinit().beyond_login(name, c);
+      auto pass = password.value_or(Memo::read_password());
+      auto hashed_pass = Memo::hub_password_hash(pass);
+      auto c = LoginCredentials{name, hashed_pass, pass};
+      auto json = this->cli().infinit().hub_login(name, c);
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       this->cli().infinit().user_save(user, true);
@@ -495,7 +484,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
-      this->cli().infinit().beyond_delete("user", name, self, false, purge);
+      this->cli().infinit().hub_delete("user", name, self, false, purge);
     }
 
     void

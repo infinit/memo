@@ -7,78 +7,36 @@ import re
 with Infinit() as bob:
   def neutralize(s):
     '''Fix gratuitous difference such as Window paths vs. Unix ones.'''
-    s = re.sub(r'Z:.*?\\(infinit(?:-\w+)?).exe', r'./bin/\1', s)
+    s = re.sub(r'Z:.*?\\(%s(?:-\w+)?).exe' % binary, r'./bin/\1', s)
     # Gee...  Maybe do this in assertEq?
     s = s.replace('\r\n', '\n')
     return s
 
-  def xfail(command, message, binary='infinit'):
-    err = neutralize(bob.run([binary] + command, return_code = 2)[1])
+  def xfail(command, message):
+    err = neutralize(bob.run(command, return_code = 2)[1])
     assertEq(message, err)
 
   xfail(['--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit --help' for more information.\n")
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo --help' for more information.\n")
 
   xfail(['foo'],
-        "./bin/infinit: command line error: unknown object type: foo\n"
-        "Try './bin/infinit --help' for more information.\n")
+        "./bin/memo: command line error: unknown object type: foo\n"
+        "Try './bin/memo --help' for more information.\n")
 
   xfail(['network', 'foo'],
-        "./bin/infinit: command line error: unknown mode for object network: foo\n"
-        "Try './bin/infinit network --help' for more information.\n")
+        "./bin/memo: command line error: unknown mode for object network: foo\n"
+        "Try './bin/memo network --help' for more information.\n")
 
   xfail(['network', '--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit network --help' for more information.\n")
-
-  xfail(['network', 'list', '--foo'],
-        "./bin/infinit: command line error: unknown option: --foo\n"
-        "Try './bin/infinit network list --help' for more information.\n")
-
-  xfail(['volume', 'create', 'name', '--network'],
-        "./bin/infinit: command line error: option requires an argument: --network\n"
-        "Try './bin/infinit volume create --help' for more information.\n")
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo network --help' for more information.\n")
 
   # Regression: invalid trailing option, which used to be ignored.
-  xfail(['volume', 'run',
-         '--mountpoint', 'mountpoint',
-         '--cache',
-         '--name', 'name',
-         '--foobar'],
-        "./bin/infinit: command line error: unknown option: --foobar\n"
-        "Try './bin/infinit volume run --help' for more information.\n")
+  xfail(['network', 'list', '--foo'],
+        "./bin/memo: command line error: unknown option: --foo\n"
+        "Try './bin/memo network list --help' for more information.\n")
 
-  # Regression: don't repeat volume here: `infinit-volume volume --help`.
-  xfail(['wrong'],
-        "[33;01;33m[cli] [main] infinit-volume is deprecated, please run: infinit volume wrong\n"
-        "[0m./bin/infinit-volume: command line error: unknown mode for object volume: wrong\n"
-        "Try './bin/infinit volume --help' for more information.\n",
-        binary='infinit-volume')
-
-  # Regression: check that "the Hub" is properly displayed, and that
-  # we display `infinit passport` not `infinit-passport passport`.  It
-  # exercised code different from the above test case.
-  out = neutralize(bob.run(['infinit-passport', '--help'])[0])
-  assertEq(out,
-           "Usage: ./bin/infinit passport [MODE|--help]\n"
-           "Infinit passport management utility.\n"
-           "\n"
-           "Modes:\n"
-           "  create     Create a passport for a user to a network\n"
-           "  delete     Locally delete a passport\n"
-           "  export     Export a user's network passport\n"
-           "  fetch      Fetch a user's network passport from the Hub\n"
-           "  import     Import a passport for a user to a network\n"
-           "  list       List all local passports\n"
-           "  pull       Remove a user's network passport from the Hub\n"
-           "  push       Push a user's network passport to the Hub\n"
-           "\n"
-           "Options:\n"
-           "  -h, --help                show this help message\n")
-
-  bob.run(['infinit', 'user', 'create', 'bob'])
-  xfail(['volume', 'run',
-         '--fetch', '--fetch-endpoints=false', '--name', 'name', '--as', 'bob'],
-        "./bin/infinit: command line error: inconsistent options: --fetch=true and --fetch-endpoints=false\n"
-        "Try './bin/infinit volume run --help' for more information.\n")
+  xfail(['user', 'create','--name'],
+        "./bin/memo: command line error: option requires an argument: --name\n"
+        "Try './bin/memo user create --help' for more information.\n")

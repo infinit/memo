@@ -1,5 +1,0 @@
-# Create the immutable block.
-block = stub.MakeImmutableBlock(
-          doughnut.MakeImmutableBlockRequest(data = b'some data'))
-# Actually insert the block.
-stub.Insert(doughnut.InsertRequest(block=block))

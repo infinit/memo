@@ -2,12 +2,12 @@ package main
 
 import (
 	"C"
-	"doughnut"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	kv "kvs/service"
 	"net"
 	"server"
+	kv "kvs/service"
+	vs "memo/vs"
 )
 
 var grpcServer *grpc.Server
@@ -24,7 +24,7 @@ func RunServer(name string, vStoreEnpoint string, grpcEndpoint string, bootstrap
 		return
 	}
 	defer vConn.Close()
-	client := doughnut.NewDoughnutClient(vConn)
+	client := vs.NewValueStoreClient(vConn)
 
 	kvConn, err := net.Listen("tcp", grpcEndpoint)
 	if err != nil {

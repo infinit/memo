@@ -17,7 +17,7 @@ namespace infinit
     {
     public:
       using Self = KeyValueStore;
-      KeyValueStore(Infinit& infinit);
+      KeyValueStore(Memo& cli);
       using Modes
         = decltype(elle::meta::list(cli::create,
                                     cli::delete_,

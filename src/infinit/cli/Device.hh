@@ -16,7 +16,7 @@ namespace infinit
       : public Object<Device>
     {
     public:
-      Device(Infinit& infinit);
+      Device(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::receive,
                                     cli::transmit));

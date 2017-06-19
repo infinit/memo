@@ -7,10 +7,9 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
-doughnut_proto = None
-doughnut_json = None
+memo_vs_proto = None
+memo_vs_json = None
 gendn = None
-genfs = None
 
 class GRPCGen(drake.Builder):
 
@@ -170,7 +169,7 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global doughnut_proto, doughnut_json, grpc_lib, grpc, sources
+  global memo_vs_proto, doughnut_json, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -182,28 +181,23 @@ def configure(
       'GO_EXECUTABLE': go.go,
     })
   import json
-  doughnut_json = drake.Node('doughnut.json')
-  with open(str(doughnut_json.path())) as f:
-    with drake.templating.Context(content = {'proto': json.load(f)}):
-      drake.node('doughnut.proto.tmpl')
-  doughnut_proto = drake.node('doughnut.proto')
-  global gendn, gendfs
+  memo_vs_json = drake.Node('memo_vs.json')
+  with open(str(memo_vs_json.path())) as f:
+    with drake.templating.Context(content = {'proto': json.load(f)},
+                                  sources = [memo_vs_json]):
+      drake.node('memo_vs.proto.tmpl')
+  memo_vs_proto = drake.node('memo_vs.proto')
+  global gendn
   gendn = GRPCCxxGen(
-    doughnut_proto,
+    memo_vs_proto,
     protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
-  genfs = GRPCCxxGen(
-    drake.node('fs.proto'),
-    protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin))
-  srcs = genfs.targets() + gendn.targets() + drake.nodes(
-    'doughnut.cc',
+  sources = gendn.targets() + drake.nodes(
+    'memo_vs.cc',
     'grpc.cc',
-    'filesystem.cc',
     'serializer.cc',
     'serializer.hh'
   )
-  sources = srcs
   # make a convenience grpc lib with all libgrpc stuff
   protobuf_lib = drake.copy(
     grpc.protobuf_lib, '.', strip_prefix = True)
@@ -217,13 +211,13 @@ def configure(
 
   git = git or drake.git.Git()
 
-  grpcgen_py = GRPCPyGen(doughnut_proto,
+  grpcgen_py = GRPCPyGen(memo_vs_proto,
                          protoc = grpc.protoc,
                          plugin = drake.node(grpc.grpc_python_plugin))
 
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
-    'docker', 'infinit-client-python', git.description())
+    'docker', 'memo-vs-client-python', git.description())
   docker_file = drake.docker.DockerFile(
     docker_path / 'Dockerfile',
     image = 'alpine',
@@ -237,10 +231,10 @@ def configure(
                   '&& apk del build-deps ' \
                   '&& rm -rf /var/cache/apk/*')
   docker_file.env('PYTHONPATH', '/root')
-  docker_file.add(drake.copy([drake.node('doughnut.py')] + grpcgen_py.targets(),
+  docker_file.add(drake.copy([drake.node('memo_vs.py')] + grpcgen_py.targets(),
                              docker_path, strip_prefix = True), '/root/')
   docker_file.entry_point(
-    ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
+    ['/usr/bin/env', 'python3', '-i', '-m', 'memo_vs'])
   drake.docker.DockerBuilder(docker_image, docker_file)
 
 # Local Variables:

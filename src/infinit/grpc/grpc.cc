@@ -25,26 +25,27 @@ namespace infinit
     std::mutex _stop_mutex;
     std::condition_variable _stop_cond;
 
-    bool Task::proceed()
+    bool
+    Task::proceed() const
     {
-      return _proceed;
+      return this->_proceed;
     }
 
     Task::Task()
     {
       std::unique_lock<std::mutex> lock(_stop_mutex);
       if (!_serving)
-        _proceed = false;
+        this->_proceed = false;
       else
       {
-        _proceed = true;
+        this->_proceed = true;
         ++_tasks;
       }
     }
 
     Task::~Task()
     {
-      if (_proceed)
+      if (this->_proceed)
       {
         std::unique_lock<std::mutex> lock(_stop_mutex);
         if (!--_tasks)
@@ -52,22 +53,17 @@ namespace infinit
       }
     }
 
-    void serve_grpc(infinit::model::Model& dht,
-                    boost::optional<elle::reactor::filesystem::FileSystem&> fs,
-                    std::string const& ep,
-                    int* effective_port)
+    void
+    serve_grpc(infinit::model::Model& dht,
+               std::string const& ep,
+               int* effective_port)
     {
       _serving = true;
-      std::unique_ptr< ::grpc::Service> fs_service;
-      if (fs)
-        fs_service = filesystem_service(*fs);
       auto ds = doughnut_service(dht);
       ::grpc::ServerBuilder builder;
       builder.AddListeningPort(ep, ::grpc::InsecureServerCredentials(),
         effective_port);
       builder.RegisterService(ds.get());
-      if (fs_service)
-        builder.RegisterService(fs_service.get());
       auto server = builder.BuildAndStart();
        ELLE_TRACE("serving grpc on %s (effective %s)", ep,
          effective_port ? *effective_port : 0);

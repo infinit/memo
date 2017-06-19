@@ -16,7 +16,7 @@ namespace infinit
       : public Object<Passport>
     {
     public:
-      Passport(Infinit& infinit);
+      Passport(Memo& memo);
       using Modes
         = decltype(elle::meta::list(cli::create,
                                     cli::delete_,

@@ -57,8 +57,8 @@ namespace infinit
                    std::string const& resource = "network") const;
 
     using ThreadedOverlay
-      = std::pair<std::unique_ptr<model::doughnut::Doughnut>,
-                  elle::reactor::Thread::unique_ptr>;
+    = std::pair<std::unique_ptr<model::doughnut::Doughnut>,
+                elle::reactor::Thread::unique_ptr>;
     ThreadedOverlay
     run(User const& user,
         MountOptions const& mo,
@@ -74,9 +74,9 @@ namespace infinit
 
     /// @param interval in seconds.
     elle::reactor::Thread::unique_ptr
-    make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
-                            infinit::overlay::NodeLocations const& locs,
-                            int interval);
+    make_poll_hub_thread(infinit::model::doughnut::Doughnut& model,
+                         infinit::overlay::NodeLocations const& locs,
+                         int interval);
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
@@ -105,8 +105,8 @@ namespace infinit
     monitoring_socket_path(User const& user) const;
 
     void
-    beyond_fetch_endpoints(infinit::model::NodeLocations& hosts,
-                           Reporter report = {});
+    hub_fetch_endpoints(infinit::model::NodeLocations& hosts,
+                        Reporter report = {});
 
     void
     print(std::ostream& out) const override;

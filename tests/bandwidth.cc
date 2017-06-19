@@ -21,7 +21,7 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.bandwidth-test");
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  elle::os::setenv("INFINIT_HOME", path.string());
+  elle::os::setenv("MEMO_HOME", path.string());
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });

@@ -11,8 +11,8 @@ namespace infinit
 
   namespace cli
   {
-    Passport::Passport(Infinit& infinit)
-      : Object(infinit)
+    Passport::Passport(Memo& memo)
+      : Object(memo)
       , create(*this,
                "Create a passport for a user to a network",
                elle::das::cli::Options(),
@@ -104,7 +104,7 @@ namespace infinit
       else
         ifnt.passport_save(passport);
       if (push || push_passport)
-        ifnt.beyond_push(
+        ifnt.hub_push(
           elle::sprintf("networks/%s/passports/%s", network.name, user.name),
           "passport",
           elle::sprintf("%s: %s", network.name, user.name),
@@ -127,7 +127,7 @@ namespace infinit
       auto owner = cli.as_user();
       auto network_name = ifnt.qualified_name(network_name_, owner);
       if (pull)
-        ifnt.beyond_delete(
+        ifnt.hub_delete(
           elle::sprintf("networks/%s/passports/%s", network_name, user_name),
           "passport for",
           user_name,
@@ -163,7 +163,7 @@ namespace infinit
     namespace
     {
       boost::optional<std::string>
-      qualified_name(infinit::cli::Infinit& cli,
+      qualified_name(infinit::cli::Memo& cli,
                      boost::optional<std::string> const& name,
                      boost::optional<infinit::User const&> owner = {})
       {
@@ -194,7 +194,7 @@ namespace infinit
       network_name = qualified_name(cli, network_name, owner);
       if (network_name && user_name)
       {
-        auto passport = ifnt.beyond_fetch<infinit::Infinit::Passport>(
+        auto passport = ifnt.hub_fetch<infinit::Infinit::Passport>(
           elle::sprintf("networks/%s/passports/%s",
                         network_name.get(), user_name.get()),
           "passport for",
@@ -208,7 +208,7 @@ namespace infinit
         auto owner_name = ifnt.owner_name(*network_name);
         if (owner_name == owner.name)
         {
-          auto res = ifnt.beyond_fetch_json(
+          auto res = ifnt.hub_fetch_json(
             elle::sprintf("networks/%s/passports", network_name.get()),
             "passports for",
             network_name.get(),
@@ -223,7 +223,7 @@ namespace infinit
         }
         else
         {
-          auto passport = ifnt.beyond_fetch<infinit::Infinit::Passport>(elle::sprintf(
+          auto passport = ifnt.hub_fetch<infinit::Infinit::Passport>(elle::sprintf(
             "networks/%s/passports/%s", network_name.get(), owner.name),
             "passport for",
             network_name.get(),
@@ -240,7 +240,7 @@ namespace infinit
       {
         using Passports
           = std::unordered_map<std::string, std::vector<infinit::Infinit::Passport>>;
-        auto res = ifnt.beyond_fetch<Passports>(
+        auto res = ifnt.hub_fetch<Passports>(
             elle::sprintf("users/%s/passports", owner.name),
             "passports for user",
             owner.name,
@@ -313,7 +313,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto network_name = ifnt.qualified_name(network_name_, owner);
-      ifnt.beyond_delete(
+      ifnt.hub_delete(
           elle::sprintf("networks/%s/passports/%s", network_name, user_name),
           "passport for",
           user_name,
@@ -333,7 +333,7 @@ namespace infinit
       auto owner = cli.as_user();
       auto network_name = ifnt.qualified_name(network_name_, owner);
       auto passport = ifnt.passport_get(network_name, user_name);
-      ifnt.beyond_push(
+      ifnt.hub_push(
           elle::sprintf("networks/%s/passports/%s", network_name, user_name),
           "passport",
           elle::sprintf("%s: %s", network_name, user_name),

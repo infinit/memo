@@ -1,2 +1,0 @@
-# Fetch a block at the address given by `address`.
-block = stub.Fetch(doughnut.FetchRequest(address = address)).block

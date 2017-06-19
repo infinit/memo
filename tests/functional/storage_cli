@@ -52,13 +52,13 @@ def test(infinit, size, description = False):
     test.name += 1
     hsize = "%s%s" % (size, qual)
     args = [
-      'infinit', 'silo', 'create', 'filesystem', str(test.name),
+      'silo', 'create', 'filesystem', str(test.name),
       '--capacity', hsize,
     ]
     if description:
       args += ['--description', 'some storage']
     infinit.run(args)
-    with open('%s/.local/share/infinit/filesystem/silos/%s' %
+    with open('%s/.local/share/infinit/memo/silos/%s' %
               (infinit.dir, str(test.name)), 'r') as conf:
       j = json.loads(''.join(conf.readlines()))
       assertEq(j['capacity'], unformat(hsize))
@@ -81,23 +81,23 @@ with Infinit() as bob:
 with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
   bob = User(infinit = tmp, name = 'bob')
   alice = User(infinit = tmp, name = 'alice')
-  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
   alice.run(
-    ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
-  bob.run(['infinit', 'silo', 'create', 'filesystem', '--as', 'bob', 's'])
-  assertEq(len(bob.run_json(['infinit', 'silo', 'list', '-s'])), 1)
-  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
+    ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])
+  bob.run(['silo', 'create', 'filesystem', '--as', 'bob', 's'])
+  assertEq(len(bob.run_json(['silo', 'list', '-s'])), 1)
+  bob.run(['network', 'create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assert os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
-  bob.run(['infinit-passport', '--create', '--as', 'bob',
+  assertEq(len(bob.run_json(['network', 'list', '-s', '--as', 'bob'])), 1)
+  bob.run(['passport', 'create', '--as', 'bob',
            '-u', 'alice', '-N', 'n'])
-  alice.run(['infinit-network', '--link', '--as', 'alice', 'bob/n', '-S', 's'])
+  alice.run(['network', 'link', '--as', 'alice', 'bob/n', '-S', 's'])
   assert os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
-  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
+  bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'])
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % tmp.state_path)), 2)
-  bob.run(['infinit', 'silo', 'delete', 's', '--as', 'bob', '--purge'])
-  assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
+  bob.run(['silo', 'delete', 's', '--as', 'bob', '--purge'])
+  assertEq(len(bob.run_json(['silo', 'list', '-s', '--as', 'bob'])), 0)
   # Ensure the descriptor is still there.
   assertEq(len(os.listdir(tmp.networks_path)), 1)
   # Ensure linked network has been removed.

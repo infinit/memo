@@ -1,1 +1,0 @@
-infinit${exe} doctor all

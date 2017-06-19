@@ -4,101 +4,44 @@ from utils import *
 
 with TemporaryDirectory() as tmp, \
     Infinit() as infinit_1, Infinit() as infinit_2:
-  infinit_1.run(['infinit-user', '--create',  'user'])
+  infinit_1.run(['user', 'create',  'user'])
   infinit_1.run([
-    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
-    'infinit-network', '--create', 'network',
-    '--storage', 'storage',
+    'network', 'create', 'network',
+    '--silo', 'storage',
     '--kelips', '--k', '1',
     '--as', 'user',
   ])
   network = infinit_1.run_json([
-    'infinit-network', '--export', 'network',
-    '--as', 'user',
-  ])
-  infinit_1.run([
-    'infinit-volume', '--create', 'volume',
-    '--network', 'network',
-    '--as', 'user',
-  ])
-  volume = infinit_1.run_json([
-    'infinit-volume', '--export', 'volume',
+    'network', 'export', 'network',
     '--as', 'user',
   ])
   # Device 2
-  infinit_2.run(['infinit-user', '--create', 'user2'])
+  infinit_2.run(['user', 'create', 'user2'])
   infinit_2.run([
-    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  infinit_2.run(['infinit-network', '--import'], input = network)
-  infinit_2.run(['infinit-volume', '--import'], input = volume)
+  infinit_2.run(['network', 'import'], input = network)
   user2 = infinit_2.run_json  ([
-    'infinit-user', '--export',  'user2'
+    'user', 'export',  'user2'
   ])
-  infinit_1.run(['infinit-user', '--import'], input = user2)
-  passport = infinit_1.run_json(['infinit-passport', '--create',
+  infinit_1.run(['user', 'import'], input = user2)
+  passport = infinit_1.run_json(['passport', 'create',
       '--user', 'user2', '--network', 'network', '--as', 'user',
       '--deny-write', '--deny-storage',
       '--output', '-'
   ])
-  infinit_2.run(['infinit-passport', '--import'], input = passport)
+  infinit_2.run(['passport', 'import'], input = passport)
   try:
-    infinit_2.run(['infinit-network', '--link', 'user/network',
-        '--storage', 'storage', '--as', 'user2'])
+    infinit_2.run(['network', 'link', 'user/network',
+        '--silo', 'storage', '--as', 'user2'])
   except:
     pass
   else:
     raise Exception('link with storage should have failed')
-  infinit_2.run(['infinit-network', '--link', 'user/network',
+  infinit_2.run(['network', 'link', 'user/network',
         '--as', 'user2'])
-  response = infinit_1.run_script(
-    user = 'user', operation = 'mkdir', path = '/beacon')
-  assertEq(response['success'], True)
-
-  u2_key = infinit_1.run_json(
-    ['infinit-user', '--export', '--name', 'user2']
-  )['public_key']
-  u2_key = json.dumps(u2_key)
-  response = infinit_1.run_script(
-    user = 'user', operation = 'setxattr',
-    name = 'user.infinit.auth.setrw',
-    path = '/',
-    value = u2_key)
-  assertEq(response['success'], True)
-  peerfile = '%s/peerfile' % tmp
-  def peer():
-    while not os.path.exists(peerfile):
-      time.sleep(0.1)
-    return peerfile
-  try:
-    volume_process = infinit_1.spawn([
-      'infinit-volume', '--run', '--as', 'user', 'volume',
-      '--endpoints-file', peerfile])
-    response = infinit_2.run_script(
-      user = 'user2', volume = 'user/volume',
-      peer = peer(),
-      operation = 'list_directory',
-      path = '/')
-    assertEq(response['success'], True)
-    assertEq(sorted(response['entries']), ['.', '..', 'beacon'])
-    response = infinit_2.run_script(
-      user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
-      peer = peer())
-    assertEq(response['success'], False)
-    assertEq(response['message'], 'Access denied')
-  finally:
-    if volume_process is not None:
-      volume_process.terminate()
-      out, err = volume_process.communicate(timeout = 30)
-    if os.environ.get('OS') != 'windows':
-      try:
-        # SIGTERM is not caught on windows. Might be wine related.
-        assertEq(volume_process.wait(), 0)
-      except:
-        print('infinit-volume STDOUT: %s' % out)
-        print('infinit-volume STDERR: %s' % err)
-        raise

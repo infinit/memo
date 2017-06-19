@@ -49,8 +49,8 @@ namespace infinit
       const std::string GoogleDrivePrint::pretty{"Google Drive"};
     }
 
-    Credentials::Credentials(Infinit& infinit)
-      : Object(infinit)
+    Credentials::Credentials(Memo& memo)
+      : Object(memo)
       , add(*this,
             "Add credentials for a third-party service",
             name,
@@ -203,7 +203,7 @@ namespace infinit
     {
       template <typename Service>
       void
-      pull_(infinit::cli::Infinit& cli,
+      pull_(infinit::cli::Memo& cli,
             Service service,
             boost::optional<std::string> const& name,
             bool allow_missing);
@@ -272,7 +272,7 @@ namespace infinit
         // FIXME: Workaround for using std::unique_ptr.
         // Remove when serialization does not require copy.
         auto res =
-          infinit.beyond_fetch_json
+          infinit.hub_fetch_json
           (where,
            elle::sprintf("\"%s\" credentials", ServicePrint<Service>::pretty),
            user.name, user);
@@ -354,7 +354,7 @@ namespace infinit
       /// \param allow_missing Do not xxx.
       template <typename Service>
       void
-      pull_(infinit::cli::Infinit& cli,
+      pull_(infinit::cli::Memo& cli,
             Service service,
             boost::optional<std::string> const& account,
             bool allow_missing)
@@ -364,7 +364,7 @@ namespace infinit
                                    ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
-        cli.infinit().beyond_delete(
+        cli.infinit().hub_delete(
           where,
           elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
           ServicePrint<Service>::name, owner, allow_missing);

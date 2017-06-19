@@ -7,7 +7,7 @@ variables:
   DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
 #  DRAKE_RAW: "1"     # debuging cmake issues
   LC_ALL: "C.UTF-8"
-  PROJECT: "Filesystem"
+  PROJECT: "memo"
   PYTHONUNBUFFERED: "1"
 
 # To update the repository, we go through several steps.
@@ -25,6 +25,7 @@ variables:
 #          cryptography/README.md
 #
 #   But --force is not supported on old versions of git.
+
 before_script:
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
@@ -46,15 +47,15 @@ x86_64-centos6-gcc4:
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
     - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project $PROJECT --source-dir $SOURCE_DIR --build-dir $BUILD_DIR --install-dir $INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //build"
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
-    - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //build"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //check"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //install"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //redhat"
+    - scp memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
     - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit"; fi
-    - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
+    - rm memo-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 $SOURCE_DIR/note-bench-stats ./bench"
     - git -C "$SOURCE_DIR" push --force git@git.infinit.io:${CI_PROJECT_NAME} refs/notes/bench
@@ -62,8 +63,6 @@ x86_64-centos6-gcc4:
     - x86_64
     - centos6
     - gcc4
-  except:
-    - /^.*feature.website.*$/
 
 x86_64-ubuntu-gcc4:
   stage: build
@@ -78,26 +77,23 @@ x86_64-ubuntu-gcc4:
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - time python3 drake --website=false -j $(nproc) //build //beyond/build
-    - time python3 drake --website=false -j $(($(nproc) / 4)) //check //beyond/check
-    - time python3 drake --website=false -j $(nproc) //install //beyond/install
+    - time python3 drake -j $(nproc) //build //beyond/build
+    - time python3 drake -j $(($(nproc) / 4)) //check //beyond/check
+    - time python3 drake -j $(nproc) //install //beyond/install
     - time python3 drake -j $(nproc) //beyond/debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - scp "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
     - time python3 drake --website=false //docker
-    - docker tag infinit:${DESC} infinit/infinit:${DESC}
-    - time docker push infinit/infinit:${DESC}
-    - docker rmi {,infinit/}infinit:${DESC}
+    - docker tag memo:${DESC} infinit/memo:${DESC}
+    - time docker push infinit/memo:${DESC}
+    - docker rmi {,infinit/}memo:${DESC}
     - time python3 drake --website=false //beyond/docker
-    - if [ -n "$SIBYLFS" ]; then time python3 drake --website=false //sibylfs; fi
   tags:
     - x86_64
     - ubuntu
     - gcc4
-  except:
-    - /^.*feature.website.*$/
 
 x86_64-alpine-gcc:
   stage: build
@@ -112,28 +108,22 @@ x86_64-alpine-gcc:
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - time python3 drake --website=false --beyond=false -j $(nproc) //build
-    - time python3 drake --website=false --beyond=false -j $(nproc) //check
+    - time python3 drake --beyond=false -j $(nproc) //build
+    - time python3 drake --beyond=false -j $(nproc) //check
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
-    - time python3 drake --website=false --beyond=false -j $(nproc) //install
-    - TARBALL=/tmp/infinit-x86_64-alpine-gcc-$DESC.tbz
-    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - time python3 drake --beyond=false -j $(nproc) //install
+    - TARBALL=/tmp/memo-x86_64-alpine-gcc-$DESC.tbz
+    - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - rm "$TARBALL"
-    - python3 drake --website=false //docker-alpine
-    - docker tag infinit-alpine:$DESC infinit/infinit-alpine:$DESC
-    - docker push infinit/infinit-alpine:$DESC
-    - docker rmi {,infinit/}infinit-alpine:$DESC
     - python3 drake --website=false //src/infinit/grpc/docker
-    - docker tag infinit-client-python:$DESC infinit/infinit-client-python:$DESC
-    - docker push infinit/infinit-client-python:$DESC
-    - docker rmi {,infinit/}infinit-client-python:$DESC
+    - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
+    - docker push infinit/memo-vs-client-python:$DESC
+    - docker rmi {,infinit/}memo-vs-client-python:$DESC
   tags:
     - x86_64
     - alpine
     - gcc
-  except:
-    - /^.*feature.website.*$/
 
 x86_64-jessie-gcc4:
   stage: build
@@ -149,21 +139,19 @@ x86_64-jessie-gcc4:
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - time python3 drake --website=false --beyond=false -j $(nproc) //build
-    - time python3 drake --website=false --beyond=false -j $(nproc) //check
-    - time python3 drake --website=false --beyond=false -j $(nproc) //install
-    - time python3 drake --website=false --beyond=false -j $(nproc) //debian
+    - time python3 drake --beyond=false -j $(nproc) //build
+    - time python3 drake --beyond=false -j $(nproc) //check
+    - time python3 drake --beyond=false -j $(nproc) //install
+    - time python3 drake --beyond=false -j $(nproc) //debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - time if $IS_RELEASE; then python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit; fi
-    - time scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
-    - rm "infinit_${DESC}_amd64.deb"
+    - time scp "memo_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
+    - rm "memo_${DESC}_amd64.deb"
     - time ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
     - jessie
     - gcc4
-  except:
-    - /^.*feature.website.*$/
 
 x86_64-windows-mingw4:
   stage: build
@@ -178,23 +166,21 @@ x86_64-windows-mingw4:
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - python3 drake --website=false -j $(nproc) //build
-    - WINEDEBUG=-all python3 drake --website=false -j $(($(nproc) / 4)) //check
+    - python3 drake -j $(nproc) //build
+    - WINEDEBUG=-all python3 drake -j $(($(nproc) / 4)) //check
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.zip' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
     - cd "$SOURCE_DIR"
-    - mv "$INSTALL_DIR" "infinit-${DESC}"
-    - zip -r "infinit-${DESC}.zip" "infinit-${DESC}"
-    - mv "infinit-${DESC}" "$INSTALL_DIR"
-    - scp "infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
-    - rm "infinit-${DESC}.zip"
+    - mv "$INSTALL_DIR" "memo-${DESC}"
+    - zip -r "memo-${DESC}.zip" "memo-${DESC}"
+    - mv "memo-${DESC}" "$INSTALL_DIR"
+    - scp "memo-${DESC}.zip" buildslave@packages.infinit.sh:tmp
+    - rm "memo-${DESC}.zip"
   tags:
     - x86_64
     - windows
     - mingw4
-  except:
-    - /^.*feature.website.*$/
 
 x86_64-osx-clang:
   stage: build
@@ -214,8 +200,8 @@ x86_64-osx-clang:
     - python3 drake -j 4 //beyond/check
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j 4 //install
-    - TARBALL=/tmp/infinit-x86_64-osx-clang3-$DESC.tbz
-    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - TARBALL=/tmp/memo-x86_64-osx-clang3-$DESC.tbz
+    - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,memo-$DESC/,"
     - scp "$TARBALL" buildslave@packages.infinit.sh:tmp
     - ssh debian@debian.infinit.io 'make brew'
     - rm "$TARBALL"
@@ -224,31 +210,3 @@ x86_64-osx-clang:
     - x86_64
     - osx
     - clang
-  except:
-    - /^.*feature.website.*$/
-
-website:
-  stage: build
-  script:
-    - pip3 install -r drake/requirements.txt
-    - pip3 install -r requirements.txt
-    - SOURCE_DIR=${CI_PROJECT_DIR}
-    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
-    - INSTALL_DIR=$SOURCE_DIR/_install
-    - DESC=$(git describe)
-    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
-    - cd "$BUILD_DIR"
-    - python3 drake -j $(nproc) //website/build
-    - python3 drake -j $(nproc) //website/check
-    - python3 drake -j $(nproc) //website/install
-    - python3 drake -j $(nproc) //website/debian
-    - PACKAGE="website/infinit-sh_${DESC}_amd64.deb"
-    - scp $PACKAGE buildslave@packages.infinit.sh:debian
-    - rm $PACKAGE
-    - ssh buildslave@packages.infinit.sh 'make debian'
-  tags:
-    - x86_64
-    - ubuntu
-    - gcc4
-  only:
-    - /^.*feature.website.*$/

@@ -1,8 +1,4 @@
 [OK] User
 [OK] Silos
 [OK] Networks
-[ERROR] Volumes:
-  [ERROR] bob/aws_volume is faulty because network "bob/aws_network" is faulty
-[ERROR] Drives:
-  [ERROR] bob/aws_drive is faulty because volume "bob/aws_volume" is faulty
 [OK] Leftovers

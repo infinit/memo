@@ -16,14 +16,13 @@ namespace infinit
   {
     void
     serve_grpc(infinit::model::Model& dht,
-               boost::optional<elle::reactor::filesystem::FileSystem&> fs,
                std::string const& ep,
                int* effective_port = nullptr);
     std::unique_ptr<::grpc::Service>
-    filesystem_service(elle::reactor::filesystem::FileSystem& fs);
-    std::unique_ptr<::grpc::Service>
     doughnut_service(infinit::model::Model& dht);
-    /** GRPC tasks (invoked by grpc callbacks) should acquire a Task
+
+    /**
+     *  GRPC tasks (invoked by grpc callbacks) should acquire a Task
      * from the callback thread, and abort if proceed() returns false
     */
     class Task
@@ -31,7 +30,9 @@ namespace infinit
     public:
       Task();
       ~Task();
-      bool proceed();
+    public:
+      bool
+      proceed() const;
     private:
       bool _proceed;
     };

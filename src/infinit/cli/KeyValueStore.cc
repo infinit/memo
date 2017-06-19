@@ -16,8 +16,8 @@ namespace infinit
 {
   namespace cli
   {
-    KeyValueStore::KeyValueStore(Infinit& infinit)
-      : Object(infinit)
+    KeyValueStore::KeyValueStore(Memo& cli)
+      : Object(cli)
       , create(*this,
                "Create a key-value store",
                cli::name,
@@ -108,7 +108,7 @@ namespace infinit
         ifnt.key_value_store_save(kvs);
       }
       if (push || push_key_value_store)
-        ifnt.beyond_push("kvs", name, kvs, owner);
+        ifnt.hub_push("kvs", name, kvs, owner);
     }
 
     /*---------------.
@@ -129,7 +129,7 @@ namespace infinit
       if (purge)
       { /* Do nothing */ }
       if (pull)
-        ifnt.beyond_delete("kvs", name, owner, true, purge);
+        ifnt.hub_delete("kvs", name, owner, true, purge);
       ifnt.key_value_store_delete(kvs);
     }
 
@@ -173,14 +173,14 @@ namespace infinit
       {
         auto name = ifnt.qualified_name(*unqualified_name, owner);
         auto desc =
-          ifnt.beyond_fetch<infinit::KeyValueStore>("kvs", name);
+          ifnt.hub_fetch<infinit::KeyValueStore>("kvs", name);
         ifnt.key_value_store_save(std::move(desc));
       }
       else if (network_name)
       {
         // Fetch all key-value stores for network.
         auto net_name = ifnt.qualified_name(*network_name, owner);
-        auto res = ifnt.beyond_fetch<KeyValueStoresMap>(
+        auto res = ifnt.hub_fetch<KeyValueStoresMap>(
             elle::sprintf("networks/%s/kvs", net_name),
             "kvs for network",
             net_name);
@@ -190,7 +190,7 @@ namespace infinit
       else
       {
         // Fetch all key-value stores for owner.
-        auto res = ifnt.beyond_fetch<KeyValueStoresMap>(
+        auto res = ifnt.hub_fetch<KeyValueStoresMap>(
             elle::sprintf("users/%s/kvs", owner.name),
             "kvs for user",
             owner.name,
@@ -268,7 +268,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto const name = ifnt.qualified_name(unqualified_name, owner);
-      ifnt.beyond_delete("kvs", name, owner, false, purge);
+      ifnt.hub_delete("kvs", name, owner, false, purge);
     }
 
 
@@ -286,7 +286,7 @@ namespace infinit
       auto const name = ifnt.qualified_name(unqualified_name, owner);
       auto kvs = ifnt.key_value_store_get(name);
       auto network = ifnt.network_get(kvs.network, owner);
-      ifnt.beyond_push("kvs", name, kvs, owner);
+      ifnt.hub_push("kvs", name, kvs, owner);
 
     }
 
@@ -369,7 +369,7 @@ namespace infinit
       dht_grpc_thread.reset(new elle::reactor::Thread("DHT gRPC",
         [dht = dht.get(), &dht_grpc_port] {
           infinit::grpc::serve_grpc(
-            *dht, boost::none, "127.0.0.1:0", &dht_grpc_port);
+            *dht, "127.0.0.1:0", &dht_grpc_port);
       }));
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)
@@ -402,12 +402,12 @@ namespace infinit
           if (fetch || publish)
           {
             infinit::model::NodeLocations eps;
-            network.beyond_fetch_endpoints(eps);
+            network.hub_fetch_endpoints(eps);
             dht->overlay()->discover(eps);
             if (fetch_endpoints_interval && *fetch_endpoints_interval > 0)
               poll_thread =
-                network.make_poll_beyond_thread(*dht, eps,
-                                                *fetch_endpoints_interval);
+                network.make_poll_hub_thread(*dht, eps,
+                                             *fetch_endpoints_interval);
           }
         };
       if (push_p)

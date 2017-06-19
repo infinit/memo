@@ -458,119 +458,6 @@ namespace
       std::string username;
     };
 
-    struct VolumeResult
-      : public Result
-    {
-      /*------.
-      | Types |
-      `------*/
-      using Super = Result;
-      using FaultyNetwork = boost::optional<NetworkResult>;
-
-      /*-------------.
-      | Construction |
-      `-------------*/
-      VolumeResult() = default;
-      VolumeResult(std::string const& name,
-                   bool sane,
-                   FaultyNetwork faulty_network = {},
-                   Result::Reason extra_reason = {})
-        : Super(name, sane, extra_reason,
-                faulty_network && faulty_network->warning())
-        , faulty_network(faulty_network)
-      {}
-
-      /*---------.
-      | Printing |
-      `---------*/
-      void
-      _print(Output& out) const override
-      {
-        if ((!this->sane() || this->warning()) && this->faulty_network)
-        {
-          out << " ";
-          if (this->sane())
-            out << "(";
-          out << "network \"" << this->faulty_network->name() << "\" is ";
-          if (!this->faulty_network->linked)
-            out << "not linked";
-          else
-            out << "faulty";
-          if (this->sane())
-            out << ")";
-        }
-      }
-
-      /*--------------.
-      | Serialization |
-      `--------------*/
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        Super::serialize(s);
-        s.serialize("network", this->faulty_network);
-      }
-
-      /*-----------.
-      | Attributes |
-      `-----------*/
-      FaultyNetwork faulty_network;
-    };
-
-    struct DriveResult
-      : public Result
-    {
-      /*------.
-      | Types |
-      `------*/
-      using Super = Result;
-      using FaultyVolume = boost::optional<VolumeResult>;
-
-      /*-------------.
-      | Construction |
-      `-------------*/
-      DriveResult() = default;
-      DriveResult(std::string const& name,
-                  bool sane,
-                  FaultyVolume faulty_volume = {},
-                  Result::Reason extra_reason = {})
-        : Super(name, sane, extra_reason)
-        , faulty_volume(faulty_volume)
-      {}
-
-      /*---------.
-      | Printing |
-      `---------*/
-      void
-      _print(Output& out) const override
-      {
-        if (!this->sane() && this->faulty_volume)
-        {
-          out << " volume \"" << this->faulty_volume->name() << "\" is ";
-          if (this->faulty_volume->reason)
-            out << this->faulty_volume->reason;
-          else
-            out << "faulty";
-        }
-      }
-
-      /*--------------.
-      | Serialization |
-      `--------------*/
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        Super::serialize(s);
-        s.serialize("volume", this->faulty_volume);
-      }
-
-
-      /*-----------.
-      | Attributes |
-      `-----------*/
-      FaultyVolume faulty_volume;
-    };
-
     struct LeftoversResult
       :  public Result
     {
@@ -609,8 +496,7 @@ namespace
       return this->user.sane()
         && sane_(this->silos)
         && sane_(this->networks)
-        && sane_(this->volumes)
-        && sane_(this->drives);
+        ;
       // Leftovers is always sane.
     }
 
@@ -620,9 +506,8 @@ namespace
       return this->user.warning()
         || warning_(this->silos)
         || warning_(this->networks)
-        || warning_(this->volumes)
-        || warning_(this->drives)
-        || warning_(this->leftovers);
+        || warning_(this->leftovers)
+      ;
     }
 
     /*---------.
@@ -636,8 +521,6 @@ namespace
       this->user.print(out);
       print_(out, "Silos", silos);
       print_(out, "Networks", networks);
-      print_(out, "Volumes", volumes);
-      print_(out, "Drives", drives);
       print_(out, "Leftovers", leftovers);
       out << std::endl;
     }
@@ -650,8 +533,6 @@ namespace
     {
       s.serialize("silos", this->silos);
       s.serialize("networks", this->networks);
-      s.serialize("volumes", this->volumes);
-      s.serialize("drives", this->drives);
       s.serialize("leftovers", this->leftovers);
       if (s.out())
       {
@@ -667,8 +548,6 @@ namespace
     UserResult user;
     std::vector<SilosResult> silos;
     std::vector<NetworkResult> networks;
-    std::vector<VolumeResult> volumes;
-    std::vector<DriveResult> drives;
     std::vector<LeftoversResult> leftovers;
   };
 
@@ -1677,7 +1556,7 @@ namespace
   {
     using boost::algorithm::starts_with;
     return elle::os::environ([](auto const& k, auto const& v) {
-        return ((starts_with(k, "INFINIT_") || starts_with(k, "ELLE_"))
+        return ((starts_with(k, "MEMO_") || starts_with(k, "ELLE_"))
                 && v != "reactor.network.UTPSocket:NONE");
       });
   }
@@ -1691,7 +1570,7 @@ namespace
 
 
   void
-  _connectivity(infinit::cli::Infinit& cli,
+  _connectivity(infinit::cli::Memo& cli,
                 boost::optional<std::string> const& server,
                 boost::optional<uint16_t> upnp_tcp_port,
                 boost::optional<uint16_t> upnp_utp_port,
@@ -1979,7 +1858,7 @@ namespace
   }
 
   void
-  _system_sanity(infinit::cli::Infinit& cli,
+  _system_sanity(infinit::cli::Memo& cli,
                  SystemSanityResults& result)
   {
     result.fuse = {fuse(false)};
@@ -2075,7 +1954,7 @@ namespace
   }
 
   void
-  _configuration_integrity(infinit::cli::Infinit& cli,
+  _configuration_integrity(infinit::cli::Memo& cli,
                            bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
@@ -2086,8 +1965,6 @@ namespace
     auto aws_credentials = ifnt.credentials_aws();
     auto gcs_credentials = ifnt.credentials_gcs();
     auto silos = parse(ifnt.silos_get());
-    auto drives = parse(ifnt.drives_get());
-    auto volumes = parse(ifnt.volumes_get());
 
     auto owner = [&]() -> boost::optional<infinit::User>
     {
@@ -2128,7 +2005,7 @@ namespace
         // for the other items.
         auto& status = elem.second.second;
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
         if (auto s3config = dynamic_cast<S3SiloConfig const*>(
               silo.get()))
         {
@@ -2152,7 +2029,7 @@ namespace
           store(results.silos, silo->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
-        INFINIT_ENTREPRISE(
+        MEMO_ENTREPRISE(
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(silo.get()))
         {
           status = any_of(gcs_credentials,
@@ -2211,63 +2088,6 @@ namespace
                 faulty, boost::none, linked);
       }
 
-    ELLE_TRACE("verify volumes")
-      for (auto& elems: volumes)
-      {
-        auto const& volume = elems.second.first;
-        auto& status = elems.second.second;
-        auto const network = networks.find(volume.network);
-        auto const network_presents = network != networks.end();
-        status = network_presents && network->second.second;
-        auto network_result = boost::find_if(results.networks,
-                                             [volume] (auto const& n)
-                                             {
-                                               return volume.network == n.name();
-                                             });
-        if (network_result != results.networks.end())
-          status &= !network_result->warning();
-        if (status)
-          store(results.volumes, volume.name, status);
-        else
-          store(results.volumes, volume.name, status,
-                (network_result != results.networks.end())
-                ? *network_result
-                : ConfigurationIntegrityResults::NetworkResult(
-                  volume.network, false, ignore_non_linked,
-                  username, {}, std::string{"missing"}
-                )
-            );
-      }
-
-    ELLE_TRACE("verify drives")
-      for (auto& elems: drives)
-      {
-        auto const& drive = elems.second.first;
-        auto& status = elems.second.second;
-        auto const volume = volumes.find(drive.volume);
-        auto const volume_presents = volume != volumes.end();
-        auto const volume_ok = volume_presents && volume->second.second;
-        auto const network = networks.find(drive.network);
-        auto const network_presents = network != networks.end();
-        auto const network_ok = network_presents && network->second.second;
-        status = network_ok && volume_ok;
-        if (status)
-          store(results.drives, drive.name, status);
-        else
-        {
-          auto it = boost::find_if(results.volumes,
-                                   [drive] (auto const& v)
-                                   {
-                                     return drive.volume == v.name();
-                                   });
-          store(results.drives, drive.name, status,
-                (it != results.volumes.end())
-                ? *it
-                : ConfigurationIntegrityResults::VolumeResult(
-                  drive.volume, false, {}, std::string{"missing"})
-            );
-        }
-      }
     auto& leftovers = results.leftovers;
     auto is_parent_of = [](bfs::path const& dir, bfs::path const& file) -> bool
       {
@@ -2296,10 +2116,6 @@ namespace
             load<infinit::NetworkDescriptor>(ifnt, p.path(), "network_descriptor");
           else if (is_parent_of(ifnt._networks_path(), p.path()))
             load<infinit::Network>(ifnt, p.path(), "network");
-          else if (is_parent_of(ifnt._volumes_path(), p.path()))
-            load<infinit::Volume>(ifnt, p.path(), "volume");
-          else if (is_parent_of(ifnt._drives_path(), p.path()))
-            load<infinit::Drive>(ifnt, p.path(), "drive");
           else if (is_parent_of(ifnt._passports_path(), p.path()))
             load<infinit::Passport>(ifnt, p.path(), "passport");
           else if (is_parent_of(ifnt._users_path(), p.path()))
@@ -2326,9 +2142,7 @@ namespace
       {
         try
         {
-          if (!is_parent_of(ifnt._avatars_path(), p.path())
-              && !is_parent_of(ifnt._drive_icon_path(), p.path()))
-            store(leftovers, p.path().string());
+          store(leftovers, p.path().string());
         }
         catch (...)
         {
@@ -2349,26 +2163,6 @@ namespace
         {
           if (p.path() == infinit::xdg_state_home() / "critical.log")
           {}
-          else if (p.path().filename() == "root_block")
-          {
-            // The root block path is:
-            // <qualified_network_name>/<qualified_volume_name>/root_block
-            auto network_volume = p.path().parent_path().lexically_relative(
-              infinit::xdg_state_home());
-            auto name = network_volume.begin();
-            std::advance(name, 1); // <network_name>
-            auto network = *network_volume.begin() / *name;
-            std::advance(name, 1);
-            auto volume_owner = name;
-            std::advance(name, 1); // <volume_name>
-            auto volume = *volume_owner / *name;
-            if (volumes.find(volume.string()) == volumes.end())
-              store(leftovers, p.path().string(),
-                    Result::Reason{"volume is gone"});
-            if (networks.find(network.string()) == networks.end())
-              store(leftovers, p.path().string(),
-                    Result::Reason{"network is gone"});
-          }
           else
             store(leftovers, p.path().string());
         }
@@ -2382,7 +2176,7 @@ namespace
   }
 
   void
-  _report_error(infinit::cli::Infinit& cli,
+  _report_error(infinit::cli::Memo& cli,
                 Output& out, bool sane, bool warning = false)
   {
     if (!sane)
@@ -2403,7 +2197,7 @@ namespace
 
   template <typename Report>
   void
-  _output(infinit::cli::Infinit& cli,
+  _output(infinit::cli::Memo& cli,
           Output& out,
           Report const& results)
   {
