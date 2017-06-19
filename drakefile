@@ -57,7 +57,6 @@ def configure(
     fuse = None,
     codesign = False,
     beyond: bool = True,
-    website: bool = True,
     enable_crash_report: bool = True,
     cxx_toolkit_host = None,
     go_toolkit = None,

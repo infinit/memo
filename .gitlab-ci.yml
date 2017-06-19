@@ -58,8 +58,8 @@ x86_64-centos6-gcc4:
     - smv $PROJECT-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
-    - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit"; fi
-    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
+    - if $IS_RELEASE; then scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j $(nproc) //symbols-commit"; fi
+    - scl enable devtoolset-4 rh-python34 "python3 drake --beyond=false -j 1 //bench"
     - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 $SOURCE_DIR/note-bench-stats ./bench"
     - git -C "$SOURCE_DIR" push --force git@git.infinit.io:${CI_PROJECT_NAME} refs/notes/bench
   tags:
@@ -87,11 +87,11 @@ x86_64-ubuntu-gcc4:
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
     - smv "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - ssh buildslave@packages.infinit.sh 'make debian'
-    - time python3 drake --website=false //docker
+    - time python3 drake //docker
     - docker tag $PROJECT:${DESC} infinit/$PROJECT:${DESC}
     - time docker push infinit/$PROJECT:${DESC}
     - docker rmi {,infinit/}$PROJECT:${DESC}
-    - time python3 drake --website=false //beyond/docker
+    - time python3 drake //beyond/docker
   tags:
     - x86_64
     - ubuntu
@@ -117,11 +117,11 @@ x86_64-alpine-gcc:
     - TARBALL=/tmp/$PROJECT-x86_64-alpine-gcc-$DESC.tbz
     - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
-    - python3 drake --website=false //docker-alpine
+    - python3 drake //docker-alpine
     - docker tag $PROJECT-alpine:$DESC infinit/$PROJECT-alpine:$DESC
     - docker push infinit/$PROJECT-alpine:$DESC
     - docker rmi {,infinit/}$PROJECT-alpine:$DESC
-    - python3 drake --website=false //src/infinit/grpc/docker
+    - python3 drake //src/infinit/grpc/docker
     - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
     - docker push infinit/memo-vs-client-python:$DESC
     - docker rmi {,infinit/}memo-vs-client-python:$DESC
@@ -149,7 +149,7 @@ x86_64-jessie-gcc4:
     - time python3 drake --beyond=false -j $(nproc) //install
     - time python3 drake --beyond=false -j $(nproc) //debian
     - (cd "$SOURCE_DIR" && time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose)
-    - time if $IS_RELEASE; then python3 drake --website=false --beyond=false -j $(nproc) //symbols-commit; fi
+    - time if $IS_RELEASE; then python3 drake --beyond=false -j $(nproc) //symbols-commit; fi
     - smv "$PROJECT_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - time ssh buildslave@packages.infinit.sh 'make debian'
   tags:
