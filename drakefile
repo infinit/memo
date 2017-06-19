@@ -975,6 +975,7 @@ def configure(
     rule_tests << test
     env = {
       'BUILD_DIR': drake.path_build(),
+      'BOOST_TEST_COLOR_OUTPUT': '1',
       'BOOST_TEST_LOG_LEVEL': 'all',
       'SOURCE_DIR': drake.path_source(),
     }
