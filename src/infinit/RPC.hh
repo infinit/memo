@@ -212,8 +212,9 @@ namespace infinit
       }
       catch (elle::Error& e)
       {
-        ELLE_TRACE("%s: exception escaped: %s",
-                   *this, elle::exception_string());
+        ELLE_TRACE_SCOPE("{}: exception escaped: {}",
+                         *this, elle::exception_string());
+        ELLE_DUMP("{}", e.backtrace());
         output.serialize("success", false);
         output.serialize("exception", std::current_exception());
       }
