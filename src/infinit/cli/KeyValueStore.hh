@@ -145,6 +145,7 @@ namespace infinit
 
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::grpc)::Formal<std::string const&>,
                  decltype(cli::allow_root_creation = false),
                  decltype(cli::peer = Strings{}),
                  decltype(cli::async = false),
@@ -166,12 +167,12 @@ namespace infinit
                  decltype(cli::no_local_endpoints = false),
                  decltype(cli::no_public_endpoints = false),
                  decltype(cli::advertise_host = Strings{}),
-                 decltype(cli::grpc = boost::optional<std::string>()),
                  decltype(cli::grpc_port_file = boost::optional<std::string>())),
            decltype(modes::mode_run)>
       run;
       void
       mode_run(std::string const& name,
+               std::string const& grpc,
                bool allow_root_creation = false,
                Strings peer = {},
                bool async = false,
@@ -192,7 +193,6 @@ namespace infinit
                bool no_local_endpoints = false,
                bool no_public_endpoints = false,
                Strings advertise_host = {},
-               boost::optional<std::string> grpc = {},
                boost::optional<std::string> grpc_port_file = {});
     };
   }

@@ -53,6 +53,7 @@ namespace infinit
       , run(*this,
             "Run a key-value store",
             cli::name,
+            cli::grpc,
             cli::allow_root_creation = false,
             cli::peer = Strings{},
             cli::async = false,
@@ -73,7 +74,6 @@ namespace infinit
             cli::no_local_endpoints = false,
             cli::no_public_endpoints = false,
             cli::advertise_host = Strings{},
-            cli::grpc = boost::none,
             cli::grpc_port_file = boost::none)
     {}
 
@@ -231,8 +231,8 @@ namespace infinit
 
       if (cli.script())
       {
-        auto l = elle::json::make_array(ifnt.key_value_stores_get(),
-                                        [&](auto const& kvs) {
+        auto const l = elle::json::make_array(ifnt.key_value_stores_get(),
+                                              [&](auto const& kvs) {
           auto res = elle::json::Object
             {
               {"name", static_cast<std::string>(kvs.name)},
@@ -296,6 +296,7 @@ namespace infinit
 
     void
     KeyValueStore::mode_run(std::string const& unqualified_name,
+                            std::string const& grpc,
                             bool allow_root_creation,
                             Strings peer,
                             bool async,
@@ -316,7 +317,6 @@ namespace infinit
                             bool no_local_endpoints,
                             bool no_public_endpoints,
                             Strings advertise_host,
-                            boost::optional<std::string> grpc,
                             boost::optional<std::string> grpc_port_file)
     {
       ELLE_TRACE_SCOPE("run");
@@ -326,9 +326,6 @@ namespace infinit
       auto const name = ifnt.qualified_name(unqualified_name, owner);
       auto kvs = ifnt.key_value_store_get(name);
       auto network = ifnt.network_get(kvs.network, owner);
-
-      if (!grpc)
-        elle::err("please specify gRPC endpoint using --grpc");
 
       network.ensure_allowed(owner, "run", "kvs");
       cache |= (cache_ram_size || cache_ram_ttl
@@ -426,7 +423,6 @@ namespace infinit
 #endif
         };
         for (auto s: signals)
-        {
           elle::reactor::scheduler().signal_handle(
             s,
             []
@@ -434,11 +430,10 @@ namespace infinit
               ELLE_DEBUG("stopping kvs");
               StopServer();
             });
-        }
         elle::reactor::background([&] {
           cli.report_action("running", "kvs", name);
           RunServer(
-            go_str(name), go_str(dht_ep), go_str(*grpc), allow_root_creation,
+            go_str(name), go_str(dht_ep), go_str(grpc), allow_root_creation,
             &kv_grpc_port);
         });
       };
