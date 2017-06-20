@@ -777,14 +777,17 @@ namespace infinit
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
+      if (elle::os::getenv("INFINIT_CRASH", false))
+        *(volatile int*)nullptr = 0;
+
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
       if (cli.script())
       {
-        auto l = elle::json::make_array(ifnt.networks_get(owner),
-                                        [&] (auto const& network) {
+        auto const l = elle::json::make_array(ifnt.networks_get(owner),
+                                              [&] (auto const& network) {
           auto res = elle::json::Object
             {
               {"name", static_cast<std::string>(network.name)},
@@ -797,7 +800,6 @@ namespace infinit
         elle::json::write(std::cout, l);
       }
       else
-      {
         for (auto const& network: ifnt.networks_get(owner))
         {
           std::cout << network.name;
@@ -809,7 +811,6 @@ namespace infinit
             std::cout << ": not linked";
           std::cout << std::endl;
         }
-      }
     }
 
 
