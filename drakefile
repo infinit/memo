@@ -919,25 +919,27 @@ def configure(
                                 grpc.grpc.protoc,
                                 drake.node(grpc.grpc.grpc_cpp_plugin))
   tests_names = [
-    ('async-conflict', []),
-    ('backward-compatibility', []),
-    ('bandwidth', []),
-    ('byzantine', []),
-    ('consensus/async', []),
-    ('consensus/cache', []),
-    ('consensus/paxos', []),
-    ('doughnut', []),
-    ('faith', []),
-    ('filesystem', binaries),
-    ('grpc', []),
-    ('kelips', []),
-    ('overlay', []),
-    ('rpc', []),
-    ('storage', [aws_lib]),
+    ('async-conflict'         , []       , None),
+    ('backward-compatibility' , []       , None),
+    ('bandwidth'              , []       , None),
+    ('byzantine'              , []       , None),
+    ('consensus/async'        , []       , None),
+    ('consensus/cache'        , []       , None),
+    ('consensus/paxos'        , []       , None),
+    ('doughnut'               , []       , None),
+    ('faith'                  , []       , None),
+    ('filesystem'             , binaries , None),
+    ('grpc'                   , []       , None),
+    ('kelips'                 , []       , None),
+    ('overlay'                , []       , ['kelips', '-t', 'kelips/*']),
+    ('overlay'                , []       , ['kouncil', '-t', 'kouncil/*']),
+    ('overlay'                , []       , ['kouncil-0-7', '-t', 'kouncil_0_7/*']),
+    ('rpc'                    , []       , None),
+    ('storage'                , [aws_lib], None),
   ]
   if enable_prometheus:
     tests_names.append(
-      ('prometheus', []),
+      ('prometheus', [], None),
     )
   # The tests that do not use Boost.Test.
   non_boost_tests = ['backward-compatibility']
@@ -950,9 +952,9 @@ def configure(
 
   if linux:
     cxx_config_tests.lib('dl')
-  for test_name, dependencies in tests_names:
+  for test_name, deps, args in tests_names:
     that_test_libs = list(tests_extra_libs)
-    ifnt_lib = test_name == 'consensus/async' and memo_lib_tests_consensus or memo_lib_tests
+    ifnt_lib = memo_lib_tests_consensus if test_name == 'consensus/async' else memo_lib_tests
     if windows:
       if test_name == 'consensus/async':
         that_test_libs += [dokan_lib_tests_consensus]
@@ -971,7 +973,7 @@ def configure(
       ] + that_test_libs,
       cxx_toolkit,
       cxx_config_tests_no_boost_test if test_name in non_boost_tests else cxx_config_tests)
-    test.dependencies_add(dependencies)
+    test.dependencies_add(deps)
     rule_tests << test
     env = {
       'BUILD_DIR': drake.path_build(),
@@ -986,13 +988,23 @@ def configure(
     # |_|   |___/_/\_\_|  |_|_____|
     #
     # Really, really do run these tests on valgrind !!!
+    if args:
+      name = '{}-{}'.format(test, args[0])
+      args = args[1:]
+    else:
+      name = test.name_relative
     if valgrind_tests and test_name not in ['filesystem']:
       runner = drake.valgrind.ValgrindRunner(
+        name = name,
         exe = test,
+        args = args,
         valgrind = elle.valgrind,
         env = env)
     else:
-      runner = drake.Runner(exe = test, env = env)
+      runner = drake.Runner(name = name,
+                            exe = test,
+                            args = args,
+                            env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 

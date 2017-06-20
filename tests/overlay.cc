@@ -114,8 +114,7 @@ class TCPInstrument
 {
 public:
   TCPInstrument(int port)
-    : _server()
-    , _socket("127.0.0.1", port)
+    : _socket("127.0.0.1", port)
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
     , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
                                         [this] { this->_serve(); }))
@@ -1368,7 +1367,7 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
-  auto storage = infinit::silo::Memory::Blocks();
+  auto storage = infinit::silo::Memory::Blocks{};
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
@@ -1988,15 +1987,11 @@ ELLE_TEST_SUITE()
     = TestConfiguration{make_kouncil, elle::Version(0, 7, 0)};
 
 
-#define BOOST_NAMED_TEST_CASE(name, test_function)                      \
-  boost::unit_test::make_test_case(                                     \
-    test_function, name, __FILE__, __LINE__ )                           \
-
 #define TEST(Suite, Overlay, Name, Timeout, Function, ...)              \
-  Suite->add(BOOST_NAMED_TEST_CASE(                                     \
-                 Name,                                                  \
+  Suite->add(ELLE_TEST_CASE(                                            \
                  [=] { ::Function(BOOST_PP_CAT(Overlay, _config),       \
-                                  ##__VA_ARGS__); }),                   \
+                                  ##__VA_ARGS__); },                    \
+                 Name),                                                 \
              0, valgrind(Timeout));                                     \
 
 #define TEST_ANON(Overlay, Name, F, Timeout, ...)                       \
