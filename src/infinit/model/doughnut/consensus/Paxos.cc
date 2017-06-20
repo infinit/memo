@@ -423,6 +423,17 @@ namespace infinit
             }, true);
         }
 
+        void
+        Paxos::RemotePeer::store(blocks::Block const& block, StoreMode mode)
+        {
+          network_exception_to_unavailable(
+            [&]
+            {
+              Super::store(block, mode);
+            });
+        }
+
+
         /*----------.
         | LocalPeer |
         `----------*/

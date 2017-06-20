@@ -202,6 +202,8 @@ namespace infinit
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            void
+            store(blocks::Block const& block, StoreMode mode) override;
           };
 
         /*-----------------.
