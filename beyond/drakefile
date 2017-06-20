@@ -273,7 +273,7 @@ def configure(
       'Architecture': 'amd64',
       'Depends': ', '.join(
         ubuntu_dependencies
-        + ['infinit (= %s)' % version]
+        + ['memo (= %s)' % version]
       ),
       'Description': 'Infinit beyond server.',
     },
