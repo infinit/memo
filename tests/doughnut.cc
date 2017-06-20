@@ -1055,6 +1055,170 @@ size(elle::reactor::Generator<T> const& g)
   return res;
 };
 
+class Local:
+  public dht::consensus::Paxos::LocalPeer
+{
+public:
+  using Super = dht::consensus::Paxos::LocalPeer;
+  using Address = infinit::model::Address;
+
+  template <typename ... Args>
+  Local(infinit::model::doughnut::consensus::Paxos& paxos,
+        int factor,
+        bool rebalance_auto_expand,
+        std::chrono::system_clock::duration node_timeout,
+        infinit::model::doughnut::Doughnut& dht,
+        Address id,
+        Args&& ... args)
+    : infinit::model::doughnut::Peer(dht, id)
+    , Super(paxos,
+            factor,
+            rebalance_auto_expand,
+            true,
+            node_timeout,
+            dht,
+            id,
+            std::forward<Args>(args)...)
+    , _all_barrier()
+    , _propose_barrier()
+    , _propose_bypass(false)
+    , _accept_barrier()
+    , _accept_bypass(false)
+    , _confirm_barrier()
+    , _confirm_bypass(false)
+    , _store_barrier()
+  {
+    this->_all_barrier.open();
+    this->_propose_barrier.open();
+    this->_accept_barrier.open();
+    this->_confirm_barrier.open();
+    this->_store_barrier.open();
+  }
+
+  virtual
+  void
+  store(blocks::Block const& block, infinit::model::StoreMode mode) override
+  {
+    elle::reactor::wait(this->_store_barrier);
+    Super::store(block, mode);
+  }
+
+  boost::optional<Paxos::PaxosClient::Accepted>
+  propose(PaxosServer::Quorum const& peers,
+          Address address,
+          PaxosClient::Proposal const& p,
+          bool insert) override
+  {
+    this->_proposing(address, p);
+    elle::reactor::wait(this->all_barrier());
+    if (!this->_propose_bypass)
+      elle::reactor::wait(this->propose_barrier());
+    auto res = Super::propose(peers, address, p, insert);
+    this->_proposed(address, p);
+    return res;
+  }
+
+  PaxosClient::Proposal
+  accept(PaxosServer::Quorum const& peers,
+         Address address,
+         PaxosClient::Proposal const& p,
+         Value const& value) override
+  {
+    this->_accepting(address, p);
+    elle::reactor::wait(this->all_barrier());
+    if (!this->_accept_bypass)
+      elle::reactor::wait(this->accept_barrier());
+    auto res = Super::accept(peers, address, p, value);
+    this->_accepted(address, p);
+    return res;
+  }
+
+  void
+  confirm(PaxosServer::Quorum const& peers,
+          Address address,
+          PaxosClient::Proposal const& p) override
+  {
+    this->_confirming(address, p);
+    elle::reactor::wait(this->all_barrier());
+    if (!this->_confirm_bypass)
+      elle::reactor::wait(this->confirm_barrier());
+    Super::confirm(peers, address, p);
+    this->_confirmed(address, p);
+  }
+
+  void
+  _disappeared_schedule_eviction(infinit::model::Address id) override
+  {
+    ELLE_TRACE("%s: node %f disappeared, evict when signaled", this, id);
+    this->_evict.connect([this, id] { this->_disappeared_evict(id); });
+  }
+
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, all_barrier);
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, propose_barrier);
+  ELLE_ATTRIBUTE_RW(bool, propose_bypass);
+  using Hook =
+    boost::signals2::signal<void(Address, PaxosClient::Proposal const&)>;
+  ELLE_ATTRIBUTE_RX(Hook, proposing);
+  ELLE_ATTRIBUTE_RX(Hook, proposed);
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, accept_barrier);
+  ELLE_ATTRIBUTE_RW(bool, accept_bypass);
+  ELLE_ATTRIBUTE_RX(Hook, accepting);
+  ELLE_ATTRIBUTE_RX(Hook, accepted);
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, confirm_barrier);
+  ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
+  ELLE_ATTRIBUTE_RX(Hook, confirming);
+  ELLE_ATTRIBUTE_RX(Hook, confirmed);
+  ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
+  ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, store_barrier);
+};
+
+static constexpr
+auto default_node_timeout = std::chrono::seconds(1);
+
+class InstrumentedPaxos
+  : public dht::consensus::Paxos
+{
+  using Super = dht::consensus::Paxos;
+  using Super::Super;
+  std::unique_ptr<dht::Local>
+  make_local(
+    boost::optional<int> port,
+    boost::optional<boost::asio::ip::address> listen,
+    std::unique_ptr<infinit::silo::Silo> storage) override
+  {
+    return std::make_unique<Local>(
+      *this,
+      this->factor(),
+      this->rebalance_auto_expand(),
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+        default_node_timeout),
+      this->doughnut(),
+      this->doughnut().id(),
+      std::move(storage),
+      port.value_or(0));
+  }
+};
+
+dht::Doughnut::ConsensusBuilder
+instrument(int factor, bool rebalance_auto_expand = true)
+{
+  return [factor, rebalance_auto_expand] (dht::Doughnut& d)
+    -> std::unique_ptr<dht::consensus::Consensus>
+  {
+    return std::make_unique<InstrumentedPaxos>(
+      dht::consensus::doughnut = d,
+      dht::consensus::replication_factor = factor,
+      dht::consensus::rebalance_auto_expand = rebalance_auto_expand);
+  };
+}
+
+auto const make_dht = [] (int n, bool rebalance_auto_expand = false)
+{
+  return std::make_unique<DHT>(
+    id = special_id(n + 10),
+    dht::consensus_builder = instrument(3, rebalance_auto_expand));
+};
+
 namespace rebalancing
 {
   ELLE_TEST_SCHEDULED(extend_and_write)
@@ -1312,162 +1476,6 @@ namespace rebalancing
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);
   };
 
-  class Local:
-    public dht::consensus::Paxos::LocalPeer
-  {
-  public:
-    using Super = dht::consensus::Paxos::LocalPeer;
-    using Address = infinit::model::Address;
-
-    template <typename ... Args>
-    Local(infinit::model::doughnut::consensus::Paxos& paxos,
-          int factor,
-          bool rebalance_auto_expand,
-          std::chrono::system_clock::duration node_timeout,
-          infinit::model::doughnut::Doughnut& dht,
-          Address id,
-          Args&& ... args)
-      : infinit::model::doughnut::Peer(dht, id)
-      , Super(paxos,
-              factor,
-              rebalance_auto_expand,
-              true,
-              node_timeout,
-              dht,
-              id,
-              std::forward<Args>(args)...)
-      , _all_barrier()
-      , _propose_barrier()
-      , _propose_bypass(false)
-      , _accept_barrier()
-      , _accept_bypass(false)
-      , _confirm_barrier()
-      , _confirm_bypass(false)
-    {
-      this->_all_barrier.open();
-      this->_propose_barrier.open();
-      this->_accept_barrier.open();
-      this->_confirm_barrier.open();
-      this->_store_barrier.open();
-    }
-
-    virtual
-    void
-    store(blocks::Block const& block, infinit::model::StoreMode mode) override
-    {
-      elle::reactor::wait(this->_store_barrier);
-      Super::store(block, mode);
-    }
-
-    boost::optional<Paxos::PaxosClient::Accepted>
-    propose(PaxosServer::Quorum const& peers,
-            Address address,
-            PaxosClient::Proposal const& p,
-            bool insert) override
-    {
-      this->_proposing(address, p);
-      elle::reactor::wait(this->all_barrier());
-      if (!this->_propose_bypass)
-        elle::reactor::wait(this->propose_barrier());
-      auto res = Super::propose(peers, address, p, insert);
-      this->_proposed(address, p);
-      return res;
-    }
-
-    PaxosClient::Proposal
-    accept(PaxosServer::Quorum const& peers,
-           Address address,
-           PaxosClient::Proposal const& p,
-           Value const& value) override
-    {
-      this->_accepting(address, p);
-      elle::reactor::wait(this->all_barrier());
-      if (!this->_accept_bypass)
-        elle::reactor::wait(this->accept_barrier());
-      auto res = Super::accept(peers, address, p, value);
-      this->_accepted(address, p);
-      return res;
-    }
-
-    void
-    confirm(PaxosServer::Quorum const& peers,
-            Address address,
-            PaxosClient::Proposal const& p) override
-    {
-      this->_confirming(address, p);
-      elle::reactor::wait(this->all_barrier());
-      if (!this->_confirm_bypass)
-        elle::reactor::wait(this->confirm_barrier());
-      Super::confirm(peers, address, p);
-      this->_confirmed(address, p);
-    }
-
-    void
-    _disappeared_schedule_eviction(infinit::model::Address id) override
-    {
-      ELLE_TRACE("%s: node %f disappeared, evict when signaled", this, id);
-      this->_evict.connect([this, id] { this->_disappeared_evict(id); });
-    }
-
-    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, all_barrier);
-    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, propose_barrier);
-    ELLE_ATTRIBUTE_RW(bool, propose_bypass);
-    using Hook =
-      boost::signals2::signal<void(Address, PaxosClient::Proposal const&)>;
-    ELLE_ATTRIBUTE_RX(Hook, proposing);
-    ELLE_ATTRIBUTE_RX(Hook, proposed);
-    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, accept_barrier);
-    ELLE_ATTRIBUTE_RW(bool, accept_bypass);
-    ELLE_ATTRIBUTE_RX(Hook, accepting);
-    ELLE_ATTRIBUTE_RX(Hook, accepted);
-    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, confirm_barrier);
-    ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
-    ELLE_ATTRIBUTE_RX(Hook, confirming);
-    ELLE_ATTRIBUTE_RX(Hook, confirmed);
-    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
-    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, store_barrier);
-  };
-
-  static constexpr
-  auto default_node_timeout = std::chrono::seconds(1);
-
-  class InstrumentedPaxos
-    : public dht::consensus::Paxos
-  {
-    using Super = dht::consensus::Paxos;
-    using Super::Super;
-    std::unique_ptr<dht::Local>
-    make_local(
-      boost::optional<int> port,
-      boost::optional<boost::asio::ip::address> listen,
-      std::unique_ptr<infinit::silo::Silo> storage) override
-    {
-      return std::make_unique<Local>(
-        *this,
-        this->factor(),
-        this->rebalance_auto_expand(),
-        std::chrono::duration_cast<std::chrono::system_clock::duration>(
-          default_node_timeout),
-        this->doughnut(),
-        this->doughnut().id(),
-        std::move(storage),
-        port.value_or(0));
-    }
-  };
-
-  dht::Doughnut::ConsensusBuilder
-  instrument(int factor, bool rebalance_auto_expand = true)
-  {
-    return [factor, rebalance_auto_expand] (dht::Doughnut& d)
-      -> std::unique_ptr<dht::consensus::Consensus>
-    {
-      return std::make_unique<InstrumentedPaxos>(
-        dht::consensus::doughnut = d,
-        dht::consensus::replication_factor = factor,
-        dht::consensus::rebalance_auto_expand = rebalance_auto_expand);
-    };
-  }
-
   static
   std::unique_ptr<blocks::Block>
   make_block(DHT& client, bool immutable, std::string data_)
@@ -1715,13 +1723,6 @@ namespace rebalancing
       local_a.evict()();
     }
   }
-
-  auto const make_dht = [] (int n, bool rebalance_auto_expand = false)
-  {
-    return std::make_unique<DHT>(
-      id = special_id(n + 10),
-      dht::consensus_builder = instrument(3, rebalance_auto_expand));
-  };
 
   auto const make_resign_dht = [] (int n, bool rebalance_auto_expand = true)
   {
