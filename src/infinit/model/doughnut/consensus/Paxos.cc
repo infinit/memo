@@ -822,31 +822,32 @@ namespace infinit
                   std::unordered_set<overlay::Overlay::Member> new_owners;
                   std::unordered_set<std::shared_ptr<Paxos::Peer>> owners;
                   for (auto id: new_q)
-                    if (id != this->doughnut().id())
-                      if (auto peer = to_paxos_peer(
-                            this->doughnut().overlay()->lookup_node(id)))
+                    if (auto peer = to_paxos_peer(
+                          this->doughnut().overlay()->lookup_node(id)))
+                    {
+                      owners.emplace(peer);
+                      if (!elle::find(q.quorum, peer->id()))
+                        new_owners.emplace(peer);
+                    };
+                  ELLE_DEBUG("send block to {}", new_owners)
+                    elle::reactor::for_each_parallel(
+                      new_owners,
+                      [&] (overlay::Overlay::Member peer)
                       {
-                        owners.emplace(peer);
-                        if (!elle::find(q.quorum, peer->id()))
-                          new_owners.emplace(peer);
-                      };
-                  elle::reactor::for_each_parallel(
-                    new_owners,
-                    [&] (overlay::Overlay::Member peer)
-                    {
-                      peer->store(*block.block, STORE_INSERT);
-                      this->_quorums.modify(
-                        this->_quorums.find(address),
-                        [&] (BlockRepartition& r)
-                        { r.quorum.insert(peer->id()); });
-                      this->_node_blocks.emplace(peer->id(), address);
-                    });
-                  elle::reactor::for_each_parallel(
-                    owners,
-                    [&] (auto peer)
-                    {
-                      peer->confirm(new_q, address, PaxosClient::Proposal());
-                    });
+                        peer->store(*block.block, STORE_INSERT);
+                        this->_quorums.modify(
+                          this->_quorums.find(address),
+                          [&] (BlockRepartition& r)
+                          { r.quorum.insert(peer->id()); });
+                        this->_node_blocks.emplace(peer->id(), address);
+                      });
+                  ELLE_DEBUG("confirm new quorum {} to {}", new_q, new_owners)
+                    elle::reactor::for_each_parallel(
+                      owners,
+                      [&] (auto peer)
+                      {
+                        peer->confirm(new_q, address, PaxosClient::Proposal());
+                      });
                   this->_rebalanced(address);
                 }
               }
@@ -893,14 +894,45 @@ namespace infinit
                       continue;
                     auto b = this->_load(target.address);
                     ELLE_ASSERT(b.block);
-                    peer->store(*b.block, STORE_INSERT);
-                    peer->confirm(target.quorum, target.address,
-                                  PaxosClient::Proposal());
-                    this->_quorums.modify(
-                      this->_quorums.find(target.address),
-                      [&] (BlockRepartition& r)
-                      {r.quorum.insert(peer->id());});
-                    this->_node_blocks.emplace(peer->id(), target.address);
+                    ELLE_DEBUG("send block to {}", peer)
+                      try
+                      {
+                        peer->store(*b.block, STORE_INSERT);
+                      }
+                      catch (elle::athena::paxos::Unavailable const& e)
+                      {
+                        ELLE_TRACE("storing block to {} failed: {}", peer, e);
+                        continue;
+                      }
+                    auto const quorum = [&]
+                      {
+                        auto q =
+                          ELLE_ENFORCE(elle::find(this->_quorums,
+                                                  target.address))->quorum;
+                        q.insert(address);
+                        return q;
+                      }();
+                    ELLE_DEBUG("confirm block to %f", quorum)
+                      elle::reactor::for_each_parallel(
+                        this->doughnut().overlay()->lookup_nodes(quorum) |
+                        transformed(to_paxos_peer),
+                        [&] (auto peer)
+                        {
+                          if (peer)
+                            try
+                            {
+                              peer->confirm(quorum, target.address,
+                                            PaxosClient::Proposal());
+                            }
+                            catch (elle::athena::paxos::Unavailable const& e)
+                            {
+                              ELLE_TRACE("confirming block to {} failed: {}",
+                                         peer, e);
+                            }
+                          else
+                            ELLE_WARN(
+                              "peer %f disappeared while confirming", peer);
+                        });
                     ELLE_TRACE("successfully duplicated %f to %f",
                                target.address, address);
                     this->_rebalanced(target.address);
@@ -1537,35 +1569,51 @@ namespace infinit
           {
             std::vector<std::shared_ptr<Paxos::Peer>> reached;
             PaxosClient::Quorum q;
-            elle::reactor::for_each_parallel(
-              owners | transformed(to_paxos_peer)
-              // FIXME: boost filtered does not play well with input iterator
-              // that move their value, since it dereferences it twice.  |
-              // filtered([] (auto peer) { return bool(peer); })
-              ,
-              [&] (auto peer)
-              {
-                if (!peer)
+            ELLE_TRACE("send block to {}", owners)
+              elle::reactor::for_each_parallel(
+                owners | transformed(to_paxos_peer)
+                // FIXME: boost filtered does not play well with input iterator
+                // that move their value, since it dereferences it twice.  |
+                // filtered([] (auto peer) { return bool(peer); })
+                ,
+                [&] (auto peer)
                 {
-                  ELLE_WARN("peer was deleted while storing");
-                  return;
-                }
-                ELLE_DEBUG_SCOPE("send block to {}", peer);
-                peer->store(*b, mode);
-                reached.push_back(peer);
-                q.insert(peer->id());
-              });
+                  if (!peer)
+                  {
+                    ELLE_WARN("peer was deleted while storing");
+                    return;
+                  }
+                  try
+                  {
+                    ELLE_DEBUG_SCOPE("send block to {}", peer);
+                    peer->store(*b, mode);
+                    reached.push_back(peer);
+                    q.insert(peer->id());
+                  }
+                  catch (elle::athena::paxos::Unavailable const& e)
+                  {
+                    ELLE_TRACE("sending block to {} failed: {}", peer, e);
+                  }
+                });
             if (reached.size() == 0u)
               elle::err("no peer available for %s of %f",
                         mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
-              elle::reactor::for_each_parallel(
-                reached,
-                [&] (auto peer)
-                {
-                  peer->confirm(q, b->address(), PaxosClient::Proposal());
-                });
+              ELLE_TRACE("confirm block to {}", reached)
+                elle::reactor::for_each_parallel(
+                  reached,
+                  [&] (auto peer)
+                  {
+                    try
+                    {
+                      peer->confirm(q, b->address(), PaxosClient::Proposal());
+                    }
+                    catch (elle::athena::paxos::Unavailable const& e)
+                    {
+                      ELLE_TRACE("confirming block to {} failed: {}", peer, e);
+                    }
+                  });
           }
         }
 

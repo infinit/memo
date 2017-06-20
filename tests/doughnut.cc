@@ -2002,11 +2002,13 @@ namespace rebalancing
         local.evict()();
         if (expand)
         {
-          elle::reactor::wait(not_rebalanced);
+          ELLE_LOG("wait until the block in under-replicated")
+            elle::reactor::wait(not_rebalanced);
           inserted = make(i);
         }
         if (erased != inserted)
-          elle::reactor::wait(local.rebalanced(), block->address());
+          ELLE_LOG("wait until the block is rebalanced")
+            elle::reactor::wait(local.rebalanced(), block->address());
         BOOST_TEST(size(dhts[0]->overlay->lookup(block->address(), 3)) == 3u);
       }
   }
@@ -2076,6 +2078,28 @@ namespace rebalancing
       elle::reactor::wait(scope);
     };
   }
+}
+
+ELLE_TEST_SCHEDULED(CHB_unavailable)
+{
+  auto a = make_dht(0, true);
+  auto& local_a = dynamic_cast<Local&>(*a->dht->local());
+  auto b = make_dht(1, false);
+  b->overlay->connect(*a->overlay);
+  auto c = make_dht(2, false);
+  auto& local_c = dynamic_cast<Local&>(*c->dht->local());
+  c->overlay->connect(*b->overlay);
+  c->overlay->connect(*a->overlay);
+  local_c.store_barrier().raise<elle::athena::paxos::Unavailable>();
+  auto block = a->dht->make_block<blocks::ImmutableBlock>(
+    elle::Buffer("CHB_unavailable"));
+  auto rebalanced =
+    elle::reactor::waiter(local_a.rebalanced(), block->address());
+  a->dht->seal_and_insert(*block);
+  local_c.store_barrier().open();
+  BOOST_TEST(size(a->overlay->lookup(block->address(), 3)) == 2u);
+  elle::reactor::wait(rebalanced);
+  BOOST_TEST(size(a->overlay->lookup(block->address(), 3)) == 3u);
 }
 
 // Since we use Locals, blocks dont go through serialization and thus
@@ -2256,9 +2280,10 @@ ELLE_TEST_SUITE()
     using namespace removal;
     TEST(serialize_ACB_remove);
   }
+  paxos->add(BOOST_TEST_CASE(CHB_unavailable), 0, valgrind(3));
 #undef TEST
-  suite.add(BOOST_TEST_CASE(admin_keys));
-  suite.add(BOOST_TEST_CASE(disabled_crypto));
+  suite.add(BOOST_TEST_CASE(admin_keys), 0, valgrind(3));
+  suite.add(BOOST_TEST_CASE(disabled_crypto), 0, valgrind(3));
   {
     paxos->add(ELLE_TEST_CASE(&tests_paxos::wrong_quorum, "wrong_quorum"));
     paxos->add(ELLE_TEST_CASE(&tests_paxos::batch_quorum, "batch_quorum"));
