@@ -590,6 +590,8 @@ class KeyValueStoreInfrastructure():
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
+          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
+          print('STDERR: %s' % err.decode('utf-8'), flush=True)
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
           print('STDOUT: %s' % out.decode('utf-8'), flush=True)
