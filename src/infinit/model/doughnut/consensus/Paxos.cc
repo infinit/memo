@@ -2093,6 +2093,8 @@ namespace infinit
 
         Paxos::Configuration::Configuration(
           elle::serialization::SerializerIn& s)
+          : _rebalance_auto_expand(true)
+          , _rebalance_inspect(true)
         {
           this->serialize(s);
         }
