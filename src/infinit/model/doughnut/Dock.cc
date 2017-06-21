@@ -250,16 +250,9 @@ namespace infinit
         : _dock(dock)
         , _location(l)
         , _socket(nullptr)
-        , _serializer()
-        , _channels()
-        , _rpc_server()
-        , _credentials()
-        , _thread()
         , _connected(false)
         , _disconnected(false)
         , _disconnected_since(std::chrono::system_clock::now())
-        , _disconnected_exception()
-        , _key_hash_cache()
       {}
 
       std::shared_ptr<Dock::Connection>
@@ -339,7 +332,7 @@ namespace infinit
                   throw;
                 }
               };
-            auto umbrella = [&, this] (auto const& f)
+            auto make_umbrella = [&, this] (auto const& f)
               {
                 return [f, this]
                 {
@@ -367,7 +360,7 @@ namespace infinit
                     elle::sprintf(
                       "%s: tcp://%s",
                       elle::reactor::scheduler().current()->name(), e),
-                    umbrella(
+                    make_umbrella(
                       [&, e]
                       {
                         using elle::reactor::network::TCPSocket;
@@ -390,7 +383,7 @@ namespace infinit
                 scope.run_background(
                   elle::sprintf("%s: utp://%s",
                                 this, this->_location.endpoints()),
-                  umbrella(
+                  make_umbrella(
                     [&, eps = this->_location.endpoints().udp()]
                     {
                       std::string cid;
@@ -547,7 +540,7 @@ namespace infinit
         {
           using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
             (Passport const&);
-          RPC<AuthSyn> auth_syn(
+          auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           return auth_syn(self.dock().doughnut().passport());
         }
@@ -557,7 +550,7 @@ namespace infinit
         {
           using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
             (Passport const&, elle::Version const&);
-          RPC<AuthSyn> auth_syn(
+          auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
           auto version = self.dock().doughnut().version();
@@ -574,7 +567,7 @@ namespace infinit
         {
           using AuthSyn =
             Remote::Auth (Address, Passport const&, elle::Version const&);
-          RPC<AuthSyn> auth_syn(
+          auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
           auto res = auth_syn(self.dock().doughnut().id(),
@@ -583,12 +576,13 @@ namespace infinit
           if (res.id == self.dock().doughnut().id())
             throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
                                                 res.id));
-          if (self.location().id() != Address::null &&
+          else if (self.location().id() != Address::null &&
               self.location().id() != res.id)
             throw HandshakeFailed(
               elle::sprintf("peer id mismatch: expected %s, got %s",
                             self.location().id(), res.id));
-          return res;
+          else
+            return res;
         }
       }
 
@@ -634,13 +628,13 @@ namespace infinit
           }
           ELLE_DEBUG("got valid remote passport");
           // sign the challenge
-          auto signed_challenge = dht.keys().k().sign(
+          auto const signed_challenge = dht.keys().k().sign(
             challenge_passport.first.first,
             elle::cryptography::rsa::Padding::pss,
             elle::cryptography::Oneway::sha256);
           // generate, seal
           // dont set _key yet so that our 2 rpcs are in cleartext
-          auto key = elle::cryptography::secretkey::generate(256);
+          auto const key = elle::cryptography::secretkey::generate(256);
           elle::Buffer password = key.password();
           auto sealed_key =
             remote_passport->user().seal(password,
@@ -648,10 +642,10 @@ namespace infinit
                                          elle::cryptography::Mode::cbc);
           ELLE_DEBUG("acknowledge authentication")
           {
-            RPC<bool (elle::Buffer const&,
-                      elle::Buffer const&,
-                      elle::Buffer const&)>
-              auth_ack("auth_ack", channels, version, nullptr);
+            using AuthAck =
+              auto (elle::Buffer const&, elle::Buffer const&, elle::Buffer const&)
+              -> bool;
+            auto auth_ack = RPC<AuthAck>{"auth_ack", channels, version};
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
