@@ -198,7 +198,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: connect to %f", this, l);
         // Check if we already have a connection to that peer.
-        if (l.id() != Address::null)
+        if (l.id())
         {
           if (auto i = elle::find(this->_connected, l.id()))
           {
@@ -419,7 +419,7 @@ namespace infinit
             }
             // Check for duplicates.
             auto id = this->_location.id();
-            ELLE_ASSERT_NEQ(id, Address::null);
+            ELLE_ASSERT(id);
             if (elle::contains(this->_dock._connected, id))
             {
               ELLE_TRACE("drop duplicate");
@@ -576,8 +576,7 @@ namespace infinit
           if (res.id == self.dock().doughnut().id())
             throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
                                                 res.id));
-          else if (self.location().id() != Address::null &&
-              self.location().id() != res.id)
+          else if (self.location().id() && self.location().id() != res.id)
             throw HandshakeFailed(
               elle::sprintf("peer id mismatch: expected %s, got %s",
                             self.location().id(), res.id));
@@ -599,7 +598,7 @@ namespace infinit
             if (version >= elle::Version(0, 7, 0))
             {
               auto res = _auth_0_7(*this, channels);
-              if (this->_location.id() == model::Address::null)
+              if (!this->_location.id())
                 this->_location.id(res.id);
               return std::make_pair(
                 res.challenge,
@@ -672,7 +671,7 @@ namespace infinit
       Dock::make_peer(NodeLocation loc)
       {
         ELLE_TRACE_SCOPE("%s: get %f", this, loc);
-        ELLE_ASSERT(loc.id() != Address::null);
+        ELLE_ASSERT(loc.id());
         if (loc.id() == this->_doughnut.id())
         {
           ELLE_TRACE("peer is ourself");

@@ -282,7 +282,7 @@ namespace infinit
     std::ostream&
     operator <<(std::ostream& output, NodeLocation const& loc)
     {
-      if (loc.id() == Address::null)
+      if (!loc.id())
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
       else if (is_fixed(output))
         elle::fprintf(output, "peer %f", loc.id());

@@ -46,7 +46,7 @@ namespace infinit
         , _connecting_since(std::chrono::system_clock::now())
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
-        ELLE_ASSERT_NEQ(connection->location().id(), Address::null);
+        ELLE_ASSERT(connection->location().id());
         this->connection(std::move(connection));
         this->_connected.changed().connect(
           [this] (bool opened)

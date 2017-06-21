@@ -431,7 +431,7 @@ namespace infinit
           if (!elle::find(this->_peers, peer.id()))
             ELLE_TRACE("connect to new %f", peer)
               this->doughnut()->dock().connect(peer);
-          if (peer.id() != Address::null)
+          if (peer.id())
             this->_remember_stale(peer);
         }
       }
@@ -439,7 +439,7 @@ namespace infinit
       void
       Kouncil::_discover(PeerInfo const& pi)
       {
-        ELLE_ASSERT_NEQ(pi.id(), Address::null);
+        ELLE_ASSERT(pi.id());
         auto changed = true;
         if (auto it = elle::find(this->_infos, pi.id()))
           this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi); });
@@ -482,7 +482,7 @@ namespace infinit
       Kouncil::_peer_connected(std::shared_ptr<Remote> peer)
       {
         ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
-        ELLE_ASSERT_NEQ(peer->id(), Address::null);
+        ELLE_ASSERT(peer->id());
         this->_peers.emplace(peer);
         if (auto it = elle::find(this->_stale_endpoints, peer->id()))
           // Stop reconnection/eviction timers.
@@ -814,7 +814,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%f: fetch_entries of %f", this, r);
         auto fetch = r.make_rpc<AddressSet()>("kouncil_fetch_entries");
         auto entries = fetch();
-        ELLE_ASSERT_NEQ(r.id(), Address::null);
+        ELLE_ASSERT(r.id());
         for (auto const& b: entries)
           this->_address_book.emplace(r.id(), b);
         ELLE_DEBUG("added %s entries from %f", entries.size(), r);

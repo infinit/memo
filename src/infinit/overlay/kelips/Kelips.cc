@@ -1091,8 +1091,7 @@ namespace infinit
         {
           NodeLocation location = candidates.back();
           candidates.pop_back();
-          bool const unknown = location.id() == model::Address::null;
-          if (!unknown && contains(scanned, location.id()))
+          if (location.id() && contains(scanned, location.id()))
             continue;
           ELLE_DEBUG_SCOPE("bootstrap %f", location);
           try
@@ -1101,8 +1100,7 @@ namespace infinit
             // ugly hack, embeded self address
             auto peer_id = res.second.back().second;
             res.second.pop_back();
-            if (location.id() != model::Address::null &&
-                peer_id != location.id())
+            if (location.id() && peer_id != location.id())
               ELLE_WARN("endpoints for peer %f reach peer %f instead",
                         location.id(), peer_id);
             scanned.emplace(peer_id);
@@ -1144,7 +1142,7 @@ namespace infinit
       {
         packet::BootstrapRequest req;
         req.sender = this->_self;
-        if (l.id() != Address::null)
+        if (l.id())
         {
           Contact& c = *get_or_make(l.id(), false, l.endpoints());
           ELLE_DEBUG_SCOPE("send bootstrap to %f at %s", l.id(), l.endpoints());
@@ -1237,8 +1235,7 @@ namespace infinit
       std::pair<elle::cryptography::SecretKey*, bool>
       Node::getKey(Address const& a)
       {
-        auto it = _keys.find(a);
-        if (it != _keys.end())
+        if (auto it = elle::find(_keys, a))
           return std::make_pair(&it->second.first, it->second.second);
         else
           return std::make_pair(nullptr, false);

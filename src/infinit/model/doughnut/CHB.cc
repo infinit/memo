@@ -126,9 +126,10 @@ namespace infinit
       CHB::_sign_remove(Model& model) const
       {
         ELLE_TRACE("%s: sign_remove, owner=%x", *this, this->_owner);
-        if (this->_owner == Address::null)
+        if (this->_owner)
+          return CHB::sign_remove(model, this->address(), this->_owner);
+        else
           return blocks::RemoveSignature();
-        return CHB::sign_remove(model, this->address(), this->_owner);
       }
 
       blocks::RemoveSignature
@@ -202,7 +203,7 @@ namespace infinit
       {
         auto& dht = dynamic_cast<Doughnut&>(model);
         ELLE_TRACE("%s: validate_remove", *this);
-        if (this->_owner == Address::null)
+        if (!this->_owner)
           return blocks::ValidationResult::success();
         if (!sig.signature_key || !sig.signature)
           return blocks::ValidationResult::failure("Missing field in signature");
@@ -267,10 +268,11 @@ namespace infinit
         elle::Buffer saltowner(salt);
         if (version < elle::Version(0, 4, 0))
           owner = Address::null;
-        if (owner != Address::null)
+        if (owner)
           saltowner.append(owner.value(), sizeof(Address::Value));
         elle::IOStream stream(saltowner.istreambuf_combine(content));
         elle::Buffer hash;
+        // FIXME: scheduler::run?
         if (content.size() > 262144 && elle::reactor::Scheduler::scheduler())
         {
           elle::reactor::background([&] {
