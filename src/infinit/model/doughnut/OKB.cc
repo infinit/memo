@@ -98,13 +98,13 @@ namespace infinit
           }
           else
           {
-            static bool disable_hash =
-              elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
+            static bool hash_enabled =
+              !elle::os::getenv("INFINIT_DISABLE_KEY_HASH", false);
             Local* local = nullptr;
             elle::unconst(s.context()).get(local, (Local*)nullptr);
             Remote* remote = nullptr;
             elle::unconst(s.context()).get(remote, (Remote*)nullptr);
-            if (local && !disable_hash)
+            if (local && hash_enabled)
             {
               if (!dn)
                 elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
@@ -115,7 +115,7 @@ namespace infinit
               KeyOrHash koh(hash);
               s.serialize(field_name + "_koh", koh);
             }
-            else if (remote && !disable_hash)
+            else if (remote && hash_enabled)
             {
               auto const& key_hash_cache = remote->key_hash_cache();
               auto it = key_hash_cache.get<0>().find(key);

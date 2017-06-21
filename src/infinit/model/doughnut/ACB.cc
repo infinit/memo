@@ -195,7 +195,7 @@ namespace infinit
                       elle::cryptography::rsa::PrivateKey const& k,
                       bool use_encrypt)
       {
-        static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
+        static bool bg = !elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", false);
         if (bg)
         {
           elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
