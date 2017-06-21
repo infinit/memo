@@ -246,7 +246,7 @@ namespace infinit
     }
   };
 
-  ///
+  /// Answer to RPCs.
   class RPCServer
   {
   public:
@@ -485,7 +485,7 @@ namespace infinit
       channel.write(response);
     }
 
-    /// Upsert a value of type \T to the context.
+    /// Upsert a value of type `T` to the context.
     ///
     /// @tparam T The type of the value to add.
     /// @param value The value to add.
@@ -542,7 +542,7 @@ namespace infinit
         return {};
     }
 
-    /// Upsert a value of type \T to the context.
+    /// Upsert a value of type `T` to the context.
     ///
     /// @tparam T The type of the value to add.
     /// @param value The value to add.
@@ -565,17 +565,16 @@ namespace infinit
   };
 
   template <typename Proto>
-  class RPC
-  {};
+  class RPC;
 
-  /// A
+  /// A remote procedure call.
   template <typename R, typename ... Args>
   class RPC<R (Args...)>
     : public BaseRPC
   {
   public:
     using Self = RPC;
-    /// Construct a RPC.
+    /// Construct an RPC.
     ///
     /// @see BaseRPC::BaseRPC.
     RPC(std::string name,
@@ -585,7 +584,7 @@ namespace infinit
       : BaseRPC(std::move(name), channels, version, std::move(key))
     {}
 
-    /// Construct a RPC.
+    /// Construct an RPC.
     ///
     /// @see BaseRPC::BaseRPC, except for the argument credentials.
     ///
@@ -685,7 +684,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: call", self);
       auto versions = elle::serialization::get_serialization_versions
         <infinit::serialization_tag>(version);
-      elle::protocol::Channel channel(*self.channels());
+      auto channel = elle::protocol::Channel{*self.channels()};
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());
@@ -703,6 +702,7 @@ namespace infinit
           static auto bench =
             elle::Bench("bench.rpcclient.encipher", std::chrono::seconds(10000));
           auto bs = elle::Bench::BenchScope(bench);
+          // FIXME: scheduler::run?
           ELLE_DEBUG("encipher request")
             if (call.size() > 262144)
             {
@@ -745,15 +745,12 @@ namespace infinit
         auto input
           = elle::serialization::binary::SerializerIn(ins, versions, false);
         input.set_context(self._context);
-        bool success = false;
-        input.serialize("success", success);
-        if (success)
+        if (input.deserialize<bool>("success"))
           return get_result<R>(input);
         else
         {
           ELLE_TRACE_SCOPE("call failed, get exception");
-          auto e =
-            input.deserialize<std::exception_ptr>("exception");
+          auto e = input.deserialize<std::exception_ptr>("exception");
           std::rethrow_exception(e);
         }
       }
