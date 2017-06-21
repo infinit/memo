@@ -2,14 +2,14 @@
 
 #include "../DHT.hh"
 
-ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.test");
+ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Paxos.test");
 
 ELLE_TEST_SCHEDULED(availability_2)
 {
   auto a = std::make_unique<DHT>();
   auto b = std::make_unique<DHT>();
   a->overlay->connect(*b->overlay);
-  auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
+  auto block = a->dht->make_block<memo::model::blocks::MutableBlock>();
   block->data(elle::Buffer("foo"));
   ELLE_LOG("insert block")
     a->dht->seal_and_insert(*block);
@@ -36,7 +36,7 @@ ELLE_TEST_SCHEDULED(availability_3)
   a->overlay->connect(*b->overlay);
   a->overlay->connect(*c->overlay);
   b->overlay->connect(*c->overlay);
-  auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
+  auto block = a->dht->make_block<memo::model::blocks::MutableBlock>();
   ELLE_LOG("store block")
   {
     block->data(elle::Buffer("foo"));

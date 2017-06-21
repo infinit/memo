@@ -1,6 +1,6 @@
 #include <elle/log.hh>
 
-#include <infinit/filesystem/filesystem.hh>
+#include <memo/filesystem/filesystem.hh>
 
 #include "DHT.hh" // XXX Shared with tests.
 

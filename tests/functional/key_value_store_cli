@@ -10,7 +10,7 @@ import grpc
 import memo_kvs_pb2 as kv
 
 # Simple.
-with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
 
   def throws_code(f, code):
     try:
@@ -54,7 +54,7 @@ with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
               grpc.StatusCode.NOT_FOUND)
 
 # List.
-with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
 
   def random_sequence(count = 100):
     from random import SystemRandom
@@ -120,7 +120,7 @@ with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
   assertEq(l.prefixes, ['a/', 'b/'])
 
 # Concurrent.
-with Infinit() as bob, KeyValueStoreInfrastructure(bob) as i:
+with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
   import threading
   client = i.stub
 

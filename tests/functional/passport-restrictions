@@ -3,45 +3,45 @@
 from utils import *
 
 with TemporaryDirectory() as tmp, \
-    Infinit() as infinit_1, Infinit() as infinit_2:
-  infinit_1.run(['user', 'create',  'user'])
-  infinit_1.run([
+    Memo() as memo_1, Memo() as memo_2:
+  memo_1.run(['user', 'create',  'user'])
+  memo_1.run([
     'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  network_name = infinit_1.run([
+  network_name = memo_1.run([
     'network', 'create', 'network',
     '--silo', 'storage',
     '--kelips', '--k', '1',
     '--as', 'user',
   ])
-  network = infinit_1.run_json([
+  network = memo_1.run_json([
     'network', 'export', 'network',
     '--as', 'user',
   ])
   # Device 2
-  infinit_2.run(['user', 'create', 'user2'])
-  infinit_2.run([
+  memo_2.run(['user', 'create', 'user2'])
+  memo_2.run([
     'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  infinit_2.run(['network', 'import'], input = network)
-  user2 = infinit_2.run_json  ([
+  memo_2.run(['network', 'import'], input = network)
+  user2 = memo_2.run_json  ([
     'user', 'export',  'user2'
   ])
-  infinit_1.run(['user', 'import'], input = user2)
-  passport = infinit_1.run_json(['passport', 'create',
+  memo_1.run(['user', 'import'], input = user2)
+  passport = memo_1.run_json(['passport', 'create',
       '--user', 'user2', '--network', 'network', '--as', 'user',
       '--deny-write', '--deny-storage',
       '--output', '-'
   ])
-  infinit_2.run(['passport', 'import'], input = passport)
+  memo_2.run(['passport', 'import'], input = passport)
   try:
-    infinit_2.run(['network', 'link', 'user/network',
+    memo_2.run(['network', 'link', 'user/network',
         '--silo', 'storage', '--as', 'user2'])
   except:
     pass
   else:
     raise Exception('link with storage should have failed')
-  infinit_2.run(['network', 'link', 'user/network',
+  memo_2.run(['network', 'link', 'user/network',
         '--as', 'user2'])

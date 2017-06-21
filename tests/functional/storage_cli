@@ -45,7 +45,7 @@ def unformat(size):
 
 
 @static_vars(name = -1)
-def test(infinit, size, description = False):
+def test(memo, size, description = False):
   global quals
   import json
   for qual in quals:
@@ -57,9 +57,9 @@ def test(infinit, size, description = False):
     ]
     if description:
       args += ['--description', 'some storage']
-    infinit.run(args)
+    memo.run(args)
     with open('%s/.local/share/infinit/memo/silos/%s' %
-              (infinit.dir, str(test.name)), 'r') as conf:
+              (memo.dir, str(test.name)), 'r') as conf:
       j = json.loads(''.join(conf.readlines()))
       assertEq(j['capacity'], unformat(hsize))
       if description:
@@ -67,7 +67,7 @@ def test(infinit, size, description = False):
       else:
         assertEq(j.get('description', None), None)
 
-with Infinit() as bob:
+with Memo() as bob:
   test(bob, '0', True)
   test(bob, '1', True)
   test(bob, '42')
@@ -78,9 +78,9 @@ with Infinit() as bob:
   test(bob, '6.25')
 
 # Purge.
-with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
-  bob = User(infinit = tmp, name = 'bob')
-  alice = User(infinit = tmp, name = 'alice')
+with Beyond() as beyond, Memo(beyond = beyond) as tmp:
+  bob = User(memo = tmp, name = 'bob')
+  alice = User(memo = tmp, name = 'alice')
   bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
   alice.run(
     ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])

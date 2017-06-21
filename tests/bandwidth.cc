@@ -10,7 +10,7 @@
 
 #include <elle/reactor/filesystem.hh>
 
-#include <infinit/filesystem/filesystem.hh>
+#include <memo/filesystem/filesystem.hh>
 
 #include "DHT.hh"
 
@@ -29,14 +29,14 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   auto server_a = DHT(owner = k);
   auto client = DHT(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
-  auto fs = std::make_unique<infinit::filesystem::FileSystem>(
+  auto fs = std::make_unique<memo::filesystem::FileSystem>(
     "test/bandwidth", client.dht,
-    infinit::filesystem::allow_root_creation = true);
+    memo::filesystem::allow_root_creation = true);
   elle::reactor::filesystem::FileSystem driver(std::move(fs), true);
   auto root = driver.path("/");
   int const max = elle::os::getenv("ITERATIONS", 100);
   auto& storage =
-    dynamic_cast<infinit::silo::Memory&>(*server_a.dht->local()->storage());
+    dynamic_cast<memo::silo::Memory&>(*server_a.dht->local()->storage());
   auto resident = boost::optional<double>{};
   for (int i = 0; i < max; ++i)
   {

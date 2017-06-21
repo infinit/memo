@@ -3,7 +3,7 @@
 from utils import *
 
 def run(perms):
-  with TemporaryDirectory() as tmp, Infinit() as owner, Infinit() as user:
+  with TemporaryDirectory() as tmp, Memo() as owner, Memo() as user:
     owner.run(['user', 'create', 'owner'])
     user.run(['user', 'create', 'user'])
 

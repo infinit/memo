@@ -4,7 +4,7 @@ from utils import *
 import json
 
 # Using hub to retreive passports.
-with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
+with Beyond() as beyond, Memo(beyond) as bob, Memo(beyond) as alice:
   bob.run(['user', 'signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'signup',
@@ -47,14 +47,14 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
 
 # Storing more than x passports.
 limit = 2
-with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as beyond, Infinit(beyond) as bob:
+with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as beyond, Memo(beyond) as bob:
   bob.run(['user', 'signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
   bob.run(['network', 'create', '--push',
            '--name', 'network',
            '--as', 'bob'])
   def push_passport(i):
-    user = Infinit(beyond)
+    user = Memo(beyond)
     user.__enter__()
     name = 'invitee%d' % i
     try:
@@ -77,8 +77,8 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
 
 # Pull and delete
 with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, \
-    Infinit(beyond = beyond) as alice:
+    Memo(beyond = beyond) as bob, \
+    Memo(beyond = beyond) as alice:
   bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
   alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
@@ -101,9 +101,9 @@ with Beyond() as beyond, \
 
 # Push passport on an network you don't own.
 with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, \
-    Infinit(beyond = beyond) as alice, \
-    Infinit(beyond = beyond) as eve:
+    Memo(beyond = beyond) as bob, \
+    Memo(beyond = beyond) as eve, \
+    Memo(beyond = beyond) as alice:
   bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
   alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
   eve.run(['user', 'signup', 'eve', '--email', 'eve@infinit.io'])

@@ -7,9 +7,9 @@ import signal
 def run(mode):
   with TemporaryDirectory() as port_tmp, \
        TemporaryDirectory() as tmp, \
-       Infinit() as owner, \
-       Infinit() as adm, \
-       Infinit() as user:
+       Memo() as owner, \
+       Memo() as adm, \
+       Memo() as user:
     # Three users, adm is granted sign delegation and signs for user
     owner.run(['user', 'create', 'owner'])
     adm.run(['user', 'create', 'adm'])

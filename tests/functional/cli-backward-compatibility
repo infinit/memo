@@ -26,7 +26,7 @@ def assertEq(x, y):
 for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
   print('# Test version', version)
   version = Version(version)
-  with Infinit() as t:
+  with Memo() as t:
     # Copy the hierachie so we can edit it (e.g.: link networks)
     shutil.copytree('%s/backward-compatibility-homes/%s' % (path, version),
                     t.data_home)

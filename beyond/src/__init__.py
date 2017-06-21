@@ -108,6 +108,7 @@ def symbolize_dump(in_, out = None):
 ## -------- ##
 
 # Don't generate crash reports on our Beyond server.
+os.environ['MEMO_CRASH_REPORTER'] = '0'
 os.environ['INFINIT_CRASH_REPORTER'] = '0'
 
 def find_binaries():

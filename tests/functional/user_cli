@@ -4,7 +4,7 @@ from utils import *
 import json
 
 # Using hub to retreive a user.
-with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
+with Beyond() as b, Memo(beyond = b) as bob, Memo(beyond = b) as alice:
   bob.run(['user', 'signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'signup', '--full',
@@ -24,7 +24,7 @@ with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
 ## Login / Push full ##
 ## ----------------- ##
 # Using login.
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
@@ -42,7 +42,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   assertEq(alice_json, alice2_json)
 
 # Push --full.
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push', '--full',
              '--name', 'alice',
@@ -61,7 +61,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   assertEq(alice_json, alice2_json)
 
 # Push without --full.
-with Beyond() as b, Infinit(beyond = b) as alice:
+with Beyond() as b, Memo(beyond = b) as alice:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push',
              '--name', 'alice',
@@ -76,7 +76,7 @@ with Beyond() as b, Infinit(beyond = b) as alice:
     assertIn('doesn\'t use the hub to login', e.args[0])
 
 # Read password from stdin (signup).
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push',
              '--full',
@@ -88,7 +88,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
               '--password', 'loremipsword'])
 
 # Read password from stdin (login).
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push',
              '--full',
@@ -100,7 +100,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
 
 # Read password from stdin (both).
 with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+     Memo(beyond = beyond) as alice, Memo(beyond = beyond) as alice2:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push',
              '--full',
@@ -111,7 +111,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              input = 'loremipsword')
 
 # Check invalid emails, allow pushing without email.
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   try:
     alice.run(['user', 'signup', '--name', 'alice', '--email', 'foo@'])
     unreachable()
@@ -122,7 +122,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['user', 'create', '--name', 'alice2', '--push'])
 
 # Password missmatch.
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
@@ -136,7 +136,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
     assertIn('password do not match', e.args[0])
 
 # Pull a user that is not you.
-with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as bob:
+with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as bob:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
@@ -152,7 +152,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as bob:
     assertIn('no private key', e.args[0])
 
 # Invalid user name.
-with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
+with Beyond() as b, Memo(beyond = b) as bob, Memo(beyond = b) as alice:
   def create_with_name(name):
     bob.run(['user', 'create',
                '--name', name, '--email', '%s@infinit.io' % name])
@@ -176,7 +176,7 @@ with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
     create_with_name_throw(name)
 
 # Deleting users.
-with Beyond() as b, Infinit(beyond = b) as alice:
+with Beyond() as b, Memo(beyond = b) as alice:
   alice.run(['user', 'create', '--name', 'alice'])
   # Test prompt for deleting a user.
   alice.run(['user', 'create', '--name', 'bob'])
@@ -198,7 +198,7 @@ with Beyond() as b, Infinit(beyond = b) as alice:
   alice.run(['user', 'delete', 'eve'])
 
 # Pulling users.
-with Beyond() as b, Infinit(beyond = b) as alice:
+with Beyond() as b, Memo(beyond = b) as alice:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'create', '--name', 'bob'])
   alice.run(
@@ -213,8 +213,8 @@ with Beyond() as b, Infinit(beyond = b) as alice:
 
 # Pull and delete.
 with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, \
-    Infinit(beyond = beyond) as alice:
+    Memo(beyond = beyond) as bob, \
+    Memo(beyond = beyond) as alice:
   bob.run(
     ['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'create', '--name', 'alice'])
@@ -233,8 +233,8 @@ with Beyond() as beyond, \
 
 # Purge.
 with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, \
-    Infinit(beyond = beyond) as alice:
+    Memo(beyond = beyond) as bob, \
+    Memo(beyond = beyond) as alice:
   from os import path
   bob.run(['user', 'signup', 'b', '--email', 'b@infinit.io'])
   alice.run(['user', 'signup', 'a', '--email', 'b@infinit.io'])
@@ -285,7 +285,7 @@ with Beyond() as beyond, \
   assertEq(len(os.listdir('%s/cache/b' % bob.state_path)), 0)
 
 # User by hash.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as alice:
   alice.run(['user', 'signup', 'alice',
              '--email', 'alice@infinit.sh'])
   user = alice.run_json(['user', 'export', 'alice'])

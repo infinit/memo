@@ -4,7 +4,7 @@ from utils import *
 import json
 import re
 
-with Infinit() as bob:
+with Memo() as bob:
   def neutralize(s):
     '''Fix gratuitous difference such as Window paths vs. Unix ones.'''
     s = re.sub(r'Z:.*?\\(%s(?:-\w+)?).exe' % binary, r'./bin/\1', s)

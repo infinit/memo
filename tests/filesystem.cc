@@ -37,23 +37,23 @@
 
 #include <elle/reactor/scheduler.hh>
 
-#include <infinit/filesystem/filesystem.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
-#include <infinit/model/faith/Faith.hh>
-#include <infinit/overlay/Stonehenge.hh>
-#include <infinit/silo/Filesystem.hh>
-#include <infinit/silo/Memory.hh>
-#include <infinit/silo/Silo.hh>
-#include <infinit/utility.hh>
+#include <memo/filesystem/filesystem.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/Local.hh>
+#include <memo/model/doughnut/Cache.hh>
+#include <memo/model/doughnut/consensus/Paxos.hh>
+#include <memo/model/faith/Faith.hh>
+#include <memo/overlay/Stonehenge.hh>
+#include <memo/silo/Filesystem.hh>
+#include <memo/silo/Memory.hh>
+#include <memo/silo/Silo.hh>
+#include <memo/utility.hh>
 
 #include "DHT.hh"
 
 ELLE_LOG_COMPONENT("test");
 
-namespace ifs = infinit::filesystem;
+namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
@@ -89,14 +89,14 @@ namespace
     return buf.string();
   }
 
-  std::vector<infinit::model::Address>
+  std::vector<memo::model::Address>
   get_fat(std::string const& attr)
   {
     std::stringstream input(attr);
     return elle::make_vector(boost::any_cast<elle::json::Array>(elle::json::read(input)),
                              [](auto const& entry)
                              {
-                               return infinit::model::Address::from_string(
+                               return memo::model::Address::from_string(
                                  boost::any_cast<std::string>(entry));
                              });
   }
@@ -138,7 +138,7 @@ namespace
       Client(std::string const& name, DHT dht, Args...args)
         : dht(std::move(dht))
         , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
-               std::make_unique<infinit::filesystem::FileSystem>(
+               std::make_unique<memo::filesystem::FileSystem>(
                  name, this->dht.dht, ifs::allow_root_creation = true,
                  std::forward<Args>(args)...),
                true))
@@ -643,11 +643,11 @@ ELLE_TEST_SCHEDULED(create_excl)
 #if 0
 ELLE_TEST_SCHEDULED(multiple_writers)
 {
-  infinit::silo::Memory::Blocks blocks;
+  memo::silo::Memory::Blocks blocks;
   struct stat st;
   auto servers = DHTs(1, {},
                with_cache = true,
-               storage = std::make_unique<infinit::silo::Memory>(blocks));
+               storage = std::make_unique<memo::silo::Memory>(blocks));
   auto client = servers.client(false);
   char buffer[1024];
   initialize(buffer);
@@ -1376,17 +1376,17 @@ ELLE_TEST_SCHEDULED(basic)
 
 ELLE_TEST_SCHEDULED(upgrade_06_07)
 {
-  infinit::silo::Memory::Blocks blocks;
+  memo::silo::Memory::Blocks blocks;
   auto owner_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key = elle::cryptography::rsa::keypair::generate(512);
   auto other_key2 = elle::cryptography::rsa::keypair::generate(512);
-  auto nid = infinit::model::Address::random(0);
+  auto nid = memo::model::Address::random(0);
   char buf[1024];
   {
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::silo::Memory>(blocks),
+             storage = std::make_unique<memo::silo::Memory>(blocks),
              version = elle::Version(0,6,0),
              id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
@@ -1410,7 +1410,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
       = DHTs(1,
              owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::silo::Memory>(blocks),
+             storage = std::make_unique<memo::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);
@@ -1444,7 +1444,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     auto dhts
       = DHTs(1, owner_key,
              keys = owner_key,
-             storage = std::make_unique<infinit::silo::Memory>(blocks),
+             storage = std::make_unique<memo::silo::Memory>(blocks),
              version = elle::Version(0,7,0),
              dht::consensus::rebalance_auto_expand = false,
              id = nid);
@@ -1755,7 +1755,7 @@ ELLE_TEST_SCHEDULED(block_size)
   BOOST_CHECK(write_file(client1.fs->path("/foo")));
   BOOST_CHECK(check_file(client1.fs->path("/foo")));
   BOOST_CHECK(check_file(client2.fs->path("/foo")));
-  dynamic_cast<infinit::filesystem::FileSystem*>(client1.fs->operations().get())
+  dynamic_cast<memo::filesystem::FileSystem*>(client1.fs->operations().get())
     ->block_size(2 * 1024 * 1024);
   BOOST_CHECK(check_file(client1.fs->path("/foo")));
   BOOST_CHECK(check_file(client2.fs->path("/foo")));

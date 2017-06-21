@@ -13,21 +13,21 @@
 
 #include <elle/reactor/network/udp-socket.hh>
 
-#include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/silo/MissingKey.hh>
+#include <memo/model/MissingBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
+#include <memo/model/doughnut/ACB.hh>
+#include <memo/overlay/kelips/Kelips.hh>
+#include <memo/overlay/kouncil/Kouncil.hh>
+#include <memo/silo/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("infinit.overlay.test");
+ELLE_LOG_COMPONENT("memo.overlay.test");
 
 #include "DHT.hh"
 
-using namespace infinit::model;
-using namespace infinit::model::blocks;
-using namespace infinit::model::doughnut;
-using namespace infinit::overlay;
+using namespace memo::model;
+using namespace memo::model::blocks;
+using namespace memo::model::doughnut;
+using namespace memo::overlay;
 
 using boost::algorithm::any_of_equal;
 using boost::algorithm::none_of_equal;
@@ -228,7 +228,7 @@ namespace
   /// @param type    "contacts", or "peers", etc.
   ///
   /// @throw std::out_of_range when the type is not in ostats.
-  std::vector<infinit::model::Address>
+  std::vector<memo::model::Address>
   get_addresses(elle::json::Object const& ostats,
                 std::string const& type)
   {
@@ -236,12 +236,12 @@ namespace
     auto cts = boost::any_cast<elle::json::Array>(ostats.at(type));
     return elle::make_vector(cts, [](auto& c) {
       auto const& o = boost::any_cast<elle::json::Object>(c);
-      return infinit::model::Address::from_string(
+      return memo::model::Address::from_string(
         boost::any_cast<std::string>(o.at("id")));
       });
   }
 
-  std::vector<infinit::model::Address>
+  std::vector<memo::model::Address>
   get_peers(DHT& client, std::string const& field = {})
   {
     return get_addresses(get_ostats(client),
@@ -298,12 +298,12 @@ namespace
     // Get the addresses of the *connected* peers.
     auto get_addresses = [](elle::json::Array const& cts)
       {
-        auto res = std::vector<infinit::model::Address>{};
+        auto res = std::vector<memo::model::Address>{};
         for (auto const& c: cts)
         {
           auto const& o = boost::any_cast<elle::json::Object>(c);
           if (boost::any_cast<bool> (o.at("connected")))
-            res.emplace_back(infinit::model::Address::from_string
+            res.emplace_back(memo::model::Address::from_string
                              (boost::any_cast<std::string>(o.at("id"))));
         }
         return res;
@@ -326,9 +326,9 @@ namespace
   // If or_more is true, accept extra non-working peers
   void
   hard_wait(DHT& s, int n_servers,
-            infinit::model::Address client = {},
+            memo::model::Address client = {},
             bool or_more = false,
-            infinit::model::Address blacklist = {})
+            memo::model::Address blacklist = {})
   {
     int attempts = 0;
     while (true)
@@ -345,13 +345,13 @@ namespace
             try
             {
               auto p = s.dht->overlay()->lookup_node(pa);
-              p.lock()->fetch(infinit::model::Address::random(), boost::none);
+              p.lock()->fetch(memo::model::Address::random(), boost::none);
             }
-            catch (infinit::silo::MissingKey const& mb)
+            catch (memo::silo::MissingKey const& mb)
             { // FIXME why do we need this?
               ++hit;
             }
-            catch (infinit::model::MissingBlock const& mb)
+            catch (memo::model::MissingBlock const& mb)
             {
               ++hit;
             }
@@ -380,15 +380,15 @@ ELLE_TEST_SCHEDULED(
   basics, (TestConfiguration, config), (bool, anonymous))
 {
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto storage = infinit::silo::Memory::Blocks();
-  auto id = infinit::model::Address::random();
+  auto storage = memo::silo::Memory::Blocks();
+  auto id = memo::model::Address::random();
   auto make_dht_a = [&]
     {
       return DHT(
         ::version = config.version,
         ::id = id,
         ::keys = keys,
-        ::storage = std::make_unique<infinit::silo::Memory>(storage),
+        ::storage = std::make_unique<memo::silo::Memory>(storage),
         ::make_overlay = config.overlay_builder);
     };
   auto disk = [&]
@@ -439,7 +439,7 @@ ELLE_TEST_SCHEDULED(
                    ::keys = keys,
                    ::make_overlay = config.overlay_builder,
                    ::paxos = false,
-                   ::protocol = infinit::model::doughnut::Protocol::utp);
+                   ::protocol = memo::model::doughnut::Protocol::utp);
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints().begin()->port()) <<
     [&] (UTPInstrument& instrument)
     {
@@ -449,7 +449,7 @@ ELLE_TEST_SCHEDULED(
                        ::make_overlay = config.overlay_builder,
                        ::paxos = false,
                        ::storage = nullptr,
-                       ::protocol = infinit::model::doughnut::Protocol::utp);
+                       ::protocol = memo::model::doughnut::Protocol::utp);
       auto const loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
                                     {instrument.endpoint()}};
       ELLE_LOG("connect DHTs")
@@ -482,7 +482,7 @@ ELLE_TEST_SCHEDULED(
   discover_endpoints, (TestConfiguration, config), (bool, anonymous))
 {
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto id_a = memo::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
     ::version = config.version,
@@ -549,7 +549,7 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(reciprocate,
                     (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::silo::Memory::Blocks b1, b2;
+  memo::silo::Memory::Blocks b1, b2;
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
@@ -558,14 +558,14 @@ ELLE_TEST_SCHEDULED(reciprocate,
     ::make_overlay = config.overlay_builder,
     ::paxos = true,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b1));
+    ::storage = std::make_unique<memo::silo::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = true,
-    ::storage = std::make_unique<infinit::silo::Memory>(b2));
+    ::storage = std::make_unique<memo::silo::Memory>(b2));
   ELLE_LOG("connect DHTs")
     discover(*dht_b, *dht_a, anonymous, false, true, true);
   {
@@ -581,7 +581,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
                     (bool, anonymous),
                     (bool, sync))
 {
-  infinit::silo::Memory::Blocks b1, b2;
+  memo::silo::Memory::Blocks b1, b2;
   auto id_a = special_id(10);
   auto id_b = special_id(11);
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
@@ -592,14 +592,14 @@ ELLE_TEST_SCHEDULED(chain_connect,
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b1));
+    ::storage = std::make_unique<memo::silo::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::id = id_b,
     ::version = config.version,
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b2));
+    ::storage = std::make_unique<memo::silo::Memory>(b2));
   ELLE_LOG("connect DHTs")
     discover(*dht_b, *dht_a, anonymous, false, sync, sync);
   auto client = DHT(
@@ -649,7 +649,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
         ::keys = keys,
         ::make_overlay = config.overlay_builder,
         dht::consensus::rebalance_auto_expand = false,
-        ::storage = std::make_unique<infinit::silo::Memory>(b2));
+        ::storage = std::make_unique<memo::silo::Memory>(b2));
       discover(*dht_b, *dht_a, anonymous, sync, sync);
       elle::reactor::wait(connected_client);
     }
@@ -667,7 +667,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
 ELLE_TEST_SCHEDULED(
   key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
-  auto blocks = infinit::silo::Memory::Blocks{};
+  auto blocks = memo::silo::Memory::Blocks{};
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto const id_a = special_id(1);
   auto dht_a = std::make_unique<DHT>(
@@ -676,8 +676,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
-    ::protocol = infinit::model::doughnut::Protocol::utp,
-    ::storage = std::make_unique<infinit::silo::Memory>(blocks));
+    ::protocol = memo::model::doughnut::Protocol::utp,
+    ::storage = std::make_unique<memo::silo::Memory>(blocks));
   auto const port_a = dht_a->dht->local()->server_endpoints().begin()->port();
   auto dht_b = DHT(
     ::keys = keys,
@@ -685,7 +685,7 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::storage = nullptr,
     ::paxos = false,
-    ::protocol = infinit::model::doughnut::Protocol::utp);
+    ::protocol = memo::model::doughnut::Protocol::utp);
 
   ELLE_LOG("discover")
     discover(dht_b, *dht_a, anonymous, false, true);
@@ -696,7 +696,7 @@ ELLE_TEST_SCHEDULED(
   {
     auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
     addr = block->address();
-    auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
+    auto& acb = dynamic_cast<memo::model::doughnut::ACB&>(*block);
     acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
                         true, true);
     dht_a->dht->seal_and_insert(*block, tcr());
@@ -716,8 +716,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
-    ::protocol = infinit::model::doughnut::Protocol::utp,
-    ::storage = std::make_unique<infinit::silo::Memory>(blocks),
+    ::protocol = memo::model::doughnut::Protocol::utp,
+    ::storage = std::make_unique<memo::silo::Memory>(blocks),
     ::port = port_a);
   // rebind local somewhere else or we get EBADF from local_endpoint
   dht_a->dht->local()->utp_server()->socket()->bind(
@@ -726,9 +726,9 @@ ELLE_TEST_SCHEDULED(
   // Force a reconnection
   auto peer = dht_b.dht->dock().peer_cache().begin()->lock();
   ELLE_LOG("disconnect from A")
-    dynamic_cast<infinit::model::doughnut::Remote&>(*peer).disconnect();
+    dynamic_cast<memo::model::doughnut::Remote&>(*peer).disconnect();
   ELLE_LOG("reconnect to A")
-    dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
+    dynamic_cast<memo::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
   BOOST_CHECK_NO_THROW(dht_b.dht->seal_and_update(*b2, tcr()));
@@ -738,9 +738,9 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   chain_connect_doom, (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::silo::Memory::Blocks b1, b2, b3;
+  memo::silo::Memory::Blocks b1, b2, b3;
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto id_a = memo::model::Address::random();
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -749,21 +749,21 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b1));
+    ::storage = std::make_unique<memo::silo::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b2));
+    ::storage = std::make_unique<memo::silo::Memory>(b2));
   auto dht_c = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b3));
+    ::storage = std::make_unique<memo::silo::Memory>(b3));
   ELLE_LOG("connect DHTs")
   {
     discover(*dht_b, *dht_a, anonymous, false, true, true);
@@ -780,7 +780,7 @@ ELLE_TEST_SCHEDULED(
       ::paxos = false,
       ::storage = nullptr);
     discover(*client, *tgt, anonymous, false, true);
-    auto addrs = std::vector<infinit::model::Address>{};
+    auto addrs = std::vector<memo::model::Address>{};
     for (int a = 0; a < 20; ++a)
     {
       try
@@ -819,9 +819,9 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   data_spread, (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::silo::Memory::Blocks b1, b2;
+  memo::silo::Memory::Blocks b1, b2;
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto id_a = memo::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
     ::version = config.version,
@@ -829,14 +829,14 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b1));
+    ::storage = std::make_unique<memo::silo::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b2));
+    ::storage = std::make_unique<memo::silo::Memory>(b2));
   ELLE_LOG("server discovery");
   discover(*dht_b, *dht_a, anonymous);
   // client. Hard-coded replication_factor=3 if paxos is enabled
@@ -852,7 +852,7 @@ ELLE_TEST_SCHEDULED(
     [&] (NodeLocation const& l, bool) { return l.id() == dht_b->dht->id(); });
   discover(*client, *dht_a, anonymous, false, true);
   elle::reactor::wait(discovered_client_b);
-  std::vector<infinit::model::Address> addrs;
+  std::vector<memo::model::Address> addrs;
   ELLE_LOG("writing blocks");
   for (int a=0; a<10; ++a)
   {
@@ -875,9 +875,9 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   data_spread2, (TestConfiguration, config), (bool, anonymous))
 {
-  infinit::silo::Memory::Blocks b1, b2;
+  memo::silo::Memory::Blocks b1, b2;
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
+  auto id_a = memo::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
     ::version = config.version,
@@ -885,14 +885,14 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b1));
+    ::storage = std::make_unique<memo::silo::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::make_unique<infinit::silo::Memory>(b2));
+    ::storage = std::make_unique<memo::silo::Memory>(b2));
   auto client = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
@@ -901,7 +901,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous, false, true);
   discover(*dht_a, *dht_b, anonymous, false, true);
-  auto addrs = std::vector<infinit::model::Address>{};
+  auto addrs = std::vector<memo::model::Address>{};
   for (int a=0; a<10; ++a)
   {
     for (int i=0; i<50; ++i)
@@ -998,7 +998,7 @@ ELLE_TEST_SCHEDULED(
           ELLE_TRACE("client %s discovers server %s", j, i)
             discover(*clients[j], *servers[i], false, false, true);
   ELLE_LOG("run some tests thingy, cf bearclaw");
-  auto addrs = std::vector<infinit::model::Address>{};
+  auto addrs = std::vector<memo::model::Address>{};
   elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
   {
     for (auto& c: clients)
@@ -1022,7 +1022,7 @@ ELLE_TEST_SCHEDULED(
               {
                 c->dht->remove(addr);
               }
-              catch (infinit::model::MissingBlock const& mb)
+              catch (memo::model::MissingBlock const& mb)
               {
               }
               catch (elle::athena::paxos::TooFewPeers const& tfp)
@@ -1062,7 +1062,7 @@ ELLE_TEST_SCHEDULED(
                   // Update.
                   ELLE_DEBUG("updating %f", addr);
                   auto aclb
-                    = dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get());
+                    = dynamic_cast<memo::model::blocks::ACLBlock*>(block.get());
                   aclb->data(elle::Buffer("coincoin"));
                   try
                   {
@@ -1076,7 +1076,7 @@ ELLE_TEST_SCHEDULED(
                   ELLE_DEBUG("updated %f", addr);
                 }
               }
-              catch (infinit::model::MissingBlock const& mb)
+              catch (memo::model::MissingBlock const& mb)
               {
                 except = std::current_exception();
               }
@@ -1166,7 +1166,7 @@ ELLE_TEST_SCHEDULED(
   (bool, back))
 {
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto storage = infinit::silo::Memory::Blocks();
+  auto storage = memo::silo::Memory::Blocks();
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::id = special_id(10),
@@ -1179,11 +1179,11 @@ ELLE_TEST_SCHEDULED(
     ::version = config.version,
     ::keys = keys,
     make_overlay = config.overlay_builder,
-    ::storage = std::make_unique<infinit::silo::Memory>(storage),
+    ::storage = std::make_unique<memo::silo::Memory>(storage),
     dht::consensus::rebalance_auto_expand = false);
   ELLE_LOG("connect DHTs")
     discover(*dht_a, *dht_b, anonymous, false, true, true);
-  infinit::model::Address addr;
+  memo::model::Address addr;
   {
     auto block =
       dht_a->dht->make_block<ACLBlock>(std::string("change_endpoints"));
@@ -1206,7 +1206,7 @@ ELLE_TEST_SCHEDULED(
       ::version = config.version,
       ::keys = keys,
       ::make_overlay = config.overlay_builder,
-      ::storage = std::make_unique<infinit::silo::Memory>(storage),
+      ::storage = std::make_unique<memo::silo::Memory>(storage),
       dht::consensus::rebalance_auto_expand = false);
   }
   ELLE_LOG("reconnect second DHT")
@@ -1222,7 +1222,7 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, back))
 {
-  auto storage = infinit::silo::Memory::Blocks();
+  auto storage = memo::silo::Memory::Blocks();
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto make_dht_a = [&]
     {
@@ -1232,7 +1232,7 @@ ELLE_TEST_SCHEDULED(
         ::keys = keys,
         ::make_overlay = config.overlay_builder,
         dht::consensus::rebalance_auto_expand = false,
-        ::storage = std::make_unique<infinit::silo::Memory>(storage));
+        ::storage = std::make_unique<memo::silo::Memory>(storage));
     };
   auto dht_a = make_dht_a();
   elle::With<TCPInstrument>(
@@ -1367,7 +1367,7 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
-  auto storage = infinit::silo::Memory::Blocks{};
+  auto storage = memo::silo::Memory::Blocks{};
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
@@ -1381,7 +1381,7 @@ ELLE_TEST_SCHEDULED(
     ::version = config.version,
     ::id = id_b,
     ::keys = keys,
-    ::storage = std::make_unique<infinit::silo::Memory>(storage),
+    ::storage = std::make_unique<memo::silo::Memory>(storage),
     ::make_overlay = config.overlay_builder,
     ::protocol = dht::Protocol::tcp,
     dht::consensus::rebalance_auto_expand = false);
@@ -1412,7 +1412,7 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
-  auto storage = infinit::silo::Memory::Blocks();
+  auto storage = memo::silo::Memory::Blocks();
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
@@ -1426,7 +1426,7 @@ ELLE_TEST_SCHEDULED(
     ::version = config.version,
     ::id = id_b,
     ::keys = keys,
-    ::storage = std::make_unique<infinit::silo::Memory>(storage),
+    ::storage = std::make_unique<memo::silo::Memory>(storage),
     ::make_overlay = config.overlay_builder,
     ::protocol = dht::Protocol::tcp,
     dht::consensus::rebalance_auto_expand = false);
@@ -1459,7 +1459,7 @@ ELLE_TEST_SCHEDULED(
       ::version = config.version,
       ::id = id_b,
       ::keys = keys,
-      ::storage = std::make_unique<infinit::silo::Memory>(storage),
+      ::storage = std::make_unique<memo::silo::Memory>(storage),
       ::make_overlay = config.overlay_builder,
       ::protocol = dht::Protocol::tcp,
       dht::consensus::rebalance_auto_expand = false);
@@ -1504,7 +1504,7 @@ struct Cluster
         ::make_overlay = config.overlay_builder,
         ::paxos = true,
         ::port = ports[i],
-        ::storage = std::make_unique<infinit::silo::Memory>(blocks[i]));
+        ::storage = std::make_unique<memo::silo::Memory>(blocks[i]));
   }
 
 
@@ -1525,9 +1525,9 @@ struct Cluster
   int n;
   using Keys = elle::cryptography::rsa::KeyPair;
   Keys keys = elle::cryptography::rsa::keypair::generate(512);
-  std::vector<infinit::model::Address> ids;
+  std::vector<memo::model::Address> ids;
   std::vector<unsigned short> ports;
-  std::vector<infinit::silo::Memory::Blocks> blocks;
+  std::vector<memo::silo::Memory::Blocks> blocks;
   std::vector<std::unique_ptr<DHT>> servers;
 };
 
@@ -1555,7 +1555,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   for (auto& s: servers)
     hard_wait(*s, n-1, client->dht->id());
   hard_wait(*client, n, client->dht->id());
-  auto addrs = std::vector<infinit::model::Address>{};
+  auto addrs = std::vector<memo::model::Address>{};
   // The index in servers[] of a host we will disconnect, and later
   // reconnect.
   int down = -1;
@@ -1574,7 +1574,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
         ::paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
-        ::storage = std::make_unique<infinit::silo::Memory>(blocks[down]));
+        ::storage = std::make_unique<memo::silo::Memory>(blocks[down]));
       for (int s=0; s< n; ++s)
         if (s != down)
         {
@@ -1619,7 +1619,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     auto block = client->dht->fetch(a);
     if (i%2)
     {
-      dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
+      dynamic_cast<memo::model::blocks::ACLBlock*>(block.get())->data(
         elle::Buffer("coincoin"));
       client->dht->update(std::move(block), tcr());
     }
@@ -1659,7 +1659,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
   discover(client, *servers[0], false);
   hard_wait(client, n, client.dht->id());
   // Write some blocks.
-  auto addrs = std::vector<infinit::model::Address>{};
+  auto addrs = std::vector<memo::model::Address>{};
   for (int i=0; i<50; ++i)
   {
     auto block = client.dht->make_block<ACLBlock>(std::string("block"));
@@ -1853,9 +1853,9 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
 ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
 {
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto storage_a = infinit::silo::Memory::Blocks();
-  auto storage_b = infinit::silo::Memory::Blocks();
-  auto storage_c = infinit::silo::Memory::Blocks();
+  auto storage_a = memo::silo::Memory::Blocks();
+  auto storage_b = memo::silo::Memory::Blocks();
+  auto storage_c = memo::silo::Memory::Blocks();
   auto port = 0;
   auto make_a = [&]
     {
@@ -1863,7 +1863,7 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
         ::version = config.version,
         ::id = special_id(10),
         ::keys = keys,
-        ::storage = std::make_unique<infinit::silo::Memory>(storage_a),
+        ::storage = std::make_unique<memo::silo::Memory>(storage_a),
         ::make_overlay = config.overlay_builder,
         ::port = port,
         dht::consensus::rebalance_auto_expand = false);
@@ -1873,14 +1873,14 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
     ::version = config.version,
     ::id = special_id(11),
     ::keys = keys,
-    ::storage = std::make_unique<infinit::silo::Memory>(storage_b),
+    ::storage = std::make_unique<memo::silo::Memory>(storage_b),
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false);
   auto c = DHT(
     ::version = config.version,
     ::id = special_id(12),
     ::keys = keys,
-    ::storage = std::make_unique<infinit::silo::Memory>(storage_c),
+    ::storage = std::make_unique<memo::silo::Memory>(storage_c),
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false);
   discover(b, *a, false, false, true, true);
@@ -1953,13 +1953,13 @@ ELLE_TEST_SUITE()
     1;
 #endif
 
-  // elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
+  // elle::os::setenv("MEMO_CONNECT_TIMEOUT",
   //                  elle::sprintf("%sms", valgrind(100, 20)));
-  // elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT",
+  // elle::os::setenv("MEMO_SOFTFAIL_TIMEOUT",
   //                  elle::sprintf("%sms", valgrind(100, 20)));
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL",
+  elle::os::setenv("MEMO_KOUNCIL_WATCHER_INTERVAL",
                    elle::sprintf("%sms", windows_factor * valgrind(20, 50)));
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY",
+  elle::os::setenv("MEMO_KOUNCIL_WATCHER_MAX_RETRY",
                    elle::sprintf("%sms", valgrind(20, 50)));
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_config = TestConfiguration{
@@ -1982,7 +1982,7 @@ ELLE_TEST_SUITE()
       return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
   auto const kouncil_config
-    = TestConfiguration{make_kouncil, infinit::version()};
+    = TestConfiguration{make_kouncil, memo::version()};
   auto const kouncil_0_7_config
     = TestConfiguration{make_kouncil, elle::Version(0, 7, 0)};
 

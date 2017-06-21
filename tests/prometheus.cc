@@ -3,7 +3,7 @@
 #include <elle/log.hh>
 #include <elle/test.hh>
 
-ELLE_LOG_COMPONENT("infinit.tests.prometheus");
+ELLE_LOG_COMPONENT("memo.tests.prometheus");
 
 #include "DHT.hh"
 
@@ -12,10 +12,10 @@ void run(int num_servers = 30)
   ELLE_LOG("running");
   auto const k = elle::cryptography::rsa::keypair::generate(512);
 
-  auto make_kouncil = [](infinit::model::doughnut::Doughnut& dht,
-                         std::shared_ptr<infinit::model::doughnut::Local> local)
+  auto make_kouncil = [](memo::model::doughnut::Doughnut& dht,
+                         std::shared_ptr<memo::model::doughnut::Local> local)
   {
-    return std::make_unique<infinit::overlay::kouncil::Kouncil>(&dht, local);
+    return std::make_unique<memo::overlay::kouncil::Kouncil>(&dht, local);
   };
 
   auto servers = std::vector<DHT>{};
@@ -26,7 +26,7 @@ void run(int num_servers = 30)
       ::id = special_id(n + 1),
       ::keys = k,
       ::make_overlay = make_kouncil,
-      ::storage = std::make_unique<infinit::silo::Memory>());
+      ::storage = std::make_unique<memo::silo::Memory>());
   };
 
   new_server();

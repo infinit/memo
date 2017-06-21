@@ -1,7 +1,7 @@
 <uwsgi>
   <plugin>python3</plugin>
   <pythonpath>/opt/infinit/beyond/lib/python${python_version_major}.${python_version_minor}</pythonpath>
-  <env>INFINIT_CRASH_REPORTER=0</env>
+  <env>MEMO_CRASH_REPORTER=0</env>
   <module>infinit.beyond.wsgi</module>
   <set>gcs-login=${repr(gcs_login)}</set>
   <set>gcs-key=${repr(gcs_key)}</set>

@@ -83,8 +83,8 @@ namespace crash_report
     , _version(std::move(version))
   {
     using elle::os::getenv;
-    if (getenv("INFINIT_CRASH_REPORT",
-               getenv("INFINIT_CRASH_REPORTER", production_build)))
+    if (getenv("MEMO_CRASH_REPORT",
+               getenv("MEMO_CRASH_REPORTER", production_build)))
     {
 #if defined INFINIT_LINUX
       breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());

@@ -3,34 +3,34 @@
 #include <elle/algorithm.hh>
 #include <elle/factory.hh>
 
-#include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/silo/Memory.hh>
+#include <memo/model/doughnut/Cache.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/Local.hh>
+#include <memo/model/doughnut/consensus/Paxos.hh>
+#include <memo/overlay/kelips/Kelips.hh>
+#include <memo/overlay/kouncil/Kouncil.hh>
+#include <memo/silo/Memory.hh>
 
-namespace dht = infinit::model::doughnut;
-namespace blocks = infinit::model::blocks;
+namespace dht = memo::model::doughnut;
+namespace blocks = memo::model::blocks;
 
-using Address = infinit::model::Address;
-using Endpoint = infinit::model::Endpoint;
-using Endpoints = infinit::model::Endpoints;
-using NodeLocation = infinit::model::NodeLocation;
+using Address = memo::model::Address;
+using Endpoint = memo::model::Endpoint;
+using Endpoints = memo::model::Endpoints;
+using NodeLocation = memo::model::NodeLocation;
 
 /*----------.
 | Overlay.  |
 `----------*/
 
 class Overlay
-  : public infinit::overlay::Overlay
+  : public memo::overlay::Overlay
 {
 public:
-  using Super = infinit::overlay::Overlay;
+  using Super = memo::overlay::Overlay;
 
-  Overlay(infinit::model::doughnut::Doughnut* d,
-          std::shared_ptr<infinit::model::doughnut::Local> local,
+  Overlay(memo::model::doughnut::Doughnut* d,
+          std::shared_ptr<memo::model::doughnut::Local> local,
           bool yield = false)
     : Super(d, local)
     , _yield(yield)
@@ -43,7 +43,7 @@ public:
           this->_blocks.emplace(block.address());
         });
       local->on_remove().connect(
-        [this] (infinit::model::Address addr)
+        [this] (memo::model::Address addr)
         {
           this->_blocks.erase(addr);
         });
@@ -65,29 +65,29 @@ public:
   }
 
   void
-  _discover(infinit::model::NodeLocations const& peers) override
+  _discover(memo::model::NodeLocations const& peers) override
   {
     ELLE_ABORT("not implemented");
   }
 
   bool
-  _discovered(infinit::model::Address id) override
+  _discovered(memo::model::Address id) override
   {
     ELLE_ABORT("not implemented");
   }
 
   static
   std::unique_ptr<Overlay>
-  make(infinit::model::doughnut::Doughnut& d,
-       std::shared_ptr<infinit::model::doughnut::Local> local)
+  make(memo::model::doughnut::Doughnut& d,
+       std::shared_ptr<memo::model::doughnut::Local> local)
   {
     return std::make_unique<Overlay>(&d, local);
   }
 
   static
   std::unique_ptr<Overlay>
-  make_yield(infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+  make_yield(memo::model::doughnut::Doughnut& d,
+             std::shared_ptr<memo::model::doughnut::Local> local)
   {
     return std::make_unique<Overlay>(&d, local, true);
   }
@@ -97,11 +97,11 @@ public:
   {
     if (this->_peers.emplace(&other).second)
       this->on_discovery()(
-        infinit::model::NodeLocation(other.doughnut()->id(), {}),
+        memo::model::NodeLocation(other.doughnut()->id(), {}),
         !other.doughnut()->local());
     if (other._peers.emplace(this).second)
       other.on_discovery()(
-        infinit::model::NodeLocation(this->doughnut()->id(), {}),
+        memo::model::NodeLocation(this->doughnut()->id(), {}),
         !this->doughnut()->local());
   }
 
@@ -150,19 +150,19 @@ public:
 
 protected:
   MemberGenerator
-  _allocate(infinit::model::Address address, int n) const override
+  _allocate(memo::model::Address address, int n) const override
   {
     return this->_find(address, n, true);
   }
 
   MemberGenerator
-  _lookup(infinit::model::Address address, int n, bool) const override
+  _lookup(memo::model::Address address, int n, bool) const override
   {
     return this->_find(address, n, false);
   }
 
   MemberGenerator
-  _find(infinit::model::Address address, int n, bool write) const
+  _find(memo::model::Address address, int n, bool write) const
   {
     if (_yield)
       elle::reactor::yield();
@@ -206,7 +206,7 @@ protected:
   }
 
   WeakMember
-  _lookup_node(infinit::model::Address id) const override
+  _lookup_node(memo::model::Address id) const override
   {
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)
@@ -216,11 +216,11 @@ protected:
 
   ELLE_ATTRIBUTE_R(bool, yield);
   ELLE_ATTRIBUTE_RX(std::unordered_set<Overlay*>, peers);
-  ELLE_ATTRIBUTE_R(std::unordered_set<infinit::model::Address>, blocks);
-  ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
+  ELLE_ATTRIBUTE_R(std::unordered_set<memo::model::Address>, blocks);
+  ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(memo::model::Address)>,
                     looked_up);
-  ELLE_ATTRIBUTE_RX(std::unordered_set<infinit::model::Address>, fail_addresses);
-  ELLE_ATTRIBUTE_RX((std::unordered_map<infinit::model::Address, int>), partial_addresses);
+  ELLE_ATTRIBUTE_RX(std::unordered_set<memo::model::Address>, fail_addresses);
+  ELLE_ATTRIBUTE_RX((std::unordered_map<memo::model::Address, int>), partial_addresses);
 };
 
 ELLE_DAS_SYMBOL(paxos);
@@ -242,7 +242,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 {
   if (enable)
     return std::make_unique<
-      infinit::model::doughnut::consensus::Cache>
+      memo::model::doughnut::consensus::Cache>
         (std::move(c), 1000);
   else
     return c;
@@ -259,9 +259,9 @@ class DHT
   ELLE_LOG_COMPONENT("tests.DHT");
 public:
   using make_overlay_t
-    = std::function<std::unique_ptr<infinit::overlay::Overlay>
-                    (infinit::model::doughnut::Doughnut& d,
-                     std::shared_ptr< infinit::model::doughnut::Local> local)>;
+    = std::function<std::unique_ptr<memo::overlay::Overlay>
+                    (memo::model::doughnut::Doughnut& d,
+                     std::shared_ptr< memo::model::doughnut::Local> local)>;
 
   template <typename ... Args>
   DHT(Args&& ... args)
@@ -272,9 +272,9 @@ public:
       paxos = true,
       keys = elle::cryptography::rsa::keypair::generate(512),
       owner = boost::optional<elle::cryptography::rsa::KeyPair>(),
-      id = infinit::model::Address::random(0), // FIXME
+      id = memo::model::Address::random(0), // FIXME
       storage = elle::factory(
-        [] { return std::make_unique<infinit::silo::Memory>(); }),
+        [] { return std::make_unique<memo::silo::Memory>(); }),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
       dht::consensus_builder = dht::Doughnut::ConsensusBuilder(),
@@ -294,8 +294,8 @@ public:
       ).call([this] (bool paxos,
                      elle::cryptography::rsa::KeyPair keys,
                      boost::optional<elle::cryptography::rsa::KeyPair> owner,
-                     infinit::model::Address id,
-                     std::unique_ptr<infinit::silo::Silo> storage,
+                     memo::model::Address id,
+                     std::unique_ptr<memo::silo::Silo> storage,
                      boost::optional<elle::Version> version,
                      make_overlay_t make_overlay,
                      dht::Doughnut::ConsensusBuilder consensus_builder,
@@ -366,8 +366,8 @@ private:
   init(bool paxos,
        elle::cryptography::rsa::KeyPair keys_,
        elle::cryptography::rsa::KeyPair owner,
-       infinit::model::Address id,
-       std::unique_ptr<infinit::silo::Silo> storage,
+       memo::model::Address id,
+       std::unique_ptr<memo::silo::Silo> storage,
        boost::optional<elle::Version> version,
        dht::Doughnut::ConsensusBuilder consensus_builder,
        make_overlay_t make_overlay,
@@ -415,8 +415,8 @@ private:
     auto passport = dht::Passport(keys->K(), "network-name", owner);
     auto overlay_builder =
           [this, &make_overlay] (
-        infinit::model::doughnut::Doughnut& d,
-        std::shared_ptr<infinit::model::doughnut::Local> local)
+        memo::model::doughnut::Doughnut& d,
+        std::shared_ptr<memo::model::doughnut::Local> local)
       {
         auto res = make_overlay(d, std::move(local));
         this->overlay = dynamic_cast<Overlay*>(res.get());
@@ -459,26 +459,26 @@ private:
 };
 
 class NoCheatConsensus
-  : public infinit::model::doughnut::consensus::Consensus
+  : public memo::model::doughnut::consensus::Consensus
 {
 public:
-  using Super = infinit::model::doughnut::consensus::Consensus;
+  using Super = memo::model::doughnut::consensus::Consensus;
   NoCheatConsensus(std::unique_ptr<Super> backend)
     : Super(backend->doughnut())
     , _backend(std::move(backend))
   {}
 
 protected:
-  std::unique_ptr<infinit::model::doughnut::Local>
+  std::unique_ptr<memo::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
-             std::unique_ptr<infinit::silo::Silo> storage) override
+             std::unique_ptr<memo::silo::Silo> storage) override
   {
     return _backend->make_local(port, listen, std::move(storage));
   }
 
-  std::unique_ptr<infinit::model::blocks::Block>
-  _fetch(infinit::model::Address address, boost::optional<int> local_version) override
+  std::unique_ptr<memo::model::blocks::Block>
+  _fetch(memo::model::Address address, boost::optional<int> local_version) override
   {
     auto res = _backend->fetch(address, local_version);
     if (!res)
@@ -497,15 +497,15 @@ protected:
   }
 
   void
-  _store(std::unique_ptr<infinit::model::blocks::Block> block,
-    infinit::model::StoreMode mode,
-    std::unique_ptr<infinit::model::ConflictResolver> resolver) override
+  _store(std::unique_ptr<memo::model::blocks::Block> block,
+    memo::model::StoreMode mode,
+    std::unique_ptr<memo::model::ConflictResolver> resolver) override
   {
     this->_backend->store(std::move(block), mode, std::move(resolver));
   }
 
   void
-  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs) override
+  _remove(memo::model::Address address, memo::model::blocks::RemoveSignature rs) override
   {
     if (rs.block)
     {
@@ -547,7 +547,7 @@ no_cheat_consensus(bool paxos = true)
 auto*
 get_kelips(DHT& client)
 {
-  return dynamic_cast<infinit::overlay::kelips::Node*>
+  return dynamic_cast<memo::overlay::kelips::Node*>
     (client.dht->overlay().get());
 }
 
@@ -555,17 +555,17 @@ get_kelips(DHT& client)
 auto*
 get_kouncil(DHT& client)
 {
-  return dynamic_cast<infinit::overlay::kouncil::Kouncil*>
+  return dynamic_cast<memo::overlay::kouncil::Kouncil*>
     (client.dht->overlay().get());
 }
 
 
 /// An Address easy to read in the logs.
-infinit::model::Address
+memo::model::Address
 special_id(int i)
 {
   assert(i);
-  infinit::model::Address::Value id;
+  memo::model::Address::Value id;
   memset(&id, 0, sizeof(id));
   id[0] = i;
   return id;
@@ -599,7 +599,7 @@ monitor_eviction(DHT& dht, DHT& target)
 void
 discover(DHT& dht,
          DHT& target,
-         infinit::model::NodeLocation const& loc,
+         memo::model::NodeLocation const& loc,
          bool wait = false,
          bool wait_back = false)
 {
