@@ -2254,15 +2254,15 @@ namespace infinit
       {
         static elle::Bench nlocalhit("kelips.localhit", std::chrono::seconds(10));
         int nhit = 0;
-        int fg = group_of(p->fileAddress);
+        int const fg = group_of(p->fileAddress);
         auto const iterators = [&]
           {
             auto its = _state.files.equal_range(p->fileAddress);
             auto res = std::vector<decltype(its.first)>{};
             for (auto it = its.first; it != its.second; ++it)
               res.push_back(it);
-            // Shuffle the match list
-            std::shuffle(res.begin(), res.end(), elle::random_engine());
+            // Shuffle the match list.
+            elle::shuffle(res);
             return res;
           }();
         for (auto it: iterators)
@@ -2322,7 +2322,7 @@ namespace infinit
           return;
         if (p->originEndpoints.empty())
           p->originEndpoints = {p->endpoint};
-        int fg = group_of(p->fileAddresses.front());
+        int const fg = group_of(p->fileAddresses.front());
         if (fg == _group)
         {
           std::vector<std::set<Address>> result_sets;
