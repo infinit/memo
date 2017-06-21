@@ -21,8 +21,9 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.Dock")
 
 namespace
 {
-  bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
-  auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+  using elle::os::getenv;
+  bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO", false);
+  auto const ipv6_enabled = !getenv("INFINIT_NO_IPV6", false);
 
   template <typename Action>
   void

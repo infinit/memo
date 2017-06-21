@@ -156,14 +156,12 @@ namespace infinit
                      std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
-          , _lenient_fetch(lenient_fetch)
+          , _lenient_fetch(elle::os::getenv("INFINIT_PAXOS_LENIENT_FETCH",
+                                            lenient_fetch))
           , _rebalance_auto_expand(rebalance_auto_expand)
           , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
-        {
-          if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
-            _lenient_fetch = true;
-        }
+        {}
 
         /*--------.
         | Factory |
