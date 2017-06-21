@@ -25,6 +25,7 @@ namespace infinit
       : private boost::totally_ordered<Address>
     {
     public:
+      using Self = Address;
       using Value = uint8_t[32];
       using Flags = uint8_t;
       static constexpr int flag_byte = 31;
@@ -33,6 +34,8 @@ namespace infinit
       Address(Value const value);
       Address(Value const value, Flags flags, bool combine);
       Address(elle::UUID const& id);
+      /// Whether is not the null Address.
+      operator bool() const;
       /// Ternary comparison, as with memcmp.
       int
       cmp(Address const& rhs) const;

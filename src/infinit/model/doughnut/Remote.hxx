@@ -161,7 +161,7 @@ namespace infinit
         this->set_context(remote);
       }
 
-      template<typename F>
+      template <typename F>
       RemoteRPC<F>
       Remote::make_rpc(std::string const& name)
       {

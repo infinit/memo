@@ -34,14 +34,19 @@ namespace infinit
     }
 
     Address::Address(Value const value)
-      : Address{value, value[flag_byte], false}
+      : Self{value, value[flag_byte], false}
     {}
 
     Address::Address(elle::UUID const& id)
-      : Address(elle::cryptography::hash(
-                  elle::ConstWeakBuffer(id.data, id.static_size()),
-                  elle::cryptography::Oneway::sha256).contents())
+      : Self{elle::cryptography::hash(
+               elle::ConstWeakBuffer(id.data, id.static_size()),
+               elle::cryptography::Oneway::sha256).contents()}
     {}
+
+    Address::operator bool() const
+    {
+      return *this != null;
+    }
 
     Address
     Address::from_string(std::string const& repr)

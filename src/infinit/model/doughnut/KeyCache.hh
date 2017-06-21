@@ -15,22 +15,22 @@ namespace infinit
 
       struct KeyHash
       {
-        KeyHash(int h, elle::cryptography::rsa::PublicKey k)
-          : hash(h)
-          , key(std::make_shared(std::move(k)))
-        {}
-
         KeyHash(int h, std::shared_ptr<elle::cryptography::rsa::PublicKey> k)
           : hash(h)
           , key(std::move(k))
         {}
 
-        int hash;
-        std::shared_ptr<elle::cryptography::rsa::PublicKey> key;
+        KeyHash(int h, elle::cryptography::rsa::PublicKey k)
+          : KeyHash{h, std::make_shared(std::move(k))}
+        {}
+
         elle::cryptography::rsa::PublicKey const& raw_key() const
         {
           return *key;
         }
+
+        int hash;
+        std::shared_ptr<elle::cryptography::rsa::PublicKey> key;
       };
 
       using KeyCache = bmi::multi_index_container<

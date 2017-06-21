@@ -127,12 +127,13 @@ namespace infinit
     : public RPCHandler
   {
   public:
+    using Self = ConcreteRPCHandler;
     using Function = std::function<R (Args...)>;
-    ConcreteRPCHandler(std::string name,
-                       Function const& function)
+    ConcreteRPCHandler(std::string name, Function const& fun)
       : RPCHandler(std::move(name))
-      , _function(function)
+      , _function(fun)
     {}
+
     ELLE_ATTRIBUTE_R(Function, function);
 
     void
@@ -522,7 +523,12 @@ namespace infinit
     BaseRPC(std::string name,
             elle::protocol::ChanneledStream& channels,
             elle::Version const& version,
-            boost::optional<elle::cryptography::SecretKey> key = {});
+            boost::optional<elle::cryptography::SecretKey> key = {})
+      : _name(std::move(name))
+      , _channels(&channels)
+      , _key(std::move(key))
+      , _version(version)
+    {}
 
     /// Return the credentials, if applicable.
     ///
@@ -568,6 +574,7 @@ namespace infinit
     : public BaseRPC
   {
   public:
+    using Self = RPC;
     /// Construct a RPC.
     ///
     /// @see BaseRPC::BaseRPC.
@@ -587,13 +594,13 @@ namespace infinit
         elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
         elle::Buffer* credentials)
-      : RPC(
-        std::move(name),
-        channels,
-        version,
-        credentials && !credentials->empty() ?
-        boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
-        boost::optional<elle::cryptography::SecretKey>())
+      : Self{
+          std::move(name),
+          channels,
+          version,
+          credentials && !credentials->empty() ?
+            boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
+            boost::optional<elle::cryptography::SecretKey>()}
     {}
 
     /// Call the RPC.
@@ -608,13 +615,10 @@ namespace infinit
   };
 
   template <typename T>
-  struct
-  RPCCall
-  {};
+  struct RPCCall;
 
   template <typename R, typename ... Args>
-  struct
-  RPCCall<R (Args...)>
+  struct RPCCall<R (Args...)>
   {
     template <typename Head, typename ... Tail>
     static
@@ -755,17 +759,6 @@ namespace infinit
       }
     }
   };
-
-  inline
-  BaseRPC::BaseRPC(std::string name,
-                   elle::protocol::ChanneledStream& channels,
-                   elle::Version const& version,
-                   boost::optional<elle::cryptography::SecretKey> key)
-    : _name(std::move(name))
-    , _channels(&channels)
-    , _key(std::move(key))
-    , _version(version)
-  {}
 
   std::ostream&
   operator <<(std::ostream& o, BaseRPC const& rpc);

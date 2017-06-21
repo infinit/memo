@@ -43,8 +43,6 @@ namespace infinit
       Remote::Remote(Doughnut& dht,
                      std::shared_ptr<Dock::Connection> connection)
         : Super(dht, connection->location().id())
-        , _connection()
-        , _connected()
         , _connecting_since(std::chrono::system_clock::now())
       {
         ELLE_TRACE_SCOPE("%s: construct", this);

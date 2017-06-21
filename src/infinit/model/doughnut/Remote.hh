@@ -32,8 +32,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::doughnut::Remote;
-        using Super = infinit::model::doughnut::Peer;
+        using Self = Remote;
+        using Super = Peer;
         /// Challenge, token
         using Challenge = std::pair<elle::Buffer, elle::Buffer>;
         struct Auth
@@ -51,7 +51,7 @@ namespace infinit
                        symbols::challenge,
                        symbols::passport))>;
         };
-        template<typename F>
+        template <typename F>
         friend
         class RemoteRPC;
         friend

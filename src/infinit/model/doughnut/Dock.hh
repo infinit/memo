@@ -139,17 +139,17 @@ namespace infinit
           _key_exchange(elle::protocol::ChanneledStream& channels);
           friend class Dock;
         };
-        /** Get a connection to the given location.
-         *
-         *  Retreive a connection to the current location, either already
-         *  connected or currently connecting, or open a new one if there is
-         *  none. Ownership is not kept by the Dock. If the location id is null,
-         *  fill it after connection. If it is set, disconnect in case of
-         *  mismatch.
-         *
-         *  @param l         Location of the peer to connect to.
-         *  @param no_remote Do not automatically create a remote on this conneciton
-         */
+
+        /// Get a connection to the given location.
+        ///
+        /// Retreive a connection to the current location, either already
+        /// connected or currently connecting, or open a new one if there is
+        /// none. Ownership is not kept by the Dock. If the location id is null,
+        /// fill it after connection. If it is set, disconnect in case of
+        /// mismatch.
+        ///
+        /// @param l         Location of the peer to connect to.
+        /// @param no_remote Do not automatically create a remote on this conneciton
         std::shared_ptr<Connection>
         connect(NodeLocation l, bool no_remote = false);
         ELLE_ATTRIBUTE_R(Connecting<Connection>, connecting);

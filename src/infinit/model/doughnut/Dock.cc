@@ -386,9 +386,9 @@ namespace infinit
                   make_umbrella(
                     [&, eps = this->_location.endpoints().udp()]
                     {
-                      std::string cid;
-                      if (this->_location.id() != Address::null)
-                        cid = elle::sprintf("%x", this->_location.id());
+                      auto const cid
+                        = this->_location.id() ? elle::sprintf("%x", this->_location.id())
+                        : "";
                       auto socket =
                         std::make_unique<elle::reactor::network::UTPSocket>(
                           this->_dock._utp_server);
