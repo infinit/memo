@@ -7,6 +7,7 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/sort.hpp>
 
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
 #include <elle/find.hh>
 #include <elle/memory.hh>
@@ -1769,7 +1770,7 @@ namespace infinit
                   !elle::os::getenv("INFINIT_DISABLE_BALANCED_TRANSFERS", false);
                 if (balance && peers.size() > 1)
                 {
-                  std::shuffle(peers.begin(), peers.end(), elle::random_engine());
+                  elle::shuffle(peers);
                   boost::sort(peers, [this] (auto const& p1, auto const& p2) {
                     return this->_transfers[p1->id()] < this->_transfers[p2->id()];
                   });
