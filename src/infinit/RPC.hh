@@ -94,22 +94,20 @@ namespace infinit
   std::ostream&
   operator <<(std::ostream& output, RPCHandler const& rpc);
 
-#ifdef __clang__
-  // Clang fails on the other simpler list implementation by
-  // matching List<Foo> to the default impl on some conditions.
+  /*-------.
+  | List.  |
+  `-------*/
+
   template <int I, typename ... Args>
-  struct ListImpl {};
+  struct ListImpl;
 
   template <typename ... Args>
-  struct List
-   : public ListImpl<sizeof...(Args), Args...>
-  {};
+  using List = ListImpl<sizeof...(Args), Args...>;
 
   template <typename ... Args>
   struct ListImpl<0, Args...>
   {
     static constexpr bool empty = true;
-    static constexpr int nargs = sizeof...(Args);
   };
 
   template <int I, typename Head_, typename ... Tail_>
@@ -119,21 +117,10 @@ namespace infinit
     using Tail = List<Tail_...>;
     static constexpr bool empty = false;
   };
-#else
-  template <typename ... Args>
-  struct List
-  {
-    static constexpr bool empty = true;
-  };
 
-  template <typename Head_, typename ... Tail_>
-  struct List<Head_, Tail_...>
-  {
-    using Head = Head_;
-    using Tail = List<Tail_...>;
-    static constexpr bool empty = false;
-  };
-#endif
+  /*---------------------.
+  | ConcreteRPCHandler.  |
+  `---------------------*/
 
   template <typename R, typename ... Args>
   class ConcreteRPCHandler
