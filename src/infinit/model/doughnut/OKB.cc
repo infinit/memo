@@ -301,11 +301,11 @@ namespace infinit
       bool
       BaseOKB<Block>::operator ==(blocks::Block const& other) const
       {
-        auto other_okb = dynamic_cast<Self const*>(&other);
-        return (other_okb
-                && this->_salt == other_okb->_salt
-                && *this->_owner_key == *other_okb->_owner_key
-                // && this->_signature->value() == other_okb->_signature->value()
+        auto that = dynamic_cast<Self const*>(&other);
+        return (that
+                && this->_salt == that->_salt
+                && *this->_owner_key == *that->_owner_key
+                // && this->_signature->value() == that->_signature->value()
                 && this->Super::operator ==(other));
       }
 

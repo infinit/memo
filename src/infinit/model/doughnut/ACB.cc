@@ -1169,26 +1169,17 @@ namespace infinit
       bool
       BaseACB<Block>::operator ==(blocks::Block const& rhs) const
       {
-        auto other_acb = dynamic_cast<Self const*>(&rhs);
-        if (!other_acb)
-          return false;
-        if (this->_editor != other_acb->_editor)
-          return false;
-        if (this->_owner_token != other_acb->_owner_token)
-          return false;
-        if (this->_acl_entries != other_acb->_acl_entries)
-          return false;
-        if (this->_data_version != other_acb->_data_version)
-          return false;
-        //if (this->_data_signature->value() != other_acb->_data_signature->value())
-        //  return false;
-        if (this->_world_readable != other_acb->_world_readable)
-          return false;
-        if (this->_world_writable != other_acb->_world_writable)
-          return false;
-        if (this->_deleted != other_acb->_deleted)
-          return false;
-        return this->Super::operator ==(rhs);
+        auto that = dynamic_cast<Self const*>(&rhs);
+        return (that
+                && this->_editor == that->_editor
+                && this->_owner_token == that->_owner_token
+                && this->_acl_entries == that->_acl_entries
+                && this->_data_version == that->_data_version
+                // && this->_data_signature->value() == that->_data_signature->value()
+                && this->_world_readable == that->_world_readable
+                && this->_world_writable == that->_world_writable
+                && this->_deleted == that->_deleted
+                && this->Super::operator ==(rhs));
       }
 
       /*--------------.
