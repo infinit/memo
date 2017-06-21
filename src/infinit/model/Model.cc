@@ -336,11 +336,11 @@ namespace infinit
     }
 
     SquashConflictResolverOptions::SquashConflictResolverOptions()
-    : max_size(0)
+      : max_size(0)
     {}
 
     SquashConflictResolverOptions::SquashConflictResolverOptions(int max_size)
-    : max_size(max_size)
+      : max_size(max_size)
     {}
 
     class MergeConflictResolver
@@ -452,12 +452,12 @@ namespace infinit
       // FIXME: check mcr max size
       if (auto mcr = dynamic_cast<MergeConflictResolver*>(&prev))
       {
-        static const unsigned int max_size
-          = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
-        if (mcr->resolvers().size() >= max_size)
-          return {model::Squash::stop, {}};
-        else
+        static auto const max_size
+          = elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", 20u);
+        if (mcr->resolvers().size() < max_size)
           return this->squashable(mcr->resolvers());
+        else
+          return {model::Squash::stop, {}};
       }
       else
       {

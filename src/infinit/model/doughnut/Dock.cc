@@ -255,9 +255,11 @@ namespace infinit
         , _disconnected_since(std::chrono::system_clock::now())
       {}
 
-      std::shared_ptr<Dock::Connection>
+      auto
       Dock::Connection::make(Dock& dock, NodeLocation loc)
+        -> std::shared_ptr<Connection>
       {
+        // Cannot use make_shared.
         auto res = std::shared_ptr<Dock::Connection>(new Connection(dock, loc));
         res->_self = res;
         return res;
@@ -554,7 +556,7 @@ namespace infinit
             "auth_syn", channels, self.dock().doughnut().version());
           auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
           auto version = self.dock().doughnut().version();
-          // 0.5.0 and 0.6.0 compares the full version it receives for
+          // 0.5.0 and 0.6.0 compare the full version they receive for
           // compatibility instead of dropping the subminor component. Set
           // it to 0.
           return auth_syn(

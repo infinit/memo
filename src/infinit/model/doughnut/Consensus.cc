@@ -108,7 +108,7 @@ namespace infinit
         Consensus::_fetch(std::vector<AddressVersion> const& addresses,
                           ReceiveBlock res)
         {
-          for (auto a: addresses)
+          for (auto const& a: addresses)
           {
             try
             {
