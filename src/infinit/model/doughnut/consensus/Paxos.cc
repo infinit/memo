@@ -789,6 +789,87 @@ namespace infinit
 
         struct Paxos::Details
         {
+          template <typename Peers>
+          static
+          int
+          send_immutable_block(Paxos& self,
+                               Peers&& peers,
+                               blocks::Block const& b,
+                               PaxosClient::Quorum current)
+          {
+            std::vector<std::shared_ptr<Paxos::Peer>> reached;
+            std::vector<std::shared_ptr<Paxos::Peer>> to_confirm;
+            ELLE_TRACE_SCOPE("send block to {}", peers);
+            std::exception_ptr weak_error;
+            elle::reactor::for_each_parallel(
+              std::forward<Peers>(peers) | transformed(to_paxos_peer)
+              // FIXME: boost filtered does not play well with input iterator
+              // that move their value, since it dereferences it twice.  |
+              // filtered([] (auto peer) { return bool(peer); })
+              ,
+              [&] (auto peer)
+              {
+                if (!peer)
+                {
+                  ELLE_WARN("peer was deleted while storing");
+                  return;
+                }
+                if (elle::find(current, peer->id()))
+                {
+                  to_confirm.emplace_back(peer);
+                  return;
+                }
+                try
+                {
+                  ELLE_DEBUG_SCOPE("send block to {}", peer);
+                  peer->store(b, STORE_INSERT);
+                  reached.emplace_back(peer);
+                  to_confirm.emplace_back(peer);
+                  current.insert(peer->id());
+                }
+                catch (elle::athena::paxos::Unavailable const& e)
+                {
+                  ELLE_TRACE("sending block to {} failed: {}", peer, e);
+                }
+                catch (elle::athena::paxos::WeakError const& e)
+                {
+                  ELLE_TRACE("weak error sending block to {}: {}", peer, e);
+                  if (!weak_error)
+                    weak_error = e.exception();
+                }
+              });
+            if (reached.size() == 0u)
+            {
+              if (weak_error)
+              {
+                ELLE_TRACE("rethrow weak error: {}",
+                           elle::exception_string(weak_error));
+                std::rethrow_exception(weak_error);
+              }
+              return 0;
+            }
+            if (self.doughnut().version() >= elle::Version(0, 6, 0))
+              ELLE_TRACE("confirm block to {}", to_confirm)
+                elle::reactor::for_each_parallel(
+                  to_confirm,
+                  [&] (auto peer)
+                  {
+                    if (!peer)
+                    {
+                      ELLE_WARN("peer was deleted while confirming");
+                      return;
+                    }
+                    try
+                    {
+                      peer->confirm(current, b.address(), PaxosClient::Proposal());
+                    }
+                    catch (elle::athena::paxos::Unavailable const& e)
+                    {
+                      ELLE_TRACE("confirming block to {} failed: {}", peer, e);
+                    }
+                  });
+            return reached.size();
+          }
         };
 
         void
@@ -822,47 +903,23 @@ namespace infinit
                   if (it == this->_quorums.end())
                     // The block was deleted in the meantime.
                     continue;
-                  auto q = *it;
+                  auto q = it->quorum;
                   auto new_q =
-                    this->_paxos._rebalance_extend_quorum(address, q.quorum);
-                  if (new_q == q.quorum)
+                    this->_paxos._rebalance_extend_quorum(address, q);
+                  if (new_q == q)
                   {
                     ELLE_DEBUG("unable to find any new owner for %f", address);
-                    this->_under_replicated(address, q.quorum.size());
+                    this->_under_replicated(address, q.size());
                     continue;
                   }
                   else
-                    ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
-                  std::unordered_set<overlay::Overlay::Member> new_owners;
-                  std::unordered_set<std::shared_ptr<Paxos::Peer>> owners;
-                  for (auto id: new_q)
-                    if (auto peer = to_paxos_peer(
-                          this->doughnut().overlay()->lookup_node(id)))
-                    {
-                      owners.emplace(peer);
-                      if (!elle::find(q.quorum, peer->id()))
-                        new_owners.emplace(peer);
-                    };
-                  ELLE_DEBUG("send block to {}", new_owners)
-                    elle::reactor::for_each_parallel(
-                      new_owners,
-                      [&] (overlay::Overlay::Member peer)
-                      {
-                        peer->store(*block.block, STORE_INSERT);
-                        this->_quorums.modify(
-                          this->_quorums.find(address),
-                          [&] (BlockRepartition& r)
-                          { r.quorum.insert(peer->id()); });
-                        this->_node_blocks.emplace(peer->id(), address);
-                      });
-                  ELLE_DEBUG("confirm new quorum {} to {}", new_q, new_owners)
-                    elle::reactor::for_each_parallel(
-                      owners,
-                      [&] (auto peer)
-                      {
-                        peer->confirm(new_q, address, PaxosClient::Proposal());
-                      });
-                  this->_rebalanced(address);
+                    ELLE_DEBUG("rebalance from %f to %f", q, new_q);
+                  if (Details::send_immutable_block(
+                        this->paxos(),
+                        this->doughnut().overlay()->lookup_nodes(new_q),
+                        *block.block,
+                        q))
+                      this->_rebalanced(address);
                 }
               }
               catch (MissingBlock const&)
@@ -901,55 +958,27 @@ namespace infinit
                 {
                   if (target.immutable)
                   {
-                    auto peer = to_paxos_peer(
-                      this->doughnut().overlay()-> lookup_node(address));
-                    if (!peer)
-                      // Peer left in the meantime.
-                      continue;
-                    auto b = this->_load(target.address);
-                    ELLE_ASSERT(b.block);
-                    ELLE_DEBUG("send block to {}", peer)
-                      try
+                    auto const quorum_current =
+                      ELLE_ENFORCE(elle::find(this->_quorums,
+                                              target.address))->quorum;
+                    auto const quorum_new = [&]
                       {
-                        peer->store(*b.block, STORE_INSERT);
-                      }
-                      catch (elle::athena::paxos::Unavailable const& e)
-                      {
-                        ELLE_TRACE("storing block to {} failed: {}", peer, e);
-                        continue;
-                      }
-                    auto const quorum = [&]
-                      {
-                        auto q =
-                          ELLE_ENFORCE(elle::find(this->_quorums,
-                                                  target.address))->quorum;
+                        auto q = quorum_current;
                         q.insert(address);
                         return q;
                       }();
-                    ELLE_DEBUG("confirm block to %f", quorum)
-                      elle::reactor::for_each_parallel(
-                        this->doughnut().overlay()->lookup_nodes(quorum) |
-                        transformed(to_paxos_peer),
-                        [&] (auto peer)
-                        {
-                          if (peer)
-                            try
-                            {
-                              peer->confirm(quorum, target.address,
-                                            PaxosClient::Proposal());
-                            }
-                            catch (elle::athena::paxos::Unavailable const& e)
-                            {
-                              ELLE_TRACE("confirming block to {} failed: {}",
-                                         peer, e);
-                            }
-                          else
-                            ELLE_WARN(
-                              "peer %f disappeared while confirming", peer);
-                        });
-                    ELLE_TRACE("successfully duplicated %f to %f",
-                               target.address, address);
-                    this->_rebalanced(target.address);
+                    auto b = this->_load(target.address);
+                    ELLE_ASSERT(b.block);
+                    if (Details::send_immutable_block(
+                          this->paxos(),
+                          this->doughnut().overlay()->lookup_nodes(quorum_new),
+                          *b.block,
+                          quorum_current))
+                    {
+                      ELLE_TRACE("successfully duplicated %f to %f",
+                                 target.address, address);
+                      this->_rebalanced(target.address);
+                    }
                   }
                   else
                   {
@@ -1579,56 +1608,9 @@ namespace infinit
               break;
             }
           }
-          else
-          {
-            std::vector<std::shared_ptr<Paxos::Peer>> reached;
-            PaxosClient::Quorum q;
-            ELLE_TRACE("send block to {}", owners)
-              elle::reactor::for_each_parallel(
-                owners | transformed(to_paxos_peer)
-                // FIXME: boost filtered does not play well with input iterator
-                // that move their value, since it dereferences it twice.  |
-                // filtered([] (auto peer) { return bool(peer); })
-                ,
-                [&] (auto peer)
-                {
-                  if (!peer)
-                  {
-                    ELLE_WARN("peer was deleted while storing");
-                    return;
-                  }
-                  try
-                  {
-                    ELLE_DEBUG_SCOPE("send block to {}", peer);
-                    peer->store(*b, mode);
-                    reached.push_back(peer);
-                    q.insert(peer->id());
-                  }
-                  catch (elle::athena::paxos::Unavailable const& e)
-                  {
-                    ELLE_TRACE("sending block to {} failed: {}", peer, e);
-                  }
-                });
-            if (reached.size() == 0u)
-              elle::err("no peer available for %s of %f",
-                        mode == STORE_INSERT ? "insertion" : "update",
-                        b->address());
-            if (this->doughnut().version() >= elle::Version(0, 6, 0))
-              ELLE_TRACE("confirm block to {}", reached)
-                elle::reactor::for_each_parallel(
-                  reached,
-                  [&] (auto peer)
-                  {
-                    try
-                    {
-                      peer->confirm(q, b->address(), PaxosClient::Proposal());
-                    }
-                    catch (elle::athena::paxos::Unavailable const& e)
-                    {
-                      ELLE_TRACE("confirming block to {} failed: {}", peer, e);
-                    }
-                  });
-          }
+          else if (!Details::send_immutable_block(
+                     *this, owners, *b, PaxosClient::Quorum()))
+            elle::err("no peer available for insertion of %f", b->address());
         }
 
         class Hit
