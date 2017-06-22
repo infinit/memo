@@ -122,12 +122,16 @@ namespace infinit
       _parent->_files.insert(
         std::make_pair(_name,
           std::make_pair(EntryType::pending, b->address())));
+      elle::SafeFinally reset_cache([&] {
+        _parent->_files.erase(_name);
+      });
       _parent->write(_owner,
                      Operation{
                        (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
                        _name, EntryType::pending, b->address()},
                      DirectoryData::null_block,
                      true);
+      reset_cache.abort();
       // arm rollback
       elle::With<elle::Finally>(
         [&]
