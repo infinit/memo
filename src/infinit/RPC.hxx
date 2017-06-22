@@ -11,7 +11,6 @@ namespace infinit
   std::ostream&
   operator <<(std::ostream& o, BaseRPC const& rpc)
   {
-    elle::fprintf(o, "RPC(%s)", rpc.name());
-    return o;
+    return elle::fprintf(o, "RPC(%s)", rpc.name());
   }
 }

@@ -335,20 +335,24 @@ namespace infinit
           return network_exception_to_unavailable([&] {
               if (this->doughnut().version() >= elle::Version(0, 9, 0))
               {
-                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
-                  PaxosServer::Quorum,
-                  Address,
-                  PaxosClient::Proposal const&,
-                  bool)>("propose");
+                using Propose =
+                  auto (PaxosServer::Quorum,
+                        Address,
+                        PaxosClient::Proposal const&,
+                        bool)
+                  -> boost::optional<PaxosClient::Accepted>;
+                auto propose = this->make_rpc<Propose>("propose");
                 propose.set_context<Doughnut*>(&this->_doughnut);
                 return propose(peers, address, p, insert);
               }
               else
               {
-                auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
-                  PaxosServer::Quorum,
-                  Address,
-                  PaxosClient::Proposal const&)>("propose");
+                using Propose =
+                  auto (PaxosServer::Quorum,
+                        Address,
+                        PaxosClient::Proposal const&)
+                  -> boost::optional<PaxosClient::Accepted>;
+                auto propose = this->make_rpc<Propose>("propose");
                 propose.set_context<Doughnut*>(&this->_doughnut);
                 return propose(peers, address, p);
               }
@@ -369,22 +373,26 @@ namespace infinit
                 ELLE_TRACE("unmanageable accept on non-block value");
                 throw elle::reactor::network::Error("Peer unavailable");
               }
-              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
-                PaxosServer::Quorum peers,
-                Address,
-                Paxos::PaxosClient::Proposal const&,
-                std::shared_ptr<blocks::Block>)>("accept");
+              using Accept =
+                auto (PaxosServer::Quorum peers,
+                      Address,
+                      Paxos::PaxosClient::Proposal const&,
+                      std::shared_ptr<blocks::Block>)
+                -> Paxos::PaxosClient::Proposal;
+              auto accept = this->make_rpc<Accept>("accept");
               accept.set_context<Doughnut*>(&this->_doughnut);
               return accept(peers, address, p,
                             value.get<std::shared_ptr<blocks::Block>>());
             }
             else
             {
-              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
-                PaxosServer::Quorum peers,
-                Address,
-                Paxos::PaxosClient::Proposal const&,
-                Value const&)>("accept");
+              using Accept =
+                auto (PaxosServer::Quorum peers,
+                      Address,
+                      Paxos::PaxosClient::Proposal const&,
+                      Value const&)
+                -> Paxos::PaxosClient::Proposal;
+              auto accept = this->make_rpc<Accept>("accept");
               accept.set_context<Doughnut*>(&this->_doughnut);
               return accept(peers, address, p, value);
             }
@@ -397,10 +405,12 @@ namespace infinit
                                    PaxosClient::Proposal const& p)
         {
           return network_exception_to_unavailable([&] {
-            auto confirm = make_rpc<void(
-              PaxosServer::Quorum,
-              Address,
-              PaxosClient::Proposal const&)>("confirm");
+            using Confirm =
+              auto (PaxosServer::Quorum,
+                    Address,
+                    PaxosClient::Proposal const&)
+              -> void;
+            auto confirm = this->make_rpc<Confirm>("confirm");
             confirm.set_context<Doughnut*>(&this->_doughnut);
             return confirm(peers, address, p);
           });
@@ -414,9 +424,10 @@ namespace infinit
           return network_exception_to_unavailable(
             [&]
             {
-              auto get = make_rpc<boost::optional<PaxosClient::Accepted>(
-                PaxosServer::Quorum,
-                Address, boost::optional<int>)>("get");
+              using Get =
+                auto (PaxosServer::Quorum, Address, boost::optional<int>)
+                -> boost::optional<PaxosClient::Accepted>;
+              auto get = this->make_rpc<Get>("get");
               get.set_context<Doughnut*>(&this->_doughnut);
               return get(peers, address, local_version);
             }, true);

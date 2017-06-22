@@ -1,8 +1,11 @@
 #include <infinit/model/doughnut/Remote.hh>
 
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
+#include <elle/multi_index_container.hh>
 #include <elle/os/environ.hh>
 #include <elle/utils.hh>
 
@@ -201,7 +204,8 @@ namespace infinit
         BENCH("store");
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        auto store = make_rpc<void (blocks::Block const&, StoreMode)>("store");
+        using Store = auto (blocks::Block const&, StoreMode) -> void;
+        auto store = this->make_rpc<Store>("store");
         store.set_context<Doughnut*>(&this->_doughnut);
         store(block, mode);
       }
@@ -211,9 +215,9 @@ namespace infinit
                     boost::optional<int> local_version) const
       {
         BENCH("fetch");
-        auto fetch = elle::unconst(this)->make_rpc<
-          std::unique_ptr<blocks::Block>(Address,
-                                         boost::optional<int>)>("fetch");
+        using Fetch = auto (Address, boost::optional<int>)
+          -> std::unique_ptr<blocks::Block>;
+        auto fetch = elle::unconst(this)->make_rpc<Fetch>("fetch");
         fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(std::move(address), std::move(local_version));
       }
@@ -225,15 +229,15 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
         {
-          auto remove = make_rpc<void (Address, blocks::RemoveSignature)>
-            ("remove");
+          using Remove = auto (Address, blocks::RemoveSignature) -> void;
+          auto remove = this->make_rpc<Remove>("remove");
           remove.set_context<Doughnut*>(&this->_doughnut);
           remove(address, rs);
         }
         else
         {
-          auto remove = make_rpc<void (Address)>
-            ("remove");
+          using Remove = auto (Address) -> void;
+          auto remove = this->make_rpc<Remove> ("remove");
           remove(address);
         }
       }
@@ -248,17 +252,22 @@ namespace infinit
         static auto bench =
           elle::Bench{"bench.remote_key_cache_hit", std::chrono::seconds(1000)};
         {
-          auto missing = std::vector<int>{};
-          for (auto id: ids)
-            if (this->key_hash_cache().get<1>().find(id) ==
-                this->key_hash_cache().get<1>().end())
-              missing.emplace_back(id);
-          if (missing.size())
+          auto missing = elle::make_vector_if
+            (ids,
+             [this](auto id)
+             {
+               return !elle::find(this->key_hash_cache().get<1>(), id);
+             });
+          if (missing.empty())
+            bench.add(1);
+          else
           {
             bench.add(0);
             ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
-            auto rpc = this->make_rpc<std::vector<elle::cryptography::rsa::PublicKey>(
-              std::vector<int> const&)>("resolve_keys");
+            using ResolveKeys =
+              auto (std::vector<int> const&)
+              -> std::vector<elle::cryptography::rsa::PublicKey>;
+            auto rpc = this->make_rpc<ResolveKeys>("resolve_keys");
             auto missing_keys = rpc(missing);
             if (missing_keys.size() != missing.size())
               elle::err("resolve_keys for %s keys on %s gave %s replies",
@@ -268,8 +277,6 @@ namespace infinit
             for (; id_it != missing.end(); ++id_it, ++key_it)
               this->key_hash_cache().emplace(*id_it, std::move(*key_it));
           }
-          else
-            bench.add(1);
         }
         return elle::make_vector(ids, [this] (auto id) {
             auto it = this->key_hash_cache().get<1>().find(id);
@@ -281,11 +288,12 @@ namespace infinit
       std::unordered_map<int, elle::cryptography::rsa::PublicKey>
       Remote::_resolve_all_keys()
       {
-        using Keys = std::unordered_map<int, elle::cryptography::rsa::PublicKey>;
-        auto res = this->make_rpc<Keys()>("resolve_all_keys")();
+        using ResolveAllKeys =
+          auto () -> std::unordered_map<int, elle::cryptography::rsa::PublicKey>;
+        auto res = this->make_rpc<ResolveAllKeys>("resolve_all_keys")();
         auto& kcache = this->key_hash_cache();
         for (auto const& key: res)
-          if (kcache.get<1>().find(key.first) == kcache.get<1>().end())
+          if (!elle::find(kcache.get<1>(), key.first))
             kcache.emplace(key.first, key.second);
         return res;
       }

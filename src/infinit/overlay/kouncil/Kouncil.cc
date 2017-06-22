@@ -632,9 +632,8 @@ namespace infinit
                 // FIXME: handle local!
                 if (auto r = std::dynamic_pointer_cast<Remote>(peer))
                 {
-                  auto lookup =
-                    r->make_rpc<AddressSet (Address)>(
-                      "kouncil_lookup");
+                  using Lookup = auto (Address) -> AddressSet;
+                  auto lookup = r->make_rpc<Lookup>("kouncil_lookup");
                   try
                   {
                     for (auto node: lookup(address))
@@ -772,8 +771,8 @@ namespace infinit
         {
           if (this->doughnut()->version() < elle::Version(0, 8, 0))
           {
-            auto advertise = r.make_rpc<NodeLocations (NodeLocations const&)>(
-              "kouncil_advertise");
+            using Advertise = auto (NodeLocations const&) -> NodeLocations;
+            auto advertise = r.make_rpc<Advertise>("kouncil_advertise");
             auto locations = send_peers ?
               elle::make_vector(
                 this->_infos,
@@ -789,9 +788,9 @@ namespace infinit
           }
           else
           {
-            auto advertise =
-              r.make_rpc<std::pair<PeerInfos, Configuration> (PeerInfos const&)>
-              ("kouncil_advertise");
+            using Advertise =
+              auto (PeerInfos const&) -> std::pair<PeerInfos, Configuration>;
+            auto advertise = r.make_rpc<Advertise> ("kouncil_advertise");
             auto res = advertise(send_peers ? this->_infos : PeerInfos());
             ELLE_TRACE("fetched %s peers", res.first.size());
             ELLE_DUMP("peers: %s", res.first);
@@ -812,7 +811,7 @@ namespace infinit
       Kouncil::_fetch_entries(Remote& r)
       {
         ELLE_TRACE_SCOPE("%f: fetch_entries of %f", this, r);
-        auto fetch = r.make_rpc<AddressSet()>("kouncil_fetch_entries");
+        auto fetch = r.make_rpc<auto () -> AddressSet>("kouncil_fetch_entries");
         auto entries = fetch();
         ELLE_ASSERT(r.id());
         for (auto const& b: entries)
