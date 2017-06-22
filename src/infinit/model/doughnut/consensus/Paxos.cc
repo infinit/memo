@@ -52,15 +52,18 @@ namespace infinit
         using boost::adaptors::filtered;
         using boost::adaptors::transformed;
 
+        /// Run `f`, translating possible network errors into Paxos
+        /// exceptions.
         template<typename F>
-        auto network_exception_to_unavailable(F f)
+        auto translate_exceptions(std::string const& name, F f)
           -> decltype(f())
         {
+          ELLE_TRACE("translate_exceptions: run {}: {}", name, f);
           try
           {
             return f();
           }
-          catch(elle::reactor::network::Error const& e)
+          catch (elle::reactor::network::Error const& e)
           {
             ELLE_TRACE("network exception in paxos: %s", e);
             throw elle::athena::paxos::Unavailable();
@@ -200,12 +203,10 @@ namespace infinit
         std::shared_ptr<Paxos::Peer>
         to_paxos_peer(overlay::Overlay::WeakMember wpeer)
         {
-          auto peer = wpeer.lock();
-          if (!peer)
-            return nullptr;
+          if (auto peer = wpeer.lock())
+            return ELLE_ENFORCE(std::dynamic_pointer_cast<Paxos::Peer>(peer));
           else
-            return ELLE_ENFORCE(
-              std::dynamic_pointer_cast<Paxos::Peer>(peer));
+            return nullptr;
         }
 
         class PaxosPeer
@@ -245,7 +246,7 @@ namespace infinit
           {
             BENCH("propose");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable(
+            return translate_exceptions("propose",
               [&]
               {
                 return member->propose(q, this->_address, p, this->_insert);
@@ -259,7 +260,7 @@ namespace infinit
           {
             BENCH("accept");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable(
+            return translate_exceptions("accept",
               [&]
               {
                 return member->accept(q, this->_address, p, value);
@@ -272,11 +273,10 @@ namespace infinit
           {
             BENCH("confirm");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable(
+            return translate_exceptions("confirm",
               [&]
               {
-                if (member->doughnut().version() >=
-                    elle::Version(0, 5, 0))
+                if (member->doughnut().version() >= elle::Version(0, 5, 0))
                   member->confirm(q, this->_address, p);
               });
           }
@@ -286,7 +286,7 @@ namespace infinit
           {
             BENCH("get");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable(
+            return translate_exceptions("get",
               [&]
               {
                 return member->get(q, this->_address, this->_local_version);
@@ -339,7 +339,9 @@ namespace infinit
                                    PaxosClient::Proposal const& p,
                                    bool insert)
         {
-          return network_exception_to_unavailable([&] {
+          return translate_exceptions("propose",
+            [&]
+            {
               if (this->doughnut().version() >= elle::Version(0, 9, 0))
               {
                 using Propose =
@@ -372,38 +374,40 @@ namespace infinit
                                   Paxos::PaxosClient::Proposal const& p,
                                   Value const& value)
         {
-          return network_exception_to_unavailable([&] {
-            if (this->doughnut().version() < elle::Version(0, 5, 0))
+          return translate_exceptions("accept",
+            [&]
             {
-              if (!value.is<std::shared_ptr<blocks::Block>>())
+              if (this->doughnut().version() < elle::Version(0, 5, 0))
               {
-                ELLE_TRACE("unmanageable accept on non-block value");
-                throw elle::reactor::network::Error("Peer unavailable");
+                if (!value.is<std::shared_ptr<blocks::Block>>())
+                {
+                  ELLE_TRACE("unmanageable accept on non-block value");
+                  throw elle::reactor::network::Error("Peer unavailable");
+                }
+                using Accept =
+                  auto (PaxosServer::Quorum peers,
+                        Address,
+                        Paxos::PaxosClient::Proposal const&,
+                        std::shared_ptr<blocks::Block>)
+                  -> Paxos::PaxosClient::Proposal;
+                auto accept = this->make_rpc<Accept>("accept");
+                accept.set_context<Doughnut*>(&this->_doughnut);
+                return accept(peers, address, p,
+                              value.get<std::shared_ptr<blocks::Block>>());
               }
-              using Accept =
-                auto (PaxosServer::Quorum peers,
-                      Address,
-                      Paxos::PaxosClient::Proposal const&,
-                      std::shared_ptr<blocks::Block>)
-                -> Paxos::PaxosClient::Proposal;
-              auto accept = this->make_rpc<Accept>("accept");
-              accept.set_context<Doughnut*>(&this->_doughnut);
-              return accept(peers, address, p,
-                            value.get<std::shared_ptr<blocks::Block>>());
-            }
-            else
-            {
-              using Accept =
-                auto (PaxosServer::Quorum peers,
-                      Address,
-                      Paxos::PaxosClient::Proposal const&,
-                      Value const&)
-                -> Paxos::PaxosClient::Proposal;
-              auto accept = this->make_rpc<Accept>("accept");
-              accept.set_context<Doughnut*>(&this->_doughnut);
-              return accept(peers, address, p, value);
-            }
-          });
+              else
+              {
+                using Accept =
+                  auto (PaxosServer::Quorum peers,
+                        Address,
+                        Paxos::PaxosClient::Proposal const&,
+                        Value const&)
+                  -> Paxos::PaxosClient::Proposal;
+                auto accept = this->make_rpc<Accept>("accept");
+                accept.set_context<Doughnut*>(&this->_doughnut);
+                return accept(peers, address, p, value);
+              }
+            });
         }
 
         void
@@ -411,16 +415,18 @@ namespace infinit
                                    Address address,
                                    PaxosClient::Proposal const& p)
         {
-          return network_exception_to_unavailable([&] {
-            using Confirm =
-              auto (PaxosServer::Quorum,
-                    Address,
-                    PaxosClient::Proposal const&)
-              -> void;
-            auto confirm = this->make_rpc<Confirm>("confirm");
-            confirm.set_context<Doughnut*>(&this->_doughnut);
-            return confirm(peers, address, p);
-          });
+          return translate_exceptions("confirm",
+            [&]
+            {
+              using Confirm =
+                auto (PaxosServer::Quorum,
+                      Address,
+                      PaxosClient::Proposal const&)
+                -> void;
+              auto confirm = this->make_rpc<Confirm>("confirm");
+              confirm.set_context<Doughnut*>(&this->_doughnut);
+              return confirm(peers, address, p);
+            });
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -428,7 +434,7 @@ namespace infinit
                                Address address,
                                boost::optional<int> local_version)
         {
-          return network_exception_to_unavailable(
+          return translate_exceptions("get",
             [&]
             {
               using Get =
@@ -443,7 +449,7 @@ namespace infinit
         void
         Paxos::RemotePeer::store(blocks::Block const& block, StoreMode mode)
         {
-          network_exception_to_unavailable(
+          translate_exceptions("store",
             [&]
             {
               Super::store(block, mode);
