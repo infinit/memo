@@ -1,8 +1,10 @@
 #include <infinit/model/doughnut/ACB.hh>
 
 #include <boost/iterator/zip_iterator.hpp>
+#include <boost/range/algorithm/find_if.hpp>
 
 #include <elle/Lazy.hh>
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
@@ -281,13 +283,8 @@ namespace infinit
       bool
       BaseACB<Block>::_admin_user(elle::cryptography::rsa::PublicKey const& key) const
       {
-        auto const& r_keys = this->doughnut()->admin_keys().r;
-        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
-          return true;
-        auto const& w_keys = this->doughnut()->admin_keys().w;
-        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
-          return true;
-        return false;
+        return (elle::contains(this->doughnut()->admin_keys().r, key)
+                || elle::contains(this->doughnut()->admin_keys().w, key));
       }
 
       template <typename Block>
@@ -295,13 +292,8 @@ namespace infinit
       BaseACB<Block>::_admin_group(
         elle::cryptography::rsa::PublicKey const& key) const
       {
-        auto const& r_keys = this->doughnut()->admin_keys().group_r;
-        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
-          return true;
-        auto const& w_keys = this->doughnut()->admin_keys().group_w;
-        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
-          return true;
-        return false;
+        return (elle::contains(this->doughnut()->admin_keys().group_r, key)
+                || elle::contains(this->doughnut()->admin_keys().group_w, key));
       }
 
       template <typename Block>
@@ -412,9 +404,8 @@ namespace infinit
         auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
         bool use_encrypt = this->_seal_version >= elle::Version(0,7,0);
-        auto it = std::find_if
-          (acl_entries.begin(), acl_entries.end(),
-           [&] (ACLEntry const& e) { return e.key == key; });
+        auto it = boost::find_if(acl_entries,
+                                 [&] (ACLEntry const& e) { return e.key == key; });
         if (it == acl_entries.end())
         {
           if (!read && !write)

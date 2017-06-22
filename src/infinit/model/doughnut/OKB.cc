@@ -1,11 +1,13 @@
 #include <infinit/model/doughnut/OKB.hh>
 
+#include <elle/Option.hh>
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
 #include <elle/cast.hh>
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
-#include <elle/Option.hh>
 #include <elle/utility/Move.hh>
 
 #include <elle/cryptography/hash.hh>
@@ -117,9 +119,7 @@ namespace infinit
             }
             else if (remote && hash_enabled)
             {
-              auto const& key_hash_cache = remote->key_hash_cache();
-              auto it = key_hash_cache.get<0>().find(key);
-              if (it != key_hash_cache.get<0>().end())
+              if (auto it = elle::find(remote->key_hash_cache().get<0>(), key))
               {
                 ELLE_DUMP("serialize key hash for %s: %s", key, it->hash);
                 auto koh = KeyOrHash(it->hash);
