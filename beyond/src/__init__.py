@@ -1,6 +1,7 @@
 import base64
 import os
 import requests
+import shutil
 import subprocess
 import sys
 
@@ -37,32 +38,55 @@ repo_dir = os.path.join(tmp_dir, 'debug-symbols')
 # Where the symbol files are.
 symbols_dir = repo_dir + '/symbols'
 
-def update_symbols():
-  '''Create or update the symbols/ directory.'''
-  # If the repository directory does not exist, clone it.
-  if not os.path.exists(repo_dir):
-    p = run(['git', 'clone',
-             'git@git.infinit.sh:infinit/debug-symbols.git',
-             repo_dir])
-    if p.returncode:
-      log('update_symbols: cannot clone git repo: {}', p.stderr)
-      return
-
+def symbols_checkout():
+  '''Fetch the debug-symbols git repository and checkout origin/master.
+  Return whether success.'''
   # The repo is there.  Update it.
+  p = run(['git', '-C', repo_dir, 'fetch'])
+  if p.returncode:
+    log('symbolize: symbols_checkout: cannot fetch git repo: {}', p.stderr)
+    return False
   p = run(['git', '-C', repo_dir, 'checkout', '--force', 'origin/master'])
   if p.returncode:
-    log('update_symbols: cannot pull git repo: {}', p.stderr)
-    return
+    log('symbolize: symbols_checkout: cannot checkout git repo: {}', p.stderr)
+    return False
+  return True
+
+def symbols_update():
+  '''Create or update the symbols/ directory.'''
+  # Try to update the checkout.
+  if symbols_checkout():
+    return True
+  # We failed.  Maybe the repository is broken, erase it and restart.
+  try:
+    shutil.rmtree(repo_dir)
+  except Exception as e:
+    log('symbolize: symbols_update: cannot remove {}: {}',
+        repo_dir, e)
+    return False
+  p = run(['git', 'clone',
+           'git@git.infinit.sh:infinit/debug-symbols.git',
+           repo_dir])
+  if p.returncode:
+    log('symbolize: symbols_update: cannot clone git repo: {}', p.stderr)
+    return False
+  # The repo is there.  It should be on origin/master, but let's play
+  # it extra safe.
+  return symbols_checkout()
 
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
   symbolized if possible.  It is safe to use in_ == out.'''
-  import subprocess
   if not out:
     out = in_
   try:
+    has_symbols = symbols_update()
     with open(out + '.tmp', 'wb') as o:
-      p = run(['minidump_stackwalk', in_, symbols_dir], stdout=o)
+      # minidump_stackwalk fails if we pass a directory that does not
+      # exist.
+      p = run(['minidump_stackwalk', in_]
+              + [symbols_dir] if has_symbols else [],
+              stdout=o)
       if p.returncode:
         log("symbolize: error: {}", p.stderr)
       else:
@@ -76,7 +100,7 @@ def symbolize_dump(in_, out = None):
   try:
     os.rename(in_, out)
   except Exception as e:
-    log("symbolizer: cannot rename dump file: {}", e)
+    log("symbolize: cannot rename dump file: {}", e)
 
 
 ## -------- ##
@@ -533,7 +557,6 @@ class Beyond:
       'platform': platform,
       'version': version,
     }
-    update_symbols()
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
       tfile = '%s/client.dmp' % temp_dir
