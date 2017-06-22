@@ -53,7 +53,7 @@ namespace infinit
         using boost::adaptors::transformed;
 
         template<typename F>
-        auto network_exception_to_unavailable(F f, bool missing = false)
+        auto network_exception_to_unavailable(F f)
           -> decltype(f())
         {
           try
@@ -283,7 +283,7 @@ namespace infinit
               [&]
               {
                 return member->get(q, this->_address, this->_local_version);
-              }, true);
+              });
           }
 
           ELLE_ATTRIBUTE_R(std::ambivalent_ptr<Paxos::Peer>, member);
@@ -430,7 +430,7 @@ namespace infinit
               auto get = this->make_rpc<Get>("get");
               get.set_context<Doughnut*>(&this->_doughnut);
               return get(peers, address, local_version);
-            }, true);
+            });
         }
 
         void
