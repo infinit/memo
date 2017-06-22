@@ -14,7 +14,7 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::doughnut::CHB;
+        using Self = CHB;
         using Super = blocks::ImmutableBlock;
 
       /*-------------.

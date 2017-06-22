@@ -75,13 +75,13 @@ namespace infinit
       `---------*/
 
       ACLEntry::ACLEntry(elle::cryptography::rsa::PublicKey key_,
-                              bool read_,
-                              bool write_,
-                              elle::Buffer token_)
-        : key(std::move(key_))
-        , read(read_)
-        , write(write_)
-        , token(std::move(token_))
+                         bool read_,
+                         bool write_,
+                         elle::Buffer token_)
+        : key{std::move(key_)}
+        , read{read_}
+        , write{write_}
+        , token{std::move(token_)}
       {}
 
       ACLEntry::ACLEntry(ACLEntry const& other)
@@ -92,7 +92,7 @@ namespace infinit
       {}
 
       ACLEntry::ACLEntry(elle::serialization::SerializerIn& s, elle::Version const& v)
-        : ACLEntry(deserialize(s, v))
+        : ACLEntry{deserialize(s, v)}
       {}
 
       ACLEntry
@@ -227,11 +227,9 @@ namespace infinit
         {
           // FIXME: factor searching the token
           for (auto const& e: this->_acl_entries)
-          {
             if (e.key == this->doughnut()->keys().K())
               background_open(secret_buffer, e.token,
                               this->doughnut()->keys().k(), use_encrypt);
-          }
         }
         if (secret_buffer.empty())
         {
@@ -260,10 +258,8 @@ namespace infinit
           }
         }
         if (secret_buffer.empty())
-        {
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
-        }
         static elle::Bench bench("bench.acb.decrypt_2", std::chrono::seconds(10000));
         elle::Bench::BenchScope bs(bench);
         auto secret = [&]() {
@@ -312,12 +308,13 @@ namespace infinit
       void
       BaseACB<Block>::_set_world_permissions(bool read, bool write)
       {
-        if (this->_world_readable == read && this->_world_writable == write)
-          return;
-        this->_world_readable = read;
-        this->_world_writable = write;
-        this->_acl_changed = true;
-        this->_data_changed = true;
+        if (this->_world_readable != read || this->_world_writable != write)
+        {
+          this->_world_readable = read;
+          this->_world_writable = write;
+          this->_acl_changed = true;
+          this->_data_changed = true;
+        }
       }
 
       template <typename Block>
@@ -358,7 +355,7 @@ namespace infinit
           elle::Buffer token;
           try
           {
-            Group g(*this->doughnut(), key);
+            auto&& g = Group(*this->doughnut(), key);
             if (this->_owner_token.size())
             {
               auto secret = use_encrypt?
@@ -1244,7 +1241,9 @@ namespace infinit
         else
         {
           bool need_signature = !s.context().has<ACBDontWaitForSignature>();
-          if (!need_signature)
+          if (need_signature)
+            s.serialize("data_signature", this->_data_signature->value());
+          else
           {
             if (s.out())
             {
@@ -1282,10 +1281,6 @@ namespace infinit
               }
             }
           }
-          else
-          {
-            s.serialize("data_signature", this->_data_signature->value());
-          }
         }
         if (version >= elle::Version(0, 4, 0))
         {
@@ -1296,18 +1291,12 @@ namespace infinit
           s.serialize("deleted", this->_deleted);
         }
         if (version >= elle::Version(0, 7, 0))
-        {
           s.serialize("seal_version", this->_seal_version);
-        }
         else if (s.in())
-        {
           this->_seal_version = elle::Version(0, 6, 0);
-        }
         else if (s.out() && this->_seal_version > version)
-        {
           ELLE_WARN("%s: seal version %s is above current version %s",
                     this, this->_seal_version, version);
-        }
       }
 
       template

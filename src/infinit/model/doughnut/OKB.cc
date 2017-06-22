@@ -209,10 +209,9 @@ namespace infinit
       {
         static elle::Bench bench("bench.okb.validate", std::chrono::seconds(10000));
         elle::Bench::BenchScope scope(bench);
-        Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
         {
-          expected_address = this->_hash_address();
+          auto const expected_address = this->_hash_address();
           if (!equal_unflagged(address, expected_address))
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",

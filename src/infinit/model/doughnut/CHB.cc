@@ -118,8 +118,8 @@ namespace infinit
       elle::Buffer
       CHB::_make_salt()
       {
-        return elle::Buffer(Address::random(0).value(), // FIXME
-                            sizeof(Address::Value));
+        return {Address::random(0).value(), // FIXME
+            sizeof(Address::Value)};
       }
 
       blocks::RemoveSignature
@@ -156,33 +156,30 @@ namespace infinit
             ELLE_WARN("CHB owner %x is not an ACB, cannot sign remove request",
               owner);
           }
-          else
+          else if (*acb->owner_key() != keys.K())
           {
-            if (*acb->owner_key() != keys.K())
+            auto& entries = acb->acl_entries();
+            auto it = std::find_if(entries.begin(), entries.end(),
+              [&](ACLEntry const& e) { return e.key == keys.K();});
+            if (it == entries.end() || !it->write)
             {
-              auto& entries = acb->acl_entries();
-              auto it = std::find_if(entries.begin(), entries.end(),
-                [&](ACLEntry const& e) { return e.key == keys.K();});
-              if (it == entries.end() || !it->write)
+              // group check
+              auto& entries = acb->acl_group_entries();
+              for (auto const& e: entries)
               {
-                // group check
-                auto& entries = acb->acl_group_entries();
-                for (auto const& e: entries)
+                try
                 {
-                  try
-                  {
-                    Group g(dht, e.key);
-                    auto kp = g.current_key();
-                    ELLE_TRACE("Using group key");
-                    signature = kp.k().sign(to_sign);
-                    res.signature_key.emplace(kp.K());
-                    res.group_key.emplace(e.key);
-                    res.group_index = g.version() - 1;
-                    break;
-                  }
-                  catch (elle::Error const&)
-                  { // group access denied
-                  }
+                  Group g(dht, e.key);
+                  auto kp = g.current_key();
+                  ELLE_TRACE("Using group key");
+                  signature = kp.k().sign(to_sign);
+                  res.signature_key.emplace(kp.K());
+                  res.group_key.emplace(e.key);
+                  res.group_index = g.version() - 1;
+                  break;
+                }
+                catch (elle::Error const&)
+                { // group access denied
                 }
               }
             }
