@@ -445,6 +445,13 @@ namespace infinit
             void
             serialize(elle::serialization::Serializer& s) override;
           };
+
+        /*--------.
+        | Details |
+        `--------*/
+        private:
+          struct Details;
+          friend struct Details;
         };
 
         struct BlockOrPaxos

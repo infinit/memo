@@ -787,6 +787,10 @@ namespace infinit
           this->_rebalanced(a);
         }
 
+        struct Paxos::Details
+        {
+        };
+
         void
         Paxos::LocalPeer::_rebalance()
         {
