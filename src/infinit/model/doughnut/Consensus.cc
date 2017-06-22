@@ -335,6 +335,13 @@ namespace infinit
                                          listen_address);
         }
 
+        std::shared_ptr<Remote>
+        Consensus::make_remote(std::shared_ptr<Dock::Connection> connection)
+        {
+          return std::make_shared<Remote>(this->doughnut(),
+                                          std::move(connection));
+        }
+
         /*-----------.
         | Monitoring |
         `-----------*/
@@ -367,10 +374,20 @@ namespace infinit
                         "%f(%x)", elle::type_info(*this), (void*)(this));
         }
 
+        /*-----------------.
+        | StackedConsensus |
+        `-----------------*/
+
         StackedConsensus::StackedConsensus(std::unique_ptr<Consensus> backend)
           : Consensus(backend->doughnut())
           , _backend(std::move(backend))
         {}
+
+        std::shared_ptr<Remote>
+        StackedConsensus::make_remote(std::shared_ptr<Dock::Connection> c)
+        {
+          return this->_backend->make_remote(std::move(c));
+        }
 
         /*--------------.
         | Configuration |

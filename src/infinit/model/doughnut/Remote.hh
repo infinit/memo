@@ -60,7 +60,7 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-      protected:
+      public:
         Remote(Doughnut& doughnut,
                std::shared_ptr<Dock::Connection> connection);
       public:

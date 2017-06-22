@@ -716,8 +716,8 @@ namespace infinit
           return {};
         else
         {
-          using RemotePeer = consensus::Paxos::RemotePeer;
-          auto res = std::make_shared<RemotePeer>(this->_doughnut, connection);
+          auto res =
+            this->doughnut().consensus()->make_remote(std::move(connection));
           auto insertion = this->_peer_cache.emplace(res);
           ELLE_ASSERT(insertion.second);
           res->_cache_iterator = insertion.first;

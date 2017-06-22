@@ -128,6 +128,9 @@ namespace infinit
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<silo::Silo> storage) override;
+          virtual
+          std::shared_ptr<Remote>
+          make_remote(std::shared_ptr<Dock::Connection> connection) override;
 
           using AcceptedOrError
             = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,

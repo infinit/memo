@@ -3,6 +3,7 @@
 #include <elle/Clonable.hh>
 
 #include <infinit/model/Model.hh>
+#include <infinit/model/doughnut/Dock.hh>
 #include <infinit/model/doughnut/Peer.hh>
 #include <infinit/model/doughnut/fwd.hh>
 #include <infinit/model/doughnut/protocol.hh>
@@ -102,7 +103,9 @@ namespace infinit
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<silo::Silo> storage);
-
+          virtual
+          std::shared_ptr<Remote>
+          make_remote(std::shared_ptr<Dock::Connection> connection);
 
         /*-----------.
         | Monitoring |
@@ -128,6 +131,9 @@ namespace infinit
         {
         public:
           StackedConsensus(std::unique_ptr<Consensus> backend);
+          virtual
+          std::shared_ptr<Remote>
+          make_remote(std::shared_ptr<Dock::Connection> connection) override;
           template<typename C>
           static
           C*

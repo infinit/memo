@@ -186,6 +186,13 @@ namespace infinit
             listen_address);
         }
 
+        std::shared_ptr<Remote>
+        Paxos::make_remote(std::shared_ptr<Dock::Connection> connection)
+        {
+          return std::make_shared<Paxos::RemotePeer>(this->doughnut(),
+                                                     std::move(connection));
+        }
+
         /*-----.
         | Peer |
         `-----*/
