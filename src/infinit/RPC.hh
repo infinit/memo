@@ -521,11 +521,11 @@ namespace infinit
     /// @param version The version used.
     /// @param key An optional key, validated by the other side.
     BaseRPC(std::string name,
-            elle::protocol::ChanneledStream& channels,
+            elle::protocol::ChanneledStream* channels,
             elle::Version const& version,
             boost::optional<elle::cryptography::SecretKey> key = {})
       : _name(std::move(name))
-      , _channels(&channels)
+      , _channels(channels)
       , _key(std::move(key))
       , _version(version)
     {}
@@ -568,6 +568,9 @@ namespace infinit
   class RPC;
 
   /// A remote procedure call.
+  ///
+  /// @tparam R The return type of the RPC.
+  /// @tparam Args The types of the arguments of the RPC.
   template <typename R, typename ... Args>
   class RPC<R (Args...)>
     : public BaseRPC
@@ -578,10 +581,20 @@ namespace infinit
     ///
     /// @see BaseRPC::BaseRPC.
     RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream* channels,
         elle::Version const& version,
         boost::optional<elle::cryptography::SecretKey> key = {})
       : BaseRPC(std::move(name), channels, version, std::move(key))
+    {}
+
+    /// Construct an RPC.
+    ///
+    /// @see BaseRPC::BaseRPC.
+    RPC(std::string name,
+        elle::protocol::ChanneledStream& channels,
+        elle::Version const& version,
+        boost::optional<elle::cryptography::SecretKey> key = {})
+      : Self{name, &channels, version, key}
     {}
 
     /// Construct an RPC.
@@ -590,7 +603,7 @@ namespace infinit
     ///
     /// @param credentials A pointer to buffer, that could contain credential.
     RPC(std::string name,
-        elle::protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream* channels,
         elle::Version const& version,
         elle::Buffer* credentials)
       : Self{
@@ -604,8 +617,6 @@ namespace infinit
 
     /// Call the RPC.
     ///
-    /// @tparam R The return type of the RPC.
-    /// @tparam Args The types of the arguments of the RPC.
     /// @param args The arguments of the RPC.
     /// @return The response, as an instance of type R.
     R
@@ -684,7 +695,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: call", self);
       auto versions = elle::serialization::get_serialization_versions
         <infinit::serialization_tag>(version);
-      auto channel = elle::protocol::Channel{*self.channels()};
+      auto channel = elle::protocol::Channel{*ELLE_ENFORCE(self.channels())};
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());

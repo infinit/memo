@@ -151,10 +151,10 @@ namespace infinit
 
       template <typename F>
       RemoteRPC<F>::RemoteRPC(std::string name, Remote* remote)
-        : Super(name,
-                *remote->_connection->channels(),
+        : Super{std::move(name),
+                remote->_connection->channels().get(),
                 remote->doughnut().version(),
-                elle::unconst(&remote->credentials()))
+                elle::unconst(&remote->credentials())}
         , _remote(remote)
       {
         this->set_context(remote);
