@@ -9,7 +9,9 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/count.hpp>
 #include <boost/range/algorithm/count_if.hpp>
+#include <boost/range/algorithm/equal_range.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/max_element.hpp>
@@ -2941,13 +2943,11 @@ namespace infinit
         long total = 0;
         int okcount = 0;
         for (auto const& e: candidates)
-        {
           if (!(e.second == Duration())) //compiler glitch on != : ambiguous overload
           {
             total += std::chrono::duration_cast<US>(e.second).count();
             okcount += 1;
           }
-        }
         int avgLatency = okcount ? total / okcount : 1;
         // apply to the map to avoid ifs belows
         for (auto& e: candidates)
@@ -3660,22 +3660,18 @@ namespace infinit
         }
         else if (k == "blockcount")
         {
-          auto files = _state.files;
+          auto const& files = _state.files;
           std::vector<int> counts;
           std::set<Address> processed;
           for (auto const& f: files)
-          {
-            if (processed.count(f.first))
-              continue;
-            processed.insert(f.first);
-            auto its = files.equal_range(f.first);
-            int count=0;
-            for (; its.first != its.second; ++count, ++its.first)
-              ;
-            if (signed(counts.size()) <= count)
-              counts.resize(count + 1, 0);
-            counts[count]++;
-          }
+            if (!processed.count(f.first))
+            {
+              processed.insert(f.first);
+              auto const count = boost::size(files.equal_range(f.first));
+              if (counts.size() <= count)
+                counts.resize(count + 1, 0);
+              counts[count]++;
+            }
           elle::json::Array ares;
           for (auto c: counts)
             ares.push_back(c);
@@ -3683,9 +3679,9 @@ namespace infinit
         }
         else if (starts_with(k, "cachecheck."))
         {
-          Address addr = Address::from_string(k.substr(strlen("cachecheck.")));
+          auto const addr = Address::from_string(k.substr(strlen("cachecheck.")));
           int g = group_of(addr);
-          std::vector<int> hits;
+          auto hits = std::vector<int>{};
           hits.resize(1);
           for (auto& c: this->_state.contacts[g])
           {
@@ -3718,20 +3714,19 @@ namespace infinit
         }
         else if (starts_with(k, "scan."))
         {
-          int factor = std::stoi(k.substr(strlen("scan.")));
+          auto factor = std::stou(k.substr(strlen("scan.")));
+          auto const& files = _state.files;
           std::vector<Address> to_scan;
           std::set<Address> processed;
           // get addresses with copy count < factor
-          for (auto const& f: _state.files)
-          {
-            if (processed.count(f.first))
-              continue;
-            processed.insert(f.first);
-            auto its = _state.files.equal_range(f.first);
-            auto count = std::distance(its.first, its.second);
-            if (count < factor)
-              to_scan.push_back(f.first);
-          }
+          for (auto const& f: files)
+            if (!processed.count(f.first))
+            {
+              processed.insert(f.first);
+              auto const count = boost::size(files.equal_range(f.first));
+              if (count < factor)
+                to_scan.push_back(f.first);
+            }
           std::vector<int> counts;
           auto scanner = [&]
           {
