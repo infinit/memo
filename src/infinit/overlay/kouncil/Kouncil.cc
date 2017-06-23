@@ -228,8 +228,7 @@ namespace infinit
              [this] ()
              {
                auto res = AddressSet{};
-               for (auto const& e:
-                      elle::as_range(this->_address_book.equal_range(this->id())))
+               for (auto const& e: elle::equal_range(this->_address_book, this->id()))
                  res.emplace(e.block());
                return res;
              });
@@ -239,8 +238,7 @@ namespace infinit
              [this] (Address const& addr)
              {
                auto res = AddressSet{};
-               for (auto const& e:
-                      elle::as_range(_address_book.get<1>().equal_range(addr)))
+               for (auto const& e: elle::equal_range(_address_book.get<1>(), addr))
                  res.emplace(e.node());
                return res;
              });
@@ -597,9 +595,8 @@ namespace infinit
             else
             {
               // Select only nodes that are ready to store.
-              auto const range =
-                elle::as_range(this->_infos.get<1>().equal_range(
-                                 boost::optional<bool>(true)));
+              auto const range = elle::equal_range(this->_infos.get<1>(),
+                                                   boost::optional<bool>(true));
               auto const size = int(boost::size(range));
               ELLE_DEBUG_SCOPE("selecting %s nodes from %s peers", n, size);
               for (auto i: elle::pick_n(std::min(n, size), range))
@@ -616,7 +613,7 @@ namespace infinit
           {
             int count = 0;
             for (auto const& entry:
-                   elle::as_range(this->_address_book.get<1>().equal_range(address)))
+                   elle::equal_range(this->_address_book.get<1>(), address))
               if (auto p = elle::find(this->peers(), entry.node()))
               {
                 yield(*p);
@@ -674,7 +671,7 @@ namespace infinit
         if (auto it = elle::find(this->_peers, id))
           return *it;
         else
-          return Overlay::WeakMember();
+          return {};
       }
 
       void
@@ -790,7 +787,7 @@ namespace infinit
           {
             using Advertise =
               auto (PeerInfos const&) -> std::pair<PeerInfos, Configuration>;
-            auto advertise = r.make_rpc<Advertise> ("kouncil_advertise");
+            auto advertise = r.make_rpc<Advertise>("kouncil_advertise");
             auto res = advertise(send_peers ? this->_infos : PeerInfos());
             ELLE_TRACE("fetched %s peers", res.first.size());
             ELLE_DUMP("peers: %s", res.first);
