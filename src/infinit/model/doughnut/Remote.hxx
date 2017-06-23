@@ -66,7 +66,7 @@ namespace infinit
                      this, name);
           this->reconnect();
         }
-        bool give_up = false;
+        bool retry = true;
         while (true)
         {
           auto const rpc_timeout_delay =
@@ -104,7 +104,7 @@ namespace infinit
                       this->_disconnected_exception =
                         std::make_exception_ptr(elle::reactor::network::TimeOut());
                       t->raise_and_wake<elle::reactor::network::TimeOut>();
-                      give_up = true;
+                      retry = false;
                     }
                   });
               ELLE_TRACE("%s: run \"%s\"", this, name)
@@ -113,7 +113,7 @@ namespace infinit
             else
             {
               ELLE_TRACE("%s: soft-fail running \"%s\"", this, name);
-              give_up = true;
+              retry = false;
             }
           }
           catch (elle::reactor::network::Error const& e)
@@ -130,23 +130,22 @@ namespace infinit
             ELLE_TRACE("%s: connection error: %s", this, e);
             throw;
           }
-          if (give_up)
-            if (rpc_timeout_delay < soft_fail_delay)
-            {
-              ELLE_TRACE("%s: give up rpc %s after %s",
-                         this, name, rpc_timeout);
-              throw elle::reactor::network::TimeOut();
-            }
-            else
-            {
-              ELLE_TRACE(
-                "%s: soft-fail rpc %s after remote was disconnected for %s",
-                this, name, disconnected_for);
-              ELLE_ASSERT(this->_disconnected_exception);
-              std::rethrow_exception(this->_disconnected_exception);
-            }
-          else
+          if (retry)
             this->reconnect();
+          else if (rpc_timeout_delay < soft_fail_delay)
+          {
+            ELLE_TRACE("%s: give up rpc %s after %s",
+                       this, name, rpc_timeout);
+            throw elle::reactor::network::TimeOut();
+          }
+          else
+          {
+            ELLE_TRACE(
+              "%s: soft-fail rpc %s after remote was disconnected for %s",
+              this, name, disconnected_for);
+            ELLE_ASSERT(this->_disconnected_exception);
+            std::rethrow_exception(this->_disconnected_exception);
+          }
         }
       }
 
