@@ -546,8 +546,7 @@ namespace infinit
         BlockOrPaxos
         Paxos::LocalPeer::_load(Address address)
         {
-          auto decision = this->_addresses.find(address);
-          if (decision != this->_addresses.end())
+          if (auto decision = elle::find(this->_addresses, address))
             return BlockOrPaxos(&decision->second);
           else
           {
@@ -593,7 +592,7 @@ namespace infinit
               return BlockOrPaxos(
                 &this->_load_paxos(address, std::move(*stored.paxos)));
             else
-              ELLE_ABORT("no block and no paxos ?");
+              ELLE_ABORT("no block and no paxos?");
           }
         }
 
