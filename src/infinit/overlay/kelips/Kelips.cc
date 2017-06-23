@@ -3092,8 +3092,8 @@ namespace infinit
         int cleared = 0;
         while (it != _state.files.end())
         {
-          if (!(it->second.home_node == _self) &&
-              t - it->second.last_seen > file_timeout)
+          if (it->second.home_node != _self
+              && t - it->second.last_seen > file_timeout)
           {
             ELLE_DUMP("%s: erase file %x", *this, it->first);
             it = _state.files.erase(it);
@@ -3109,8 +3109,7 @@ namespace infinit
         int idx = 0;
         for (auto& contacts: _state.contacts)
         {
-          auto it = contacts.begin();
-          while (it != contacts.end())
+          for (auto it = contacts.begin(); it != contacts.end(); )
           {
             endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
             if (it->second.endpoints.empty())
@@ -3128,19 +3127,17 @@ namespace infinit
           ++idx;
         }
         // check observers too
+        for (auto it = this->_state.observers.begin();
+             it != this->_state.observers.end(); )
         {
-          auto it = this->_state.observers.begin();
-          while (it != this->_state.observers.end())
+          endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
+          if (it->second.endpoints.empty())
           {
-            endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
-            if (it->second.endpoints.empty())
-            {
-              ELLE_LOG("%s: erase %s from observers", *this, it->second);
-              it = this->_state.observers.erase(it);
-            }
-            else
-              ++it;
+            ELLE_LOG("%s: erase %s from observers", *this, it->second);
+            it = this->_state.observers.erase(it);
           }
+          else
+            ++it;
         }
         // Check ping timeouts
         auto today = now();
