@@ -420,7 +420,7 @@ namespace infinit
               return;
             }
             // Check for duplicates.
-            auto id = this->_location.id();
+            auto const id = this->_location.id();
             ELLE_ASSERT(id);
             if (elle::contains(this->_dock._connected, id))
             {
@@ -537,21 +537,26 @@ namespace infinit
 
       namespace
       {
-        std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+        using ChallengePassport
+          = std::pair<Remote::Challenge, std::unique_ptr<Passport>>;
+
+        ChallengePassport
         _auth_0_3(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
         {
-          using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-            (Passport const&);
+          using AuthSyn =
+            auto (Passport const&)
+            -> std::pair<Remote::Challenge, std::unique_ptr<Passport>>;
           auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           return auth_syn(self.dock().doughnut().passport());
         }
 
-        std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+        ChallengePassport
         _auth_0_4(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
         {
-          using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-            (Passport const&, elle::Version const&);
+          using AuthSyn =
+            auto (Passport const&, elle::Version const&)
+            -> std::pair<Remote::Challenge, std::unique_ptr<Passport>>;
           auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
@@ -564,26 +569,33 @@ namespace infinit
             elle::Version(version.major(), version.minor(), 0));
         }
 
-        Remote::Auth
+        ChallengePassport
         _auth_0_7(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
         {
           using AuthSyn =
-            Remote::Auth (Address, Passport const&, elle::Version const&);
+            auto (Address, Passport const&, elle::Version const&)
+            -> Remote::Auth;
           auto auth_syn = RPC<AuthSyn>(
             "auth_syn", channels, self.dock().doughnut().version());
           auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
-          auto res = auth_syn(self.dock().doughnut().id(),
+          auto auth = auth_syn(self.dock().doughnut().id(),
                               self.dock().doughnut().passport(),
                               self.dock().doughnut().version());
-          if (res.id == self.dock().doughnut().id())
+          if (auth.id == self.dock().doughnut().id())
             throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
-                                                res.id));
-          else if (self.location().id() && self.location().id() != res.id)
+                                                auth.id));
+          else if (self.location().id() && self.location().id() != auth.id)
             throw HandshakeFailed(
               elle::sprintf("peer id mismatch: expected %s, got %s",
-                            self.location().id(), res.id));
+                            self.location().id(), auth.id));
           else
-            return res;
+          {
+            if (!self.location().id())
+              elle::unconst(self.location()).id(auth.id);
+            return std::make_pair(
+              auth.challenge,
+              std::make_unique<Passport>(std::move(auth.passport)));
+          }
         }
       }
 
@@ -598,14 +610,7 @@ namespace infinit
           auto challenge_passport = [&]
           {
             if (version >= elle::Version(0, 7, 0))
-            {
-              auto res = _auth_0_7(*this, channels);
-              if (!this->_location.id())
-                this->_location.id(res.id);
-              return std::make_pair(
-                res.challenge,
-                std::make_unique<Passport>(std::move(res.passport)));
-            }
+              return _auth_0_7(*this, channels);
             else if (version >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);
             else
@@ -615,14 +620,14 @@ namespace infinit
           ELLE_ASSERT(remote_passport);
           if (!dht.verify(*remote_passport, false, false, false))
           {
-            auto msg = elle::sprintf(
+            auto const msg = elle::sprintf(
               "passport validation failed for %s", this->_location.id());
             ELLE_WARN("%s", msg);
             throw elle::Error(msg);
           }
           if (!remote_passport->allow_storage())
           {
-            auto msg = elle::sprintf(
+            auto const msg = elle::sprintf(
               "%s: Peer passport disallows storage", *this);
             ELLE_WARN("%s", msg);
             throw elle::Error(msg);
@@ -679,7 +684,7 @@ namespace infinit
           ELLE_TRACE("peer is ourself");
           return this->_doughnut.local();
         }
-        if (auto it = elle::find(this->_peer_cache, loc.id()))
+        else if (auto it = elle::find(this->_peer_cache, loc.id()))
           return overlay::Overlay::WeakMember::own(
                ELLE_ENFORCE(it->lock()));
         else
