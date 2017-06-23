@@ -3316,7 +3316,7 @@ namespace infinit
         BENCH("lookup");
         return [this, address, n, fast](MemberGenerator::yielder const& yield)
           {
-            std::function<void(NodeLocation)> handle = [&](NodeLocation hosts)
+            auto handle = [&](NodeLocation hosts)
               {
                 yield(elle::unconst(this)->make_peer(hosts));
               };
@@ -3781,10 +3781,10 @@ namespace infinit
         }
         else if (starts_with(k, "node."))
         {
-          Address target = Address::from_string(k.substr(5));
-          Overlay::WeakMember n;
-          try {
-            n = this->lookup_node(target);
+          auto const target = Address::from_string(k.substr(5));
+          try
+          {
+            this->lookup_node(target);
             res["status"] = "got it";
           }
           catch (elle::Error const& e)
