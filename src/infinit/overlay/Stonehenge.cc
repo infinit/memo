@@ -3,6 +3,7 @@
 #include <iterator>
 
 #include <boost/algorithm/cxx11/any_of.hpp>
+#include <boost/range/algorithm/find_if.hpp>
 
 #include <elle/Error.hh>
 #include <elle/assert.hh>
@@ -91,11 +92,18 @@ namespace infinit
     Stonehenge::_lookup_node(model::Address address) const
       -> WeakMember
     {
-      for (auto const& peer: this->_peers)
-        if (peer.id() == address)
-          return this->_make_member(peer);
-      ELLE_WARN("%s: could not find peer %s", *this, address);
-      return Overlay::Member(nullptr);
+      auto it = boost::find_if(this->_peers,
+                               [&address](auto const& peer)
+                               {
+                                 return peer.id() == address;
+                               });
+      if (it == end(this->_peers))
+      {
+        ELLE_WARN("%s: could not find peer %s", *this, address);
+        return Overlay::Member(nullptr);
+      }
+      else
+        return this->_make_member(*it);
     }
 
     Overlay::WeakMember

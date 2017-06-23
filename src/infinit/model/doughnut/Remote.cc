@@ -237,7 +237,7 @@ namespace infinit
         else
         {
           using Remove = auto (Address) -> void;
-          auto remove = this->make_rpc<Remove> ("remove");
+          auto remove = this->make_rpc<Remove>("remove");
           remove(address);
         }
       }

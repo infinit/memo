@@ -295,14 +295,10 @@ private:
       {
         auto const dht = [this, &peer, &id_a, &id_b, &id_c]
           {
-            if (peer.id() == id_a)
-              return this->dht_a;
-            else if (peer.id() == id_b)
-              return this->dht_b;
-            else if (peer.id() == id_c)
-              return this->dht_c;
-            else
-              ELLE_ABORT("unknown doughnut id: %f", peer.id());
+            if (peer.id() == id_a)      return this->dht_a;
+            else if (peer.id() == id_b) return this->dht_b;
+            else if (peer.id() == id_c) return this->dht_c;
+            else ELLE_ABORT("unknown doughnut id: %f", peer.id());
           }();
         elle::unconst(peer.endpoints()).emplace(
           boost::asio::ip::address::from_string("127.0.0.1"),
@@ -324,7 +320,7 @@ mutable_block_count(C const& c)
 
 ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 {
-  DHTs dhts(paxos);
+  auto dhts = DHTs(paxos);
   auto& dht = *dhts.dht_a;
   {
     auto data = elle::Buffer("\\_o<");
