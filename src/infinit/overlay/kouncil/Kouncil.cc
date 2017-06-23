@@ -1008,12 +1008,8 @@ namespace infinit
       {
         elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
       }
-
-      namespace
-      {
-        const auto a
-          = elle::TypeInfo::RegisterAbbrevation{"infinit::overlay::kouncil::Kouncil", "Kouncil"};
-      }
     }
   }
 }
+
+ELLE_TYPE_INFO_ABBR("Kouncil", "infinit::overlay::kouncil::Kouncil");

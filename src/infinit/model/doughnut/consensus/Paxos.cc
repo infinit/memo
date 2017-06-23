@@ -2180,11 +2180,6 @@ namespace infinit
         static const elle::serialization::Hierarchy<Configuration>::
         Register<Paxos::Configuration> _register_Configuration("paxos");
       }
-
-      static const elle::TypeInfo::RegisterAbbrevation
-      _local_abbr("consensus::Paxos::LocalPeer", "PaxosLocal");
-      static const elle::TypeInfo::RegisterAbbrevation
-      _remote_abbr("consensus::Paxos::RemotePeer", "PaxosRemote");
     }
   }
 }
@@ -2202,3 +2197,6 @@ namespace elle
     }
   }
 }
+
+ELLE_TYPE_INFO_ABBR("PaxosLocal", "consensus::Paxos::LocalPeer");
+ELLE_TYPE_INFO_ABBR("PaxosRemote", "consensus::Paxos::RemotePeer");

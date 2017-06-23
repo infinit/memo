@@ -1298,8 +1298,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<ACB> _register_okb_serialization("ACB");
-      static const elle::TypeInfo::RegisterAbbrevation
-      _acb_abbr("BaseACB<infinit::model::blocks::ACLBlock>", "ACB");
     }
   }
 }
+
+ELLE_TYPE_INFO_ABBR("ACB", "BaseACB<infinit::model::blocks::ACLBlock>");

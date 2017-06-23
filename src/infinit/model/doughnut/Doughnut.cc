@@ -143,10 +143,9 @@ namespace
   const auto _dht_ser
     = elle::serialization::Hierarchy<infinit::model::ModelConfig>
     ::Register<infinit::model::doughnut::Configuration>("doughnut");
-
-  const auto _dht_abbr
-    = elle::TypeInfo::RegisterAbbrevation("infinit::model::doughnut", "dht");
 }
+
+ELLE_TYPE_INFO_ABBR("dht", "infinit::model::doughnut");
 
 namespace infinit
 {
