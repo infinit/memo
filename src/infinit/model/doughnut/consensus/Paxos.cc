@@ -792,7 +792,9 @@ namespace infinit
               PaxosClient c(
                 this->doughnut().id(),
                 lookup_nodes(this->doughnut(), q, a, boost::none, true));
-              // FIXME: do something in case of conflict
+              // FIXME: do something in case of conflict.
+              // FIXME: or don't ? if someone successfully wrote anything, isn't
+              // the block propagated per se ?
               c.choose(
                 paxos.current_version() + 1,
                 value->value.get<std::shared_ptr<blocks::Block>>());
