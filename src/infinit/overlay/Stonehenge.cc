@@ -73,9 +73,9 @@ namespace infinit
       // following nodes.
       return [this, address, n](MemberGenerator::yielder const& yield)
         {
-          int size = this->_peers.size();
+          int const size = this->_peers.size();
           ELLE_ASSERT_LTE(n, size);
-          auto owner = address.value()[0] % size;
+          auto const owner = address.value()[0] % size;
           ELLE_ASSERT(this->doughnut());
           int i = owner;
           do

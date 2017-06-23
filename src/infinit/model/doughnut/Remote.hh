@@ -98,6 +98,7 @@ namespace infinit
       | Networking |
       `-----------*/
       public:
+        /// Build a remote procedure named `name`, with `F` as signature.
         template <typename F>
         RemoteRPC<F>
         make_rpc(std::string const& name);

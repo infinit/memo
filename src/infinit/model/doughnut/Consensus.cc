@@ -33,7 +33,7 @@ namespace infinit
                          StoreMode mode,
                          std::unique_ptr<ConflictResolver> resolver)
         {
-          ELLE_TRACE_SCOPE("%s: store %s", *this, block);
+          ELLE_TRACE_SCOPE("%s: store %s (mode: %s)", *this, block, mode);
           this->_store(std::move(block), mode, std::move(resolver));
         }
 
@@ -46,15 +46,16 @@ namespace infinit
           {
             switch (mode)
             {
-              case STORE_INSERT:
-                for (auto owner: this->doughnut().overlay()->allocate(block->address(), 1))
-                  return owner;
-              case STORE_UPDATE:
-                return this->doughnut().overlay()->lookup(block->address());
+            case STORE_INSERT:
+              for (auto owner: this->doughnut().overlay()->allocate(block->address(), 1))
+                return owner;
+              elle::unreachable();
+            case STORE_UPDATE:
+              return this->doughnut().overlay()->lookup(block->address());
             }
             ELLE_ABORT("unrecognized store mode: %s", mode);
           }();
-          std::unique_ptr<blocks::Block> nb;
+          auto nb = std::unique_ptr<blocks::Block>{};
           while (true)
           {
             try
