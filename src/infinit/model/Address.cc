@@ -148,14 +148,7 @@ namespace std
   std::hash<infinit::model::Address>::operator()(
     infinit::model::Address const& address) const
   {
-    using boost::hash_combine;
-    std::size_t res = 0;
-    for (unsigned int i = 0;
-         i < sizeof(infinit::model::Address::Value);
-         i += sizeof(std::size_t))
-      hash_combine(res,
-                   *reinterpret_cast<std::size_t const*>(address.value() + i));
-    return res;
+    return boost::hash_value(address.value());
   }
 }
 
@@ -174,15 +167,15 @@ namespace elle
     Serialize<Address>::convert(Type buffer)
     {
       if (buffer.empty())
-        return Address();
-      else if (buffer.size() != sizeof(Address::Value))
-        elle::err("invalid address: %x", buffer);
-      else
+        return {};
+      else if (buffer.size() == sizeof(Address::Value))
       {
         Address::Value value;
         memcpy(value, buffer.contents(), sizeof(Address::Value));
         return value;
       }
+      else
+        elle::err("invalid address: %x", buffer);
     }
   }
 }
