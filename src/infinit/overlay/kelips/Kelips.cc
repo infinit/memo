@@ -3672,10 +3672,7 @@ namespace infinit
                 counts.resize(count + 1, 0);
               counts[count]++;
             }
-          elle::json::Array ares;
-          for (auto c: counts)
-            ares.push_back(c);
-          res["counts"] = ares;
+          res["counts"] = elle::json::make_array(counts);
         }
         else if (auto const a = elle::tail(k, "cachecheck."))
         {
@@ -3750,10 +3747,7 @@ namespace infinit
             while (!elle::reactor::wait(s, 10_sec))
               ELLE_TRACE("scanner: %s remaining", to_scan.size());
           };
-          elle::json::Array ares;
-          for (auto c: counts)
-            ares.push_back(c);
-          res["counts"] = ares;
+          res["counts"] = elle::json::make_array(counts);
         }
         else if (k == "bootstrap")
         {
