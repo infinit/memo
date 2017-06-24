@@ -3677,10 +3677,10 @@ namespace infinit
             ares.push_back(c);
           res["counts"] = ares;
         }
-        else if (starts_with(k, "cachecheck."))
+        else if (auto const a = elle::tail(k, "cachecheck."))
         {
-          auto const addr = Address::from_string(k.substr(strlen("cachecheck.")));
-          int g = group_of(addr);
+          auto const addr = Address::from_string(*a);
+          auto const g = group_of(addr);
           auto hits = std::vector<int>{};
           hits.resize(1);
           for (auto& c: this->_state.contacts[g])
@@ -3704,17 +3704,17 @@ namespace infinit
               ++hits[0];
             else
             {
-              int nh = r->result.size();
-              if (signed(hits.size()) <= nh)
+              auto const nh = r->result.size();
+              if (hits.size() <= nh)
                 hits.resize(nh+1);
               hits[nh]++;
             }
           }
           res["counts"] = elle::make_vector(hits);
         }
-        else if (starts_with(k, "scan."))
+        else if (auto const f = elle::tail(k, "scan."))
         {
-          auto factor = std::stou(k.substr(strlen("scan.")));
+          auto const factor = std::stou(*f);
           auto const& files = _state.files;
           std::vector<Address> to_scan;
           std::set<Address> processed;
@@ -3761,22 +3761,26 @@ namespace infinit
         }
         else if (k == "gossip")
         {
-          if (!v)
+          if (v)
+          {
+            size_t s1 = v->find_first_of(',');
+            size_t s2 = v->find_last_of(',');
+            ELLE_ASSERT(s1 != s2 && s1 != std::string::npos);
+            std::string fpp = v->substr(0, s1);
+            std::string interval = v->substr(s1+1, s2-s1-1);
+            std::string timeout = v->substr(s2+1);
+            _config.gossip.files = std::stol(fpp);
+            _config.gossip.interval_ms = std::stol(interval);
+            _config.file_timeout_ms = std::stol(timeout);
+          }
+          else
+            // FIXME: why not a Json object in res?
             return elle::sprintf("files per packet: %s,  interval: %s ms, timeout: %s",
               _config.gossip.files, _config.gossip.interval_ms, _config.file_timeout_ms);
-          size_t s1 = v->find_first_of(',');
-          size_t s2 = v->find_last_of(',');
-          ELLE_ASSERT(s1 != s2 && s1 != std::string::npos);
-          std::string fpp = v->substr(0, s1);
-          std::string interval = v->substr(s1+1, s2-s1-1);
-          std::string timeout = v->substr(s2+1);
-          _config.gossip.files = std::stol(fpp);
-          _config.gossip.interval_ms = std::stol(interval);
-          _config.file_timeout_ms = std::stol(timeout);
         }
-        else if (starts_with(k, "node."))
+        else if (auto const t = elle::tail(k, "node."))
         {
-          auto const target = Address::from_string(k.substr(5));
+          auto const target = Address::from_string(*t);
           try
           {
             this->lookup_node(target);
