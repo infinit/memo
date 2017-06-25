@@ -707,7 +707,7 @@ namespace infinit
       case EntryType::file:
         {
           static auto bench =
-            elle::Bench("bench.filesystem.filecache.hit", std::chrono::seconds(1000));
+            elle::Bench("bench.filesystem.filecache.hit", 1000s);
           ELLE_DEBUG("fetching %f from file cache", address);
           auto fit = _file_cache.find(address);
           boost::optional<int> version;
@@ -795,7 +795,7 @@ namespace infinit
     {
       ELLE_DEBUG_SCOPE("%s: get directory at %f", this, address);
       static auto bench =
-         elle::Bench("bench.filesystem.dircache.hit", std::chrono::seconds(1000));
+         elle::Bench("bench.filesystem.dircache.hit", 1000s);
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())

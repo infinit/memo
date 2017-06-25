@@ -521,7 +521,7 @@ namespace infinit
     void
     File::stat(struct stat* st)
     {
-      static elle::Bench bench("bench.file.stat", std::chrono::seconds(10000));
+      static elle::Bench bench("bench.file.stat", 10000s);
       elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));

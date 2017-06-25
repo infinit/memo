@@ -620,7 +620,7 @@ namespace infinit
       int nthreads = prefetch_threads;
       if (this->_prefetching ||
           nthreads == 0 ||
-          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15) ||
+          (FileSystem::now() - this->_last_prefetch) < 15s ||
           fs.prefetching() >= prefetch_tasks)
         return;
       this->_last_prefetch = FileSystem::now();
@@ -641,7 +641,7 @@ namespace infinit
         [self, files, fs = &fs, running,
          parked, nthreads, group_size, available]
         {
-          static elle::Bench bench("bench.fs.prefetch", std::chrono::seconds(10000));
+          static elle::Bench bench("bench.fs.prefetch", 10000s);
           elle::Bench::BenchScope bs(bench);
           auto start_time = boost::posix_time::microsec_clock::universal_time();
           int nf = 0;

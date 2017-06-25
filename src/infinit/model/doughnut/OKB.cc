@@ -207,7 +207,7 @@ namespace infinit
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
-        static elle::Bench bench("bench.okb.validate", std::chrono::seconds(10000));
+        static elle::Bench bench("bench.okb.validate", 10000s);
         elle::Bench::BenchScope scope(bench);
         ELLE_DEBUG("%s: check address", *this)
         {
@@ -342,7 +342,7 @@ namespace infinit
       {
         if (!this->_data_decrypted)
         {
-          static elle::Bench bench("bench.decrypt", std::chrono::seconds(10000));
+          static elle::Bench bench("bench.decrypt", 10000s);
           elle::Bench::BenchScope scope(bench);
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
           const_cast<BaseOKB<Block>*>(this)->_data_plain =
@@ -460,7 +460,7 @@ namespace infinit
       blocks::ValidationResult
       BaseOKB<Block>::_validate(Model const& model, bool writing) const
       {
-        static elle::Bench bench("bench.okb._validate", std::chrono::seconds(10000));
+        static elle::Bench bench("bench.okb._validate", 10000s);
         elle::Bench::BenchScope scope(bench);
         if (auto res =
             static_cast<OKBHeader const*>(this)->validate(this->address()))

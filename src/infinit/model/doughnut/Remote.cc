@@ -18,7 +18,7 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
 
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench{"bench.remote." name, std::chrono::seconds(10000)};     \
+  static auto bench = elle::Bench{"bench.remote." name, 10000s};     \
   elle::Bench::BenchScope bs(bench)
 
 namespace infinit
@@ -250,7 +250,7 @@ namespace infinit
       Remote::_resolve_keys(std::vector<int> const& ids)
       {
         static auto bench =
-          elle::Bench{"bench.remote_key_cache_hit", std::chrono::seconds(1000)};
+          elle::Bench{"bench.remote_key_cache_hit", 1000s};
         {
           auto missing = elle::make_vector_if
             (ids,

@@ -21,6 +21,8 @@
 
 namespace infinit
 {
+  using namespace std::literals;
+
   /// Exception representing the attempt of invoking an unknown RPC.
   class UnknownRPC
     : public elle::Error
@@ -404,7 +406,7 @@ namespace infinit
         try
         {
           static auto bench = elle::Bench("bench.rpcserve.decipher",
-                                          std::chrono::seconds(10000));
+                                          10000s);
           auto bs = elle::Bench::BenchScope(bench);
           if (request.size() > 262144)
           {
@@ -465,7 +467,7 @@ namespace infinit
       if (had_key)
       {
         static auto bench =
-          elle::Bench("bench.rpcserve.encipher", std::chrono::seconds(10000));
+          elle::Bench("bench.rpcserve.encipher", 10000s);
         auto bs = elle::Bench::BenchScope(bench);
         if (response.size() >= 262144)
         {
@@ -711,7 +713,7 @@ namespace infinit
         if (self.key())
         {
           static auto bench =
-            elle::Bench("bench.rpcclient.encipher", std::chrono::seconds(10000));
+            elle::Bench("bench.rpcclient.encipher", 10000s);
           auto bs = elle::Bench::BenchScope(bench);
           // FIXME: scheduler::run?
           ELLE_DEBUG("encipher request")
@@ -737,7 +739,7 @@ namespace infinit
         if (self.key())
         {
           static auto bench
-            = elle::Bench("bench.rpcclient.decipher", std::chrono::seconds(10000));
+            = elle::Bench("bench.rpcclient.decipher", 10000s);
           auto bs = elle::Bench::BenchScope(bench);
           if (response.size() > 262144)
           {

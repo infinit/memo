@@ -14,6 +14,8 @@
 #include <infinit/silo/MissingKey.hh>
 #include <infinit/silo/InsufficientSpace.hh>
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("infinit.storage.Filesystem");
 
 namespace infinit
@@ -54,7 +56,7 @@ namespace infinit
         ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
         throw MissingKey(key);
       }
-      static elle::Bench bench("bench.fsstorage.get", std::chrono::seconds(10000));
+      static elle::Bench bench("bench.fsstorage.get", 10000s);
       elle::Bench::BenchScope bs(bench);
       elle::Buffer res;
       auto&& output = elle::IOStream(res.ostreambuf());
@@ -70,7 +72,7 @@ namespace infinit
                      bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
-      static elle::Bench bench("bench.fsstorage.set", std::chrono::seconds(10000));
+      static elle::Bench bench("bench.fsstorage.set", 10000s);
       elle::Bench::BenchScope bs(bench);
       auto const path = this->_path(key);
       bool const exists = bfs::exists(path);
@@ -100,7 +102,7 @@ namespace infinit
     Filesystem::_erase(Key key)
     {
       ELLE_TRACE("erase %x", key);
-      static elle::Bench bench("bench.fsstorage.erase", std::chrono::seconds(10000));
+      static elle::Bench bench("bench.fsstorage.erase", 10000s);
       elle::Bench::BenchScope bs(bench);
       auto const path = this->_path(key);
       if (!exists(path))
@@ -117,7 +119,7 @@ namespace infinit
     std::vector<Key>
     Filesystem::_list()
     {
-      static elle::Bench bench("bench.fsstorage.list", std::chrono::seconds(10000));
+      static elle::Bench bench("bench.fsstorage.list", 10000s);
       elle::Bench::BenchScope bs(bench);
       auto res = std::vector<Key>{};
       for (auto const& p: bfs::recursive_directory_iterator(this->root()))

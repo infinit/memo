@@ -4,6 +4,7 @@
 
 namespace infinit
 {
+  using namespace std::literals;
   namespace model
   {
     namespace doughnut
@@ -36,10 +37,8 @@ namespace infinit
                      doughnut::monitoring_socket_path =
                      boost::optional<boost::filesystem::path>(),
                      doughnut::protocol = Protocol::all,
-                     doughnut::connect_timeout =
-                     elle::defaulted(std::chrono::milliseconds(5000)),
-                     doughnut::soft_fail_timeout =
-                     elle::defaulted(std::chrono::milliseconds(20000)),
+                     doughnut::connect_timeout = elle::defaulted(5000ms),
+                     doughnut::soft_fail_timeout = elle::defaulted(20000ms),
                      doughnut::soft_fail_running = elle::defaulted(false),
                      doughnut::tcp_heartbeat = boost::none,
                      doughnut::encrypt_options = EncryptOptions(),

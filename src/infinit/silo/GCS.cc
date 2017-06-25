@@ -1,3 +1,8 @@
+#include <infinit/silo/GCS.hh>
+
+#include <sstream>
+#include <string>
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -8,17 +13,14 @@
 #include <elle/json/json.hh>
 
 #include <infinit/silo/Collision.hh>
-#include <infinit/silo/GCS.hh>
 #include <infinit/silo/MissingKey.hh>
-
-#include <sstream>
-#include <string>
 
 ELLE_LOG_COMPONENT("infinit.storage.GCS");
 
+using namespace std::literals;
 
-#define BENCH(name)                                       \
-  static elle::Bench bench("bench.gcs." name, std::chrono::seconds(10000)); \
+#define BENCH(name)                                     \
+  static elle::Bench bench("bench.gcs." name, 10000s);  \
   elle::Bench::BenchScope bs(bench)
 
 using StatusCode = elle::reactor::http::StatusCode;
@@ -48,8 +50,7 @@ namespace infinit
     {
       BENCH("get");
       ELLE_DEBUG("get %x", key);
-      std::string url = this->_url(key);
-      auto r = this->_request(url,
+      auto r = this->_request(this->_url(key),
                               elle::reactor::http::Method::GET,
                               elle::reactor::http::Request::QueryDict(),
                               {},
@@ -77,8 +78,7 @@ namespace infinit
       ELLE_DEBUG("set %x", key);
       if (!insert && !update)
         elle::err("neither inserting nor updating");
-      std::string url = this->_url(key);
-      auto r = this->_request(url,
+      auto r = this->_request(this->_url(key),
                               elle::reactor::http::Method::PUT,
                               elle::reactor::http::Request::QueryDict(),
                               {},
@@ -92,8 +92,7 @@ namespace infinit
     {
       BENCH("erase");
       ELLE_DEBUG("erase %x", k);
-      std::string url = this->_url(k);
-      auto r = this->_request(url,
+      auto r = this->_request(this->_url(k),
                               elle::reactor::http::Method::DELETE,
                               elle::reactor::http::Request::QueryDict(),
                               {},
@@ -118,7 +117,7 @@ namespace infinit
         for (auto const& base_element: response.get_child("ListBucketResult"))
           if (base_element.first == "Contents")
           {
-             std::string fname = base_element.second.get<std::string>("Key");
+             auto const fname = base_element.second.get<std::string>("Key");
              auto pos = fname.find("0x");
              res.emplace_back(Key::from_string(fname.substr(pos+2)));
           }

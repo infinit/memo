@@ -19,6 +19,8 @@
 #include <infinit/silo/MissingKey.hh>
 #include <infinit/model/Address.hh>
 
+using namespace std::literals;
+
 enum PacketType
 {
   SSH_FXP_INIT           =      1,
@@ -76,9 +78,8 @@ enum PacketType
 
 ELLE_LOG_COMPONENT("infinit.fs.sftp");
 
-#define BENCH(name)                                                     \
-  static auto bench =                                                   \
-    elle::Bench("bench.sftp." name, std::chrono::seconds(10000));       \
+#define BENCH(name)                                             \
+  static auto bench = elle::Bench("bench.sftp." name, 10000s);  \
   auto bs = elle::Bench::BenchScope(bench)
 
 namespace

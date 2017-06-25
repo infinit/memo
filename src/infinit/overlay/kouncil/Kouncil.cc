@@ -100,7 +100,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
-        if (_eviction_delay < std::chrono::seconds(3))
+        if (_eviction_delay < 3s)
           ELLE_WARN("Eviction is dangerously low, peers might be evicted"
                     " before any reconnection attempt");
         if (local)

@@ -17,11 +17,12 @@
 #include <infinit/silo/MissingKey.hh>
 #include <infinit/symbols.hh>
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
 
 #define BENCH(name)                                                     \
-  static auto bench =                                                   \
-    elle::Bench("bench.gdrive." name, std::chrono::seconds(10000));     \
+  static auto bench = elle::Bench("bench.gdrive." name, 10000s);        \
   auto bs = elle::Bench::BenchScope(bench)
 
 namespace infinit

@@ -10,8 +10,7 @@
 ELLE_LOG_COMPONENT("infinit.storage.GoogleAPI");
 
 #define BENCH(name)                                                     \
-  static auto bench =                                                   \
-    elle::Bench("bench.googleapi." name, std::chrono::seconds(10000));  \
+  static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \
   auto bs = elle::Bench::BenchScope(bench)
 
 namespace
@@ -29,6 +28,8 @@ namespace
 
 namespace infinit
 {
+  using namespace std::literals;
+
   namespace silo
   {
     GoogleAPI::GoogleAPI(std::string name,
