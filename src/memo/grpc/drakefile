@@ -7,9 +7,12 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
+# Used by the website.
 memo_vs_proto = None
 memo_vs_json = None
-gendn = None
+# Used internaly.
+memo_vs_with_named_proto = None
+gen_vs_w_named = None
 
 class GRPCGen(drake.Builder):
 
@@ -169,7 +172,9 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global memo_vs_proto, doughnut_json, grpc_lib, grpc, sources
+  global memo_vs_proto, memo_vs_with_named_proto, grpc_lib, grpc, sources
+  global gen_vs, gen_vs_w_named
+
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -180,19 +185,43 @@ def configure(
       'CMAKE_CXX_FLAGS': '-Wno-deprecated-declarations',
       'GO_EXECUTABLE': go.go,
     })
+
+  ## ----------------------------------- ##
+  ## Generate .proto file and C++ files. ##
+  ## ----------------------------------- ##
+
+  # Render the .proto file from the JSON.
   import json
+  def render(j, proto_tmpl, content = None):
+    if content is None:
+      with open(str(memo_vs_json.path())) as f:
+        content = json.load(f)
+    with drake.templating.Context(content = {'proto': content},
+                                  sources = [j]):
+      drake.node(proto_tmpl)
+    return content
+  # Generate the 'public' memo vs proto file.
   memo_vs_json = drake.Node('memo_vs.json')
-  with open(str(memo_vs_json.path())) as f:
-    with drake.templating.Context(content = {'proto': json.load(f)},
-                                  sources = [memo_vs_json]):
-      drake.node('memo_vs.proto.tmpl')
+  _vs_json = render(memo_vs_json, 'memo_vs.proto.tmpl')
   memo_vs_proto = drake.node('memo_vs.proto')
-  global gendn
-  gendn = GRPCCxxGen(
+  gen_vs = GRPCCxxGen(
     memo_vs_proto,
     protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
-  sources = gendn.targets() + drake.nodes(
+  # Generate the 'private' memo vs proto file that includes NamedBlocks.
+  memo_vs_named_json = drake.Node('memo_vs_named_only.json')
+  with open(str(memo_vs_named_json.path())) as f:
+    _vs_named_json = json.load(f)
+  _vs_named_json['services'][0]['rpcs'] += _vs_json['services'][0]['rpcs']
+  _vs_named_json['messages'] += _vs_json['messages']
+  render(memo_vs_json, 'memo_vs_with_named.proto.tmpl', _vs_named_json)
+  memo_vs_with_named_proto = drake.node('memo_vs_with_named.proto')
+  gen_vs_w_named = GRPCCxxGen(
+    memo_vs_with_named_proto,
+    protoc = grpc.protoc,
+    plugin = drake.node(grpc.grpc_cpp_plugin))
+  # Sources to compile the server part.
+  sources = gen_vs_w_named.targets() + drake.nodes(
     'memo_vs.cc',
     'grpc.cc',
     'serializer.cc',

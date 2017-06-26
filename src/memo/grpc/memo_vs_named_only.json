@@ -1,0 +1,77 @@
+{
+  "syntax": "proto3",
+  "package": "memo.vs",
+  "services": [{
+    "name": "ValueStore",
+    "rpcs": [
+      {
+        "name": "MakeNamedBlock",
+        "arguments": ["MakeNamedBlockRequest"],
+        "returns": "Block",
+        "documentation": {
+          "abstract": "Ask for a brand new Block, representing a NamedBlock",
+          "description": "The address of a NamedBlock is based on its owner public key and its name, given by the MakeNamedBlockRequest. N.B. The Block is not pushed yet"
+        }
+      },
+      {
+        "name": "NamedBlockAddress",
+        "arguments": ["NamedBlockAddressRequest"],
+        "returns": "NamedBlockAddressResponse",
+        "documentation": {
+          "abstract": "Ask for a translation between a name and an Address",
+          "description": "To fetch a NamedBlock, you first need to get its address. The NamedBlock address can be calculated from an owner and a name, given by the NamedBlockAddressRequest"
+        }
+      }
+    ]
+  }],
+  "messages": [
+    {
+      "name": "MakeNamedBlockRequest",
+      "documentation": {
+        "abstract": "Create a request for a NamedBlock"
+      },
+      "attributes": [
+        {
+          "name": "key",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The name of the NamedBlock to create"
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "NamedBlockAddressRequest",
+      "documentation": {
+        "abstract": "Create a request to retrieve the address of a NamedBlock"
+      },
+      "attributes": [
+        {
+          "name": "key",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The name to retrieve address from"
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "NamedBlockAddressResponse",
+      "documentation": {
+        "abstract": "A response to a NamedBlockAddressRequest, containing the address of a NamedBlock"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address"
+          },
+          "index": 1
+        }
+      ]
+    }
+  ]
+}

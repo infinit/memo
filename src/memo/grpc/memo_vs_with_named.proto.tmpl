@@ -1,0 +1,75 @@
+<%!
+def documentation(element, prefix):
+
+  def comment_prefix(prefix):
+    return prefix
+
+  def comment_join(prefix):
+   return "\n" + comment_prefix(prefix)
+
+  def wrapper(prefix):
+    import textwrap
+    return textwrap.TextWrapper(80 - len(comment_prefix(prefix)))
+
+  def insert_comment(comment, format = "%s."):
+    ret = comment_prefix(prefix)
+    if isinstance(comment, list):
+      comment = ", ".join(comment)
+    ret += comment_join(prefix).join(wrapper(prefix).wrap(format % comment))
+    return ret
+
+  doc = element.get("documentation", {})
+  return "\n\n".join(map(lambda args: insert_comment(doc.get(args[0]), *args[1:]),
+          filter(lambda entry: doc.get(entry[0]),
+                 [
+                   ('abstract',),
+                   ('description',),
+                   ('specific', 'Specific: This attribute is specific to %s.'),
+                   ('related', 'Related: %s.'),
+                 ])))
+%>
+syntax = "${proto["syntax"]}";
+
+package ${proto["package"]};
+
+% for service in proto["services"]:
+service ${service["name"]} {
+%   for rpc in service["rpcs"]:
+  /**
+${documentation(rpc, "    ")}
+  */
+  rpc ${rpc["name"]}(${" ".join(rpc["arguments"])}) returns (${rpc["returns"]}) {}
+
+%   endfor
+}
+% endfor
+
+% for message in proto["messages"]:
+/**
+${documentation(message, "  ")}
+*/
+message ${message["name"]} {
+  % for attribute in message.get("attributes", []):
+  /**
+${documentation(attribute, "    ")}
+  */
+    % if attribute.get("rule"):
+  ${attribute["rule"]}
+    % endif
+    % if attribute["type"] != "oneof":
+  ${attribute["type"]} ${attribute["name"]} = ${attribute["index"]};
+    % else:
+  ${attribute["type"]} ${attribute["name"]} {
+      % for subattribute in attribute.get("values", []):
+      /**
+${documentation(subattribute, "      ")}
+      */
+    ${subattribute["type"]} ${subattribute["name"]} = ${subattribute["index"]};
+      % endfor
+  };
+    % endif
+
+  % endfor
+}
+
+% endfor

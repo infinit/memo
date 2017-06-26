@@ -25,24 +25,6 @@
         }
       },
       {
-        "name": "MakeNamedBlock",
-        "arguments": ["MakeNamedBlockRequest"],
-        "returns": "Block",
-        "documentation": {
-          "abstract": "Ask for a brand new Block, representing a NamedBlock",
-          "description": "The address of a NamedBlock is based on its owner public key and its name, given by the MakeNamedBlockRequest. N.B. The Block is not pushed yet"
-        }
-      },
-      {
-        "name": "NamedBlockAddress",
-        "arguments": ["NamedBlockAddressRequest"],
-        "returns": "NamedBlockAddressResponse",
-        "documentation": {
-          "abstract": "Ask for a translation between a name and an Address",
-          "description": "To fetch a NamedBlock, you first need to get its address. The NamedBlock address can be calculated from an owner and a name, given by the NamedBlockAddressRequest"
-        }
-      },
-      {
         "name": "Fetch",
         "arguments": ["FetchRequest"],
         "returns": "FetchResponse",
@@ -89,22 +71,6 @@
       }
     },
     {
-      "name": "MakeNamedBlockRequest",
-      "documentation": {
-        "abstract": "Create a request for a NamedBlock"
-      },
-      "attributes": [
-        {
-          "name": "key",
-          "type": "bytes",
-          "documentation": {
-            "abstract": "The name of the NamedBlock to create"
-          },
-          "index": 1
-        }
-      ]
-    },
-    {
       "name": "MakeImmutableBlockRequest",
       "documentation": {
         "abstract": "Create a request for an ImmutableBlock",
@@ -127,22 +93,6 @@
             "description": "This address is used to find the ACB in charge of the Block, to sign the Block and control remove permissions. Until ACB are introduced to this API, leave this field empty to base the signature on the key-value store keys"
           },
           "index": 2
-        }
-      ]
-    },
-    {
-      "name": "NamedBlockAddressRequest",
-      "documentation": {
-        "abstract": "Create a request to retrieve the address of a NamedBlock"
-      },
-      "attributes": [
-        {
-          "name": "key",
-          "type": "bytes",
-          "documentation": {
-            "abstract": "The name to retrieve address from"
-          },
-          "index": 1
         }
       ]
     },
@@ -211,22 +161,6 @@
             "documentation": "MutableBlocks have, by design, their payload encrypted. Enabling `decrypt_data` will cause the key-value store to set the `data` field of the Block with the decrypted payload"
           },
           "index": 2
-        }
-      ]
-    },
-    {
-      "name": "NamedBlockAddressResponse",
-      "documentation": {
-        "abstract": "A response to a NamedBlockAddressRequest, containing the address of a NamedBlock"
-      },
-      "attributes": [
-        {
-          "name": "address",
-          "type": "bytes",
-          "documentation": {
-            "abstract": "The address"
-          },
-          "index": 1
         }
       ]
     },

@@ -973,7 +973,7 @@ def configure(
       else:
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc' and cxx_toolkit.os is drake.os.linux:
-      that_test_libs += grpc.gendn.targets()
+      that_test_libs += grpc.gen_vs_w_named.targets()
       that_test_libs.append(grpc.grpc.protobuf_lib)
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()

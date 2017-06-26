@@ -3,7 +3,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/serialization/json.hh>
 
-#include <memo/grpc/memo_vs.grpc.pb.h>
+#include <memo/grpc/memo_vs_with_named.grpc.pb.h>
 #include <memo/grpc/grpc.hh>
 #include <memo/grpc/serializer.hh>
 
