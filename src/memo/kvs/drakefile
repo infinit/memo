@@ -16,6 +16,7 @@ def configure(
   go_toolkit,
   go_config,
   grpc,
+  git = None
 ):
   global header, library, rule_build
   global service_proto, gen_cpp, gen_go, gen_py
@@ -113,3 +114,31 @@ def configure(
     service_proto,
     grpc.grpc.protoc,
     drake.node(grpc.grpc.grpc_python_plugin))
+
+  ## -------------------- ##
+  ## Docker python client ##
+  ## -------------------- ##
+
+  git = git or drake.git.Git()
+
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'memo-kvs-client-python', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apk add --update python3' \
+                  '&& apk add --virtual build-deps python3-dev gcc g++' \
+                  '&& pip3 install grpcio ' \
+                  '&& apk del build-deps ' \
+                  '&& rm -rf /var/cache/apk/*')
+  docker_file.env('PYTHONPATH', '/root')
+  docker_file.add(drake.copy([drake.node('memo_kvs.py')] + gen_py.targets(),
+                             docker_path, strip_prefix = True), '/root/')
+  docker_file.entry_point(
+    ['/usr/bin/env', 'python3', '-i', '-m', 'memo_kvs'])
+  drake.docker.DockerBuilder(docker_image, docker_file)
