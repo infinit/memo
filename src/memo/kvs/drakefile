@@ -29,8 +29,21 @@ def configure(
 
   gen_vs = grpc.GRPCGoGen(grpc.memo_vs_with_named_proto, grpc.grpc.protoc,
                           toolkit = go_toolkit)
+  class CopyToEmptyDirectory(drake.Copy):
+
+    def execute(self):
+      import shutil
+      folder = str(self.targets()[0].path().dirname())
+      shutil.rmtree(folder)
+      os.makedirs(folder)
+      return super().execute()
+
+    def hash(self):
+      return {}
+
   vs_grpc = drake.copy(gen_vs.targets(), 'src/memo/vs',
-                       strip_prefix = True)
+                       strip_prefix = True,
+                       builder = CopyToEmptyDirectory)
   service_proto = drake.node('protobuf/memo_kvs.proto')
   gen_go = grpc.GRPCGoGen(service_proto,
                           grpc.grpc.protoc,
