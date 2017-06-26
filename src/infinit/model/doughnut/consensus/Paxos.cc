@@ -59,7 +59,6 @@ namespace infinit
         auto translate_exceptions(std::string const& name, F f)
           -> decltype(f())
         {
-          ELLE_TRACE("translate_exceptions: run {}: {}", name, f);
           try
           {
             return f();
