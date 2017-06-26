@@ -1944,13 +1944,13 @@ namespace rebalancing
       l->proposing().connect(
         [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
         {
-          if (++count <= 16)
+          if (++count <= 12)
             throw elle::athena::paxos::Unavailable();
         });
     auto rebalanced =
       elle::reactor::waiter(local_c.rebalanced(), block->address());
     dht_c.reset();
-    BOOST_TEST(count > 16);
+    BOOST_TEST(count > 12);
     elle::reactor::wait(rebalanced);
   }
 
@@ -2337,7 +2337,7 @@ ELLE_TEST_SUITE()
       auto missing_block = &rebalancing::missing_block;
       rebalancing->add(BOOST_TEST_CASE(missing_block), 0, valgrind(3));
       auto resign_insist = &rebalancing::resign_insist;
-      rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(5));
       auto update_while_evicting = &rebalancing::update_while_evicting;
       rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
     }

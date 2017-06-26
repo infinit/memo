@@ -19,6 +19,7 @@
 #include <elle/cryptography/rsa/PublicKey.hh>
 #include <elle/cryptography/hash.hh>
 
+#include <elle/reactor/Backoff.hh>
 #include <elle/reactor/for-each.hh>
 
 #include <infinit/RPC.hh>
@@ -2004,11 +2005,13 @@ namespace infinit
         {
           ELLE_LOG_COMPONENT(
             "infinit.model.doughnut.consensus.Paxos.rebalance");
+          elle::reactor::Backoff backoff(
+            std::chrono::milliseconds(10), std::chrono::milliseconds(10000));
           auto local = this->doughnut().local();
           if (!local)
             return;
           auto paxos = std::static_pointer_cast<LocalPeer>(local);
-          for (bool done = false; !done;)
+          for (bool failed = false, done = false; !done;)
           {
             done = true;
             auto blocks =
@@ -2018,6 +2021,11 @@ namespace infinit
                   .equal_range(this->doughnut().id())));
             for (auto nb: blocks)
             {
+              if (failed)
+              {
+                failed = false;
+                backoff.backoff();
+              }
               auto address = nb.block;
               if (!address.mutable_block())
                 continue;
@@ -2034,10 +2042,14 @@ namespace infinit
                 if (this->_rebalance(client, address, quorum, latest))
                   paxos->rebalanced()(address);
                 else
+                {
+                  failed = true;
                   ELLE_WARN("%f: unable to rebalance %f", this, address);
+                }
               }
               catch (elle::Error const& e)
               {
+                failed = true;
                 ELLE_WARN("%f: unable to rebalance %f: %f", this, address, e);
               }
             }
