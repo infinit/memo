@@ -66,5 +66,5 @@ This will result on `bin/memo`.
 
 ## Maintainers
 
- * Website: https://infinit.sh/project/memo
+ * Website: https://memo.infinit.sh
  * Email: open+memo@infinit.sh
