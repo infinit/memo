@@ -1948,8 +1948,11 @@ namespace infinit
                     return true;
                   }
                   else if (signed(quorum.size()) == this->_factor)
+                  {
                     ELLE_TRACE(
                       "someone else rebalanced to a sufficient quorum");
+                    return true;
+                  }
                   else
                   {
                     ELLE_TRACE(
