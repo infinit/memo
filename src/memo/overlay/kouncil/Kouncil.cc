@@ -39,7 +39,7 @@ namespace memo
       namespace
       {
         int64_t
-        to_milliseconds(Time t)
+        to_milliseconds(elle::Time t)
         {
           return std::chrono::duration_cast<std::chrono::milliseconds>(
                 t.time_since_epoch()).count();
@@ -89,14 +89,13 @@ namespace memo
 
       Kouncil::Kouncil(model::doughnut::Doughnut* dht,
                        std::shared_ptr<Local> local,
-                       boost::optional<std::chrono::seconds> eviction_delay)
+                       elle::DurationOpt eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
         , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               [this] { this->_broadcast(); }))
-        , _eviction_delay(
-          eviction_delay.value_or(std::chrono::seconds{200 * 60}))
+        , _eviction_delay(eviction_delay.value_or(200min))
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);

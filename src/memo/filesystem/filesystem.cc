@@ -545,7 +545,7 @@ namespace memo
               return this->_root_address;
             }
           }
-          elle::reactor::sleep(1_sec);
+          elle::reactor::sleep(1s);
         }
       }
     }

@@ -27,6 +27,8 @@
 #include <memo/silo/Memory.hh>
 #include <memo/silo/Silo.hh>
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("test");
 
 #if defined MEMO_WINDOWS
@@ -77,7 +79,7 @@ namespace
                  ctx, elle::exception_string());
         throw;
       }
-      elle::reactor::sleep(1_sec);
+      elle::reactor::sleep(1s);
     }
     elle::unreachable();
   }
@@ -314,7 +316,7 @@ namespace
         if (boost::any_cast<bool>(c.at("discovered")))
           break;
       }
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
     ELLE_LOG("Returning observer");
     return std::make_pair(std::move(fs), std::move(tptr));
@@ -498,7 +500,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     fss.push_back(make_observer(tmp, kp, 1, 3, false, false, false));
 //     if (i == 0)
 //       writefile(*fss.front(), "foo", "bar");
-//     elle::reactor::sleep(100_ms);
+//     elle::reactor::sleep(100ms);
 //   }
 //   for (int i=0; i<3; ++i)
 //   {
@@ -713,7 +715,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_TEST(now - st.st_mtime <= delta);
   BOOST_TEST(now - st.st_ctime <= delta);
 
-  elle::reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100ms);
   now = time(nullptr);
   appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
   fs->path("/dir/file")->stat(&st);
@@ -723,7 +725,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_TEST(now - st.st_mtime >= 2);
   BOOST_TEST(now - st.st_ctime >= 2);
 
-  elle::reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100ms);
   now = time(nullptr);
   writefile(*fs, "dir/file2", "foo");
   fs->path("/dir2/dir")->mkdir(0600);
@@ -864,7 +866,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   beyond.pull(*nodes[0].first);
   beyond.pull(*nodes[1].first);
   nodes.clear();
-  elle::reactor::sleep(2_sec);
+  elle::reactor::sleep(2s);
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
   nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   beyond.push(*nodes[0].first);

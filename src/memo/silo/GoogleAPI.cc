@@ -9,6 +9,8 @@
 
 ELLE_LOG_COMPONENT("memo.silo.GoogleAPI");
 
+using namespace std::literals;
+
 #define BENCH(name)                                                     \
   static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \
   auto bs = elle::Bench::BenchScope(bench)
@@ -21,15 +23,12 @@ namespace
   elle::reactor::Duration
   delay(int attempt)
   {
-    auto factor = pow(2, std::min(8, attempt));
-    return boost::posix_time::milliseconds(factor * 100);
+    return std::min(25000ms, int(pow(2, attempt)) * 100ms);
   }
 }
 
 namespace memo
 {
-  using namespace std::literals;
-
   namespace silo
   {
     GoogleAPI::GoogleAPI(std::string name,

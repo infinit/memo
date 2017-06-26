@@ -6,11 +6,10 @@
 #include <boost/multi_index/ordered_index.hpp>
 
 #include <elle/Error.hh>
-#include <elle/unordered_map.hh>
-
-#include <elle/das/tuple.hh>
-
 #include <elle/athena/paxos/Client.hh>
+#include <elle/das/tuple.hh>
+#include <elle/reactor/duration.hh>
+#include <elle/unordered_map.hh>
 
 #include <memo/model/doughnut/Consensus.hh>
 #include <memo/model/doughnut/Local.hh>
@@ -400,7 +399,7 @@ namespace memo
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
             ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
             using NodeTimeouts =
-              std::unordered_map<Address, boost::asio::deadline_timer>;
+              std::unordered_map<Address, elle::reactor::WTimer>;
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 

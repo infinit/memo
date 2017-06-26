@@ -2,6 +2,7 @@
 
 #include <google/protobuf/message.h>
 
+#include <elle/Duration.hh>
 #include <elle/meta.hh>
 #include <elle/serialization/json/Error.hh> // serialization::MissingKey.
 

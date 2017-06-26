@@ -643,7 +643,7 @@ namespace memo
         {
           static elle::Bench bench("bench.fs.prefetch", 10000s);
           elle::Bench::BenchScope bs(bench);
-          auto start_time = boost::posix_time::microsec_clock::universal_time();
+          auto start_time = std::chrono::steady_clock::now();
           int nf = 0;
           bool should_exit = false;
           while (true)
@@ -756,11 +756,9 @@ namespace memo
                   });
             }
           }
-          ELLE_TRACE("prefetched %s entries in %s us",
-                   nf,
-                   (boost::posix_time::microsec_clock::universal_time() - start_time)
-                     .total_microseconds());
-          if (!(--(*running)))
+          ELLE_TRACE("prefetched %s entries in %s",
+                     nf, std::chrono::steady_clock::now() - start_time);
+          if (!--*running)
           {
             self->_prefetching = false;
             fs->prefetching()--;

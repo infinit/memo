@@ -67,12 +67,10 @@ namespace memo
                  // Kelips options.
                  decltype(cli::nodes = boost::optional<int>()),
                  decltype(cli::k = boost::optional<int>()),
-                 decltype(cli::kelips_contact_timeout =
-                          boost::optional<std::string>()),
+                 decltype(cli::kelips_contact_timeout = boost::optional<std::string>()),
                  decltype(cli::encrypt = boost::optional<std::string>()),
                  decltype(cli::protocol = boost::optional<std::string>()),
-                 decltype(cli::tcp_heartbeat =
-                          boost::optional<std::chrono::milliseconds>()),
+                 decltype(cli::tcp_heartbeat = elle::DurationOpt{}),
                  decltype(cli::disable_encrypt_at_rest = false),
                  decltype(cli::disable_encrypt_rpc = false),
                  decltype(cli::disable_signature = false)),
@@ -85,8 +83,8 @@ namespace memo
         Strings const& silo = {},
         boost::optional<int> port = boost::none,
         int replication_factor = 1,
-        boost::optional<std::string> const& eviction_delay = boost::none,
-        boost::optional<std::string> const& output_name = boost::none,
+        boost::optional<std::string> const& eviction_delay = {},
+        boost::optional<std::string> const& output_name = {},
         bool push_network = false,
         bool push = false,
         Strings const& admin_r = {},
@@ -102,11 +100,11 @@ namespace memo
         // Kelips options,
         boost::optional<int> nodes = boost::none,
         boost::optional<int> k = boost::none,
-        boost::optional<std::string> kelips_contact_timeout = boost::none,
-        boost::optional<std::string> encrypt = boost::none,
+        boost::optional<std::string> kelips_contact_timeout = {},
+        boost::optional<std::string> encrypt = {},
         // Generic options
-        boost::optional<std::string> protocol = boost::none,
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none,
+        boost::optional<std::string> protocol = {},
+        elle::DurationOpt tcp_heartbeat = {},
         bool disable_encrypt_at_rest = false,
         bool disable_encrypt_rpc = false,
         bool disable_signature = false);

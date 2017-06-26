@@ -68,31 +68,6 @@ using boost::algorithm::starts_with;
 
 using namespace std::literals;
 
-namespace elle
-{
-  namespace kelips = memo::overlay::kelips;
-
-  namespace serialization
-  {
-
-    template<> struct Serialize<kelips::Time>
-    {
-      using Type = uint64_t;
-      static uint64_t convert(kelips::Time& t)
-      {
-        Type res = std::chrono::duration_cast<std::chrono::milliseconds>(
-          t.time_since_epoch()).count();
-        return res;
-      }
-
-      static kelips::Time convert(uint64_t repr)
-      {
-        return kelips::Time(std::chrono::milliseconds(repr));
-      }
-    };
-  }
-}
-
 struct PrettyEndpoint
 {
   using Endpoint = memo::overlay::kelips::Endpoint;
@@ -130,8 +105,7 @@ namespace std
 {
   namespace chrono
   {
-    std::ostream& operator << (std::ostream&o,
-                               time_point<std::chrono::system_clock> const& t)
+    std::ostream& operator << (std::ostream&o, elle::Time const& t)
     {
       return o << std::chrono::duration_cast<std::chrono::milliseconds>(
         t.time_since_epoch()).count();
@@ -152,7 +126,7 @@ namespace memo
         Time
         now()
         {
-          return std::chrono::system_clock::now();
+          return elle::Clock::now();
         }
 
         void
@@ -205,13 +179,6 @@ namespace memo
           for (auto const& e: v)
             res.emplace(e.first);
           return res;
-        }
-
-        uint64_t
-        serialize_time(const Time& t)
-        {
-          return elle::serialization::Serialize<Time>::convert(
-            const_cast<Time&>(t));
         }
 
         std::string
@@ -1005,7 +972,7 @@ namespace memo
             elle::reactor::Waiter waiter = elle::reactor::waiter(conn->on_connection());
             for (int i=0; i< 50; ++i)
             {
-              if (this->_terminating || elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
+              if (this->_terminating || elle::reactor::wait(waiter, 100ms) || conn->disconnected())
                 break;
             }
           }
@@ -1018,7 +985,7 @@ namespace memo
           if (!conn->disconnected())
           {
             remote = this->doughnut()->dock().make_peer(conn);
-            remote->connect(5_sec);
+            remote->connect(5s);
             ELLE_DEBUG("remote ready");
             this->_peer_cache.emplace(remote->id(), remote);
           }
@@ -1967,13 +1934,13 @@ namespace memo
       Node::gossipEmitter()
       {
         int v = elle::pick_one(_config.gossip.interval_ms);
-        elle::reactor::sleep(boost::posix_time::milliseconds(v));
+        elle::reactor::sleep(std::chrono::milliseconds(v));
         packet::Gossip p;
         p.sender = _self;
         p.observer = _observer;
         while (true)
         {
-          elle::reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
+          elle::reactor::sleep(std::chrono::milliseconds(_config.gossip.interval_ms));
           p.contacts.clear();
           p.files.clear();
           p.contacts = pickContacts();
@@ -1995,7 +1962,7 @@ namespace memo
           {
             if (!p.files.empty())
               ELLE_DUMP("%s: info on %s files %s   %x %x", *this, p.files.size(),
-                       serialize_time(p.files.begin()->second.first),
+                       p.files.begin()->second.first,
                        _self, p.files.begin()->second.second);
             auto it = _state.contacts[group_of(a)].find(a);
             if (it != _state.contacts[group_of(a)].end())
@@ -2128,8 +2095,8 @@ namespace memo
             {
               ELLE_DUMP("%s: %s %s %s %x", *this,
                        it->second.last_seen < f.second.first,
-                       serialize_time(it->second.last_seen),
-                       serialize_time(f.second.first),
+                       it->second.last_seen,
+                       f.second.first,
                        f.first);
               it->second.last_seen = std::max(it->second.last_seen, f.second.first);
             }
@@ -2662,8 +2629,8 @@ namespace memo
           ELLE_ASSERT(ir.second);
           ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
-                      elle::reactor::wait(r->barrier,
-              boost::posix_time::milliseconds(_config.query_timeout_ms));
+          elle::reactor::wait(r->barrier,
+                              std::chrono::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
             ELLE_LOG("%s: mget request to %s on %s timeout (try %s)",
@@ -2781,7 +2748,7 @@ namespace memo
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second);
             elle::reactor::wait(r->barrier,
-              boost::posix_time::milliseconds(_config.query_timeout_ms));
+                                std::chrono::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
             {
               ELLE_TRACE("%s: get request on %s timeout (try %s)",
@@ -2882,7 +2849,7 @@ namespace memo
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
           elle::reactor::wait(r->barrier,
-            boost::posix_time::milliseconds(_config.query_timeout_ms));
+            std::chrono::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
             ELLE_LOG("%s: Timeout on PUT attempt %s", *this, i);
@@ -3021,12 +2988,12 @@ namespace memo
       Node::pinger()
       {
         int v = elle::pick_one(_config.ping_interval_ms);
-        elle::reactor::sleep(boost::posix_time::milliseconds(v));
+        elle::reactor::sleep(std::chrono::milliseconds(v));
         int counter = 0;
         while (true)
         {
           ELLE_DUMP("%s: sleep for %s ms", *this, _config.ping_interval_ms);
-          elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+          elle::reactor::sleep(std::chrono::milliseconds(_config.ping_interval_ms));
           cleanup();
           // some stats
           static elle::Bench n_files("kelips.file_count", 10s);
@@ -3039,7 +3006,7 @@ namespace memo
             auto group = elle::pick_one(_config.k);
             if (_state.contacts[group].empty())
             {
-              elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+              elle::reactor::sleep(std::chrono::milliseconds(_config.ping_interval_ms));
               continue;
             }
             auto it = elle::pick_one(_state.contacts[group]);
@@ -3048,7 +3015,7 @@ namespace memo
             {
               if (now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
               {
-                elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+                elle::reactor::sleep(std::chrono::milliseconds(_config.ping_interval_ms));
                 continue;
               }
               else
@@ -3337,9 +3304,9 @@ namespace memo
           if (sum >= count)
             break;
           ELLE_LOG("%s: waiting for %s nodes, got %s", *this, count, sum);
-          elle::reactor::sleep(1_sec);
+          elle::reactor::sleep(1s);
         }
-        elle::reactor::sleep(1_sec);
+        elle::reactor::sleep(1s);
       }
 
       void
@@ -3697,7 +3664,7 @@ namespace memo
             r->barrier.close();
             this->_pending_requests.emplace(gf.request_id, r);
             send(gf, c.second);
-            if (!elle::reactor::wait(r->barrier, 100_ms))
+            if (!elle::reactor::wait(r->barrier, 100ms))
               ++hits[0];
             else
             {
@@ -3744,7 +3711,7 @@ namespace memo
           {
             for (int i=0; i<10; ++i)
               s.run_background("scanner", scanner);
-            while (!elle::reactor::wait(s, 10_sec))
+            while (!elle::reactor::wait(s, 10s))
               ELLE_TRACE("scanner: %s remaining", to_scan.size());
           };
           res["counts"] = elle::json::make_array(counts);

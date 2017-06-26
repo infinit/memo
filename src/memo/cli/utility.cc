@@ -112,7 +112,7 @@ namespace memo
           elle::SafeFinally spoll([&] {
               poller.terminate_now();
           });
-          socket.rdv_connect("ip-fetcher", host, port, 5_sec);
+          socket.rdv_connect("ip-fetcher", host, port, 5s);
           poller.terminate_now();
           spoll.abort();
           ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());

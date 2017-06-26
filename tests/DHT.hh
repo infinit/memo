@@ -285,10 +285,8 @@ public:
       yielding_overlay = false,
       protocol = dht::Protocol::tcp,
       port = boost::none,
-      dht::connect_timeout =
-        elle::defaulted(std::chrono::milliseconds(5000)),
-      dht::soft_fail_timeout =
-        elle::defaulted(std::chrono::milliseconds(20000)),
+      dht::connect_timeout = elle::defaulted(elle::Duration{5s}),
+      dht::soft_fail_timeout = elle::defaulted(elle::Duration{20s}),
       dht::soft_fail_running = elle::defaulted(false),
       dht::resign_on_shutdown = false
       ).call([this] (bool paxos,
@@ -300,14 +298,14 @@ public:
                      make_overlay_t make_overlay,
                      dht::Doughnut::ConsensusBuilder consensus_builder,
                      bool rebalance_auto_expand,
-                     std::chrono::system_clock::duration node_timeout,
+                     elle::Duration node_timeout,
                      bool with_cache,
                      std::string const& user_name,
                      bool yielding_overlay,
                      dht::Protocol p,
                      boost::optional<int> port,
-                     elle::Defaulted<std::chrono::milliseconds> connect_timeout,
-                     elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+                     elle::Defaulted<elle::Duration> connect_timeout,
+                     elle::Defaulted<elle::Duration> soft_fail_timeout,
                      elle::Defaulted<bool> soft_fail_running,
                      bool resign_on_shutdown)
              {
@@ -372,14 +370,14 @@ private:
        dht::Doughnut::ConsensusBuilder consensus_builder,
        make_overlay_t make_overlay,
        bool rebalance_auto_expand,
-       std::chrono::system_clock::duration node_timeout,
+       elle::Duration node_timeout,
        bool with_cache,
        std::string const& user_name,
        bool yielding_overlay,
        dht::Protocol p,
        boost::optional<int> port,
-       elle::Defaulted<std::chrono::milliseconds> connect_timeout,
-       elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+       elle::Defaulted<elle::Duration> connect_timeout,
+       elle::Defaulted<elle::Duration> soft_fail_timeout,
        elle::Defaulted<bool> soft_fail_running,
        bool resign_on_shutdown)
   {

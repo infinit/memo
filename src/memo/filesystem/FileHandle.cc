@@ -91,7 +91,7 @@ namespace memo
     FileBuffer::~FileBuffer()
     {
       while (_prefetchers_count)
-        elle::reactor::sleep(20_ms);
+        elle::reactor::sleep(20ms);
       if (this->_remove_data)
       {
         // FIXME optimize pass removal data

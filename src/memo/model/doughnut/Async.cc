@@ -173,8 +173,8 @@ namespace memo
           // Wake up the thread if needed.
           if (this->_queue.size() == 0)
             this->_queue.put(0);
-          if (!elle::reactor::wait(*this->_process_thread, 10_sec)
-            || !elle::reactor::wait(*this->_init_thread, 10_sec))
+          if (!elle::reactor::wait(*this->_process_thread, 10s)
+            || !elle::reactor::wait(*this->_init_thread, 10s))
             ELLE_WARN("forcefully kiling async process loop");
         }
 
@@ -193,7 +193,7 @@ namespace memo
         {
           int wait_id = _next_index-1;
           while (_last_processed_index < wait_id)
-            elle::reactor::sleep(100_ms);
+            elle::reactor::sleep(100ms);
         }
 
         void
@@ -580,9 +580,11 @@ namespace memo
         Async::_process_operation(elle::generic_unique_ptr<Op const> op)
         {
           ++_processed_op_count;
-          static const int delay = std::stoi(elle::os::getenv("INFINIT_ASYNC_POP_DELAY", "0"));
-          if (delay)
-            elle::reactor::sleep(boost::posix_time::milliseconds(delay));
+          static const auto delay
+            = std::chrono::milliseconds(elle::os::getenv(
+                "INFINIT_ASYNC_POP_DELAY", 0));
+          if (delay != 0s)
+            elle::reactor::sleep(delay);
           Address addr = op->address;
           boost::optional<StoreMode> mode = op->mode;
           int attempt = 0;
@@ -645,9 +647,7 @@ namespace memo
             // If we land here (no break) an error occurred
             {
               ++attempt;
-              auto delay = std::min(
-                20000_ms,
-                boost::posix_time::milliseconds(200 * attempt));
+              auto delay = std::min(20000ms, 200ms * attempt);
               ELLE_DEBUG("wait %s before retrying", delay)
                 elle::reactor::sleep(delay);
             }

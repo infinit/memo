@@ -309,10 +309,10 @@ namespace kademlia
         ELLE_TRACE("%s: Waiting for %s nodes, got %s", *this, _config.wait, n);
         if (n >= _config.wait)
           break;
-        elle::reactor::sleep(1_sec);
+        elle::reactor::sleep(1s);
       }
     }
-    elle::reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
+    elle::reactor::sleep(std::chrono::milliseconds(_config.wait_ms));
     ELLE_LOG("%s: exiting ctor", *this);
   }
 
@@ -444,7 +444,7 @@ namespace kademlia
     while (_local_endpoint == Endpoint())
     {
       ELLE_TRACE("%s: Waiting for endpoint (ping)", *this);
-      elle::reactor::sleep(500_ms);
+      elle::reactor::sleep(500ms);
     }
     auto keys = l.storage()->list();
     for (auto const& k: keys)
@@ -860,7 +860,7 @@ namespace kademlia
 
   void Kademlia::_republish()
   {
-    elle::reactor::sleep(boost::posix_time::seconds(rand() % 10));
+    elle::reactor::sleep(std::chrono::seconds(rand() % 10));
     while (true)
     {
       // count how many keys we have
@@ -871,12 +871,12 @@ namespace kademlia
             ++count;
       if (!count)
       {
-        elle::reactor::sleep(10_sec);
+        elle::reactor::sleep(10s);
         continue;
       }
       int interval = _config.storage_lifetime_ms / count;
       ELLE_DEBUG("%s: set refresh interval to %s", *this, interval);
-      elle::reactor::sleep(boost::posix_time::milliseconds(interval/3));
+      elle::reactor::sleep(std::chrono::milliseconds(interval/3));
       Address oldest;
       Time t = now();
       Store* match = nullptr;
@@ -909,7 +909,7 @@ namespace kademlia
   {
     while (true)
     {
-      elle::reactor::sleep(10_sec);
+      elle::reactor::sleep(10s);
       for (auto& s: _storage)
       {
         for (unsigned int i=0; i < s.second.size(); ++i)
@@ -928,10 +928,10 @@ namespace kademlia
 
   void Kademlia::_ping()
   {
-    elle::reactor::sleep(boost::posix_time::milliseconds(rand() % _config.ping_interval_ms));
+    elle::reactor::sleep(std::chrono::milliseconds(rand() % _config.ping_interval_ms));
     while (true)
     {
-      elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+      elle::reactor::sleep(std::chrono::milliseconds(_config.ping_interval_ms));
       int ncount = 0;
       for (auto const& b: _routes)
         ncount += b.size();
@@ -958,7 +958,7 @@ namespace kademlia
   }
   void Kademlia::_refresh()
   {
-    elle::reactor::sleep(boost::posix_time::milliseconds(rand() % _config.refresh_interval_ms));
+    elle::reactor::sleep(std::chrono::milliseconds(rand() % _config.refresh_interval_ms));
     while (true)
     {
       ELLE_DEBUG("%s: refresh query", *this);
@@ -968,7 +968,7 @@ namespace kademlia
         sq->barrier.wait();
         ELLE_DEBUG("%s: refresh query finished", *this);
       }
-      elle::reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
+      elle::reactor::sleep(std::chrono::milliseconds(_config.refresh_interval_ms));
     }
   }
 

@@ -37,9 +37,8 @@ namespace memo
       using Endpoints = model::Endpoints;
       using NodeLocation = model::NodeLocation;
       using Address = memo::model::Address;
-      using Time = std::chrono::time_point<std::chrono::system_clock>;
-      using Duration = Time::duration;
-      //using Duration = std::chrono::duration<long, std::ratio<1, 1000000>>;
+      using Time = elle::Time;
+      using Duration = elle::Duration;
 
       using TimedEndpoint = std::pair<Endpoint, Time>;
       struct Contact

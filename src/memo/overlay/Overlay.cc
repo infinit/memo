@@ -56,7 +56,7 @@ namespace memo
       : _doughnut(dht)
       , _local(local)
       , _storing(true)
-      , _reachable_max_update_period(10_sec)
+      , _reachable_max_update_period(10s)
       , _reachable_blocks_thread(new elle::reactor::Thread("reachable", [&] {
         this->_reachable_blocks_loop();
       }))

@@ -20,19 +20,15 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Cache");
 
 namespace memo
 {
-  namespace bfs = boost::filesystem;
-
   namespace model
   {
     namespace doughnut
     {
       namespace consensus
       {
-        static
-        Cache::clock::time_point
-        now()
+        auto now()
         {
-          return Cache::clock::now();
+          return elle::Clock::now();
         }
 
         class CacheConflictResolver: public ConflictResolver
@@ -93,21 +89,16 @@ namespace memo
 
         Cache::Cache(std::unique_ptr<Consensus> backend,
                      boost::optional<int> cache_size,
-                     boost::optional<std::chrono::seconds> cache_invalidation,
-                     boost::optional<std::chrono::seconds> cache_ttl,
-                     boost::optional<boost::filesystem::path> disk_cache_path,
+                     elle::DurationOpt cache_invalidation,
+                     elle::DurationOpt cache_ttl,
+                     boost::optional<bfs::path> disk_cache_path,
                      boost::optional<uint64_t> disk_cache_size)
           : StackedConsensus(std::move(backend))
-          , _cache_invalidation(
-            cache_invalidation ?
-            cache_invalidation.get() : 15s)
-          , _cache_ttl(
-            cache_ttl ?
-            cache_ttl.get() : std::chrono::seconds(60 * 5))
-          , _cache_size(cache_size ? cache_size.get() : 64_MiB)
+          , _cache_invalidation(cache_invalidation.value_or(15s))
+          , _cache_ttl(cache_ttl.value_or(5min))
+          , _cache_size(cache_size.value_or(64_mB))
           , _disk_cache_path(disk_cache_path)
-          , _disk_cache_size(
-            disk_cache_size ? disk_cache_size.get() : 512_MiB)
+          , _disk_cache_size(disk_cache_size.value_or(512_mB))
           , _disk_cache_used(0)
           , _cleanup_thread(
             new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
@@ -116,12 +107,12 @@ namespace memo
           ELLE_TRACE_SCOPE(
             "%s: create with size %s, TTL %ss and invalidation %ss",
             *this, this->_cache_size,
-            this->_cache_ttl.count(), this->_cache_invalidation.count());
+            this->_cache_ttl.count(), this->_cache_invalidation);
           if (!this->_disk_cache_path)
             this->_disk_cache_size = 0;
           if (this->_disk_cache_size)
           {
-            boost::filesystem::create_directories(*this->_disk_cache_path);
+            bfs::create_directories(*this->_disk_cache_path);
             this->_load_disk_cache();
           }
         }
@@ -162,7 +153,7 @@ namespace memo
               this->_disk_cache_used -= it->size();
               boost::system::error_code erc;
               auto path = *this->_disk_cache_path / elle::sprintf("%x", it->address());
-              boost::filesystem::remove(path, erc);
+              bfs::remove(path, erc);
               if (erc)
                 ELLE_WARN("Error pruning %s from cache: %s", path, erc);
               this->_disk_cache.erase(it);
@@ -290,7 +281,7 @@ namespace memo
               ELLE_DEBUG("disk cache hit on %f", address);
               bench_disk_hit.add(1);
               auto path = *this->_disk_cache_path / elle::sprintf("%x", address);
-              boost::filesystem::ifstream is(path, std::ios::binary);
+              bfs::ifstream is(path, std::ios::binary);
               elle::serialization::binary::SerializerIn sin(is);
               sin.set_context<Doughnut*>(&this->doughnut());
               auto block = sin.deserialize<std::unique_ptr<blocks::Block>>();
@@ -388,13 +379,9 @@ namespace memo
                 :  std::unique_ptr<ConflictResolver>());
           }
           if (mb)
-          {
             this->insert(std::move(cloned));
-          }
           else
-          {
             this->_disk_cache_push(*cloned);
-          }
         }
 
         void
@@ -405,12 +392,12 @@ namespace memo
           auto path = *this->_disk_cache_path
             / elle::sprintf("%x", block.address());
           {
-            boost::filesystem::ofstream ofs(path, std::ios::binary);
+            bfs::ofstream ofs(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(ofs);
             sout.set_context<Doughnut*>(&this->doughnut());
             sout.serialize_forward(&block);
           }
-          auto sz = boost::filesystem::file_size(path);
+          auto sz = bfs::file_size(path);
           this->_disk_cache.emplace(CachedCHB{block.address(), sz, now()});
           this->_disk_cache_used += sz;
           ELLE_DEBUG("add %f to disk cache (%s bytes)", block.address(), sz);
@@ -423,7 +410,7 @@ namespace memo
             ELLE_DEBUG("Pruning %s of size %s from cache", path, it->size());
             boost::system::error_code erc;
             this->_disk_cache_used -= it->size();
-            boost::filesystem::remove(path, erc);
+            bfs::remove(path, erc);
             if (erc)
               ELLE_WARN("Error pruning %s from cache: %s", path, erc);
             order.erase(it);
@@ -443,9 +430,9 @@ namespace memo
           int count = 0;
           for (auto const& p: bfs::directory_iterator(*this->_disk_cache_path))
           {
-            auto sz = boost::filesystem::file_size(p);
+            auto sz = bfs::file_size(p);
             auto addr = Address::from_string(p.path().filename().string());
-            this->_disk_cache.insert(CachedCHB{addr, sz, clock::time_point()});
+            this->_disk_cache.insert(CachedCHB{addr, sz, elle::Time()});
             this->_disk_cache_used += sz;
             ++count;
           }
@@ -544,15 +531,16 @@ namespace memo
                   }
                 }
               }
+            // FIXME: WHAT???
             elle::reactor::sleep(
-              boost::posix_time::seconds(
+              std::chrono::seconds(
                 this->_cache_invalidation.count()) / 10);
           }
         }
 
         Cache::CachedCHB::CachedCHB(Address address,
                                     uint64_t size,
-                                    clock::time_point last_used)
+                                    elle::Time last_used)
           : _address(address)
           , _size(size)
           , _last_used(last_used)

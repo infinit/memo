@@ -509,7 +509,7 @@ namespace memo
                                      this);
                     for (auto const& address: this->storage()->list())
                     {
-                      elle::reactor::sleep(100_ms);
+                      elle::reactor::sleep(100ms);
                       try
                       {
                         auto b = this->_load(address);
@@ -686,11 +686,7 @@ namespace memo
             std::forward_as_tuple(id),
             std::forward_as_tuple(elle::reactor::scheduler().io_service()));
           it.first->second.cancel();
-          it.first->second.expires_from_now(
-            boost::posix_time::seconds(
-              this->_node_timeout.count() *
-              decltype(this->_node_timeout)::period::num /
-              decltype(this->_node_timeout)::period::den));
+          it.first->second.expires_from_now(this->_node_timeout);
           it.first->second.async_wait(
             [this, id] (const boost::system::error_code& error)
             {
@@ -2008,8 +2004,7 @@ namespace memo
         {
           ELLE_LOG_COMPONENT(
             "memo.model.doughnut.consensus.Paxos.rebalance");
-          elle::reactor::Backoff backoff(
-            std::chrono::milliseconds(10), std::chrono::milliseconds(10000));
+          auto backoff = elle::reactor::Backoff(10ms, 10s);
           auto local = this->doughnut().local();
           if (!local)
             return;

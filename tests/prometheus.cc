@@ -32,15 +32,15 @@ void run(int num_servers = 30)
   new_server();
   for (int i = 0; i < num_servers; ++i)
   {
-    elle::reactor::sleep(1_sec);
+    elle::reactor::sleep(1s);
     new_server();
     discover(servers[0], servers.back(), false, false, true, true);
   }
-  elle::reactor::sleep(5_sec);
+  elle::reactor::sleep(5s);
   // And then kill one after the other.
   while (!servers.empty())
   {
-    elle::reactor::sleep(1_sec);
+    elle::reactor::sleep(1s);
     ELLE_LOG("kill server %s", servers.size() - 1);
     servers.pop_back();
   }

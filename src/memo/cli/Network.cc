@@ -364,7 +364,7 @@ namespace memo
       boost::optional<std::string> kelips_contact_timeout,
       boost::optional<std::string> encrypt,
       boost::optional<std::string> protocol,
-      boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+      elle::DurationOpt tcp_heartbeat,
       bool disable_encrypt_at_rest,
       bool disable_encrypt_rpc,
       bool disable_signature)
@@ -532,15 +532,14 @@ namespace memo
                 // XXX[Silo]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
-                std::make_shared<elle::cryptography::rsa::PublicKey>(
-                  desc.owner),
+                std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
                 d->passport,
                 u.name,
                 d->port,
                 desc.version,
                 desc.admin_keys,
                 desc.peers,
-                desc.tcp_heartbeat,
+                elle::DurationOpt{desc.tcp_heartbeat},
                 desc.encrypt_options),
               desc.description);
             // Update linked network for user.
@@ -902,7 +901,7 @@ namespace memo
           if (grpc_port_file)
           {
             while (grpc_port == -1)
-              elle::reactor::sleep(50_ms);
+              elle::reactor::sleep(50ms);
             port_to_file(grpc_port, *grpc_port_file);
           }
         }

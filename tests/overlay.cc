@@ -318,7 +318,7 @@ namespace
       if (n_servers <= int(servers.size()))
         return;
       ELLE_TRACE("%s/%s", servers.size(), n_servers);
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
   }
 
@@ -364,7 +364,7 @@ namespace
       if ((hit == n_servers || (or_more && hit >n_servers))
           && ok)
         break;
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
     ELLE_DEBUG("hard_wait exiting");
   }
@@ -1148,7 +1148,7 @@ ELLE_TEST_SCHEDULED(
   // repeatedly, it did happen to fail for lack of time.
   for (auto i = 0; i < 100 && c != nservers; ++i)
   {
-    elle::reactor::sleep(100_ms);
+    elle::reactor::sleep(100ms);
     c = boost::count_if(servers, [npeers](auto&& s) {
         return peer_count(*s) == npeers;
       });
@@ -1242,7 +1242,7 @@ ELLE_TEST_SCHEDULED(
         ::keys = keys,
         ::make_overlay = config.overlay_builder,
         doughnut::consensus::rebalance_auto_expand = false,
-        doughnut::connect_timeout = std::chrono::milliseconds(valgrind(100, 10)),
+        doughnut::connect_timeout = elle::Duration{valgrind(100ms, 10)},
         doughnut::soft_fail_running = true);
       auto const loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
       auto const value = std::string("stale");
@@ -1718,7 +1718,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   auto& servers = cluster.servers;
   /// Let's not wait eviction for too long.
   for (auto& c: cluster)
-    get_kouncil(*c)->eviction_delay(std::chrono::seconds{valgrind(1, 5) * 10});
+    get_kouncil(*c)->eviction_delay(valgrind(10s, 5));
   /// A: the main peer.
   auto& dht_a = servers[0];
   auto const id_a = ids[0];
@@ -1769,7 +1769,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     CHECK_IN(id_b, addrs);
   }
   // Let some time pass.
-  elle::reactor::sleep(2_sec);
+  elle::reactor::sleep(2s);
   // Kill server A, C remains alone, remembering about A and B.
   {
     ELLE_LOG("kill A and wait for C to notice");
