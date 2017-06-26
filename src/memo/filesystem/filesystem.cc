@@ -46,7 +46,7 @@
 #include <memo/filesystem/Symlink.hh>
 #include <memo/filesystem/Unknown.hh>
 
-#ifdef INFINIT_LINUX
+#ifdef MEMO_LINUX
   #include <attr/xattr.h>
 #endif
 

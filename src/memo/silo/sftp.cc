@@ -1,5 +1,5 @@
 #include <unistd.h>
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 # include <arpa/inet.h>
 # include <sys/wait.h>
 #endif

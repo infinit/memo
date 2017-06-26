@@ -36,7 +36,7 @@
 #include <memo/silo/GoogleDrive.hh>
 #include <memo/silo/Strip.hh>
 #include <elle/cryptography/random.hh>
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 # include <memo/silo/sftp.hh>
 #endif
 #include <memo/silo/S3.hh>

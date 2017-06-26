@@ -23,7 +23,7 @@ namespace memo
     ELLE_DAS_SYMBOL(cache_ram_invalidation);
     ELLE_DAS_SYMBOL(cache_ram_size);
     ELLE_DAS_SYMBOL(cache_ram_ttl);
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
     ELLE_DAS_SYMBOL(enable_monitoring); // aka monitoring.
 #endif
     ELLE_DAS_SYMBOL(fetch);             // aka fetch_endpoints.
@@ -65,7 +65,7 @@ namespace memo
     boost::optional<Strings> peers;
     boost::optional<int> poll_beyond;
     boost::optional<boost::asio::ip::address> listen_address;
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
     boost::optional<bool> enable_monitoring;
 #endif
     using serialization_tag = memo::serialization_tag;
@@ -90,7 +90,7 @@ namespace memo
                  mount_options::peers,
                  mount_options::poll_beyond
                  // mount_options::listen_address,
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
                  , mount_options::enable_monitoring
 #endif
                  ))>;

@@ -11,7 +11,7 @@
 #include <memo/silo/GCS.hh>
 #include <memo/silo/GoogleDrive.hh>
 #include <memo/silo/S3.hh>
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 # include <memo/silo/sftp.hh>
 #endif
 #include <memo/cli/Memo.hh>

@@ -421,7 +421,7 @@ namespace memo
     save(f, user);
     this->report_local_action()(existed ? "updated" : "saved", "user",
                                 user.name);
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
     bfs::permissions(path,
                      bfs::remove_perms | bfs::others_all | bfs::group_all);
 #endif

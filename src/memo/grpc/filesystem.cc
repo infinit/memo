@@ -1,4 +1,4 @@
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 # include <fcntl.h>
 #endif
 

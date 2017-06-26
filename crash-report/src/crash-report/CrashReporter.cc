@@ -13,9 +13,9 @@
 #include <elle/reactor/http/exceptions.hh>
 #include <elle/reactor/http/Request.hh>
 
-#if defined INFINIT_LINUX
+#if defined MEMO_LINUX
 # include <client/linux/handler/exception_handler.h>
-#elif defined INFINIT_MACOSX
+#elif defined MEMO_MACOSX
 # include <crash-report/gcc_fix.hh>
 // FIXME: Adding `pragma GCC diagnostic ignored "-Wdeprecated"` does not work
 // for removing #import warnings.
@@ -30,12 +30,12 @@ namespace crash_report
 {
   namespace
   {
-#if defined INFINIT_LINUX
+#if defined MEMO_LINUX
     bool
     dump_callback(const breakpad::MinidumpDescriptor& descriptor,
                   void* context,
                   bool success)
-#elif defined INFINIT_MACOSX
+#elif defined MEMO_MACOSX
     bool
     dump_callback(const char* dump_dir,
                   const char* minidump_id,
@@ -86,7 +86,7 @@ namespace crash_report
     if (getenv("MEMO_CRASH_REPORT",
                getenv("MEMO_CRASH_REPORTER", production_build)))
     {
-#if defined INFINIT_LINUX
+#if defined MEMO_LINUX
       breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
       this->_exception_handler =
         std::make_unique<breakpad::ExceptionHandler>(descriptor,
@@ -95,7 +95,7 @@ namespace crash_report
                                                      nullptr,
                                                      true,
                                                      -1);
-#elif defined INFINIT_MACOSX
+#elif defined MEMO_MACOSX
       this->_exception_handler =
         std::make_unique<breakpad::ExceptionHandler>(this->_dumps_path.string(),
                                                      nullptr,

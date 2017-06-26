@@ -11,10 +11,10 @@
 #include <sys/stat.h> // S_IMFT...
 #include <fcntl.h> // O_EXCL
 
-#ifdef INFINIT_LINUX
+#ifdef MEMO_LINUX
   #include <attr/xattr.h>
 #endif
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
   #undef stat
   #define O_EXCL _O_EXCL
 #endif

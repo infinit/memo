@@ -128,6 +128,17 @@ def configure(
   cxx_config.add_local_include_path('src')
   cxx_config.define('_FILE_OFFSET_BITS=64')
 
+  if cxx_toolkit.os == drake.os.linux:
+    cxx_config.define('MEMO_LINUX')
+  elif cxx_toolkit.os == drake.os.android:
+    cxx_config.define('MEMO_ANDROID')
+  elif cxx_toolkit.os == drake.os.macos:
+    cxx_config.define('MEMO_MACOSX')
+  elif cxx_toolkit.os == drake.os.windows:
+    cxx_config.define('MEMO_WINDOWS')
+  elif cxx_toolkit.os is drake.os.ios:
+    cxx_config.define('MEMO_IOS')
+
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
 

@@ -24,7 +24,7 @@ namespace memo
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
                                     cli::inspect,
 #endif
                                     cli::link,
@@ -168,7 +168,7 @@ namespace memo
       | Mode: inspect.  |
       `----------------*/
 
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>()),
@@ -318,7 +318,7 @@ namespace memo
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::input = boost::optional<std::string>()),
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
                  decltype(cli::daemon = false),
                  decltype(cli::monitoring = true),
 #endif
@@ -361,7 +361,7 @@ namespace memo
       void
       mode_run(std::string const& network_name,
                boost::optional<std::string> const& commands,
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
                bool daemon = false,
                bool monitoring = true,
 #endif

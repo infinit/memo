@@ -121,7 +121,7 @@ namespace memo
       version,
       port,
       mo.listen_address
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
       , ((mo.enable_monitoring && *mo.enable_monitoring)
          || enable_monitoring)
 #endif
@@ -243,7 +243,7 @@ namespace memo
       std::move(listen),
       std::move(rdv_host),
       std::move(resign_on_shutdown)
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
       , enable_monitoring ? this->monitoring_socket_path(user)
       : boost::optional<bfs::path>()
 #endif
@@ -299,7 +299,7 @@ namespace memo
   bfs::path
   Network::monitoring_socket_path(User const& user) const
   {
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
     elle::unreachable();
 #else
     // UNIX-domain addresses are limited to 108 chars on Linux and 104 chars

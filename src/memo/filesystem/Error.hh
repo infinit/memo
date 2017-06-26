@@ -1,9 +1,9 @@
 #pragma once
 
-#if defined INFINIT_LINUX
+#if defined MEMO_LINUX
 # include <sys/types.h>
 # include <attr/xattr.h>
-#elif defined INFINIT_MACOSX
+#elif defined MEMO_MACOSX
 # include <sys/xattr.h>
 #endif
 

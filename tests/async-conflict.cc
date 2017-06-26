@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include <cstdlib>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 # undef stat
 #endif
 

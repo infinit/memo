@@ -7,7 +7,7 @@
 #include <memo/filesystem/FileHeader.hh>
 #include <memo/model/blocks/Block.hh>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 # define S_IFLNK    0120000
 # define S_IFREG    0100000
 # define S_IFDIR    0040000

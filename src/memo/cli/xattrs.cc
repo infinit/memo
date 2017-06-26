@@ -1,9 +1,9 @@
 #include <memo/cli/xattrs.hh>
 
 #include <memo/cli/xattrs.hh>
-#if defined INFINIT_LINUX
+#if defined MEMO_LINUX
 # include <attr/xattr.h>
-#elif defined INFINIT_MACOSX
+#elif defined MEMO_MACOSX
 # include <sys/xattr.h>
 #endif
 
@@ -37,8 +37,8 @@ namespace memo
               std::string const& value,
               bool fallback)
     {
-#ifndef INFINIT_WINDOWS
-# ifdef INFINIT_MACOSX
+#ifndef MEMO_WINDOWS
+# ifdef MEMO_MACOSX
       int res = ::setxattr(
         file.c_str(), key.c_str(), value.data(), value.size(), 0,
         XATTR_NOFOLLOW);
@@ -68,9 +68,9 @@ namespace memo
               int val_size,
               bool fallback)
     {
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
       int res = -1;
-# ifdef INFINIT_MACOSX
+# ifdef MEMO_MACOSX
       res = ::getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
 # else
       res = lgetxattr(file.c_str(), key.c_str(), val, val_size);

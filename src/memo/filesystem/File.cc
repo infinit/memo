@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 #include <fcntl.h>
 #endif
 
@@ -16,7 +16,7 @@
 #include <elle/cryptography/random.hh>
 #include <elle/cryptography/SecretKey.hh>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 #undef stat
 #endif
 
@@ -684,7 +684,7 @@ namespace memo
           }
           if (dirty)
           {
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
             // Propagating to dirty open files breaks saving of office documents.
             return;
 #else

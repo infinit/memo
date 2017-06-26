@@ -26,7 +26,7 @@
 #include <memo/model/doughnut/User.hh>
 
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 # undef stat
 #endif
 

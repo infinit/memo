@@ -1170,7 +1170,7 @@ namespace memo
     void
     Network::mode_run(std::string const& network_name,
                       boost::optional<std::string> const& commands,
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
                       bool daemon,
                       bool monitoring,
 #endif
@@ -1210,7 +1210,7 @@ namespace memo
         (
          cli,
          network_name,
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
          daemon,
          monitoring,
 #endif

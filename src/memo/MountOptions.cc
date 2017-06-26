@@ -38,7 +38,7 @@ namespace memo
     memo::merge(mountpoint, b.mountpoint);
     memo::merge(peers, b.peers);
     memo::merge(poll_beyond, b.poll_beyond);
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
     memo::merge(enable_monitoring, b.enable_monitoring);
 #endif
     memo::merge(listen_address, b.listen_address);
@@ -76,7 +76,7 @@ namespace memo
     if (cache_ram_invalidation) args("--cache-ram-invalidation", std::to_string(*cache_ram_invalidation));
     if (cache_disk_size) args("--cache-disk-size", std::to_string(*cache_disk_size));
     if (poll_beyond && *poll_beyond >0) args("--poll-hub", std::to_string(*poll_beyond));
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
     if (enable_monitoring && !*enable_monitoring) args("--monitoring=false");
 #endif
     if (mountpoint)

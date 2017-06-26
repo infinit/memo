@@ -15,7 +15,7 @@
 #include <elle/reactor/Scope.hh>
 #include <elle/reactor/exception.hh>
 #include <elle/reactor/network/utp-server.hh>
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 # include <elle/reactor/network/unix-domain-server.hh>
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
@@ -306,7 +306,7 @@ namespace memo
               elle::sprintf("%s: user blocks checker", *this),
               check_user_blocks));
         }
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
         if (init.monitoring_socket_path)
         {
           auto const& m_path = init.monitoring_socket_path.get();

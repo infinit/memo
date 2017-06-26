@@ -2,7 +2,7 @@
 #include <memo/filesystem/Directory.hh>
 #include <sys/stat.h>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 #undef stat
 #endif
 
@@ -27,7 +27,7 @@ namespace memo
       }
       catch (elle::Error const&) {}
       st->st_size = attr.size();
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
       st->st_blocks = st->st_size / 512;
 #endif
       st->st_mode =  S_IFREG | 0666;
@@ -103,7 +103,7 @@ namespace memo
         try {value = _file->getxattr(a);} catch(...) {}
         struct stat st;
         st.st_size = value.size();
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
         st.st_blocks = st.st_size / 512;
 #endif
         st.st_mode =  S_IFREG;
