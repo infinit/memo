@@ -72,19 +72,22 @@ namespace memo
 
         if (elle::contains(expected_codes, r.status()))
           return r;
-        else if (r.status() == StatusCode::Forbidden
-                 || r.status() == StatusCode::Unauthorized)
-          const_cast<GoogleAPI*>(this)->_refresh();
+        else
+        {
+          if (r.status() == StatusCode::Forbidden
+              || r.status() == StatusCode::Unauthorized)
+            elle::unconst(this)->_refresh();
 
-        ELLE_WARN("Unexpected google HTTP response on %s %s payload %s: %s, attempt %s",
-                  method,
-                  url,
-                  payload.size(),
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        ++attempt;
-        elle::reactor::sleep(delay(attempt));
+          ELLE_WARN("Unexpected google HTTP response on %s %s payload %s: %s, attempt %s",
+                    method,
+                    url,
+                    payload.size(),
+                    r.status(),
+                    attempt + 1);
+          ELLE_DUMP("body: %s", r.response());
+          ++attempt;
+          elle::reactor::sleep(delay(attempt));
+        }
       }
     }
 
@@ -115,12 +118,14 @@ namespace memo
           // FIXME: Update the conf file. Credentials or storage or both ?
           break;
         }
-
-        ELLE_WARN("Unexpected google HTTP status (refresh): %s, attempt %s",
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        elle::reactor::sleep(delay(attempt++));
+        else
+        {
+          ELLE_WARN("Unexpected google HTTP status (refresh): %s, attempt %s",
+                    r.status(),
+                    attempt + 1);
+          ELLE_DUMP("body: %s", r.response());
+          elle::reactor::sleep(delay(attempt++));
+        }
       }
     }
   }

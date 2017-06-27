@@ -2189,7 +2189,7 @@ namespace memo
           catch (elle::serialization::MissingKey const&)
           {
             ELLE_ASSERT(s.in());
-            this->_node_timeout = std::chrono::minutes(10);
+            this->_node_timeout = 10min;
           }
         }
 

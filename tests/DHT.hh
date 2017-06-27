@@ -11,6 +11,8 @@
 #include <memo/overlay/kouncil/Kouncil.hh>
 #include <memo/silo/Memory.hh>
 
+using namespace std::literals;
+
 namespace dht = memo::model::doughnut;
 namespace blocks = memo::model::blocks;
 
@@ -279,7 +281,7 @@ public:
       make_overlay = &Overlay::make,
       dht::consensus_builder = dht::Doughnut::ConsensusBuilder(),
       dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::minutes(10),
+      dht::consensus::node_timeout = 10min,
       with_cache = false,
       user_name = "",
       yielding_overlay = false,
@@ -343,7 +345,7 @@ public:
       catch (...)
       {
         ELLE_LOG("%s: connection failed: %s",
-                 *this, elle::exception_string());
+                 this, elle::exception_string());
       }
     ELLE_ERR("connect_tcp: all connection attempts failed");
     abort();
