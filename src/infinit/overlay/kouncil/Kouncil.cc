@@ -624,7 +624,8 @@ namespace infinit
             {
               ELLE_TRACE_SCOPE("%s: block %f not found, checking all %s peers",
                                this, address, this->peers().size());
-              for (auto peer: this->peers())
+              auto peers_copy = elle::make_vector(this->peers());
+              for (auto peer: peers_copy)
               {
                 // FIXME: handle local!
                 if (auto r = std::dynamic_pointer_cast<Remote>(peer))
