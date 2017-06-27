@@ -82,7 +82,7 @@ namespace infinit
   {
     class Service;
 
-    template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
+    template <typename NF, typename REQ, typename RESP, bool NoExcept>
     ::grpc::Status
     invoke_named(Service& service,
                  elle::reactor::Scheduler& sched,
@@ -95,7 +95,7 @@ namespace infinit
     class Service: public ::grpc::Service
     {
     public:
-      template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
+      template <typename GArg, typename GRet, bool NoExcept=false, typename NF>
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht,
                      std::string const& route)
       {
@@ -115,7 +115,7 @@ namespace infinit
                 GRet* ret)
               {
                 increment(_counters[index]);
-                return invoke_named<NF, GArg, GRet, NOEXCEPT>(
+                return invoke_named<NF, GArg, GRet, NoExcept>(
                   *this, sched, dht, nf, ctx, arg, ret);
               },
               this)));
@@ -232,7 +232,7 @@ namespace infinit
       }
     };
 
-    template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
+    template <typename NF, typename REQ, typename RESP, bool NoExcept>
     ::grpc::Status
     invoke_named(Service& service,
                  elle::reactor::Scheduler& sched,
@@ -268,7 +268,7 @@ namespace infinit
                       elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
-            if (NOEXCEPT) // It will compile anyway no need for static switch
+            if (NoExcept) // It will compile anyway no need for static switch
             {
               auto* adapted =
                 OptionFirst<typename NF::Result::Super>::value(res, status);
