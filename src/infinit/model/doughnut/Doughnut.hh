@@ -26,6 +26,7 @@
 
 namespace infinit
 {
+  namespace bfs = boost::filesystem;
   namespace model
   {
     class MonitoringServer;
@@ -338,11 +339,11 @@ namespace infinit
 
         std::unique_ptr<infinit::model::Model>
         make(bool client,
-             boost::filesystem::path const& p) override;
+             bfs::path const& p) override;
         std::unique_ptr<Doughnut>
         make(
           bool client,
-          boost::filesystem::path const& p,
+          bfs::path const& p,
           bool async = false,
           bool cache = false,
           boost::optional<int> cache_size = {},
@@ -354,7 +355,7 @@ namespace infinit
           boost::optional<boost::asio::ip::address> listen_address = {},
           boost::optional<std::string> rdv_host = {},
           boost::optional<bool> resign_on_shutdown = {},
-          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
+          boost::optional<bfs::path> monitoring_socket_path = {});
       };
 
       std::string
