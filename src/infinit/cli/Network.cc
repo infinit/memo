@@ -511,7 +511,8 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
-      auto save = [&ifnt] (infinit::NetworkDescriptor desc_) {
+      auto save = [&ifnt] (infinit::NetworkDescriptor const desc_)
+      {
         // Save or update network descriptor.
         ifnt.network_save(desc_, true);
         for (auto const& u: ifnt.network_linked_users(desc_.name))
@@ -551,8 +552,8 @@ namespace infinit
       };
       if (network_name)
       {
-        auto name = ifnt.qualified_name(*network_name, owner);
-        auto network = ifnt.hub_fetch<infinit::NetworkDescriptor>(
+        auto const name = ifnt.qualified_name(*network_name, owner);
+        auto const network = ifnt.hub_fetch<infinit::NetworkDescriptor>(
           "network", name);
         save(network);
       }
@@ -561,13 +562,13 @@ namespace infinit
         // Fetch all networks for owner.
         using Networks
           = std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>;
-        auto res =
+        auto const res =
           ifnt.hub_fetch<Networks>(
             elle::sprintf("users/%s/networks", owner.name),
             "networks for user",
             owner.name,
             owner);
-        for (auto const& n: res["networks"])
+        for (auto const& n: res.at("networks"))
           save(n);
       }
     }

@@ -829,36 +829,31 @@ namespace infinit
           [&] (Doughnut& dht)
           {
             if (!this->consensus)
-            {
               elle::err(
                 "invalid network configuration, missing field \"consensus\"");
-            }
-            auto consensus = this->consensus->make(dht);
+            auto res = this->consensus->make(dht);
             if (async)
-            {
-              consensus = std::make_unique<consensus::Async>(
-                std::move(consensus), p / "async");
-            }
+              res = std::make_unique<consensus::Async>(
+                std::move(res), p / "async");
             if (cache)
-            {
-              consensus = std::make_unique<consensus::Cache>(
-                std::move(consensus),
+              res = std::make_unique<consensus::Cache>(
+                std::move(res),
                 std::move(cache_size),
                 std::move(cache_invalidation),
                 std::move(cache_ttl),
                 p / "cache",
                 std::move(disk_cache_size)
                 );
-            }
-            return consensus;
+            return res;
           };
         auto make_overlay =
           [&] (Doughnut& dht, std::shared_ptr<Local> local)
           {
-            if (!this->overlay)
+            if (this->overlay)
+              return this->overlay->make(std::move(local), &dht);
+            else
               elle::err(
                 "invalid network configuration, missing field \"overlay\"");
-            return this->overlay->make(std::move(local), &dht);
           };
         std::unique_ptr<silo::Silo> storage;
         if (this->storage)
