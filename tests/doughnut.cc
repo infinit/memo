@@ -2237,9 +2237,9 @@ ELLE_TEST_SCHEDULED(disabled_crypto)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  boost::unit_test::test_suite* plain = BOOST_TEST_SUITE("plain");
+  auto plain = BOOST_TEST_SUITE("plain");
   suite.add(plain);
-  boost::unit_test::test_suite* paxos = BOOST_TEST_SUITE("paxos");
+  auto paxos = BOOST_TEST_SUITE("paxos");
   suite.add(paxos);
 #define TEST(Name)                              \
   {                                             \
@@ -2267,12 +2267,12 @@ ELLE_TEST_SUITE()
   TEST(monitoring);
 #endif
   {
-    boost::unit_test::test_suite* remove_plain = BOOST_TEST_SUITE("removal");
+    auto remove_plain = BOOST_TEST_SUITE("removal");
     plain->add(remove_plain);
-    boost::unit_test::test_suite* remove_paxos = BOOST_TEST_SUITE("removal");
+    auto remove_paxos = BOOST_TEST_SUITE("removal");
     paxos->add(remove_paxos);
-    auto* plain = remove_plain;
-    auto* paxos = remove_paxos;
+    auto plain = remove_plain;
+    auto paxos = remove_paxos;
     using namespace removal;
     TEST(serialize_ACB_remove);
   }
@@ -2286,7 +2286,7 @@ ELLE_TEST_SUITE()
     paxos->add(ELLE_TEST_CASE(&tests_paxos::CHB_no_peer, "CHB_no_peer"));
   }
   {
-    boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
+    auto rebalancing = BOOST_TEST_SUITE("rebalancing");
     paxos->add(rebalancing);
     using namespace rebalancing;
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(3));
@@ -2342,7 +2342,7 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
     }
     {
-      auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
+      auto evict_chain = BOOST_TEST_SUITE("evict_chain");
       rebalancing->add(evict_chain);
       evict_chain->add(
         ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, true), "expand"),
