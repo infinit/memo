@@ -1013,9 +1013,10 @@ namespace infinit
                       PaxosClient c(
                         this->doughnut().id(),
                         lookup_nodes(this->doughnut(), quorum, target.address));
+                      auto latest = this->paxos()._latest(c, address);
                       quorum.insert(address);
-                      // FIXME: do something in case of conflict
-                      c.choose(paxos.current_version() + 1, quorum);
+                      this->paxos()._rebalance(
+                        c, target.address, quorum, latest);
                     }
                     this->_propagate(paxos, target.address, quorum);
                   }
