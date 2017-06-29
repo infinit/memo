@@ -83,6 +83,14 @@ namespace infinit
         }
 
         void
+        propagate(consensus::Paxos::PaxosServer::Quorum,
+                  std::shared_ptr<blocks::Block>,
+                  consensus::Paxos::PaxosClient::Proposal) override
+        {
+          throw elle::athena::paxos::Unavailable();
+        }
+
+        void
         print(std::ostream& stream) const override
         {
           elle::fprintf(stream, "%s(%s)", elle::type_info(*this), this->id());

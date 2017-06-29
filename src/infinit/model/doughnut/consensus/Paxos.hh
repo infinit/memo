@@ -169,6 +169,11 @@ namespace infinit
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) = 0;
+            virtual
+            void
+            propagate(PaxosServer::Quorum  q,
+                      std::shared_ptr<blocks::Block> block,
+                      Paxos::PaxosClient::Proposal p) = 0;
           };
 
         /*------------------.
@@ -205,6 +210,10 @@ namespace infinit
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            void
+            propagate(PaxosServer::Quorum  q,
+                      std::shared_ptr<blocks::Block> block,
+                      Paxos::PaxosClient::Proposal p) override;
             void
             store(blocks::Block const& block, StoreMode mode) override;
           };
@@ -275,6 +284,11 @@ namespace infinit
                 Address address,
                 boost::optional<int> local_version) override;
             void
+            propagate(PaxosServer::Quorum  q,
+                      std::shared_ptr<blocks::Block> block,
+                      Paxos::PaxosClient::Proposal p) override;
+
+            void
             store(blocks::Block const& block, StoreMode mode) override;
             void
             remove(Address address, blocks::RemoveSignature rs) override;
@@ -304,8 +318,10 @@ namespace infinit
             BlockOrPaxos
             _load(Address address);
             Decision&
-            _load_paxos(Address address,
-                        boost::optional<PaxosServer::Quorum> peers = {});
+            _load_paxos(
+              Address address,
+              boost::optional<PaxosServer::Quorum> peers = {},
+              std::shared_ptr<blocks::Block> value = nullptr);
             Decision&
             _load_paxos(Address address, Decision decision);
             void

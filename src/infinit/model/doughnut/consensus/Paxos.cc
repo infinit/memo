@@ -447,6 +447,23 @@ namespace infinit
         }
 
         void
+        Paxos::RemotePeer::propagate(PaxosServer::Quorum  q,
+                                     std::shared_ptr<blocks::Block> block,
+                                     Paxos::PaxosClient::Proposal p)
+        {
+          return translate_exceptions("propagate",
+            [&]
+            {
+              using Propagate = void (PaxosServer::Quorum  q,
+                                      std::shared_ptr<blocks::Block> block,
+                                      Paxos::PaxosClient::Proposal p);
+              auto propagate = this->make_rpc<Propagate>("propagate");
+              propagate.set_context<Doughnut*>(&this->_doughnut);
+              return propagate(std::move(q), std::move(block), std::move(p));
+            });
+        }
+
+        void
         Paxos::RemotePeer::store(blocks::Block const& block, StoreMode mode)
         {
           translate_exceptions("store",
@@ -599,7 +616,8 @@ namespace infinit
         Paxos::LocalPeer::Decision&
         Paxos::LocalPeer::_load_paxos(
           Address address,
-          boost::optional<PaxosServer::Quorum> peers)
+          boost::optional<PaxosServer::Quorum> peers,
+          std::shared_ptr<blocks::Block> value)
         {
           try
           {
@@ -617,8 +635,17 @@ namespace infinit
               ELLE_TRACE("%s: create paxos for %f", this, address);
               auto version =
                 elle_serialization_version(this->doughnut().version());
+              auto v = [&] () -> boost::optional<std::shared_ptr<blocks::Block>>
+                {
+                  if (value)
+                    return value;
+                  else
+                    return boost::none;
+                }();
               return this->_load_paxos(
-                address, Decision(PaxosServer(this->id(), *peers, version)));
+                address,
+                Decision(
+                  PaxosServer(this->id(), *peers, std::move(v), version)));
             }
             else
             {
@@ -1205,6 +1232,18 @@ namespace infinit
         }
 
         void
+        Paxos::LocalPeer::propagate(PaxosServer::Quorum  q,
+                                    std::shared_ptr<blocks::Block> block,
+                                    Paxos::PaxosClient::Proposal p)
+        {
+          ELLE_TRACE_SCOPE("%s: propagate %f on %f at %f", this, block, q, p);
+          auto& decision = this->_load_paxos(block->address(), q, block);
+          decision.paxos.propose(q, p);
+          decision.paxos.accept(q, p, q);
+          decision.paxos.confirm(q, p);
+        }
+
+        void
         Paxos::LocalPeer::_register_rpcs(Connection& connection)
         {
           auto& rpcs = connection.rpcs();
@@ -1267,6 +1306,17 @@ namespace infinit
             {
               return this->get(q, a, v);
             });
+          if (this->doughnut().version() >= elle::Version(0, 9, 0))
+            rpcs.add(
+              "propagate",
+              [this, &rpcs](PaxosServer::Quorum q,
+                            std::shared_ptr<blocks::Block> block,
+                            Paxos::PaxosClient::Proposal p)
+              {
+                this->_require_auth(rpcs, true);
+                return this->propagate(
+                  std::move(q), std::move(block), std::move(p));
+              });
         }
 
         std::unique_ptr<blocks::Block>
@@ -1885,6 +1935,17 @@ namespace infinit
         }
 
         bool
+        Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
+        {
+          ELLE_LOG_COMPONENT(
+            "infinit.model.doughnut.consensus.Paxos.rebalance");
+          ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
+          auto client = this->_client(address);
+          auto latest = this->_latest(client, address);
+          return this->_rebalance(client, address, ids, latest);
+        }
+
+        bool
         Paxos::_rebalance(PaxosClient& client, Address address)
         {
           ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
@@ -1906,17 +1967,6 @@ namespace infinit
           }
           ELLE_DEBUG("rebalance block to: %f", new_q)
             return this->_rebalance(client, address, new_q, latest);
-        }
-
-        bool
-        Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
-        {
-          ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
-          ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
-          auto client = this->_client(address);
-          auto latest = this->_latest(client, address);
-          return this->_rebalance(client, address, ids, latest);
         }
 
         bool
