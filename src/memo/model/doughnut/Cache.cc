@@ -104,10 +104,10 @@ namespace memo
           , _cache_ttl(
             cache_ttl ?
             cache_ttl.get() : std::chrono::seconds(60 * 5))
-          , _cache_size(cache_size ? cache_size.get() : 64_mB)
+          , _cache_size(cache_size ? cache_size.get() : 64_MiB)
           , _disk_cache_path(disk_cache_path)
           , _disk_cache_size(
-            disk_cache_size ? disk_cache_size.get() : 512_mB)
+            disk_cache_size ? disk_cache_size.get() : 512_MiB)
           , _disk_cache_used(0)
           , _cleanup_thread(
             new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
