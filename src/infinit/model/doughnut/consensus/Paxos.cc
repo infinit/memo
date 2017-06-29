@@ -1041,9 +1041,18 @@ namespace infinit
                         this->doughnut().id(),
                         lookup_nodes(this->doughnut(), quorum, target.address));
                       auto latest = this->paxos()._latest(c, address);
-                      quorum.insert(address);
+                      auto new_q = [address, quorum, factor = this->_factor]
+                        (PaxosServer::Quorum q)
+                        {
+                          if (signed(quorum.size()) == factor)
+                            ELLE_TRACE(
+                              "someone else rebalanced to a sufficient quorum");
+                          else
+                            q.insert(address);
+                          return q;
+                        };
                       this->paxos()._rebalance(
-                        c, target.address, quorum, latest);
+                        c, target.address, new_q, latest);
                     }
                     this->_propagate(paxos, target.address, quorum);
                   }
@@ -1942,7 +1951,11 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
           auto latest = this->_latest(client, address);
-          return this->_rebalance(client, address, ids, latest);
+          auto new_q = [ids] (PaxosServer::Quorum)
+            {
+              return ids;
+            };
+          return this->_rebalance(client, address, new_q, latest);
         }
 
         bool
@@ -1959,33 +1972,38 @@ namespace infinit
                        this->_factor);
             return false;
           }
-          auto new_q = this->_rebalance_extend_quorum(address, latest.quorum);
-          if (new_q == latest.quorum)
-          {
-            ELLE_TRACE("unable to find any new owner");
-            return false;
-          }
-          ELLE_DEBUG("rebalance block to: %f", new_q)
-            return this->_rebalance(client, address, new_q, latest);
+          auto new_q = [address, this] (PaxosServer::Quorum q)
+            {
+              auto res = this->_rebalance_extend_quorum(address, q);
+              if (res == q)
+                ELLE_TRACE("unable to find any new owner");
+              return res;
+            };
+          return this->_rebalance(client, address, new_q, latest);
         }
 
         bool
-        Paxos::_rebalance(PaxosClient& client,
-                          Address address,
-                          PaxosClient::Quorum const& ids,
-                          PaxosClient::State const& state)
+        Paxos::_rebalance(
+          PaxosClient& client,
+          Address address,
+          std::function<PaxosClient::Quorum (PaxosClient::Quorum)> make_quorum,
+          PaxosClient::State const& state)
         {
           ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
+          auto new_quorum = make_quorum(state.quorum);
+          if (new_quorum == state.quorum)
+            return false;
           std::unique_ptr<PaxosClient> replace;
           int version = state.proposal ? state.proposal->version : -1;
           while (true)
           {
+            ELLE_DEBUG("rebalance block to: %f", new_quorum)
             try
             {
               // FIXME: version is the last *value* version, there could have
               // been a quorum since then in which case this will fail.
               if (auto conflict =
-                  (replace ? *replace : client).choose(version + 1, ids))
+                  (replace ? *replace : client).choose(version + 1, new_quorum))
               {
                 // FIXME: Retry balancing.
                 // FIXME: We should still try block propagation in the case that
@@ -1993,48 +2011,46 @@ namespace infinit
                 if (conflict->value.is<PaxosServer::Quorum>())
                 {
                   auto quorum = conflict->value.get<PaxosServer::Quorum>();
-                  if (quorum == ids)
+                  if (quorum == new_quorum)
                   {
-                    ELLE_TRACE("someone else rebalanced to the same quorum");
+                    ELLE_TRACE("conflicted rebalancing to the quorum we picked");
                     return true;
                   }
                   else if (signed(quorum.size()) == this->_factor)
                   {
-                    ELLE_TRACE(
-                      "someone else rebalanced to a sufficient quorum");
-                    return true;
-                  }
-                  else
-                  {
-                    ELLE_TRACE(
-                      "someone else rebalanced to an insufficient quorum");
-                    auto new_q =
-                      this->_rebalance_extend_quorum(address, quorum);
-                    if (new_q == quorum)
+                    new_quorum = make_quorum(quorum);
+                    if (new_quorum == quorum)
                     {
-                      ELLE_TRACE("unable to find any new owner");
-                      return false;
+                      ELLE_TRACE(
+                        "conflicted rebalancing to a satisfying quorum");
+                      return true;
                     }
-                    ++version;
-                    replace.reset(
-                      new Paxos::PaxosClient(
-                        this->doughnut().id(),
-                        lookup_nodes(this->doughnut(), new_q, address)));
-                    continue;
+                    else
+                    {
+                      ELLE_TRACE(
+                        "conflicted rebalancing to an non-satisfying quorum");
+                      ++version;
+                      replace.reset(
+                        new Paxos::PaxosClient(
+                          this->doughnut().id(),
+                          lookup_nodes(this->doughnut(), quorum, address)));
+                      continue;
+                    }
                   }
                 }
                 else
                 {
+                  // FIXME: does this then skip versions, possibly hiding a
+                  // different and potentially better quorum pick ?
                   ELLE_TRACE("someone else picked a value while we rebalanced");
                   ++version;
                   continue;
                 }
-                return false;
               }
               else
               {
                 ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
-                           ids.size(), version + 1);
+                           new_quorum.size(), version + 1);
                 return true;
               }
             }
@@ -2084,15 +2100,17 @@ namespace infinit
                 continue;
               done = false;
               ELLE_TRACE_SCOPE("rebalance %f out", address);
-              auto quorum =
-                ELLE_ENFORCE(elle::find(paxos->quorums(), address))->quorum;
-              ELLE_ENFORCE_EQ(quorum.erase(this->doughnut().id()), 1u);
-              ELLE_DEBUG("new quorum: %f", quorum);
+              auto new_quorum = [id = this->doughnut().id()]
+                (PaxosServer::Quorum q)
+                {
+                  q.erase(id);
+                  return q;
+                };
               try
               {
                 auto client = this->_client(address);
                 auto latest = this->_latest(client, address);
-                if (this->_rebalance(client, address, quorum, latest))
+                if (this->_rebalance(client, address, new_quorum, latest))
                   paxos->rebalanced()(address);
                 else
                 {

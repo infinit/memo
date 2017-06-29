@@ -104,7 +104,7 @@ namespace infinit
           bool
           _rebalance(PaxosClient& client,
                      Address address,
-                     PaxosClient::Quorum const& ids,
+                     std::function<PaxosClient::Quorum (PaxosClient::Quorum)> m,
                      PaxosClient::State const& version);
           Paxos::PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
