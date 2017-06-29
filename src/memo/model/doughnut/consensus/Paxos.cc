@@ -618,7 +618,7 @@ namespace memo
               auto version =
                 elle_serialization_version(this->doughnut().version());
               return this->_load_paxos(
-                address, Decision(PaxosServer(this->id(), *peers, version)));
+                address, Decision(PaxosServer(this->id(), *peers, {}, version)));
             }
             else
             {
@@ -713,9 +713,10 @@ namespace memo
           ELLE_LOG_COMPONENT(
             "infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: evict node %f", this, lost_id);
-          auto blocks = elle::make_vector(
-            elle::as_range(
-              this->_node_blocks.get<by_node>().equal_range(lost_id)),
+          auto range = elle::equal_range(
+            this->_node_blocks.get<by_node>(), lost_id);
+          // FIXME: move the range.
+          auto blocks = elle::make_vector(range,
             [] (NodeBlock const& nb) { return nb.block; });
           for (auto address: blocks)
           {
@@ -2016,12 +2017,11 @@ namespace memo
           for (bool failed = false, done = false; !done;)
           {
             done = true;
-            auto blocks =
-              elle::make_vector(
-                elle::as_range(
-                  paxos->node_blocks().get<LocalPeer::by_node>()
-                  .equal_range(this->doughnut().id())));
-            for (auto nb: blocks)
+            auto range = elle::equal_range(
+              paxos->node_blocks().get<LocalPeer::by_node>(),
+              this->doughnut().id());
+            // FIXME: move the range
+            for (auto nb: elle::make_vector(range))
             {
               if (failed)
               {
