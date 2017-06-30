@@ -806,8 +806,10 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::_propagate(PaxosServer& paxos, Address a)
+        Paxos::LocalPeer::_propagate(Address a)
         {
+          auto& paxos =
+            ELLE_ENFORCE(elle::find(this->_addresses, a))->second.paxos;
           if (auto value = paxos.current_value())
             ELLE_DEBUG("propagate block value")
             {
@@ -1053,7 +1055,7 @@ namespace infinit
                       this->paxos()._rebalance(
                         c, target.address, new_q, latest);
                     }
-                    this->_propagate(paxos, target.address);
+                    this->_propagate(target.address);
                   }
                 }
                 catch (elle::Error const& e)
@@ -1077,7 +1079,7 @@ namespace infinit
                 [&] (BlockRepartition& r) {r.quorum = q;});
               for (auto const& node: q)
                 this->_node_blocks.emplace(node, address);
-              this->_propagate(it->second.paxos, address);
+              this->_propagate(address);
             }
             else
               ; // The block was deleted in the meantime.
