@@ -260,6 +260,8 @@ namespace infinit
           protected:
             void
             _cleanup() override;
+          private:
+            friend class Paxos;
 
           /*------.
           | Paxos |

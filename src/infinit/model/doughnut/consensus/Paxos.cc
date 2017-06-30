@@ -3,6 +3,7 @@
 #include <functional>
 #include <utility>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/sort.hpp>
@@ -52,6 +53,7 @@ namespace infinit
       {
         using boost::adaptors::filtered;
         using boost::adaptors::transformed;
+        using boost::algorithm::any_of;
 
         /// Run `f`, translating possible network errors into Paxos
         /// exceptions.
@@ -826,7 +828,6 @@ namespace infinit
                 paxos.current_version() + 1,
                 value->value.get<std::shared_ptr<blocks::Block>>());
             }
-          this->_rebalanced(a);
         }
 
         struct Paxos::Details
@@ -1028,9 +1029,7 @@ namespace infinit
                     if (it == this->_addresses.end())
                       // The block was deleted in the meantime.
                       continue;
-                    // Beware of interators invalidation, use a reference.
-                    auto& paxos = it->second.paxos;
-                    auto quorum = paxos.current_quorum();
+                    auto quorum = it->second.paxos.current_quorum();
                     // We can't actually rebalance this block, under_represented
                     // was wrong. Don't think this can happen but better safe
                     // than sorry.
@@ -1055,7 +1054,6 @@ namespace infinit
                       this->paxos()._rebalance(
                         c, target.address, new_q, latest);
                     }
-                    this->_propagate(target.address);
                   }
                 }
                 catch (elle::Error const& e)
@@ -1079,7 +1077,6 @@ namespace infinit
                 [&] (BlockRepartition& r) {r.quorum = q;});
               for (auto const& node: q)
                 this->_node_blocks.emplace(node, address);
-              this->_propagate(address);
             }
             else
               ; // The block was deleted in the meantime.
@@ -2015,7 +2012,7 @@ namespace infinit
                   if (quorum == new_quorum)
                   {
                     ELLE_TRACE("conflicted rebalancing to the quorum we picked");
-                    return true;
+                    break;
                   }
                   else if (signed(quorum.size()) == this->_factor)
                   {
@@ -2024,7 +2021,7 @@ namespace infinit
                     {
                       ELLE_TRACE(
                         "conflicted rebalancing to a satisfying quorum");
-                      return true;
+                      break;
                     }
                     else
                     {
@@ -2052,7 +2049,7 @@ namespace infinit
               {
                 ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
                            new_quorum.size(), version + 1);
-                return true;
+                break;
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
@@ -2068,6 +2065,14 @@ namespace infinit
               return false;
             }
           }
+          auto local =
+            std::static_pointer_cast<LocalPeer>(this->doughnut().local());
+          if (any_of(new_quorum,
+                     [&] (Address const& id)
+                     { return !elle::find(state.quorum, id); }))
+            local->_propagate(address);
+          local->_rebalanced(address);
+          return true;
         }
 
         void
@@ -2111,9 +2116,7 @@ namespace infinit
               {
                 auto client = this->_client(address);
                 auto latest = this->_latest(client, address);
-                if (this->_rebalance(client, address, new_quorum, latest))
-                  paxos->rebalanced()(address);
-                else
+                if (!this->_rebalance(client, address, new_quorum, latest))
                 {
                   failed = true;
                   ELLE_WARN("%f: unable to rebalance %f", this, address);
