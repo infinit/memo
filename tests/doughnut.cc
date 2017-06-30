@@ -1517,10 +1517,12 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_newcomer, (bool, immutable))
   {
-    auto dht_a = DHT(dht::consensus_builder = instrument(3));
+    auto dht_a = DHT(id = special_id(10),
+                     dht::consensus_builder = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(dht::consensus_builder = instrument(3));
+    auto dht_b = DHT(id = special_id(11),
+                     dht::consensus_builder = instrument(3));
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = make_block(dht_a, immutable, "expand_newcomer");
     ELLE_LOG("write block to first DHT")
