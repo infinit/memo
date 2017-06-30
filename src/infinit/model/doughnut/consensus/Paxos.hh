@@ -338,7 +338,7 @@ namespace infinit
             _disappeared_evict(Address id);
           private:
             void
-            _propagate(PaxosServer& paxos, Address a, PaxosServer::Quorum q);
+            _propagate(PaxosServer& paxos, Address a);
             void
             _rebalance();
             ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),

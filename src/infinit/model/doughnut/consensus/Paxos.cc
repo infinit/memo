@@ -806,9 +806,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::_propagate(PaxosServer& paxos,
-                                     Address a,
-                                     PaxosServer::Quorum q)
+        Paxos::LocalPeer::_propagate(PaxosServer& paxos, Address a)
         {
           if (auto value = paxos.current_value())
             ELLE_DEBUG("propagate block value")
@@ -817,7 +815,8 @@ namespace infinit
               // deleted in-between.
               PaxosClient c(
                 this->doughnut().id(),
-                lookup_nodes(this->doughnut(), q, a, boost::none, true));
+                lookup_nodes(this->doughnut(),
+                             paxos.current_quorum(), a, boost::none, true));
               // FIXME: do something in case of conflict.
               // FIXME: or don't ? if someone successfully wrote anything, isn't
               // the block propagated per se ?
@@ -1054,7 +1053,7 @@ namespace infinit
                       this->paxos()._rebalance(
                         c, target.address, new_q, latest);
                     }
-                    this->_propagate(paxos, target.address, quorum);
+                    this->_propagate(paxos, target.address);
                   }
                 }
                 catch (elle::Error const& e)
@@ -1078,7 +1077,7 @@ namespace infinit
                 [&] (BlockRepartition& r) {r.quorum = q;});
               for (auto const& node: q)
                 this->_node_blocks.emplace(node, address);
-              this->_propagate(it->second.paxos, address, q);
+              this->_propagate(it->second.paxos, address);
             }
             else
               ; // The block was deleted in the meantime.
