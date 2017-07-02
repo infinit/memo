@@ -96,9 +96,9 @@ namespace memo
           : StackedConsensus(std::move(backend))
           , _cache_invalidation(cache_invalidation.value_or(15s))
           , _cache_ttl(cache_ttl.value_or(5min))
-          , _cache_size(cache_size.value_or(64_mB))
+          , _cache_size(cache_size.value_or(64_MiB))
           , _disk_cache_path(disk_cache_path)
-          , _disk_cache_size(disk_cache_size.value_or(512_mB))
+          , _disk_cache_size(disk_cache_size.value_or(512_MiB))
           , _disk_cache_used(0)
           , _cleanup_thread(
             new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
