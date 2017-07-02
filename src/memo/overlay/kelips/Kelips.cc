@@ -153,14 +153,12 @@ namespace memo
         endpoints_cleanup(std::vector<TimedEndpoint>& endpoints, Time deadline)
         {
           for (unsigned i=0; i<endpoints.size(); ++i)
-          {
             if (endpoints[i].second < deadline)
             {
               std::swap(endpoints[i], endpoints[endpoints.size()-1]);
               endpoints.pop_back();
               --i;
             }
-          }
         }
 
         Time
@@ -184,9 +182,10 @@ namespace memo
         std::string
         key_hash(elle::cryptography::SecretKey const& k)
         {
-          auto hk = elle::cryptography::hash(k.password(),
-                                                 elle::cryptography::Oneway::sha256);
-          std::string hkhex = elle::sprintf("%x", hk);
+          auto hk =
+            elle::cryptography::hash(k.password(),
+                                     elle::cryptography::Oneway::sha256);
+          auto hkhex = elle::sprintf("%x", hk);
           return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
         }
 
@@ -3607,8 +3606,7 @@ namespace memo
           for (auto& contact: this->_state.observers)
           {
             auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() -
-               endpoints_max(contact.second.endpoints));
+              (now() - endpoints_max(contact.second.endpoints));
             elle::json::Array endpoints;
             for (auto const pair: contact.second.endpoints)
               endpoints.push_back(PrettyEndpoint(pair.first).repr());
@@ -3775,8 +3773,7 @@ namespace memo
           for (auto const& contact: group)
           {
             auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() -
-               endpoints_max(contact.second.endpoints));
+              (now() - endpoints_max(contact.second.endpoints));
             auto endpoints
               = elle::make_vector(contact.second.endpoints,
                                   [](auto const pair)

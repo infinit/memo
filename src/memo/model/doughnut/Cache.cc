@@ -7,6 +7,7 @@
 
 #include <elle/bench.hh>
 #include <elle/bytes.hh>
+#include <elle/find.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
@@ -144,23 +145,19 @@ namespace memo
           ELLE_TRACE_SCOPE("%s: remove %f", this, address);
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
-          else
+          else if (auto it = elle::find(this->_disk_cache, address))
           {
-            auto it = this->_disk_cache.find(address);
-            if (it != this->_disk_cache.end())
-            {
-              ELLE_DEBUG("drop block from disk cache");
-              this->_disk_cache_used -= it->size();
-              boost::system::error_code erc;
-              auto path = *this->_disk_cache_path / elle::sprintf("%x", it->address());
-              bfs::remove(path, erc);
-              if (erc)
-                ELLE_WARN("Error pruning %s from cache: %s", path, erc);
-              this->_disk_cache.erase(it);
-            }
-            else
-              ELLE_DEBUG("block was not in cache");
+            ELLE_DEBUG("drop block from disk cache");
+            this->_disk_cache_used -= it->size();
+            boost::system::error_code erc;
+            auto path = *this->_disk_cache_path / elle::sprintf("%x", it->address());
+            bfs::remove(path, erc);
+            if (erc)
+              ELLE_WARN("Error pruning %s from cache: %s", path, erc);
+            this->_disk_cache.erase(it);
           }
+          else
+            ELLE_DEBUG("block was not in cache");
           this->_backend->remove(address, std::move(rs));
         }
 
