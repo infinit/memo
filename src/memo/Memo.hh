@@ -25,13 +25,13 @@ namespace memo
   class Memo
   {
   public:
-    /// ReportAction represents a signal Memo will triggers when it perform
-    /// an action related to the resources / objects (e.g. Users, Networks,
-    /// etc.)
+    /// ReportAction is a signal Memo triggers when it performs an
+    /// action related to the resources / objects (e.g. Users,
+    /// Networks, etc.).
     using ReportAction =
-      boost::signals2::signal<void (std::string const& action,
+      boost::signals2::signal<auto (std::string const& action,
                                     std::string const& type,
-                                    std::string const& name)>;
+                                    std::string const& name) -> void>;
   public:
     /// Whether the resource name contains a `/`.
     static bool
@@ -48,7 +48,7 @@ namespace memo
     | Network.  |
     `----------*/
 
-    /// Return a network for a given user and name.
+    /// The network for a given user and name.
     ///
     /// @param name The name of the network to get. If the name is unqualifed,
     ///             it gets qualified by the user name.
@@ -64,17 +64,17 @@ namespace memo
     network_get(std::string const& name,
                 User const& user,
                 bool ensure_linked = true);
-    /// Return the networks associated with a user (or by default, by the
+    /// The networks associated with a user (or by default, by the
     /// default memo user).
     ///
-    /// @param self The user.
-    /// @param linked_only Filter non-linked networks.
+    /// @param self The user.  @param linked_only Filter non-linked
+    /// networks.
     ///
     /// @return The list of networks.
     std::vector<Network>
     networks_get(boost::optional<memo::User> self,
                  bool linked_only = false) const;
-    /// Return the list of users who linked the given network.
+    /// The list of users who linked the given network.
     ///
     /// @param name The name of the network.
     /// @param user An optional user used to qualify unqualifed network names.
@@ -83,8 +83,7 @@ namespace memo
     std::vector<User>
     network_linked_users(std::string const& name,
                          boost::optional<User> user = boost::none);
-    ///
-    ///
+
     void
     network_unlink(std::string const& name_,
                    User const& user);
@@ -285,16 +284,16 @@ namespace memo
     /// Otherwise, return whether the resource already exists and was
     /// overwritten.
     ///
-    /// \param f The stream to associate with the file.
-    /// \param path The path to the file to open.
-    /// \param name The name of the resource (e.g. "root")
-    /// \param type The type of the resource (e.g. "User")
-    /// \param overwrite Whether if the function is allowed to overwrite an
+    /// @param f The stream to associate with the file.
+    /// @param path The path to the file to open.
+    /// @param name The name of the resource (e.g. "root")
+    /// @param type The type of the resource (e.g. "User")
+    /// @param overwrite Whether if the function is allowed to overwrite an
     ///                  existing file.
-    /// \param mode Flags describing the requested input/output mode for the
+    /// @param mode Flags describing the requested input/output mode for the
     ///                   file.
-    /// \return Whether if a file was overwritten.
-    /// \throw ResourceAlreadyFetched if the file already exists and overwrite
+    /// @return Whether if a file was overwritten.
+    /// @throw ResourceAlreadyFetched if the file already exists and overwrite
     ///        was false.
     static
     bool
@@ -535,10 +534,6 @@ namespace memo
                bool purge = false) const;
 
   private:
-    std::string
-    _type_plural(std::string const& type) const;
-
-
     /// report_local_action is triggered when a local resource is edited:
     /// - saved
     /// - updated
@@ -553,8 +548,7 @@ namespace memo
 
   namespace deprecated
   {
-      boost::filesystem::path
-      storages_path();
+    bfs::path storages_path();
   }
 }
 

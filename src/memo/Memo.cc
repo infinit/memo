@@ -1115,7 +1115,7 @@ namespace memo
                          bool ignore_missing,
                          bool purge) const
   {
-    return hub_delete(elle::sprintf("%s/%s", _type_plural(type), name),
+    return hub_delete(elle::sprintf("%s/%s", plural(type), name),
                       type, name, self, ignore_missing, purge);
   }
 
@@ -1196,7 +1196,7 @@ namespace memo
     }
     else
     {
-      auto error = [&] {
+      auto const error = [&] {
         try
         {
           auto s = elle::serialization::json::SerializerIn{r, false};
@@ -1214,11 +1214,5 @@ namespace memo
         elle::err("unexpected HTTP error %s pushing %s:\n%s",
                   r.status(), type, error);
     }
-  }
-
-  std::string
-  Memo::_type_plural(std::string const& type) const
-  {
-    return elle::sprintf("%s%s", type, type.back() == 's' ? "" : "s");
   }
 }
