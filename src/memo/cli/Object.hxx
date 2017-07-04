@@ -6,6 +6,7 @@
 
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
+#include <memo/model/prometheus.hh>
 
 namespace memo
 {
@@ -140,12 +141,15 @@ namespace memo
     Mode<Self, Sig, Symbol>::apply(Memo& memo,
                                    std::vector<std::string>& args)
     {
+      // Add the options that are common to all the modes.
       auto options = this->options;
       auto f = this->prototype().extend(
-        help = false,
-        cli::compatibility_version = boost::none,
-        script = false,
-        as = memo.default_user_name());
+        help = false
+        , cli::compatibility_version = boost::none
+        , script = false
+        , as = memo.default_user_name()
+        , prometheus = boost::optional<std::string>()
+      );
       auto const verb = memo.command_line().at(1);
       auto const subst = [&](auto const& f)
         {
@@ -175,6 +179,7 @@ namespace memo
                boost::optional<elle::Version> const& compatibility_version,
                bool script,
                std::string as,
+               boost::optional<std::string> prometheus,
                auto&& ... args)
           {
             memo.as(as);
@@ -184,6 +189,8 @@ namespace memo
               ensure_version_is_supported(*compatibility_version);
               memo.compatibility_version(std::move(compatibility_version));
             }
+            if (prometheus)
+              memo::prometheus::endpoint(*prometheus);
             if (help)
               show_help(std::cout);
             else
