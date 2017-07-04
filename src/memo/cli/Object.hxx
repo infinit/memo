@@ -47,13 +47,13 @@ namespace memo
         bool
         value(std::ostream& s, Object const& object)
         {
-          auto vars = VarMap{
-            {"action", elle::print("to %s", Symbol::name())},
-            {"hub", beyond(true)},
-          };
-          elle::fprintf(s, "  %-10s %s\n",
-                        elle::das::cli::option_name_from_c(Symbol::name()),
-                        vars.expand(Symbol::attr_get(object).description));
+          elle::print(s, "  %-10s %s\n",
+                      elle::das::cli::option_name_from_c(Symbol::name()),
+                      elle::print(Symbol::attr_get(object).description,
+                           {
+                             {"action", elle::print("to %s", Symbol::name())},
+                             {"hub",    beyond(true)},
+                           }));
           return true;
         }
       };
