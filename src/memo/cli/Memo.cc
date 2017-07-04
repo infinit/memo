@@ -37,9 +37,10 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
-  /// The path to `memo`.
-  auto memo_exe = std::string(BIN);
+  /// How the user called us.
   auto argv_0 = std::string(BIN);
+  /// The path to `memo`.
+  auto memo_exe = argv_0;
 }
 
 namespace memo
