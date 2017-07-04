@@ -142,12 +142,13 @@ namespace memo
                                    std::vector<std::string>& args)
     {
       // Add the options that are common to all the modes.
-      auto options = this->options;
-      auto f = this->prototype().extend(
+      auto const options = this->options;
+      auto const f = this->prototype().extend(
         help = false
+        , as = memo.default_user_name()
         , cli::compatibility_version = boost::none
         , script = false
-        , as = memo.default_user_name()
+        , log = boost::optional<std::string>()
         , prometheus = boost::optional<std::string>()
       );
       auto const verb = memo.command_line().at(1);
@@ -161,7 +162,7 @@ namespace memo
               {"verb",   verb},
             });
         };
-      auto show_help = [&] (std::ostream& s)
+      auto const show_help = [&] (std::ostream& s)
         {
           Memo::usage(s, subst("{object} {verb} [OPTIONS]"));
           s << subst(this->description) << "\n\nOptions:\n";
@@ -176,9 +177,10 @@ namespace memo
         elle::das::cli::call(
           f,
           [&] (bool help,
+               std::string as,
                boost::optional<elle::Version> const& compatibility_version,
                bool script,
-               std::string as,
+               boost::optional<std::string> log,
                boost::optional<std::string> prometheus,
                auto&& ... args)
           {
@@ -189,6 +191,8 @@ namespace memo
               ensure_version_is_supported(*compatibility_version);
               memo.compatibility_version(std::move(compatibility_version));
             }
+            if (log)
+              elle::log::logger_add(elle::log::make_logger(*log));
             if (prometheus)
               memo::prometheus::endpoint(*prometheus);
             if (help)

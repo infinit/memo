@@ -100,6 +100,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(kouncil, 0, "use a Kouncil overlay network", false);
     ELLE_DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
     ELLE_DAS_CLI_SYMBOL(listen, 0, "specify which IP address to listen on (default: all)", false);
+    ELLE_DAS_CLI_SYMBOL(log, 0, "specify the destination for logs", false);
     ELLE_DAS_CLI_SYMBOL(log_level, 0, "Log level to start volumes with (default: LOG)", false);
     ELLE_DAS_CLI_SYMBOL(log_path, 0, "Store volume logs in given path", false);
     ELLE_DAS_CLI_SYMBOL(login_user, 0, "Login with selected user(s), of form 'user:password'", false);
