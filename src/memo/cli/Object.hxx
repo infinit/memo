@@ -1,6 +1,7 @@
 #include <memo/cli/Object.hh>
 
 #include <elle/Exit.hh>
+#include <elle/print.hh>
 #include <elle/printf.hh>
 
 #include <memo/cli/Memo.hh>
@@ -36,9 +37,7 @@ namespace memo
       {};
 
       template <typename T, typename Owner>
-      struct find_name
-        : public _find_name<T, Owner, typename Owner::Objects>
-      {};
+      using find_name = _find_name<T, Owner, typename Owner::Objects>;
 
       template <typename Symbol, typename Object>
       struct help_modes
@@ -49,7 +48,7 @@ namespace memo
         value(std::ostream& s, Object const& object)
         {
           auto vars = VarMap{
-            {"action", elle::sprintf("to %s", Symbol::name())},
+            {"action", elle::print("to %s", Symbol::name())},
             {"hub", beyond(true)},
           };
           elle::fprintf(s, "  %-10s %s\n",
@@ -66,7 +65,7 @@ namespace memo
     {
       using Symbol = find_name<Self, Owner>;
       Memo::usage(
-        s, elle::sprintf("%s [MODE|--help]", Symbol::name()));
+        s, elle::print("%s [MODE|--help]", Symbol::name()));
       elle::fprintf(s,
                     "Memo %s management utility.\n"
                     "\n"
@@ -148,20 +147,24 @@ namespace memo
         script = false,
         as = memo.default_user_name());
       auto const verb = memo.command_line().at(1);
-      auto const vars = VarMap{
-        {"action", elle::sprintf("to %s", verb)},
-        {"hub", beyond(true)},
-        {"object", memo.command_line().at(0)},
-        {"verb", verb},
-      };
+      auto const subst = [&](auto const& f)
+        {
+          return elle::print(f,
+            {
+              {"action", elle::print("to %s", verb)},
+              {"hub",    beyond(true)},
+              {"object", memo.command_line().at(0)},
+              {"verb",   verb},
+            });
+        };
       auto show_help = [&] (std::ostream& s)
         {
-          Memo::usage(s, vars.expand("{object} {verb} [OPTIONS]"));
-          s << vars.expand(this->description) << "\n\nOptions:\n";
+          Memo::usage(s, subst("{object} {verb} [OPTIONS]"));
+          s << subst(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;
             buffer << elle::das::cli::help(f, options);
-            s << vars.expand(buffer.str());
+            s << subst(buffer.str());
           }
         };
       try
@@ -192,7 +195,7 @@ namespace memo
       catch (elle::das::cli::Error const& e)
       {
         auto ex = CLIError(e.what());
-        ex.object(vars.expand("{object} {verb}"));
+        ex.object(subst("{object} {verb}"));
         throw ex;
       }
     }
