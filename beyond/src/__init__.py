@@ -108,8 +108,7 @@ def symbolize_dump(in_, out = None):
 ## -------- ##
 
 # Don't generate crash reports on our Beyond server.
-os.environ['MEMO_CRASH_REPORTER'] = '0'
-os.environ['INFINIT_CRASH_REPORTER'] = '0'
+os.environ['MEMO_CRASH_REPORT'] = '0'
 
 def find_binaries():
   for path in chain(
@@ -553,25 +552,29 @@ class Beyond:
   ## Crash Report ##
   ## ------------ ##
 
-  def crash_report_send(self, data, platform = 'Unknown', version = 'Unknown'):
-    variables = {
-      'platform': platform,
-      'version': version,
-    }
+  def crash_report_send(self, json):
     import tempfile
+    from base64 import b64decode
+    variables = {
+      'platform': json.get('platform', 'Unknown'),
+      'version': json.get('version', 'Unknown'),
+    }
     with tempfile.TemporaryDirectory() as temp_dir:
-      tfile = '%s/client.dmp' % temp_dir
-      with open(tfile, 'wb') as f:
-        f.write(data)
-      symbolize_dump(tfile)
-      with open(tfile, 'rb') as dump:
-        self.__emailer.send_one(
-          recipient_email = 'crash@infinit.sh',
-          recipient_name = 'Crash',
-          variables = variables,
-          files = [dump],
-          **self.template('Internal/Crash Report')
-        )
+      files = []
+      for k, v in json.items():
+        if k not in ['platform', 'version']:
+          file = '{}/client.{}'.format(temp_dir, k)
+          with open(file, 'wb') as f:
+            f.write(b64decode(v))
+          if k in ['dump']:
+            symbolize_dump(file)
+          files.append(file)
+      self.__emailer.send_one(
+        recipient_email = 'crash@infinit.sh',
+        recipient_name = 'Crash',
+        variables = variables,
+        files = files,
+        **self.template('Internal/Crash Report'))
 
 class User:
   fields = {
