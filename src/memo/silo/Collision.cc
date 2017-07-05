@@ -26,6 +26,6 @@ namespace memo
     }
 
     static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<Collision> _register_serialization;
+    Register<Collision> _register_serialization{"infinit::storage::Collision"};
   }
 }

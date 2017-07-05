@@ -18,7 +18,7 @@ namespace memo
       {}
 
       static const elle::serialization::Hierarchy<elle::Exception>::
-      Register<ValidationFailed> _register_serialization;
+      Register<ValidationFailed> _register_serialization{"infinit::model::doughnut::ValidationFailed"};
     }
   }
 }
