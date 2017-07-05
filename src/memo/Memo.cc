@@ -3,8 +3,11 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include <memo/utility.hh>
+#include <elle/bytes.hh>
+#include <elle/log.hh>
+#include <elle/log/FileLogger.hh>
 
+#include <memo/utility.hh>
 #include <memo/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("memo");
@@ -31,6 +34,15 @@ namespace memo
     {
       return storages_path() / name;
     }
+  }
+
+  Memo::Memo()
+  {
+    auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
+    create_directories(log_dir);
+    auto const log_base = log_dir / "main";
+    elle::log::logger_add(std::make_unique<elle::log::FileLogger>
+                          (log_base.string(), "LOG", 100_KiB));
   }
 
   bool

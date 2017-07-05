@@ -44,13 +44,17 @@ namespace crash_report
                   bool succeeded)
 #endif
     {
+      auto& report = *static_cast<CrashReporter*>(context);
+      if (report.make_payload)
+        report.make_payload(elle::print("{}/{}", dump_dir, minidump_id));
       return succeeded;
     }
 
     /// Prepare the exception handler.
     auto
-    make_exception_handler(std::string const& dumps_path)
+    make_exception_handler(CrashReporter& report)
     {
+      auto const& dumps_path = report.dumps_path().string();
 #if defined MEMO_LINUX
       breakpad::MinidumpDescriptor descriptor(dumps_path);
       return
@@ -58,7 +62,7 @@ namespace crash_report
         (descriptor,
          nullptr, // filter
          dump_callback,
-         nullptr, // callback context
+         &report, // callback context
          true,    // install handler
          -1);     // server-fd.
 #elif defined MEMO_MACOSX
@@ -67,7 +71,7 @@ namespace crash_report
         (dumps_path,
          nullptr, // filter
          dump_callback,
-         nullptr, // callback context.
+         &report, // callback context.
          true,    // install handler
          nullptr);
 #endif
@@ -112,8 +116,7 @@ namespace crash_report
     using elle::os::getenv;
     if (getenv("MEMO_CRASH_REPORT", production_build))
     {
-      this->_exception_handler
-        = make_exception_handler(this->_dumps_path.string());
+      this->_exception_handler = make_exception_handler(*this);
       ELLE_TRACE("crash handler started");
     }
   }

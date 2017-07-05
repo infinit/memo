@@ -25,6 +25,9 @@ namespace memo
   class Memo
   {
   public:
+    Memo();
+
+  public:
     /// ReportAction is a signal Memo triggers when it performs an
     /// action related to the resources / objects (e.g. Users,
     /// Networks, etc.).
