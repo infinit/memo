@@ -587,6 +587,11 @@ class KeyValueStoreInfrastructure():
       ['memo', 'kvs', 'run', self.kvname, '--as', self.uname,
        '--allow-root-creation',
        '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
+    def comm(self):
+      self.out, self.err = self.__proc.communicate()
+    import threading
+    self.__comm = threading.Thread(target=comm, args=[self])
+    self.__comm.start()
     while not os.path.exists(port_file):
       time.sleep(0.1)
     with open(port_file, 'r') as f:
@@ -600,14 +605,14 @@ class KeyValueStoreInfrastructure():
   def __exit__(self, *args, **kwargs):
     if self.__proc:
       self.__proc.terminate()
-      out, err = self.__proc.communicate(timeout = 30)
+      self.__comm.join()
       if os.environ.get('OS') != 'windows':
         try:
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
-          log('STDOUT: %s' % out.decode('utf-8'))
-          log('STDERR: %s' % err.decode('utf-8'))
+          log('STDOUT: %s' % self.out.decode('utf-8'))
+          log('STDERR: %s' % self.err.decode('utf-8'))
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
           log('STDOUT: %s' % out.decode('utf-8'))
