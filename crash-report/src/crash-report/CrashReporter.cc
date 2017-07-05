@@ -122,17 +122,6 @@ namespace crash_report
       return buf.string();
     }
 
-    /// The content of this file.
-    std::string
-    contents(bfs::path const& path)
-    {
-      auto&& f = bfs::ifstream(path);
-      if (!f.good())
-        elle::err("unable to read file: %s", path);
-      return {std::istreambuf_iterator<char>(f),
-              std::istreambuf_iterator<char>()};
-    }
-
     bool constexpr production_build
 #ifdef MEMO_PRODUCTION_BUILD
       = true;
@@ -177,6 +166,8 @@ namespace crash_report
   {
     try
     {
+      if (!boost::ends_with(path.string(), ".dmp"))
+        elle::err("unexpected minidump extension: %s", path);
       auto content = elle::json::Object
         {
           {"dump", contents_base64(path)},
@@ -192,7 +183,11 @@ namespace crash_report
       for (auto const& p: bfs::directory_iterator(path.parent_path()))
         if (auto ext = elle::tail(p.path().string(), base))
           if (*ext != "dmp")
-            content[*ext] = contents(p);
+            // Put everything in base64.  Valid JSON requires that the
+            // string is valid UTF-8, and it might always be the case.
+            // In particular the logs may embed ANSI escapes for
+            // colors, or simply include raw bytes.
+            content[*ext] = contents_base64(p);
       ELLE_DEBUG("%s: uploading: %s", this, path);
       ELLE_DUMP("%s: content to upload: %s", this, content);
       namespace http = elle::reactor::http;
