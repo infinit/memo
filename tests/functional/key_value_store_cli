@@ -153,3 +153,37 @@ with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
   for k, v in data.items():
     # XXX: assertEq prints out two values making log files large.
     assert client.Fetch(kv.FetchRequest(key = k)).value.decode('utf-8') == v
+
+  # concurrent update
+  client.Upsert(kv.UpsertRequest(key='cu', value='0'.encode('utf-8')), timeout=20)
+  def cu(idx):
+    kvs = i.client()
+    for u in range(50):
+      kvs.Upsert(kv.UpsertRequest(key='cu', value=str(idx).encode('utf-8')), timeout=20)
+  go_on = True
+  n_read = 0
+  reader_exception = False
+  def reader():
+    global n_read, reader_exception
+    kvs = i.client()
+    try:
+      while go_on:
+        kvs.Fetch(kv.FetchRequest(key='cu'), timeout=10)
+        n_read += 1
+    except Exception:
+      reader_exception = True
+      raise
+  threads = list()
+  for ti in range(5):
+    threads.append(threading.Thread(target=cu, args=[ti]))
+  for t in threads:
+    t.start()
+  rt = threading.Thread(target=reader)
+  rt.start()
+  for t in threads:
+    t.join()
+  go_on = False
+  rt.join()
+  print('completed %s reads' % n_read)
+  assert not reader_exception
+  assert int(client.Fetch(kv.FetchRequest(key='cu'), timeout=5).value.decode('utf-8')) < 10
