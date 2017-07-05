@@ -1,17 +1,18 @@
 #include <crash-report/CrashReporter.hh>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/range/algorithm/count_if.hpp>
+
+#include <elle/algorithm.hh>
 #include <elle/format/base64.hh>
 #include <elle/json/json.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
+#include <elle/reactor/http/Request.hh>
+#include <elle/reactor/http/exceptions.hh>
 #include <elle/system/platform.hh>
 #include <elle/system/user_paths.hh>
-
-#include <boost/filesystem/fstream.hpp>
-#include <boost/range/algorithm/count_if.hpp>
-
-#include <elle/reactor/http/exceptions.hh>
-#include <elle/reactor/http/Request.hh>
 
 #if defined MEMO_LINUX
 # include <client/linux/handler/exception_handler.h>
@@ -90,12 +91,46 @@ namespace crash_report
     }
 
     void
-    _remove_file(bfs::path const& path)
+    _try_remove_file(bfs::path const& path)
     {
       boost::system::error_code erc;
       bfs::remove(path, erc);
       if (erc)
-        ELLE_WARN("unable to remove crash dump (%s): %s", path, erc.message());
+        ELLE_WARN("unable to remove file %s: %s", path, erc.message());
+    }
+
+    /// The content of this file, encoded in base64.
+    std::string
+    contents_base64(bfs::path const& path)
+    {
+      auto&& f = bfs::ifstream(path, std::ios_base::in | std::ios_base::binary);
+      if (!f.good())
+        elle::err("unable to read crash dump: %s", path);
+
+      auto buf = elle::Buffer{};
+      auto stream = elle::IOStream(buf.ostreambuf());
+      auto&& base64_stream = elle::format::base64::Stream{stream};
+      auto constexpr chunk_size = 16 * 1024;
+      char chunk[chunk_size + 1];
+      chunk[chunk_size] = 0;
+      while (!f.eof())
+      {
+        f.read(chunk, chunk_size);
+        base64_stream.write(chunk, chunk_size);
+        base64_stream.flush();
+      }
+      return buf.string();
+    }
+
+    /// The content of this file.
+    std::string
+    contents(bfs::path const& path)
+    {
+      auto&& f = bfs::ifstream(path);
+      if (!f.good())
+        elle::err("unable to read file: %s", path);
+      return {std::istreambuf_iterator<char>(f),
+              std::istreambuf_iterator<char>()};
     }
 
     bool constexpr production_build
@@ -133,59 +168,55 @@ namespace crash_report
                         return _is_crash_report(p);
                       });
     ELLE_DEBUG("%s: %s %s awaiting upload",
-               this, res, (res == 1 ? "crash" : "crashes"));
+               this, res, res == 1 ? "crash" : "crashes");
     return res;
   }
 
   void
   CrashReporter::_upload(bfs::path const& path) const
   {
-    auto&& f = bfs::ifstream(path, std::ios_base::in | std::ios_base::binary);
-    if (!f.good())
+    try
     {
-      ELLE_ERR("%s: unable to read crash dump: %s", this, path);
-      return;
-    }
-    // The content of `path`, in base 64.
-    auto const minidump = [&f]
-      {
-        auto buf = elle::Buffer{};
-        auto stream = elle::IOStream(buf.ostreambuf());
-        auto&& base64_stream = elle::format::base64::Stream{stream};
-        auto constexpr chunk_size = 16 * 1024;
-        char chunk[chunk_size + 1];
-        chunk[chunk_size] = 0;
-        while (!f.eof())
+      auto content = elle::json::Object
         {
-          f.read(chunk, chunk_size);
-          base64_stream.write(chunk, chunk_size);
-          base64_stream.flush();
-        }
-        return buf.string();
-      }();
-    // There is no reason for the version sending the report to be the
-    // same as the one that generated the crash.
-    auto content = elle::json::Object
+          {"dump", contents_base64(path)},
+          {"platform", elle::system::platform::os_description()},
+          // Beware that there is no reason for the version of memo
+          // sending the report to be the same as the one that
+          // generated the crash.
+          {"version", this->_version},
+        };
+      // Check if there are other payloads to attach.  Remove "dmp"
+      // from the minidump file name (i.e., ends with the period).
+      auto const base = path.string().substr(0, path.string().size() - 3);
+      for (auto const& p: bfs::directory_iterator(path.parent_path()))
+        if (auto ext = elle::tail(p.path().string(), base))
+          if (*ext != "dmp")
+            content[*ext] = contents(p);
+      ELLE_DEBUG("%s: uploading: %s", this, path);
+      ELLE_DUMP("%s: content to upload: %s", this, content);
+      namespace http = elle::reactor::http;
+      auto r = http::Request(this->_crash_url,
+                             http::Method::PUT, "application/json");
+      elle::json::write(r, content);
+      if (r.status() == http::StatusCode::OK)
       {
-        {"dump", minidump},
-        {"platform", elle::system::platform::os_description()},
-        {"version", this->_version},
-      };
-    ELLE_DEBUG("%s: uploading: %s", this, path);
-    ELLE_DUMP("%s: content to upload: %s", this, content);
-    auto r = elle::reactor::http::Request(this->_crash_url,
-                                          elle::reactor::http::Method::PUT,
-                                          "application/json");
-    elle::json::write(r, content);
-    if (r.status() == elle::reactor::http::StatusCode::OK)
-    {
-      ELLE_DUMP("%s: removing uploaded crash dump: %s", this, path);
-      f.close();
-      _remove_file(path);
+        ELLE_DUMP("%s: successfully uploaded: %s", this, path);
+        for (auto const& p: bfs::directory_iterator(path.parent_path()))
+          if (boost::starts_with(p.path().string(), base))
+            {
+              ELLE_DUMP("%s: removing uploaded crash dump: %s", this, path);
+              _try_remove_file(p);
+            }
+      }
+      else
+        ELLE_ERR("%s: unable to upload crash report (%s) to %s: %s",
+                 this, path, this->_crash_url, r.status());
     }
-    else
-      ELLE_ERR("%s: unable to upload crash report (%s) to %s: %s",
-               this, path, this->_crash_url, r.status());
+    catch (elle::Error const& e)
+    {
+      ELLE_ERR("%s: unable to upload crash report: %s", e);
+    }
   }
 
   void
@@ -195,7 +226,7 @@ namespace crash_report
       if (_is_crash_report(p))
         try
         {
-          _upload(p.path());
+          this->_upload(p.path());
         }
         catch (elle::reactor::http::RequestError const& e)
         {

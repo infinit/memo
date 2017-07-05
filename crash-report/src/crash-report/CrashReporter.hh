@@ -28,7 +28,7 @@ namespace crash_report
                   std::string version);
     ~CrashReporter();
 
-    /// Upload the existing crash reports.
+    /// Upload the existing crash reports (and possible associated payloads).
     void
     upload_existing() const;
 
