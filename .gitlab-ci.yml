@@ -121,10 +121,13 @@ x86_64-alpine-gcc:
     - docker tag $PROJECT-alpine:$DESC infinit/$PROJECT-alpine:$DESC
     - docker push infinit/$PROJECT-alpine:$DESC
     - docker rmi {,infinit/}$PROJECT-alpine:$DESC
-    - python3 drake //src/infinit/grpc/docker
+    - python3 drake //src/memo/grpc/docker
+    - python3 drake //src/memo/kvs/docker
     - docker tag memo-vs-client-python:$DESC infinit/memo-vs-client-python:$DESC
+    - docker tag memo-kvs-client-python:$DESC infinit/memo-kvs-client-python:$DESC
     - docker push infinit/memo-vs-client-python:$DESC
-    - docker rmi {,infinit/}memo-vs-client-python:$DESC
+    - docker push infinit/memo-kvs-client-python:$DESC
+    - docker rmi {,infinit/}memo-{k,}vs-client-python:$DESC
   tags:
     - x86_64
     - alpine

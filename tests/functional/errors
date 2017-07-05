@@ -2,7 +2,7 @@
 
 from utils import *
 
-with Infinit() as infinit:
+with Memo() as memo:
   descriptor = {
     'name' : 'clouds',
     'overlay' : {
@@ -20,7 +20,7 @@ with Infinit() as infinit:
     'replication_factor': 1,
     'version': '0.0.0'
   }
-  infinit.run(['user', 'create', '--name', 'user'])
-  infinit.run(['network', 'import'], input = descriptor)
-  infinit.run(['network', 'run', '--name', 'clouds', '--as', 'user'],
-              return_code = 1)
+  memo.run(['user', 'create', '--name', 'user'])
+  memo.run(['network', 'import'], input = descriptor)
+  memo.run(['network', 'run', '--name', 'clouds', '--as', 'user'],
+           return_code = 1)

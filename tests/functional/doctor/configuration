@@ -57,13 +57,13 @@ def leftovers_text(res):
 
 import subprocess
 for home, (i, (json_output, text_output)) in expectations.items():
-  infinit = Infinit(home = os.path.join(os.environ['MEMO_HOME_ROOT'], home))
-  res = infinit.run_json(['doctor', 'configuration',  '--script', '--as', 'bob'],
+  memo = Memo(home = os.path.join(os.environ['MEMO_HOME_ROOT'], home))
+  res = memo.run_json(['doctor', 'configuration',  '--script', '--as', 'bob'],
                          return_code = i)
   if home == 'leftovers':
     res = leftovers_json(res)
   assertEq(res, json_output)
-  output = infinit.run(['doctor', 'configuration',  '--as', 'bob', '--no-color'],
+  output = memo.run(['doctor', 'configuration',  '--as', 'bob', '--no-color'],
                          return_code = i)[0].strip().replace('\r', '').split('\n')
   if i == 0:
     output = output[:-2]

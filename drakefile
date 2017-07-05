@@ -128,6 +128,17 @@ def configure(
   cxx_config.add_local_include_path('src')
   cxx_config.define('_FILE_OFFSET_BITS=64')
 
+  if cxx_toolkit.os == drake.os.linux:
+    cxx_config.define('MEMO_LINUX')
+  elif cxx_toolkit.os == drake.os.android:
+    cxx_config.define('MEMO_ANDROID')
+  elif cxx_toolkit.os == drake.os.macos:
+    cxx_config.define('MEMO_MACOSX')
+  elif cxx_toolkit.os == drake.os.windows:
+    cxx_config.define('MEMO_WINDOWS')
+  elif cxx_toolkit.os is drake.os.ios:
+    cxx_config.define('MEMO_IOS')
+
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
 
@@ -157,14 +168,14 @@ def configure(
   class CxxVersionGenerator(VersionGenerator):
     def _variable(self, name, value):
       try:
-        return '#define INFINIT_%s %s' % (name.upper(), int(value))
+        return '#define MEMO_%s %s' % (name.upper(), int(value))
       except:
-        return '#define INFINIT_%s "%s"' % (name.upper(), value)
+        return '#define MEMO_%s "%s"' % (name.upper(), value)
 
   def stringify(s):
     return '"%s"' % re.sub(r'([\\"])', r'\\\1', s)
 
-  CxxVersionGenerator(drake.node('src/infinit/version.hh'),
+  CxxVersionGenerator(drake.node('src/memo/version.hh'),
                       git,
                       production_build = production_build)
 
@@ -172,42 +183,42 @@ def configure(
       'description_regex': description_regex,
       'name_regex': name_regex,
     }):
-    drake.node('src/infinit/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
+    drake.node('src/memo/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   memo_sources = drake.nodes(
-    'src/infinit/Infinit.cc',
-    'src/infinit/Infinit.hh',
-    'src/infinit/Infinit.hxx',
-    'src/infinit/KeyValueStore.cc',
-    'src/infinit/KeyValueStore.hh',
-    'src/infinit/LoginCredentials.cc',
-    'src/infinit/LoginCredentials.hh',
-    'src/infinit/MountOptions.cc',
-    'src/infinit/MountOptions.hh',
-    'src/infinit/Network.cc',
-    'src/infinit/Network.hh',
-    'src/infinit/RPC.cc',
-    'src/infinit/RPC.hh',
-    'src/infinit/RPC.hxx',
-    'src/infinit/User.cc',
-    'src/infinit/User.hh',
-    'src/infinit/Version.hh',
-    'src/infinit/crash-report.cc',
-    'src/infinit/crash-report.hh',
-    'src/infinit/environ.cc',
-    'src/infinit/environ.hh',
-    'src/infinit/serialization.cc',
-    'src/infinit/serialization.hh',
-    'src/infinit/utility.hh',
-    'src/infinit/version.hh',
+    'src/memo/Memo.cc',
+    'src/memo/Memo.hh',
+    'src/memo/Memo.hxx',
+    'src/memo/KeyValueStore.cc',
+    'src/memo/KeyValueStore.hh',
+    'src/memo/LoginCredentials.cc',
+    'src/memo/LoginCredentials.hh',
+    'src/memo/MountOptions.cc',
+    'src/memo/MountOptions.hh',
+    'src/memo/Network.cc',
+    'src/memo/Network.hh',
+    'src/memo/RPC.cc',
+    'src/memo/RPC.hh',
+    'src/memo/RPC.hxx',
+    'src/memo/User.cc',
+    'src/memo/User.hh',
+    'src/memo/Version.hh',
+    'src/memo/crash-report.cc',
+    'src/memo/crash-report.hh',
+    'src/memo/environ.cc',
+    'src/memo/environ.hh',
+    'src/memo/serialization.cc',
+    'src/memo/serialization.hh',
+    'src/memo/utility.hh',
+    'src/memo/version.hh',
   )
-  memo_sources += drake.include('src/infinit/credentials').sources
-  memo_sources += drake.include('src/infinit/descriptor').sources
-  memo_sources += drake.include('src/infinit/filesystem').sources
-  memo_sources += drake.include('src/infinit/model').sources
-  memo_sources += drake.include('src/infinit/overlay').sources
+  memo_sources += drake.include('src/memo/credentials').sources
+  memo_sources += drake.include('src/memo/descriptor').sources
+  memo_sources += drake.include('src/memo/filesystem').sources
+  memo_sources += drake.include('src/memo/model').sources
+  memo_sources += drake.include('src/memo/overlay').sources
   memo_sources += drake.include(
-    'src/infinit/silo',
+    'src/memo/silo',
     entreprise_edition = entreprise_edition).sources
   memo_utility_config = drake.cxx.Config(cxx_config_memo)
   memo_utility_config.define('BEYOND_HOST', stringify(beyond_host))
@@ -216,19 +227,19 @@ def configure(
   memo_utility_config.define('EMAIL_REGEX', stringify(email_regex))
   memo_sources.append(
     drake.cxx.Object(
-      drake.node('src/infinit/utility.cc'),
+      drake.node('src/memo/utility.cc'),
       cxx_toolkit,
       memo_utility_config))
   if not windows:
     memo_sources += drake.nodes(
-      'src/infinit/silo/sftp.cc',
-      'src/infinit/silo/sftp.hh',
+      'src/memo/silo/sftp.cc',
+      'src/memo/silo/sftp.hh',
     )
-  outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
-  jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
+  outguess_lib = drake.cxx.StaticLib('src/memo/model/steg/outguess-0.2/outguess.a')
+  jpeg_lib = drake.cxx.StaticLib('src/memo/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
 
-  outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
-  outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
+  outguess_configure = drake.node('src/memo/model/steg/outguess-0.2/configure')
+  outguess_makefile = drake.node('src/memo/model/steg/outguess-0.2/Makefile')
 
 
   ## ------ ##
@@ -237,7 +248,7 @@ def configure(
   PatchAndInstall = drake.cxx.PatchAndInstall
 
   grpc = drake.include(
-    'src/infinit/grpc',
+    'src/memo/grpc',
     cxx_toolkit = cxx_toolkit,
     cxx_config = cxx_config)
   memo_sources += grpc.sources
@@ -255,8 +266,8 @@ def configure(
   ## ------------ ##
   enable_prometheus = not windows
   if enable_prometheus:
-    cxx_config.define('INFINIT_ENABLE_PROMETHEUS', '1')
-    cxx_config_memo.define('INFINIT_ENABLE_PROMETHEUS', '1')
+    cxx_config.define('MEMO_ENABLE_PROMETHEUS', '1')
+    cxx_config_memo.define('MEMO_ENABLE_PROMETHEUS', '1')
     prometheus = drake.include('prometheus/prometheus-cpp',
                                cxx_toolkit = cxx_toolkit,
                                in_cxx_config = cxx_config,
@@ -269,7 +280,7 @@ def configure(
     prometheus_lib = drake.copy(prometheus.prometheus_lib, libdir,
                                 strip_prefix = True)
     extra_libs.append(prometheus_lib)
-    drake.node('src/infinit/model/prometheus.hh')\
+    drake.node('src/memo/model/prometheus.hh')\
          .dependencies_add(grpc.grpc.protobuf_headers
                            + drake.nodes('prometheus/prometheus-cpp/lib/cpp/metrics.pb.h'))
 
@@ -284,8 +295,8 @@ def configure(
                                  cxx_config = cxx_config)
     crash_report_lib = import_lib(crash_report)
     minidump_stackwalk = crash_report.minidump_stackwalk_exe
-    cxx_config.define('INFINIT_ENABLE_CRASH_REPORT')
-    cxx_config_memo.define('INFINIT_ENABLE_CRASH_REPORT')
+    cxx_config.define('MEMO_ENABLE_CRASH_REPORT')
+    cxx_config_memo.define('MEMO_ENABLE_CRASH_REPORT')
     cxx_config_memo.add_local_include_path('crash-report/src')
   else:
     minidump_stackwalk = None
@@ -339,7 +350,7 @@ def configure(
 
   if with_kvs:
     kvs = drake.include(
-      'src/infinit/kvs',
+      'src/memo/kvs',
       go_toolkit = go_toolkit,
       go_config = go_config,
       grpc = grpc,
@@ -415,33 +426,34 @@ def configure(
   installed_libraries = set()
   # CLI
   memo_cli_sources = drake.nodes(
-    'src/infinit/cli/Block.cc',
-    'src/infinit/cli/Block.hh',
-    'src/infinit/cli/Credentials.cc',
-    'src/infinit/cli/Credentials.hh',
-    'src/infinit/cli/Device.cc',
-    'src/infinit/cli/Device.hh',
-    'src/infinit/cli/Doctor.cc',
-    'src/infinit/cli/Doctor.hh',
-    'src/infinit/cli/Error.hh',
-    'src/infinit/cli/Infinit.cc',
-    'src/infinit/cli/Infinit.hh',
-    'src/infinit/cli/Journal.cc',
-    'src/infinit/cli/Journal.hh',
-    'src/infinit/cli/Network.cc',
-    'src/infinit/cli/Network.hh',
-    'src/infinit/cli/Object.hh',
-    'src/infinit/cli/Object.hxx',
-    'src/infinit/cli/Passport.cc',
-    'src/infinit/cli/Passport.hh',
-    'src/infinit/cli/Silo.cc',
-    'src/infinit/cli/Silo.hh',
-    'src/infinit/cli/User.cc',
-    'src/infinit/cli/User.hh',
-    'src/infinit/cli/utility.cc',
-    'src/infinit/cli/utility.hh',
-    'src/infinit/cli/xattrs.cc',
-    'src/infinit/cli/xattrs.hh',
+    'src/memo/cli/Block.cc',
+    'src/memo/cli/Block.hh',
+    'src/memo/cli/Credentials.cc',
+    'src/memo/cli/Credentials.hh',
+    'src/memo/cli/Device.cc',
+    'src/memo/cli/Device.hh',
+    'src/memo/cli/Doctor.cc',
+    'src/memo/cli/Doctor.hh',
+    'src/memo/cli/Error.hh',
+    'src/memo/cli/Memo.cc',
+    'src/memo/cli/Memo.hh',
+    'src/memo/cli/Memo.hxx',
+    'src/memo/cli/Journal.cc',
+    'src/memo/cli/Journal.hh',
+    'src/memo/cli/Network.cc',
+    'src/memo/cli/Network.hh',
+    'src/memo/cli/Object.hh',
+    'src/memo/cli/Object.hxx',
+    'src/memo/cli/Passport.cc',
+    'src/memo/cli/Passport.hh',
+    'src/memo/cli/Silo.cc',
+    'src/memo/cli/Silo.hh',
+    'src/memo/cli/User.cc',
+    'src/memo/cli/User.hh',
+    'src/memo/cli/utility.cc',
+    'src/memo/cli/utility.hh',
+    'src/memo/cli/xattrs.cc',
+    'src/memo/cli/xattrs.hh',
   )
   memo_modes = [
       'block',
@@ -456,25 +468,25 @@ def configure(
   ]
   if with_kvs:
     memo_cli_sources += drake.nodes(
-      'src/infinit/cli/KeyValueStore.cc',
-      'src/infinit/cli/KeyValueStore.hh',
+      'src/memo/cli/KeyValueStore.cc',
+      'src/memo/cli/KeyValueStore.hh',
     )
     memo_modes.append('key-value-store')
   if with_daemon:
     memo_modes.append('daemon')
     memo_cli_sources += drake.nodes(
-      'src/infinit/cli/Daemon.cc',
-      'src/infinit/cli/Daemon.hh',
+      'src/memo/cli/Daemon.cc',
+      'src/memo/cli/Daemon.hh',
     )
   memo_cli_instantiate = drake.node(
-    'src/infinit/cli/Infinit-instantiate.cc')
+    'src/memo/cli/memo-instantiate.cc')
   for b in memo_modes:
     memo_cli_instantiate_config = drake.cxx.Config(cli_cxx_config)
     if windows:
       memo_cli_instantiate_config.define('ELLE_LOG_DISABLE', 1)
     memo_cli_sources.append(
       drake.cxx.Object(
-        drake.node('src/infinit/cli/instantiate-%s.cc' % b.replace('_', '-')),
+        drake.node('src/memo/cli/instantiate-%s.cc' % b.replace('_', '-')),
         cxx_toolkit,
         memo_cli_instantiate_config))
   memo_cli_deps = [memo_lib]
@@ -961,7 +973,7 @@ def configure(
       else:
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc' and cxx_toolkit.os is drake.os.linux:
-      that_test_libs += grpc.gendn.targets()
+      that_test_libs += grpc.gen_vs_w_named.targets()
       that_test_libs.append(grpc.grpc.protobuf_lib)
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()

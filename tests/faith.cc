@@ -2,21 +2,21 @@
 #include <elle/test.hh>
 #include <elle/Version.hh>
 
-#include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/faith/Faith.hh>
-#include <infinit/silo/Memory.hh>
+#include <memo/model/MissingBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
+#include <memo/model/faith/Faith.hh>
+#include <memo/silo/Memory.hh>
 
-ELLE_LOG_COMPONENT("infinit.model.faith.test");
+ELLE_LOG_COMPONENT("memo.model.faith.test");
 
 template <typename B>
 static
 void
 copy_and_store(B const& block,
-               infinit::model::faith::Faith& d,
+               memo::model::faith::Faith& d,
                bool insert)
 {
-  namespace blk = infinit::model::blocks;
+  namespace blk = memo::model::blocks;
   auto ptr = block.clone();
   if (insert)
     d.insert(std::move(ptr));
@@ -28,12 +28,12 @@ static
 void
 faith()
 {
-  std::unique_ptr<infinit::silo::Silo> storage
-    = std::make_unique<infinit::silo::Memory>();
-  infinit::model::faith::Faith faith(std::move(storage));
+  std::unique_ptr<memo::silo::Silo> storage
+    = std::make_unique<memo::silo::Memory>();
+  memo::model::faith::Faith faith(std::move(storage));
 
-  auto block1 = faith.make_block<infinit::model::blocks::MutableBlock>();
-  auto block2 = faith.make_block<infinit::model::blocks::MutableBlock>();
+  auto block1 = faith.make_block<memo::model::blocks::MutableBlock>();
+  auto block2 = faith.make_block<memo::model::blocks::MutableBlock>();
   BOOST_CHECK_NE(block1->address(), block2->address());
   ELLE_LOG("store blocks")
   {
@@ -54,17 +54,17 @@ faith()
   }
   ELLE_LOG("fetch non-existent block")
   {
-    auto block3 = faith.make_block<infinit::model::blocks::MutableBlock>();
+    auto block3 = faith.make_block<memo::model::blocks::MutableBlock>();
     BOOST_CHECK_THROW(faith.fetch(block3->address()),
-                      infinit::model::MissingBlock);
+                      memo::model::MissingBlock);
     BOOST_CHECK_THROW(faith.remove(block3->address()),
-                      infinit::model::MissingBlock);
+                      memo::model::MissingBlock);
   }
   ELLE_LOG("remove block")
   {
     faith.remove(block2->address());
     BOOST_CHECK_THROW(faith.fetch(block2->address()),
-                      infinit::model::MissingBlock);
+                      memo::model::MissingBlock);
     faith.fetch(block1->address());
   }
 }

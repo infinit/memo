@@ -12,37 +12,37 @@
 #include <elle/utils.hh>
 #include <elle/Version.hh>
 
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
-#include <infinit/model/Conflict.hh>
-#include <infinit/model/MissingBlock.hh>
-#include <infinit/model/MonitoringServer.hh>
-#include <infinit/model/blocks/ACLBlock.hh>
-#include <infinit/model/blocks/ImmutableBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Group.hh>
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/NB.hh>
-#include <infinit/model/doughnut/Remote.hh>
-#include <infinit/model/doughnut/UB.hh>
-#include <infinit/model/doughnut/User.hh>
-#include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
-#include <infinit/overlay/Stonehenge.hh>
-#include <infinit/silo/Memory.hh>
+#include <memo/model/Conflict.hh>
+#include <memo/model/MissingBlock.hh>
+#include <memo/model/MonitoringServer.hh>
+#include <memo/model/blocks/ACLBlock.hh>
+#include <memo/model/blocks/ImmutableBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
+#include <memo/model/doughnut/ACB.hh>
+#include <memo/model/doughnut/Cache.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/Group.hh>
+#include <memo/model/doughnut/Local.hh>
+#include <memo/model/doughnut/NB.hh>
+#include <memo/model/doughnut/Remote.hh>
+#include <memo/model/doughnut/UB.hh>
+#include <memo/model/doughnut/User.hh>
+#include <memo/model/doughnut/ValidationFailed.hh>
+#include <memo/model/doughnut/consensus/Paxos.hh>
+#include <memo/overlay/Stonehenge.hh>
+#include <memo/silo/Memory.hh>
 
 #include "DHT.hh"
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
-namespace blocks = infinit::model::blocks;
-namespace dht = infinit::model::doughnut;
-using namespace infinit::silo;
+namespace blocks = memo::model::blocks;
+namespace dht = memo::model::doughnut;
+using namespace memo::silo;
 
 using dht::consensus::Paxos;
 
@@ -79,9 +79,9 @@ public:
       ::keys_a = elle::cryptography::rsa::keypair::generate(key_size()),
       ::keys_b = elle::cryptography::rsa::keypair::generate(key_size()),
       ::keys_c = elle::cryptography::rsa::keypair::generate(key_size()),
-      id_a = infinit::model::Address::random(0), // FIXME
-      id_b = infinit::model::Address::random(0), // FIXME
-      id_c = infinit::model::Address::random(0), // FIXME
+      id_a = memo::model::Address::random(0), // FIXME
+      id_b = memo::model::Address::random(0), // FIXME
+      id_c = memo::model::Address::random(0), // FIXME
       storage_a = nullptr,
       storage_b = nullptr,
       storage_c = nullptr,
@@ -89,14 +89,14 @@ public:
       version_b = boost::optional<elle::Version>(),
       version_c = boost::optional<elle::Version>(),
       monitoring_socket_path_a = boost::optional<boost::filesystem::path>(),
-      encrypt_options = infinit::model::doughnut::EncryptOptions(),
+      encrypt_options = memo::model::doughnut::EncryptOptions(),
       make_overlay =
       [] (int,
-          infinit::model::NodeLocations peers,
-          std::shared_ptr<infinit::model::doughnut::Local> local,
-          infinit::model::doughnut::Doughnut& d)
+          memo::model::NodeLocations peers,
+          std::shared_ptr<memo::model::doughnut::Local> local,
+          memo::model::doughnut::Doughnut& d)
       {
-        return std::make_unique<infinit::overlay::Stonehenge>(
+        return std::make_unique<memo::overlay::Stonehenge>(
           peers, std::move(local), &d);
       },
       dht::consensus_builder = dht::Doughnut::ConsensusBuilder(),
@@ -106,9 +106,9 @@ public:
         elle::cryptography::rsa::KeyPair keys_a,
         elle::cryptography::rsa::KeyPair keys_b,
         elle::cryptography::rsa::KeyPair keys_c,
-        infinit::model::Address id_a,
-        infinit::model::Address id_b,
-        infinit::model::Address id_c,
+        memo::model::Address id_a,
+        memo::model::Address id_b,
+        memo::model::Address id_c,
         std::unique_ptr<Silo> storage_a,
         std::unique_ptr<Silo> storage_b,
         std::unique_ptr<Silo> storage_c,
@@ -116,14 +116,14 @@ public:
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
         boost::optional<boost::filesystem::path> monitoring_socket_path_a,
-        infinit::model::doughnut::EncryptOptions encrypt_options,
+        memo::model::doughnut::EncryptOptions encrypt_options,
         std::function<
-          std::unique_ptr<infinit::overlay::Stonehenge>(
+          std::unique_ptr<memo::overlay::Stonehenge>(
             int,
-            infinit::model::NodeLocations peers,
+            memo::model::NodeLocations peers,
             std::shared_ptr<
-              infinit::model::doughnut::Local> local,
-            infinit::model::doughnut::Doughnut& d)> make_overlay,
+              memo::model::doughnut::Local> local,
+            memo::model::doughnut::Doughnut& d)> make_overlay,
         dht::Doughnut::ConsensusBuilder consensus_builder,
         bool cache)
               {
@@ -157,9 +157,9 @@ private:
        elle::cryptography::rsa::KeyPair keys_a,
        elle::cryptography::rsa::KeyPair keys_b,
        elle::cryptography::rsa::KeyPair keys_c,
-       infinit::model::Address id_a,
-       infinit::model::Address id_b,
-       infinit::model::Address id_c,
+       memo::model::Address id_a,
+       memo::model::Address id_b,
+       memo::model::Address id_c,
        std::unique_ptr<Silo> storage_a,
        std::unique_ptr<Silo> storage_b,
        std::unique_ptr<Silo> storage_c,
@@ -167,13 +167,13 @@ private:
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
-       infinit::model::doughnut::EncryptOptions encrypt_options,
+       memo::model::doughnut::EncryptOptions encrypt_options,
        std::function<
-         std::unique_ptr<infinit::overlay::Stonehenge>(
+         std::unique_ptr<memo::overlay::Stonehenge>(
            int,
-           infinit::model::NodeLocations peers,
-           std::shared_ptr<infinit::model::doughnut::Local> local,
-           infinit::model::doughnut::Doughnut& d)> make_overlay,
+           memo::model::NodeLocations peers,
+           std::shared_ptr<memo::model::doughnut::Local> local,
+           memo::model::doughnut::Doughnut& d)> make_overlay,
        dht::Doughnut::ConsensusBuilder consensus_builder,
        bool cache)
   {
@@ -194,19 +194,19 @@ private:
           return std::make_unique<dht::consensus::Cache>(
             consensus_builder(dht));
         };
-    auto const members = infinit::model::NodeLocations
+    auto const members = memo::model::NodeLocations
       {
-        {id_a, infinit::model::Endpoints()},
-        {id_b, infinit::model::Endpoints()},
-        {id_c, infinit::model::Endpoints()},
+        {id_a, memo::model::Endpoints()},
+        {id_b, memo::model::Endpoints()},
+        {id_c, memo::model::Endpoints()},
       };
-    std::vector<infinit::overlay::Stonehenge*> stonehenges;
+    std::vector<memo::overlay::Stonehenge*> stonehenges;
     make_overlay =
       [make_overlay, &stonehenges] (
         int n,
-        infinit::model::NodeLocations peers,
-        std::shared_ptr<infinit::model::doughnut::Local> local,
-        infinit::model::doughnut::Doughnut& d)
+        memo::model::NodeLocations peers,
+        std::shared_ptr<memo::model::doughnut::Local> local,
+        memo::model::doughnut::Doughnut& d)
       {
         auto res = make_overlay(
           n, std::move(peers), std::move(local), d);
@@ -227,8 +227,8 @@ private:
         this->keys_a->public_key(),
         passport_a,
         consensus_builder,
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+        [=] (memo::model::doughnut::Doughnut& d,
+             std::shared_ptr<memo::model::doughnut::Local> local)
         {
           return make_overlay(0, members, std::move(local), d);
         },
@@ -236,9 +236,9 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_a),
         dht::version = version_a,
-        infinit::model::doughnut::monitoring_socket_path =
+        memo::model::doughnut::monitoring_socket_path =
           monitoring_socket_path_a,
-        infinit::model::doughnut::encrypt_options = encrypt_options);
+        memo::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_b.
     {
@@ -254,8 +254,8 @@ private:
         this->keys_a->public_key(),
         passport_b,
         consensus_builder,
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+        [=] (memo::model::doughnut::Doughnut& d,
+             std::shared_ptr<memo::model::doughnut::Local> local)
         {
           return make_overlay(1, members, std::move(local), d);
         },
@@ -263,7 +263,7 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
         dht::version = version_b,
-        infinit::model::doughnut::encrypt_options = encrypt_options);
+        memo::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_c.
     {
@@ -279,8 +279,8 @@ private:
         this->keys_a->public_key(),
         passport_c,
         consensus_builder,
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+        [=] (memo::model::doughnut::Doughnut& d,
+             std::shared_ptr<memo::model::doughnut::Local> local)
         {
           return make_overlay(2, members, std::move(local), d);
         },
@@ -288,7 +288,7 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),
         dht::version = version_c,
-        infinit::model::doughnut::encrypt_options = encrypt_options);
+        memo::model::doughnut::encrypt_options = encrypt_options);
     }
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
@@ -361,7 +361,7 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(missing_block, (bool, paxos))
 {
-  using namespace infinit::model;
+  using namespace memo::model;
   DHTs dhts(paxos);
   ELLE_LOG("fetch immutable block")
     BOOST_CHECK_THROW(dhts.dht_a->fetch(
@@ -494,7 +494,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   BOOST_CHECK_THROW(
     dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
                                         dhts.dht_a->version()),
-                       infinit::model::blocks::RemoveSignature()),
+                       memo::model::blocks::RemoveSignature()),
     std::exception);
   BOOST_CHECK_THROW(
     dhts.dht_b->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
@@ -530,10 +530,10 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   {
     BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
     BOOST_CHECK_THROW(
-      dhtb->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      dhtb->remove(ruba->address(), memo::model::blocks::RemoveSignature()),
       std::exception);
     BOOST_CHECK_THROW(
-      dhta->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      dhta->remove(ruba->address(), memo::model::blocks::RemoveSignature()),
       std::exception);
   }
   ELLE_LOG("remove RUB")
@@ -547,8 +547,8 @@ namespace removal
   ELLE_TEST_SCHEDULED(serialize_ACB_remove, (bool, paxos))
   {
     Memory::Blocks dht_storage;
-    auto dht_id = infinit::model::Address::random();
-    infinit::model::Address address;
+    auto dht_id = memo::model::Address::random();
+    memo::model::Address address;
     // Store signature removal in the first run so the second run of the DHT
     // does not fetch the block before removing it. This tests the block is
     // still reloaded without a previous fetch.
@@ -574,20 +574,20 @@ namespace removal
       auto dht = DHT(id = dht_id,
               storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
-      ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
+      ctx.set<memo::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_bad, true, ctx);
       // we send a remove with an obsolete signature, so consensus will retry,
       // but will fail to call sign_remove() since we don't have the proper keys
       BOOST_CHECK_THROW(dht.dht->remove(address, sig),
-                        infinit::model::doughnut::ValidationFailed);
+                        memo::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("remove block")
     {
       auto dht = DHT(id = dht_id,
               storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
-      ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
+      ctx.set<memo::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_good, true, ctx);
       dht.dht->remove(address, sig);
@@ -597,7 +597,7 @@ namespace removal
 }
 
 class AppendConflictResolver
-  : public infinit::model::ConflictResolver
+  : public memo::model::ConflictResolver
 {
   std::unique_ptr<blocks::Block>
   operator () (blocks::Block& old,
@@ -652,7 +652,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
     block_bob->data(elle::Buffer("AB"));
     BOOST_CHECK_THROW(
       dhts.dht_b->seal_and_update(*block_bob),
-      infinit::model::Conflict);
+      memo::model::Conflict);
     dhts.dht_b->seal_and_update(*block_bob,
                                 std::make_unique<AppendConflictResolver>());
   }
@@ -672,9 +672,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   auto keys_a = elle::cryptography::rsa::keypair::generate(key_size());
   auto keys_b = elle::cryptography::rsa::keypair::generate(key_size());
   auto keys_c = elle::cryptography::rsa::keypair::generate(key_size());
-  auto id_a = infinit::model::Address::random(0); // FIXME
-  auto id_b = infinit::model::Address::random(0); // FIXME
-  auto id_c = infinit::model::Address::random(0); // FIXME
+  auto id_a = memo::model::Address::random(0); // FIXME
+  auto id_b = memo::model::Address::random(0); // FIXME
+  auto id_c = memo::model::Address::random(0); // FIXME
   Memory::Blocks storage_a;
   Memory::Blocks storage_b;
   Memory::Blocks storage_c;
@@ -729,19 +729,19 @@ namespace tests_paxos
   /// Make one of the overlay return a partial quorum, missing one of the three
   /// members, and check it gets fixed.
   class WrongQuorumStonehenge
-    : public infinit::overlay::Stonehenge
+    : public memo::overlay::Stonehenge
   {
   public:
     template <typename ... Args>
     WrongQuorumStonehenge(Args&& ... args)
-      : infinit::overlay::Stonehenge(std::forward<Args>(args)...)
+      : memo::overlay::Stonehenge(std::forward<Args>(args)...)
       , fail(false)
     {}
 
-    elle::reactor::Generator<infinit::overlay::Overlay::WeakMember>
-    _lookup(infinit::model::Address address, int n, bool fast) const override
+    elle::reactor::Generator<memo::overlay::Overlay::WeakMember>
+    _lookup(memo::model::Address address, int n, bool fast) const override
     {
-      return infinit::overlay::Stonehenge::_lookup(address,
+      return memo::overlay::Stonehenge::_lookup(address,
                                                    fail ? n - 1 : n,
                                                    fast);
     }
@@ -755,17 +755,17 @@ namespace tests_paxos
     auto dhts = DHTs(
       make_overlay =
       [&stonehenge] (int dht,
-                     infinit::model::NodeLocations peers,
-                     std::shared_ptr<infinit::model::doughnut::Local> local,
-                     infinit::model::doughnut::Doughnut& d)
+                     memo::model::NodeLocations peers,
+                     std::shared_ptr<memo::model::doughnut::Local> local,
+                     memo::model::doughnut::Doughnut& d)
       {
         if (dht == 0)
         {
           stonehenge = new WrongQuorumStonehenge(peers, std::move(local), &d);
-          return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
+          return std::unique_ptr<memo::overlay::Stonehenge>(stonehenge);
         }
         else
-          return std::make_unique<infinit::overlay::Stonehenge>(
+          return std::make_unique<memo::overlay::Stonehenge>(
             peers, std::move(local), &d);
       });
     auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
@@ -791,7 +791,7 @@ namespace tests_paxos
     dht_b.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_a.overlay);
     dht_b.overlay->connect(*dht_c.overlay);
-    std::vector<infinit::model::Model::AddressVersion> addrs;
+    std::vector<memo::model::Model::AddressVersion> addrs;
     for (int i=0; i<10; ++i)
     {
       auto block = dht_a.dht->make_block<blocks::ACLBlock>();
@@ -802,7 +802,7 @@ namespace tests_paxos
       dht_b.dht->seal_and_insert(*block);
     }
     int hit = 0;
-    auto handler = [&](infinit::model::Address,
+    auto handler = [&](memo::model::Address,
                        std::unique_ptr<blocks::Block> b,
                        std::exception_ptr ex)
       {
@@ -879,23 +879,23 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
 }
 
 static std::unique_ptr<blocks::Block>
-cycle(infinit::model::doughnut::Doughnut& dht,
+cycle(memo::model::doughnut::Doughnut& dht,
       std::unique_ptr<blocks::Block> b)
 {
   elle::Buffer buf;
   {
     elle::IOStream os(buf.ostreambuf());
     elle::serialization::binary::SerializerOut sout(os, false);
-    sout.set_context(infinit::model::doughnut::ACBDontWaitForSignature{});
-    sout.set_context(infinit::model::doughnut::OKBDontWaitForSignature{});
+    sout.set_context(memo::model::doughnut::ACBDontWaitForSignature{});
+    sout.set_context(memo::model::doughnut::OKBDontWaitForSignature{});
     sout.serialize_forward(b);
   }
   elle::IOStream is(buf.istreambuf());
   elle::serialization::binary::SerializerIn sin(is, false);
-  sin.set_context<infinit::model::Model*>(&dht); // FIXME: needed ?
-  sin.set_context<infinit::model::doughnut::Doughnut*>(&dht);
-  sin.set_context(infinit::model::doughnut::ACBDontWaitForSignature{});
-  sin.set_context(infinit::model::doughnut::OKBDontWaitForSignature{});
+  sin.set_context<memo::model::Model*>(&dht); // FIXME: needed ?
+  sin.set_context<memo::model::doughnut::Doughnut*>(&dht);
+  sin.set_context(memo::model::doughnut::ACBDontWaitForSignature{});
+  sin.set_context(memo::model::doughnut::OKBDontWaitForSignature{});
   auto res = sin.deserialize<std::unique_ptr<blocks::Block>>();
   res->seal();
   return res;
@@ -945,7 +945,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   { // signing with group key
     std::unique_ptr<elle::cryptography::rsa::PublicKey> gkey;
     {
-      infinit::model::doughnut::Group g(*dhts.dht_a, "g");
+      memo::model::doughnut::Group g(*dhts.dht_a, "g");
       g.create();
       g.add_member(dht::User(dhts.keys_b->K(), "bob"));
       gkey.reset(new elle::cryptography::rsa::PublicKey(
@@ -968,15 +968,15 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
 ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
 {
   auto keys_a = elle::cryptography::rsa::keypair::generate(key_size());
   auto keys_b = elle::cryptography::rsa::keypair::generate(key_size());
   auto keys_c = elle::cryptography::rsa::keypair::generate(key_size());
-  auto id_a = infinit::model::Address::random(0); // FIXME
-  auto id_b = infinit::model::Address::random(0); // FIXME
-  auto id_c = infinit::model::Address::random(0); // FIXME
+  auto id_a = memo::model::Address::random(0); // FIXME
+  auto id_b = memo::model::Address::random(0); // FIXME
+  auto id_c = memo::model::Address::random(0); // FIXME
   Memory::Blocks storage_a;
   Memory::Blocks storage_b;
   Memory::Blocks storage_c;
@@ -997,8 +997,8 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
   );
   BOOST_CHECK(boost::filesystem::exists(monitoring_path));
   elle::reactor::network::UnixDomainSocket socket(monitoring_path);
-  using Monitoring = infinit::model::MonitoringServer;
-  using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+  using Monitoring = memo::model::MonitoringServer;
+  using Query = memo::model::MonitoringServer::MonitorQuery::Query;
   auto do_query = [&] (Query query_val) -> elle::json::Object
     {
       auto query = Monitoring::MonitorQuery(query_val);
@@ -1056,17 +1056,17 @@ class Local:
 {
 public:
   using Super = dht::consensus::Paxos::LocalPeer;
-  using Address = infinit::model::Address;
+  using Address = memo::model::Address;
 
   template <typename ... Args>
-  Local(infinit::model::doughnut::consensus::Paxos& paxos,
+  Local(memo::model::doughnut::consensus::Paxos& paxos,
         int factor,
         bool rebalance_auto_expand,
         std::chrono::system_clock::duration node_timeout,
-        infinit::model::doughnut::Doughnut& dht,
+        memo::model::doughnut::Doughnut& dht,
         Address id,
         Args&& ... args)
-    : infinit::model::doughnut::Peer(dht, id)
+    : memo::model::doughnut::Peer(dht, id)
     , Super(paxos,
             factor,
             rebalance_auto_expand,
@@ -1093,7 +1093,7 @@ public:
 
   virtual
   void
-  store(blocks::Block const& block, infinit::model::StoreMode mode) override
+  store(blocks::Block const& block, memo::model::StoreMode mode) override
   {
     elle::reactor::wait(this->_store_barrier);
     Super::store(block, mode);
@@ -1143,7 +1143,7 @@ public:
   }
 
   void
-  _disappeared_schedule_eviction(infinit::model::Address id) override
+  _disappeared_schedule_eviction(memo::model::Address id) override
   {
     ELLE_TRACE("%s: node %f disappeared, evict when signaled", this, id);
     this->_evict.connect([this, id] { this->_disappeared_evict(id); });
@@ -1180,7 +1180,7 @@ class InstrumentedPaxos
   make_local(
     boost::optional<int> port,
     boost::optional<boost::asio::ip::address> listen,
-    std::unique_ptr<infinit::silo::Silo> storage) override
+    std::unique_ptr<memo::silo::Silo> storage) override
   {
     return std::make_unique<Local>(
       *this,
@@ -1301,11 +1301,11 @@ namespace rebalancing
       {
         dht_a.dht->seal_and_update(*b1);
       }
-      catch (infinit::model::Conflict const& c)
+      catch (memo::model::Conflict const& c)
       {
         ELLE_LOG("resolve conflict")
         {
-          dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
+          dynamic_cast<memo::model::blocks::MutableBlock&>(*c.current())
             .data(std::string("extend_and_write 1 bis"));
           dht_a.dht->seal_and_update(*c.current());
         }
@@ -1317,8 +1317,8 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(extend_shrink_and_write)
   {
-    run_extend_shrink_and_write<infinit::model::blocks::MutableBlock>();
-    run_extend_shrink_and_write<infinit::model::blocks::ACLBlock>();
+    run_extend_shrink_and_write<memo::model::blocks::MutableBlock>();
+    run_extend_shrink_and_write<memo::model::blocks::ACLBlock>();
   }
 
   ELLE_TEST_SCHEDULED(shrink_and_write)
@@ -1441,7 +1441,7 @@ namespace rebalancing
   }
 
   class VersionHop:
-    public infinit::model::ConflictResolver
+    public memo::model::ConflictResolver
   {
   public:
     VersionHop(blocks::Block& previous)
@@ -1600,7 +1600,7 @@ namespace rebalancing
     }
     ELLE_LOG("wait for rebalancing")
     {
-      boost::signals2::signal<void(infinit::model::Address)> rebalanced;
+      boost::signals2::signal<void(memo::model::Address)> rebalanced;
       boost::signals2::scoped_connection c_a =
         local_a.rebalanced().connect(rebalanced);
       boost::signals2::scoped_connection c_b =
@@ -1614,9 +1614,9 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_from_disk, (bool, immutable))
   {
-    infinit::silo::Memory::Blocks storage_a;
-    infinit::model::Address address;
-    auto id_a = infinit::model::Address::random();
+    memo::silo::Memory::Blocks storage_a;
+    memo::model::Address address;
+    auto id_a = memo::model::Address::random();
     ELLE_LOG("create block with 1 DHT")
     {
       auto dht_a = DHT(id = id_a,
@@ -1683,7 +1683,7 @@ namespace rebalancing
     }
     ELLE_LOG("wait for rebalancing")
     {
-      boost::signals2::signal<void(infinit::model::Address)> rebalanced;
+      boost::signals2::signal<void(memo::model::Address)> rebalanced;
       boost::signals2::scoped_connection c_a =
         local_a.rebalanced().connect(rebalanced);
       boost::signals2::scoped_connection c_b =
@@ -2141,7 +2141,7 @@ ELLE_TEST_SCHEDULED(admin_keys)
   // set server-side adm key but don't tell the client
   auto admin = elle::cryptography::rsa::keypair::generate(512);
   dht.dht->admin_keys().r.push_back(admin.K());
-  dynamic_cast<infinit::model::blocks::MutableBlock*>(b2.get())->
+  dynamic_cast<memo::model::blocks::MutableBlock*>(b2.get())->
     data(std::string("bar"));
   BOOST_CHECK_THROW(client.dht->seal_and_update(*b2), std::exception);
   auto b3 = client.dht->make_block<blocks::ACLBlock>();
@@ -2174,7 +2174,7 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto ba3 = client.dht->fetch(ba->address());
   no_cheating(client.dht.get(), ba3);
   BOOST_CHECK_EQUAL(ba3->data(), std::string("foo"));
-  dynamic_cast<infinit::model::blocks::MutableBlock*>(ba3.get())->data(
+  dynamic_cast<memo::model::blocks::MutableBlock*>(ba3.get())->data(
     std::string("bar"));
   client.dht->seal_and_update(*ba3);
   auto ba4 = cadm.dht->fetch(ba->address());
@@ -2224,7 +2224,7 @@ ELLE_TEST_SCHEDULED(admin_keys)
 ELLE_TEST_SCHEDULED(disabled_crypto)
 {
   auto key = elle::cryptography::rsa::keypair::generate(key_size());
-  infinit::model::doughnut::EncryptOptions eopts(false, false, false);
+  memo::model::doughnut::EncryptOptions eopts(false, false, false);
   DHTs dhts(true, encrypt_options = eopts, keys_a = key, keys_b=key, keys_c = key);
   auto b = dhts.dht_a->make_block<blocks::ACLBlock>(elle::Buffer("canard", 6));
   auto baddr = b->address();
@@ -2241,9 +2241,9 @@ ELLE_TEST_SCHEDULED(disabled_crypto)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  boost::unit_test::test_suite* plain = BOOST_TEST_SUITE("plain");
+  auto plain = BOOST_TEST_SUITE("plain");
   suite.add(plain);
-  boost::unit_test::test_suite* paxos = BOOST_TEST_SUITE("paxos");
+  auto paxos = BOOST_TEST_SUITE("paxos");
   suite.add(paxos);
 #define TEST(Name)                              \
   {                                             \
@@ -2267,16 +2267,16 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
-#ifndef INFINIT_WINDOWS
+#ifndef MEMO_WINDOWS
   TEST(monitoring);
 #endif
   {
-    boost::unit_test::test_suite* remove_plain = BOOST_TEST_SUITE("removal");
+    auto remove_plain = BOOST_TEST_SUITE("removal");
     plain->add(remove_plain);
-    boost::unit_test::test_suite* remove_paxos = BOOST_TEST_SUITE("removal");
+    auto remove_paxos = BOOST_TEST_SUITE("removal");
     paxos->add(remove_paxos);
-    auto* plain = remove_plain;
-    auto* paxos = remove_paxos;
+    auto plain = remove_plain;
+    auto paxos = remove_paxos;
     using namespace removal;
     TEST(serialize_ACB_remove);
   }
@@ -2290,7 +2290,7 @@ ELLE_TEST_SUITE()
     paxos->add(ELLE_TEST_CASE(&tests_paxos::CHB_no_peer, "CHB_no_peer"));
   }
   {
-    boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
+    auto rebalancing = BOOST_TEST_SUITE("rebalancing");
     paxos->add(rebalancing);
     using namespace rebalancing;
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(3));
@@ -2346,7 +2346,7 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
     }
     {
-      auto* evict_chain = BOOST_TEST_SUITE("evict_chain");
+      auto evict_chain = BOOST_TEST_SUITE("evict_chain");
       rebalancing->add(evict_chain);
       evict_chain->add(
         ELLE_TEST_CASE(std::bind(&rebalancing::evict_chain, true), "expand"),

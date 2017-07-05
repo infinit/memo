@@ -3,37 +3,37 @@
 import sys
 from utils import *
 
-with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
+with TemporaryDirectory() as tmp, Memo() as memo_1, Memo() as memo_2:
   # Device 1
-  infinit_1.run(['user', 'create',  'user'])
-  user = infinit_1.run_json(
+  memo_1.run(['user', 'create',  'user'])
+  user = memo_1.run_json(
     ['user', 'export', 'user', '--full'])
-  infinit_1.run([
+  memo_1.run([
     'silo', 'create', 'filesystem',
      'storage', '--path', tmp.dir,
   ])
-  network_name = infinit_1.run([
+  network_name = memo_1.run([
     'network', 'create',
     'network', '--silo', 'storage',
     '--no-consensus',
     '--as', 'user',
   ])
-  network = infinit_1.run_json([
+  network = memo_1.run_json([
     'network', 'export',
      'network',
     '--as', 'user',
   ])
-  infinit_1.run([
+  memo_1.run([
     'volume', 'create',
      'volume', '--network', 'network',
     '--as', 'user',
   ])
-  volume = infinit_1.run_json([
+  volume = memo_1.run_json([
     'volume', 'export',
      'volume',
     '--as', 'user',
   ])
-  response = infinit_1.run_json(
+  response = memo_1.run_json(
     [
       'volume', 'run',
       'volume',
@@ -44,21 +44,21 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
   # Device 2
-  infinit_2.run(
+  memo_2.run(
     ['user', 'import'], input = user)
-  infinit_2.run([
+  memo_2.run([
     'silo', 'create', 'filesystem', 'storage',
     '--path', tmp.dir,
   ])
-  infinit_2.run(['network', 'import'], input = network)
-  infinit_2.run([
+  memo_2.run(['network', 'import'], input = network)
+  memo_2.run([
     'network', 'link',
      'network',
     '--silo', 'storage',
     '--as', 'user',
   ])
-  infinit_2.run(['volume', 'import'], input = volume)
-  response = infinit_2.run_json(
+  memo_2.run(['volume', 'import'], input = volume)
+  response = memo_2.run_json(
     [
       'volume', 'run',
       'volume',
@@ -69,43 +69,43 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     raise AssertionError('operation failed: %s' % response)
   assertEq(sorted(response['entries']), ['.', '..', 'beacon'])
   # XATTRS
-  response = infinit_1.run_script(user = 'user', operation = 'setxattr',
+  response = memo_1.run_script(user = 'user', operation = 'setxattr',
                                   path = '/beacon',
                                   name = 'foo', value = 'bar')
   assertEq(response['success'], True)
-  response = infinit_1.run_script(user = 'user', operation = 'getxattr',
+  response = memo_1.run_script(user = 'user', operation = 'getxattr',
                                   path = '/beacon',
                                   name = 'foo')
   assertEq(response['success'], True)
   assertEq(response['value'], 'bar')
-  response = infinit_1.run_script(user = 'user', operation = 'listxattr',
+  response = memo_1.run_script(user = 'user', operation = 'listxattr',
                                   path = '/beacon')
   assertEq(response['entries'], ['foo'])
-  response = infinit_1.run_script(user = 'user', operation = 'removexattr',
+  response = memo_1.run_script(user = 'user', operation = 'removexattr',
                                   path = '/beacon',
                                   name = 'foo')
   assertEq(response['success'], True)
-  response = infinit_1.run_script(user = 'user', operation = 'getxattr',
+  response = memo_1.run_script(user = 'user', operation = 'getxattr',
                                   path = '/beacon',
                                   name = 'foo')
   assertEq(response['success'], False)
   # READ/WRITE FILES
-  response = infinit_1.run_script(user = 'user', operation = 'write_file',
+  response = memo_1.run_script(user = 'user', operation = 'write_file',
                                   path = '/beacon/readme.txt',
                                   content = 'foo')
   assertEq(response['success'], True)
-  response = infinit_1.run_script(user = 'user', operation = 'read_file',
+  response = memo_1.run_script(user = 'user', operation = 'read_file',
                                   path = '/beacon/readme.txt')
   assertEq(response['success'], True)
   assertEq(response['content'], 'foo')
-  response = infinit_1.run_script(user = 'user', operation = 'unlink',
+  response = memo_1.run_script(user = 'user', operation = 'unlink',
                                   path = '/beacon/readme.txt')
   assertEq(response['success'], True)
-  response = infinit_1.run_script(user = 'user', operation = 'rmdir',
+  response = memo_1.run_script(user = 'user', operation = 'rmdir',
                                   path = '/beacon')
   assertEq(response['success'], True)
   # READ/WRITE files with handle API
-  response = infinit_1.run_script(user = 'user', seq =
+  response = memo_1.run_script(user = 'user', seq =
     [
       { 'operation': 'create', 'path': '/file', 'handle': 'h1',
         'flags': 0x0202, 'mode': 33206
@@ -123,7 +123,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     ]);
   assertEq(4, len(response))
   assertEq(response[3]['success'], True)
-  response = infinit_1.run_script(user = 'user', seq =
+  response = memo_1.run_script(user = 'user', seq =
     [
       { 'operation': 'open', 'path': '/file', 'handle': 'h1',
         'flags': 0x2, 'mode': 0

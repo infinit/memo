@@ -1,29 +1,26 @@
-#ifndef DUMMYDOUGHNUT_HH
-# define DUMMYDOUGHNUT_HH
+#pragma once
 
-#include <infinit/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/Doughnut.hh>
 
 class DummyDoughnut
-  : public infinit::model::doughnut::Doughnut
+  : public memo::model::doughnut::Doughnut
 {
 public:
   DummyDoughnut()
-    : DummyDoughnut(infinit::model::Address::random(0), // FIXME
+    : DummyDoughnut(memo::model::Address::random(0), // FIXME
                     elle::cryptography::rsa::keypair::generate(1024))
   {}
 
-  DummyDoughnut(infinit::model::Address id,
+  DummyDoughnut(memo::model::Address id,
                 elle::cryptography::rsa::KeyPair keys)
-    : infinit::model::doughnut::Doughnut(
+    : memo::model::doughnut::Doughnut(
       id, std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
       keys.public_key(),
-      infinit::model::doughnut::Passport(keys.K(), "network", keys),
-      [] (infinit::model::doughnut::Doughnut&)
+      memo::model::doughnut::Passport(keys.K(), "network", keys),
+      [] (memo::model::doughnut::Doughnut&)
       { return nullptr; },
-      [] (infinit::model::doughnut::Doughnut&,
-          std::shared_ptr<infinit::model::doughnut::Local>)
+      [] (memo::model::doughnut::Doughnut&,
+          std::shared_ptr<memo::model::doughnut::Local>)
       { return nullptr; })
   {}
 };
-
-#endif

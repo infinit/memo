@@ -9,18 +9,17 @@
 
 #include <elle/cryptography/SecretKey.hh>
 
-#include <infinit/model/blocks/Block.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/CHB.hh>
-#include <infinit/model/doughnut/NB.hh>
-#include <infinit/model/doughnut/OKB.hh>
-#include <infinit/model/doughnut/UB.hh>
-
-#include <infinit/filesystem/filesystem.hh>
-#include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/File.hh>
-#include <infinit/utility.hh>
+#include <memo/model/blocks/Block.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/ACB.hh>
+#include <memo/model/doughnut/CHB.hh>
+#include <memo/model/doughnut/NB.hh>
+#include <memo/model/doughnut/OKB.hh>
+#include <memo/model/doughnut/UB.hh>
+#include <memo/filesystem/filesystem.hh>
+#include <memo/filesystem/Directory.hh>
+#include <memo/filesystem/File.hh>
+#include <memo/utility.hh>
 
 ELLE_LOG_COMPONENT("backward-compatibility");
 
@@ -142,8 +141,8 @@ static const elle::Buffer salt("HARDCODED_SALT");
 static const DeterministicSecretKey secret =
   elle::serialization::json::deserialize<DeterministicSecretKey>(secret_buffer);
 
-namespace dht = infinit::model::doughnut;
-namespace fs = infinit::filesystem;
+namespace dht = memo::model::doughnut;
+namespace fs = memo::filesystem;
 
 class DummyDoughnut
   : public dht::Doughnut
@@ -152,7 +151,7 @@ public:
   DummyDoughnut(std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
                 boost::optional<elle::Version> v)
     : dht::Doughnut(
-      infinit::model::Address::null, keys, keys->public_key(),
+      memo::model::Address::null, keys, keys->public_key(),
       dht::Passport(keys->K(), "network", *keys),
       [] (dht::Doughnut&)
       { return nullptr; },
@@ -184,7 +183,7 @@ struct TestSet
 
   void apply(std::string const& action,
              std::function<void(std::string const&,
-                                infinit::model::blocks::Block*)> const& f)
+                                memo::model::blocks::Block*)> const& f)
   {
     ELLE_LOG("%s CHB", action)
       f("CHB", chb.get());
@@ -216,12 +215,12 @@ struct TestSetConflictResolver
   : dht(keys, v)
   , dir(new fs::DirectoryConflictResolver(dht,
       fs::Operation{fs::OperationType::insert, "foo", fs::EntryType::directory, {}},
-      infinit::model::Address()))
+      memo::model::Address()))
   , file(new fs::FileConflictResolver("/foo", &dht, fs::WriteTarget::data))
   {}
   void apply(std::string const& action,
              std::function<void(std::string const&,
-                                infinit::model::ConflictResolver*)> const& f)
+                                memo::model::ConflictResolver*)> const& f)
   {
     std::cout << "  " << action << " dir" << std::endl;
     f("cr_dir", dir.get());
@@ -279,7 +278,7 @@ main(int argc, char** argv)
   }
   if (vm.count("version"))
   {
-    std::cout << infinit::version() << std::endl;
+    std::cout << memo::version() << std::endl;
     return 0;
   }
   elle::reactor::Scheduler sched;
@@ -297,7 +296,7 @@ main(int argc, char** argv)
       if (vm.count("generate"))
       {
         elle::Version current_version(
-          infinit::version().major(), infinit::version().minor(), 0);
+          memo::version().major(), memo::version().minor(), 0);
         auto current = path(current_version);
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
@@ -305,14 +304,14 @@ main(int argc, char** argv)
         TestSet set(keys, current_version);
         set.apply(
           "generate",
-          [&] (std::string const& name, infinit::model::blocks::Block* b)
+          [&] (std::string const& name, memo::model::blocks::Block* b)
           {
             generate(name, b, current, current_version);
           });
         TestSetConflictResolver cr(keys, current_version);
         cr.apply(
           "generate",
-          [&] (std::string const& name, infinit::model::ConflictResolver* b)
+          [&] (std::string const& name, memo::model::ConflictResolver* b)
           {
             generate(name, b, current, current_version);
           });
@@ -344,7 +343,7 @@ main(int argc, char** argv)
           TestSet set(keys, version);
           set.apply(
             "check",
-            [&] (std::string const& name, infinit::model::blocks::Block* b)
+            [&] (std::string const& name, memo::model::blocks::Block* b)
             {
               {
                 auto path = p / elle::sprintf("%s.json", name);
@@ -361,7 +360,7 @@ main(int argc, char** argv)
                 ctx.set<dht::Doughnut*>(&set.dht);
                 auto loaded =
                   elle::serialization::json::deserialize<
-                  std::unique_ptr<infinit::model::blocks::Block>>(
+                  std::unique_ptr<memo::model::blocks::Block>>(
                     contents, version, false, ctx);
                 // Replace OKB owner keys with deterministic ones
                 std::cerr << "CAST" << std::endl;
@@ -407,7 +406,7 @@ main(int argc, char** argv)
           TestSetConflictResolver cr(keys, version);
           cr.apply(
             "check",
-            [&] (std::string const& name, infinit::model::ConflictResolver* b)
+            [&] (std::string const& name, memo::model::ConflictResolver* b)
             {
               {
                 auto path = p / elle::sprintf("%s.json", name);

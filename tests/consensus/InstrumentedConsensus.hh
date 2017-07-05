@@ -2,44 +2,44 @@
 
 #include <boost/signals2.hpp>
 
-#include <infinit/model/MissingBlock.hh>
-#include <infinit/model/doughnut/Consensus.hh>
+#include <memo/model/MissingBlock.hh>
+#include <memo/model/doughnut/Consensus.hh>
 
 class InstrumentedConsensus
-  : public infinit::model::doughnut::consensus::Consensus
+  : public memo::model::doughnut::consensus::Consensus
 {
 public:
-  using Address = infinit::model::Address;
+  using Address = memo::model::Address;
 
-  InstrumentedConsensus(infinit::model::doughnut::Doughnut& dht)
-    : infinit::model::doughnut::consensus::Consensus(dht)
+  InstrumentedConsensus(memo::model::doughnut::Doughnut& dht)
+    : memo::model::doughnut::consensus::Consensus(dht)
   {}
 
 public:
   void
-  add(infinit::model::blocks::Block const& block)
+  add(memo::model::blocks::Block const& block)
   {
     this->_blocks.emplace(block.address(), block.clone());
   }
 
   using Blocks = std::unordered_map<
-    Address, std::unique_ptr<infinit::model::blocks::Block>>;
+    Address, std::unique_ptr<memo::model::blocks::Block>>;
   ELLE_ATTRIBUTE_R(Blocks, blocks);
   ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address const&)>, fetched);
 
 protected:
   void
-  _store(std::unique_ptr<infinit::model::blocks::Block>,
-         infinit::model::StoreMode,
-         std::unique_ptr<infinit::model::ConflictResolver>) override
+  _store(std::unique_ptr<memo::model::blocks::Block>,
+         memo::model::StoreMode,
+         std::unique_ptr<memo::model::ConflictResolver>) override
   {}
 
-  std::unique_ptr<infinit::model::blocks::Block>
+  std::unique_ptr<memo::model::blocks::Block>
   _fetch(Address addr, boost::optional<int>) override
   {
     auto it = this->_blocks.find(addr);
     if (it == this->_blocks.end())
-      throw infinit::model::MissingBlock(addr);
+      throw memo::model::MissingBlock(addr);
     else
     {
       this->_fetched(addr);
@@ -48,7 +48,7 @@ protected:
   }
 
   void
-  _remove(Address addr, infinit::model::blocks::RemoveSignature) override
+  _remove(Address addr, memo::model::blocks::RemoveSignature) override
   {
     this->_blocks.erase(addr);
   }

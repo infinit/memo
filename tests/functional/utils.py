@@ -50,16 +50,16 @@ class Unreachable(BaseException):
 def unreachable():
   raise Unreachable()
 
-class Infinit(TemporaryDirectory):
+class Memo(TemporaryDirectory):
 
   def __init__(self,
                beyond = None,
-               infinit_root = None,
+               memo_root = None,
                home = None,
                user = None):
     super().__init__(home)
     self.__beyond = beyond
-    self.__infinit_root = infinit_root or ''
+    self.__memo_root = memo_root or ''
     self.__user = user
     self.__env = {}
 
@@ -137,8 +137,8 @@ class Infinit(TemporaryDirectory):
     elif valgrind:
       args = ['/usr/bin/valgrind'] + args
     env_ = {
-      'INFINIT_BACKTRACE': '1',
-      'INFINIT_RDV': '',
+      'MEMO_BACKTRACE': '1',
+      'MEMO_RDV': '',
     }
     if self.dir is not None:
       env_['MEMO_HOME'] = self.dir
@@ -149,7 +149,7 @@ class Infinit(TemporaryDirectory):
       if k in os.environ:
         env_[k] = os.environ[k]
     if self.__beyond is not None:
-      env_['INFINIT_BEYOND'] = self.__beyond.domain
+      env_['MEMO_BEYOND'] = self.__beyond.domain
     env_.update(env)
     env_.update(self.__env)
     if input is not None and not noscript:
@@ -188,7 +188,8 @@ class Infinit(TemporaryDirectory):
           valgrind = False,
           timeout = 600,
           noscript = False,
-          binary = binary):
+          binary = binary,
+          kill = False):
     '''Return (stdout, stderr).'''
     args = [binary] + args
     try:
@@ -199,15 +200,17 @@ class Infinit(TemporaryDirectory):
       out, err = process.communicate(timeout = timeout)
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
-      process.terminate()
+      process.kill()
       try:
-        out, err = process.communicate(timeout = 30)
+        out, err = process.communicate(timeout = 15)
       except ValueError:
         # Python bug, throws ValueError. But in that case blocking read is fine
         out = process.stdout.read()
         err = process.stderr.read()
       print('STDOUT: %s' % out.decode('utf-8'))
       print('STDERR: %s' % err.decode('utf-8'))
+      if kill:
+        return out, err
       raise
     out = out.decode('utf-8')
     err = err.decode('utf-8')
@@ -424,19 +427,19 @@ class Beyond():
 
 class User():
 
-  def __init__(self, name, infinit):
+  def __init__(self, name, memo):
     self.name = name
     self.storage = '%s/%s-storage' % (name, name)
     self.network = '%s/%s-network' % (name, name)
     self.volume = '%s/%s-volume' % (name, name)
-    self.mountpoint = '%s/%s-mountpoint' % (infinit.dir, name)
+    self.mountpoint = '%s/%s-mountpoint' % (memo.dir, name)
     self.drive = '%s/%s-drive' % (name, name)
     os.mkdir(self.mountpoint)
 
-    self.infinit = infinit
+    self.memo = memo
 
   def run(self, cli, **kargs):
-    return self.infinit.run(
+    return self.memo.run(
       cli.split(' ') if isinstance(cli, str) else cli,
       env = { 'MEMO_USER': self.name }, **kargs)
 
@@ -445,10 +448,10 @@ class User():
       env['MEMO_USER'] = self.name
     else:
       kwargs['env'] = { 'MEMO_USER': self.name }
-    return self.infinit.run_json(*args, **kwargs)
+    return self.memo.run_json(*args, **kwargs)
 
   def run_split(self, args, **kargs):
-    return self.infinit.run(args, env = { 'MEMO_USER': self.name }, **kargs)
+    return self.memo.run(args, env = { 'MEMO_USER': self.name }, **kargs)
 
   def async(self, cli, **kargs):
     import threading
@@ -460,7 +463,7 @@ class User():
     return thread
 
   def fail(self, cli, **kargs):
-    self.infinit.run(cli.split(' '), return_code = 1, **kargs)
+    self.memo.run(cli.split(' '), return_code = 1, **kargs)
 
 class SharedLogicCLITests():
 
@@ -476,7 +479,7 @@ class SharedLogicCLITests():
   def run(self):
     entity = self.__entity
     # Creating and deleting entity.
-    with Infinit() as bob:
+    with Memo() as bob:
       e_name = self.random_sequence()
       bob.run(['user', 'create',  'bob'])
       bob.run(['network', 'create', 'network', '--as', 'bob'])
@@ -487,7 +490,7 @@ class SharedLogicCLITests():
 
     # Push to the hub.
     with Beyond() as beyond, \
-        Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
+        Memo(beyond = beyond) as bob, Memo(beyond) as alice:
       e_name = self.random_sequence()
       bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
       bob.run(['network', 'create', 'network', '--as', 'bob',
@@ -508,7 +511,7 @@ class SharedLogicCLITests():
       assertEq(e['description'], 'something')
 
     # Pull and delete.
-    with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+    with Beyond() as beyond, Memo(beyond = beyond) as bob:
       e_name = self.random_sequence()
       e_name2 = e_name
       while e_name2 == e_name:

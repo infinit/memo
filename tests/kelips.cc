@@ -6,17 +6,17 @@
 
 #include <elle/reactor/for-each.hh>
 
-#include <infinit/Network.hh>
-#include <infinit/filesystem/filesystem.hh>
-#include <infinit/model/Endpoints.hh>
-#include <infinit/model/doughnut/Async.hh>
-#include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/silo/Filesystem.hh>
-#include <infinit/silo/Memory.hh>
-#include <infinit/silo/Silo.hh>
+#include <memo/Network.hh>
+#include <memo/filesystem/filesystem.hh>
+#include <memo/model/Endpoints.hh>
+#include <memo/model/doughnut/Async.hh>
+#include <memo/model/doughnut/Cache.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/consensus/Paxos.hh>
+#include <memo/overlay/kelips/Kelips.hh>
+#include <memo/silo/Filesystem.hh>
+#include <memo/silo/Memory.hh>
+#include <memo/silo/Silo.hh>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,25 +25,25 @@
 
 ELLE_LOG_COMPONENT("test");
 
-#if defined INFINIT_WINDOWS
+#if defined MEMO_WINDOWS
 # undef stat
 # define IF_WINDOWS(Then, Else) (Then)
 #else
 # define IF_WINDOWS(Then, Else) (Else)
 #endif
 
-#if defined INFINIT_MACOSX
+#if defined MEMO_MACOSX
 # define IF_MACOS(Then, Else) (Then)
 #else
 # define IF_MACOS(Then, Else) (Else)
 #endif
 
-namespace ifs = infinit::filesystem;
+namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
-namespace imd = infinit::model::doughnut;
-namespace iok = infinit::overlay::kelips;
-using infinit::model::Endpoints;
+namespace imd = memo::model::doughnut;
+namespace iok = memo::overlay::kelips;
+using memo::model::Endpoints;
 
 namespace
 {
@@ -80,8 +80,8 @@ struct BEndpoints
   int port;
   using Model = elle::das::Model<
     BEndpoints,
-    decltype(elle::meta::list(infinit::symbols::addresses,
-                              infinit::symbols::port))>;
+    decltype(elle::meta::list(memo::symbols::addresses,
+                              memo::symbols::port))>;
 };
 ELLE_DAS_SERIALIZE(BEndpoints);
 
@@ -117,20 +117,20 @@ public:
         ELLE_LOG("endpoints: '%s'", res);
         return res;
       });
-    elle::os::setenv("INFINIT_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
+    elle::os::setenv("MEMO_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
   }
 
-  void push(infinit::model::Address id, Endpoints eps)
+  void push(memo::model::Address id, Endpoints eps)
   {
     _endpoints["bob"][elle::sprintf("%s", id)] = e2b(eps);
   }
 
-  void pull(infinit::model::Address id)
+  void pull(memo::model::Address id)
   {
     _endpoints["bob"].erase(elle::sprintf("%s", id));
   }
 
-  void push(infinit::model::doughnut::Doughnut& d)
+  void push(memo::model::doughnut::Doughnut& d)
   {
     auto eps = Endpoints{
       {
@@ -141,7 +141,7 @@ public:
     push(d.id(), eps);
   }
 
-  void pull(infinit::model::doughnut::Doughnut& d)
+  void pull(memo::model::doughnut::Doughnut& d)
   {
     pull(d.id());
   }
@@ -158,8 +158,8 @@ private:
   NetEndpoints _endpoints;
 };
 
-auto endpoints = std::vector<infinit::model::Endpoints>{};
-auto net = infinit::Network("bob/network", nullptr, boost::none);
+auto endpoints = std::vector<memo::model::Endpoints>{};
+auto net = memo::Network("bob/network", nullptr, boost::none);
 using Nodes = std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
@@ -189,29 +189,29 @@ run_nodes(bfs::path const& where,
   config.query_get_retries = 2;
   for (int n=0; n<count; ++n)
   {
-    std::unique_ptr<infinit::silo::Silo> s;
+    std::unique_ptr<memo::silo::Silo> s;
     bfs::create_directories(where / "store");
-    s.reset(new infinit::silo::Filesystem(where / ("store" + std::to_string(n))));
-    auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
+    s.reset(new memo::silo::Filesystem(where / ("store" + std::to_string(n))));
+    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
     auto consensus =
-    [&] (infinit::model::doughnut::Doughnut& dht)
-        -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+    [&] (memo::model::doughnut::Doughnut& dht)
+        -> std::unique_ptr<memo::model::doughnut::consensus::Consensus>
         {
           return std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
         };
     auto overlay =
-        [&] (infinit::model::doughnut::Doughnut& dht,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+        [&] (memo::model::doughnut::Doughnut& dht,
+             std::shared_ptr<memo::model::doughnut::Local> local)
         {
           auto res = config.make(local, &dht);
           res->discover(endpoints);
           return res;
         };
-    infinit::model::Address::Value v;
+    memo::model::Address::Value v;
     memset(v, 0, sizeof(v));
     v[0] = base_id + n + 1;
-    auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-      infinit::model::Address(v),
+    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
+      memo::model::Address(v),
       std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
       passport,
@@ -223,13 +223,13 @@ run_nodes(bfs::path const& where,
     elle::reactor::Thread::unique_ptr tptr;
     if (beyond_port)
     {
-      infinit::overlay::NodeLocations locs;
+      memo::overlay::NodeLocations locs;
       tptr = net.make_poll_hub_thread(*dn, locs, 1);
     }
     res.emplace_back(dn, std::move(tptr));
     //if (res.size() == 1)
     endpoints.emplace_back(
-        infinit::model::Endpoints{{
+        memo::model::Endpoints{{
             boost::asio::ip::address::from_string("127.0.0.1"),
             dn->local()->server_endpoint().port(),
         }});
@@ -255,9 +255,9 @@ namespace
     config.accept_plain = false;
     config.query_get_retries = 3;
     config.ping_timeout_ms = valgrind(500, 20);
-    auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
+    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
     auto make_consensus =
-      [&] (infinit::model::doughnut::Doughnut& dht)
+      [&] (memo::model::doughnut::Doughnut& dht)
       {
         auto res =
           std::unique_ptr<imd::consensus::Consensus>{
@@ -265,22 +265,22 @@ namespace
           };
         if (async)
           res = std::make_unique<
-            infinit::model::doughnut::consensus::Async>(std::move(res),
+            memo::model::doughnut::consensus::Async>(std::move(res),
               where / bfs::unique_path());
         if (cache)
           res = std::make_unique<imd::consensus::Cache>(std::move(res));
         return res;
       };
     auto make_overlay =
-      [&] (infinit::model::doughnut::Doughnut& dht,
-           std::shared_ptr<infinit::model::doughnut::Local> local)
+      [&] (memo::model::doughnut::Doughnut& dht,
+           std::shared_ptr<memo::model::doughnut::Local> local)
       {
         auto res = config.make(local, &dht);
         res->discover(endpoints);
         return res;
       };
-    auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-      infinit::model::Address::random(0), // FIXME
+    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
+      memo::model::Address::random(0), // FIXME
       std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
       passport,
@@ -288,7 +288,7 @@ namespace
       make_overlay,
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
-      std::unique_ptr<infinit::silo::Silo>());
+      std::unique_ptr<memo::silo::Silo>());
     auto ops = std::make_unique<ifs::FileSystem>(
       "volume", dn, ifs::allow_root_creation = true);
     auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
@@ -296,7 +296,7 @@ namespace
     elle::reactor::Thread::unique_ptr tptr;
     if (beyond_port)
     {
-      infinit::overlay::NodeLocations locs;
+      memo::overlay::NodeLocations locs;
       tptr = net.make_poll_hub_thread(*dn, locs, 1);
     }
     while (true)
@@ -616,13 +616,13 @@ ELLE_TEST_SCHEDULED(conflicts)
     auto& fs1 = fs1p.first;
     auto& fs2 = fs2p.first;
     auto cache1 =
-      dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
-        dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
+        dynamic_cast<memo::model::doughnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs1->operations().get())->block_store().get())->consensus().get());
     auto cache2 =
-      dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
-        dynamic_cast<infinit::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
+        dynamic_cast<memo::model::doughnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs2->operations().get())->block_store().get())->consensus().get());
     struct stat st;
@@ -944,10 +944,10 @@ ELLE_TEST_SCHEDULED(beyond_storage)
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "2");
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "5");
+  elle::os::setenv("MEMO_CONNECT_TIMEOUT", "2");
+  elle::os::setenv("MEMO_SOFTFAIL_TIMEOUT", "5");
   // disable RDV so that nodes won't find each other that way
-  elle::os::setenv("INFINIT_RDV", "");
+  elle::os::setenv("MEMO_RDV", "");
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));

@@ -7,8 +7,8 @@ import json
 ## Use hub to pair ##
 ##---------------- ##
 # Normal case.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-     Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+     Memo(beyond = beyond) as alice2:
   # Signup without sending private key.
   alice.run(['user', 'signup',
              '--name', 'alice',
@@ -26,8 +26,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
   assertEq(alice_json['private_key'], alice2_json['private_key'])
 
 # Passphrase from input.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-     Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+     Memo(beyond = beyond) as alice2:
   passphrase = 'super_passphrase'
   # Signup without sending private key.
   alice.run(['user', 'signup',
@@ -47,8 +47,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
   assertEq(alice_json['private_key'], alice2_json['private_key'])
 
 #  Expired.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-     Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+     Memo(beyond = beyond) as alice2:
    passphrase = 'super_passphrase'
    # Signup without sending private key.
    alice.run(['user', 'signup',
@@ -70,8 +70,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
      assert 'pairing/gone' in e.args[0]
 
 # Invalid passphrase.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-     Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+     Memo(beyond = beyond) as alice2:
   passphrase = 'super_passphrase'
   # Signup without sending private key.
   alice.run(['user', 'signup',
@@ -93,8 +93,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
     assert 'pairing/invalid_passphrase' in e.args[0]
 
 # No pairing information.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-     Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+     Memo(beyond = beyond) as alice2:
   passphrase = 'super_passphrase'
   # Signup without sending private key.
   alice.run(['user', 'signup',
@@ -110,8 +110,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
     assert 'pairing_information/not_found' in e.args[0]
 
 # Pairing information usable once.
-with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
-Infinit(beyond = beyond) as alice2:
+with Beyond() as beyond, Memo(beyond = beyond) as alice, \
+Memo(beyond = beyond) as alice2:
   passphrase = 'super_passphrase'
   alice.run(['user', 'signup',
              '--name', 'alice',

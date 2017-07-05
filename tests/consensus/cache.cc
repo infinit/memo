@@ -1,16 +1,16 @@
 #include <elle/test.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
 
-#include <infinit/model/blocks/ImmutableBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/Cache.hh>
+#include <memo/model/blocks/ImmutableBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
+#include <memo/model/doughnut/Cache.hh>
 
 #include "DummyDoughnut.hh"
 #include "InstrumentedConsensus.hh"
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache.test");
 
-namespace dht = infinit::model::doughnut;
+namespace dht = memo::model::doughnut;
 
 struct Recipe
 {
@@ -35,15 +35,15 @@ struct Recipe
 ELLE_TEST_SCHEDULED(memory)
 {
   Recipe r;
-  auto addr = infinit::model::Address::random();
-  BOOST_CHECK_THROW(r.cache.fetch(addr), infinit::model::MissingBlock);
-  auto okb = r.dht.make_block<infinit::model::blocks::MutableBlock>(
+  auto addr = memo::model::Address::random();
+  BOOST_CHECK_THROW(r.cache.fetch(addr), memo::model::MissingBlock);
+  auto okb = r.dht.make_block<memo::model::blocks::MutableBlock>(
     elle::Buffer("data", 4));
   okb->seal(1);
   r.instrument.add(*okb);
   BOOST_CHECK_EQUAL(r.cache.fetch(okb->address())->data(), okb->data());
   r.instrument.fetched().connect(
-    [] (infinit::model::Address const& addr)
+    [] (memo::model::Address const& addr)
     {
       BOOST_FAIL(elle::sprintf("block %f should have been cached", addr));
     });
@@ -55,19 +55,19 @@ ELLE_TEST_SCHEDULED(memory)
 ELLE_TEST_SCHEDULED(disk)
 {
   elle::filesystem::TemporaryDirectory tmp;
-  std::unique_ptr<infinit::model::blocks::Block> chb;
+  std::unique_ptr<memo::model::blocks::Block> chb;
   ELLE_LOG("create and fetch CHB")
   {
     Recipe r(boost::optional<int>(),
              boost::optional<std::chrono::seconds>(),
              boost::optional<std::chrono::seconds>(),
              tmp.path());
-    chb = r.dht.make_block<infinit::model::blocks::ImmutableBlock>(
+    chb = r.dht.make_block<memo::model::blocks::ImmutableBlock>(
       elle::Buffer("data", 4));
     r.instrument.add(*chb);
     BOOST_CHECK_EQUAL(r.cache.fetch(chb->address())->data(), chb->data());
     r.instrument.fetched().connect(
-      [] (infinit::model::Address const& addr)
+      [] (memo::model::Address const& addr)
       {
         BOOST_FAIL(elle::sprintf("block %f should have been cached", addr));
     });
@@ -80,7 +80,7 @@ ELLE_TEST_SCHEDULED(disk)
              boost::optional<std::chrono::seconds>(),
              tmp.path());
     r.instrument.fetched().connect(
-      [] (infinit::model::Address const& addr)
+      [] (memo::model::Address const& addr)
       {
         BOOST_FAIL(elle::sprintf("block %f should have been cached", addr));
     });

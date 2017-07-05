@@ -6,8 +6,8 @@ import json
 with_kvs = os.environ.get('MEMO_WITH_KEY_VALUE_STORE', '1') == '1'
 
 # Creating and deleting networks locally.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as bob, \
+     Memo(beyond = beyond) as alice:
   bob.run(['user', 'create',  'bob'])
   alice.run(['user', 'create',  'alice'])
 
@@ -22,7 +22,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Check network is linked.
   assertEq(len(os.listdir(bob.linked_networks_path)), 1)
   bob.run(['network', 'run', '--name', 'broken',
-           '--as', 'bob', '--async', '--cache', '-s'])
+           '--as', 'bob', '--async', '--cache', '-s'],
+          timeout = 2, kill = True)
   # Ensure network cache directory is created
   assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   bob.run(['network', 'delete', '--name', 'broken', '--as', 'bob',
@@ -32,7 +33,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   bob.run(['network', 'create', 'broken', '--as', 'bob'])
   bob.run(['network', 'run', '--name', 'broken', '--as', 'bob',
-           '--async', '--cache', '-s'])
+           '--async', '--cache', '-s'],
+          timeout = 2, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   # Specified.
   bob.run(
@@ -53,57 +55,58 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
              '--name', 'bob/osef', '--as', 'alice', '--unlink'])
 
 # Unlinking
-with Infinit() as tmp:
-  bob = User(name = 'bob', infinit = tmp)
+with Memo() as tmp:
+  bob = User(name = 'bob', memo = tmp)
   bob.run(['user', 'create'])
   bob.run(['silo', 'create', 'filesystem', 's'])
   bob.run(['network', 'create', 'n', '--silo', 's'])
   # Check descriptor is created.
-  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  assertEq(len(os.listdir(bob.memo.networks_path)), 1)
   # Check network is linked.
-  assertEq(len(os.listdir(bob.infinit.linked_networks_path)), 1)
-  print(os.listdir(bob.infinit.networks_path))
+  assertEq(len(os.listdir(bob.memo.linked_networks_path)), 1)
+  print(os.listdir(bob.memo.networks_path))
   # Store descriptor.
   descriptor = None
-  with open('%s/bob/n' % bob.infinit.networks_path) as f:
+  with open('%s/bob/n' % bob.memo.networks_path) as f:
     descriptor = f.read()
   # Store linked network.
   linked_net = None
-  with open('%s/bob/bob/n' % bob.infinit.linked_networks_path, 'r') as f:
+  with open('%s/bob/bob/n' % bob.memo.linked_networks_path, 'r') as f:
     linked_net = f.read()
-  bob.run(['network', 'run', 'n', '-s', '--async', '--cache'])
+  bob.run(['network', 'run', 'n', '-s', '--async', '--cache'],
+          timeout = 2, kill = True)
   # Ensure cache directories created.
-  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.infinit.state_path)), 2)
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.memo.state_path)), 2)
   bob.run(['network', 'unlink', 'n'])
   # Ensure cache directories removed.
-  assertEq(len(os.listdir('%s/cache/bob' % bob.infinit.state_path)), 0)
+  assertEq(len(os.listdir('%s/cache/bob' % bob.memo.state_path)), 0)
   # Check network is no longer linked.
-  assertEq(len(os.listdir('%s/bob/bob' % bob.infinit.linked_networks_path)), 0)
+  assertEq(len(os.listdir('%s/bob/bob' % bob.memo.linked_networks_path)), 0)
   # Check network descriptor still exists.
-  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  assertEq(len(os.listdir(bob.memo.networks_path)), 1)
   bob.run(['network', 'delete', 'n'])
-  assertEq(len(os.listdir('%s/bob' % bob.infinit.networks_path)), 0)
+  assertEq(len(os.listdir('%s/bob' % bob.memo.networks_path)), 0)
   # Simulate old link behaviour: copy linked network to descriptor folder,
   # check that unlink changes it to a network descriptor.
-  with open('%s/bob/n' % bob.infinit.networks_path, 'w') as f:
+  with open('%s/bob/n' % bob.memo.networks_path, 'w') as f:
     f.write(linked_net)
-  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  assertEq(len(os.listdir(bob.memo.networks_path)), 1)
   node_id = json.loads(linked_net)['model']['id']
   assertEq(len(node_id), 44)
   out, _ = bob.run(['network', 'unlink', 'n'])
   assert node_id in out
-  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
-  with open('%s/bob/n' % bob.infinit.networks_path) as f:
+  assertEq(len(os.listdir(bob.memo.networks_path)), 1)
+  with open('%s/bob/n' % bob.memo.networks_path) as f:
     test = f.read()
     assertEq(test, descriptor)
   bob.run(['network', 'link', 'n', '--node-id', node_id])
-  with open('%s/bob/bob/n' % bob.infinit.linked_networks_path, 'r') as f:
+  with open('%s/bob/bob/n' % bob.memo.linked_networks_path, 'r') as f:
     relinked_net = f.read()
     assertEq(node_id, json.loads(relinked_net)['model']['id'])
 
 # Fetch & list.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as bob, \
+     Memo(beyond = beyond) as alice:
 
   bob.run(['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'signup', '--name', 'alice', '--email', 'alice@infinit.io'])
@@ -151,8 +154,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     assertEq(json.loads(test), json.loads(bob_n))
 
 # Update network.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as bob, \
+     Memo(beyond = beyond) as alice:
   bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'signup',  'alice', '--email', 'alice@infinit.io'])
   bob.run(['user', 'fetch', '--name', 'alice'])
@@ -201,8 +204,8 @@ def setup(beyond, bob, alice):
   alice.run(['passport', 'fetch', '--as', 'alice'])
 
 # Make sure passports are kept after updating.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as bob, \
+     Memo(beyond = beyond) as alice:
   setup(beyond, bob, alice)
   assertEq(len(alice.run_json(['passport', 'list',
                                '--as', 'alice', '--script'])),
@@ -221,8 +224,8 @@ for field, body in [
     ('stat', {'capacity': 100, 'usage': 1000}),
     ('endpoints', {'stuff':  [{'host': '127.0.0.1', 'port': 8080}]})
 ]:
-  with Beyond(disable_authentication = True) as beyond, Infinit(beyond = beyond) as bob, \
-       Infinit(beyond = beyond) as alice:
+  with Beyond(disable_authentication = True) as beyond, Memo(beyond = beyond) as bob, \
+       Memo(beyond = beyond) as alice:
     setup(beyond, bob, alice)
     # Bypass the binaries.
     import requests
@@ -255,8 +258,8 @@ for field, body in [
     assertEq(res, initial_res)
 
 # Create and link with multiple 'storage'.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Memo(beyond = beyond) as bob, \
+     Memo(beyond = beyond) as alice:
   bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.io'])
   alice.run(['user', 'signup',  'alice',
              '--email', 'alice@infinit.io'])
@@ -285,12 +288,13 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   assertEq(len(s2), 2)
 
 # Pull and delete.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+with Beyond() as beyond, Memo(beyond = beyond) as bob:
   # Local and Beyond.
   bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
   bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
-           '--async', '--cache', '-s'])
+           '--async', '--cache', '-s'],
+          timeout = 2, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['network', 'delete', '--as', 'bob', 'n', '--unlink'])
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
@@ -307,16 +311,17 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
 
 # Delete multi user.
 def remove_network_linked_by_two_users(owner_remove = True):
-  with Beyond() as beyond, Infinit(beyond = beyond) as infinit:
-    owner = User('bob', infinit)
-    invitee = User('alice', infinit)
+  with Beyond() as beyond, Memo(beyond = beyond) as memo:
+    owner = User('bob', memo)
+    invitee = User('alice', memo)
     owner.run('user signup --email owner@infinit.sh ' + owner.name)
     invitee.run('user signup --email invitee@infinit.sh ' + invitee.name)
     owner.run('network create n --push')
     owner.run(['network', 'run', '--name', 'n',
-               '--async', '--cache', '-s'])
+               '--async', '--cache', '-s'],
+              timeout = 2, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
-      'state': infinit.state_path,
+      'state': memo.state_path,
       'user_name': owner.name,
       'owner_name': owner.name})), 2)
     assertEq(
@@ -339,9 +344,10 @@ def remove_network_linked_by_two_users(owner_remove = True):
       ])
     invitee.run('network link --name %s/n' % owner.name)
     invitee.run(['network', 'run', '--name', '%s/n' % owner.name,
-                 '--async', '--cache', '-s'])
+                 '--async', '--cache', '-s'],
+                timeout = 2, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
-      'state': infinit.state_path,
+      'state': memo.state_path,
       'user_name': invitee.name,
       'owner_name': owner.name})), 2)
     assertEq(
@@ -351,7 +357,7 @@ def remove_network_linked_by_two_users(owner_remove = True):
       ])
     invitee.run('network unlink --name %s/n' % owner.name)
     assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
-      'state': infinit.state_path, 'name': invitee.name})), 0)
+      'state': memo.state_path, 'name': invitee.name})), 0)
     assertEq(
       invitee.run_json('network list --script'),
       [
@@ -359,9 +365,10 @@ def remove_network_linked_by_two_users(owner_remove = True):
       ])
     invitee.run('network link --name %s/n' % owner.name)
     invitee.run(['network', 'run', '--name', '%s/n' % owner.name,
-                 '--async', '--cache', '-s'])
+                 '--async', '--cache', '-s'],
+                timeout = 2, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
-      'state': infinit.state_path,
+      'state': memo.state_path,
       'user_name': invitee.name,
       'owner_name': owner.name})), 2)
     if owner_remove:
@@ -373,16 +380,16 @@ def remove_network_linked_by_two_users(owner_remove = True):
     assertEq(owner.run_json('network list --script'), [])
     assertEq(invitee.run_json('network list --script'), [])
     assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
-      'state': infinit.state_path, 'name': owner.name})), 0)
+      'state': memo.state_path, 'name': owner.name})), 0)
     assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
-      'state': infinit.state_path, 'name': invitee.name})), 0)
+      'state': memo.state_path, 'name': invitee.name})), 0)
 
 remove_network_linked_by_two_users(owner_remove = True)
 remove_network_linked_by_two_users(owner_remove = False)
 
 # Purge.
 with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+    Memo(beyond = beyond) as bob, Memo(beyond = beyond) as alice:
   bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
   alice.run(
     ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])
@@ -390,7 +397,8 @@ with Beyond() as beyond, \
   bob.run(['network', 'create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assertEq(len(bob.run_json(['network', 'list', '-s', '--as', 'bob'])), 1)
   bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
-           '--async', '--cache', '-s'])
+           '--async', '--cache', '-s'],
+          timeout = 2, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['user', 'fetch', 'alice'])
   bob.run(['passport', 'create', '--as', 'bob',
@@ -398,7 +406,8 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['passport', 'list', '-s', '--as', 'bob'])), 1)
   alice.run(['network', 'create', '--as', 'alice', 'n', '-p'])
   alice.run(['network', 'run', '--name', 'n', '--as', 'alice',
-             '--async', '--cache', '-s'])
+             '--async', '--cache', '-s'],
+            timeout = 2, kill = True)
   assertEq(len(os.listdir('%s/cache/alice/alice/n' % alice.state_path)), 2)
   alice.run(['user', 'fetch', 'bob'])
   alice.run(['passport', 'create', '--as', 'alice',

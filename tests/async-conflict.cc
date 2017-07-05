@@ -3,64 +3,64 @@
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
-#include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/filesystem.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Async.hh>
-#include <infinit/model/doughnut/Group.hh>
-#include <infinit/overlay/Kalimero.hh>
-#include <infinit/silo/Filesystem.hh>
-#include <infinit/silo/Memory.hh>
-#include <infinit/silo/Silo.hh>
+#include <memo/filesystem/Directory.hh>
+#include <memo/filesystem/filesystem.hh>
+#include <memo/model/doughnut/consensus/Paxos.hh>
+#include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/Async.hh>
+#include <memo/model/doughnut/Group.hh>
+#include <memo/overlay/Kalimero.hh>
+#include <memo/silo/Filesystem.hh>
+#include <memo/silo/Memory.hh>
+#include <memo/silo/Silo.hh>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cstdlib>
 
-#ifdef INFINIT_WINDOWS
+#ifdef MEMO_WINDOWS
 # undef stat
 #endif
 
 ELLE_LOG_COMPONENT("test");
 
-namespace ifs = infinit::filesystem;
+namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 std::unique_ptr<elle::reactor::filesystem::FileSystem>
 make(bfs::path where,
-     infinit::model::Address node_id,
+     memo::model::Address node_id,
      bool enable_async,
      int cache_size,
      elle::cryptography::rsa::KeyPair const& kp)
 {
   bfs::create_directories(where / "store");
   bfs::create_directories(where / "async");
-  auto s = std::unique_ptr<infinit::silo::Silo>{
-    new infinit::silo::Filesystem(where / "store")};
-  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
-  infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
-    [&] (infinit::model::doughnut::Doughnut& dht)
-        -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+  auto s = std::unique_ptr<memo::silo::Silo>{
+    new memo::silo::Filesystem(where / "store")};
+  memo::model::doughnut::Passport passport(kp.K(), "testnet", kp);
+  memo::model::doughnut::Doughnut::ConsensusBuilder consensus =
+    [&] (memo::model::doughnut::Doughnut& dht)
+        -> std::unique_ptr<memo::model::doughnut::consensus::Consensus>
         {
            auto backend = std::make_unique<
-             infinit::model::doughnut::consensus::Paxos>(dht, 1);
+             memo::model::doughnut::consensus::Paxos>(dht, 1);
            if (!enable_async)
              return std::move(backend);
            auto async = std::make_unique<
-             infinit::model::doughnut::consensus::Async>(std::move(backend),
+             memo::model::doughnut::consensus::Async>(std::move(backend),
                where / "async", cache_size);
            return std::move(async);
         };
   auto make_overlay =
-        [=] (infinit::model::doughnut::Doughnut& dht,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
+        [=] (memo::model::doughnut::Doughnut& dht,
+             std::shared_ptr<memo::model::doughnut::Local> local)
         {
-          return std::make_unique<infinit::overlay::Kalimero>(&dht, local);
+          return std::make_unique<memo::overlay::Kalimero>(&dht, local);
         };
-  auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
+  auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
     node_id,
     std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
@@ -70,8 +70,8 @@ make(bfs::path where,
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
     std::move(s));
-  auto ops = std::make_unique<infinit::filesystem::FileSystem>(
-    "volume", dn, infinit::filesystem::allow_root_creation = true);
+  auto ops = std::make_unique<memo::filesystem::FileSystem>(
+    "volume", dn, memo::filesystem::allow_root_creation = true);
   auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
     std::move(ops), true);
   return fs;
@@ -106,7 +106,7 @@ root_count(std::unique_ptr<elle::reactor::filesystem::FileSystem>& fs)
 
 ELLE_TEST_SCHEDULED(async_cache)
 {
-  auto node_id = infinit::model::Address::random(0);
+  auto node_id = memo::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
@@ -259,7 +259,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
 ELLE_TEST_SCHEDULED(async_groups)
 {
-  auto const node_id = infinit::model::Address::random(0);
+  auto const node_id = memo::model::Address::random(0);
   auto const path = bfs::temp_directory_path() / bfs::unique_path();
   auto const kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
@@ -272,11 +272,11 @@ ELLE_TEST_SCHEDULED(async_groups)
   // Create group
   {
     auto fs = make(path, node_id, false, 10, kp);
-    auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+    auto dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
         ->block_store().get());
     {
-      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      auto&& g = memo::model::doughnut::Group(*dn, "test_group");
       g.create();
       g.current_public_key();
       g.group_keys();
@@ -288,17 +288,17 @@ ELLE_TEST_SCHEDULED(async_groups)
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
     auto const fs = make(path, node_id, true, 10, kp);
     auto const root = fs->path("/");
-    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+    auto const dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
         ->block_store().get());
     {
-      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      auto&& g = memo::model::doughnut::Group(*dn, "test_group");
       g.remove_member(elle::serialization::json::serialize(kp.public_key()));
       g.current_public_key();
       g.group_keys();
     }
     {
-      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      auto&& g = memo::model::doughnut::Group(*dn, "test_group");
       g.current_public_key();
       g.group_keys();
       g.list_members();
@@ -308,11 +308,11 @@ ELLE_TEST_SCHEDULED(async_groups)
   // push some group update
   {
     auto const fs = make(path, node_id, false, 10, kp);
-    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+    auto const dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
         ->block_store().get());
     {
-      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      auto&& g = memo::model::doughnut::Group(*dn, "test_group");
       g.remove_member(elle::serialization::json::serialize(kp.public_key()));
       g.current_public_key();
       g.group_keys();
@@ -323,12 +323,12 @@ ELLE_TEST_SCHEDULED(async_groups)
   {
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     auto const fs = make(path, node_id, true, 10, kp);
-    auto const dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-      dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+    auto const dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
         ->block_store().get());
     BOOST_TEST(fs->path("/")->getxattr("user.infinit.sync") == "ok");
     {
-      auto&& g = infinit::model::doughnut::Group(*dn, "test_group");
+      auto&& g = memo::model::doughnut::Group(*dn, "test_group");
       g.current_public_key();
       g.group_keys();
     }
@@ -336,18 +336,18 @@ ELLE_TEST_SCHEDULED(async_groups)
   }
 }
 
-infinit::model::doughnut::consensus::Async*
+memo::model::doughnut::consensus::Async*
 async(std::unique_ptr<elle::reactor::filesystem::FileSystem>& fs)
 {
-  auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
-    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+  auto dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
+    dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
     ->block_store().get());
-  return dynamic_cast<infinit::model::doughnut::consensus::Async*>(dn->consensus().get());
+  return dynamic_cast<memo::model::doughnut::consensus::Async*>(dn->consensus().get());
 }
 
 ELLE_TEST_SCHEDULED(async_squash2)
 {
-  auto node_id = infinit::model::Address::random(0);
+  auto node_id = memo::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
@@ -410,7 +410,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
 
 ELLE_TEST_SCHEDULED(async_squash)
 {
-  auto node_id = infinit::model::Address::random(0);
+  auto node_id = memo::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
@@ -441,7 +441,7 @@ ELLE_TEST_SCHEDULED(async_squash)
 
 ELLE_TEST_SCHEDULED(async_squash_conflict)
 {
-  auto node_id = infinit::model::Address::random(0);
+  auto node_id = memo::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);

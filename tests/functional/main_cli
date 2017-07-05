@@ -2,7 +2,7 @@
 
 from utils import *
 
-with Infinit() as bob:
+with Memo() as bob:
   bob.run(['user', 'create'])
   bob.run(['user', 'list',
            '--compatibility-version', '0.3.0'])

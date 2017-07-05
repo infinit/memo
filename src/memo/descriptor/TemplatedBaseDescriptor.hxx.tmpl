@@ -1,0 +1,92 @@
+// FIXME: GCC on Jessie has these regexes wrong, don't move to
+// std::regex just yet.
+#include <boost/regex.hpp>
+
+#include <elle/serialization/Serializer.hh>
+
+namespace memo
+{
+  namespace descriptor
+  {
+    template <typename T>
+    void
+    TemplatedBaseDescriptor<T>::check_name(std::string const& name)
+    {
+      auto const slash_pos = name.find_first_of("/");
+      if (!T::permit_name_slash() && slash_pos != std::string::npos)
+        throw DescriptorNameError(name);
+      auto const test_name
+        = slash_pos == std::string::npos
+        ? name
+        : name.substr(slash_pos + 1);
+      static auto const allowed = boost::regex{T::name_regex()};
+      if (!boost::regex_match(test_name, allowed))
+        throw DescriptorNameError(name);
+    }
+
+    template <typename T>
+    void
+    TemplatedBaseDescriptor<T>::check_description(
+      boost::optional<std::string> const& description)
+    {
+      static auto const allowed = boost::regex{T::description_regex()};
+      if (description
+          && !boost::regex_match(description.get(), allowed))
+        throw DescriptorDescriptionError(description.get());
+    }
+
+    /*-------------.
+    | Construction |
+    `-------------*/
+
+    template <typename T>
+    TemplatedBaseDescriptor<T>::TemplatedBaseDescriptor(
+        std::string name,
+        boost::optional<std::string> description)
+      : BaseDescriptor(std::move(name), std::move(description))
+    {
+      check_name(this->name);
+      check_description(this->description);
+    }
+
+    template <typename T>
+    TemplatedBaseDescriptor<T>::TemplatedBaseDescriptor(
+        TemplatedBaseDescriptor const& descriptor)
+      : BaseDescriptor(descriptor)
+    {
+      check_name(this->name);
+      check_description(this->description);
+    }
+
+    /*--------------.
+    | Serialization |
+    `--------------*/
+
+    template <typename T>
+    TemplatedBaseDescriptor<T>::TemplatedBaseDescriptor(
+        elle::serialization::SerializerIn& s)
+      : BaseDescriptor(s)
+    {
+      check_name(this->name);
+      check_description(this->description);
+    }
+
+    template <typename T>
+    std::string
+    TemplatedBaseDescriptor<T>::name_regex()
+    {
+      return "${name_regex}";
+    }
+
+    template <typename T>
+    std::string
+    TemplatedBaseDescriptor<T>::description_regex()
+    {
+      return "${description_regex}";
+    }
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

@@ -7,23 +7,20 @@
 
 #include <boost/optional.hpp>
 
-#include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/UB.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kouncil/Kouncil.hh>
-#include <infinit/silo/MissingKey.hh>
-
-#include <infinit/filesystem/filesystem.hh>
-
-#include <infinit/grpc/fs.grpc.pb.h>
-#include <infinit/grpc/memo_vs.grpc.pb.h>
+#include <memo/filesystem/filesystem.hh>
+#include <memo/grpc/memo_vs.grpc.pb.h>
+#include <memo/model/MissingBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
+#include <memo/model/doughnut/ACB.hh>
+#include <memo/model/doughnut/UB.hh>
+#include <memo/overlay/kelips/Kelips.hh>
+#include <memo/overlay/kouncil/Kouncil.hh>
+#include <memo/silo/MissingKey.hh>
 
 #include <tests/grpc.grpc.pb.h>
 
-#include <infinit/grpc/grpc.hh>
-#include <infinit/grpc/serializer.hh>
+#include <memo/grpc/grpc.hh>
+#include <memo/grpc/serializer.hh>
 
 #include <grpc++/grpc++.h>
 
@@ -200,8 +197,8 @@ public:
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
       , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
-             std::make_unique<infinit::filesystem::FileSystem>(
-               name, this->dht.dht, infinit::filesystem::allow_root_creation = true,
+             std::make_unique<memo::filesystem::FileSystem>(
+               name, this->dht.dht, memo::filesystem::allow_root_creation = true,
                std::forward<Args>(args)...),
              true))
     {}
@@ -299,7 +296,7 @@ ELLE_TEST_SCHEDULED(serialization)
   auto reference = s;
   ::Simple sout;
   {
-    infinit::grpc::SerializerOut ser(&sout);
+    memo::grpc::SerializerOut ser(&sout);
     ser.serialize_forward(s);
   }
   BOOST_CHECK_EQUAL(sout.str(), "foo");
@@ -309,7 +306,7 @@ ELLE_TEST_SCHEDULED(serialization)
   BOOST_CHECK_EQUAL(sout.ri64_size(), 3);
   s = structs::Simple{"", 0, 0, false};
   {
-    infinit::grpc::SerializerIn ser(&sout);
+    memo::grpc::SerializerIn ser(&sout);
     ser.serialize_forward(s);
   }
   BOOST_CHECK_EQUAL(s, reference);
@@ -368,7 +365,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   };
   ::Complex cplx;
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(cplx.simple().str(), "foo");
@@ -381,7 +378,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
     std::string()
   };
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(complex.simple.str, "foo");
@@ -392,7 +389,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   // check unset optional<primitive>
   complex.opt_str.reset();
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(cplx.opt_str(), "");
@@ -404,7 +401,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
     std::string()
   };
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(complex.simple.str, "foo");
@@ -417,7 +414,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   ELLE_LOG("empty optional<string>");
   complex.opt_str = std::string();
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(cplx.opt_str(), "");
@@ -429,7 +426,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
     std::string()
   };
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   // FAILS BOOST_CHECK_EQUAL(complex.opt_str.value_or("UNSET"), "");
@@ -438,7 +435,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
 
   complex.opt_simple = structs::Simple{"foo", -12, 12, true};
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(cplx.opt_str(), "");
@@ -450,7 +447,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
     std::string()
   };
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK(complex.opt_simple);
@@ -458,7 +455,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
 
   complex.rsimple.push_back(structs::Simple{"foo", -12, 12, true});
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   complex = structs::Complex {
@@ -469,7 +466,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
     std::string()
   };
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(complex.rsimple.size(), 1);
@@ -478,23 +475,23 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   // Option
   complex.siopt = std::string("foo");
   {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   complex.siopt = (int64_t)42;
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(complex.siopt.get<std::string>(), "foo");
   complex.siopt = (int64_t)42;
     {
-    infinit::grpc::SerializerOut ser(&cplx);
+    memo::grpc::SerializerOut ser(&cplx);
     ser.serialize_forward(complex);
   }
   complex.siopt = std::string("foo");
   {
-    infinit::grpc::SerializerIn ser(&cplx);
+    memo::grpc::SerializerIn ser(&cplx);
     ser.serialize_forward(complex);
   }
   BOOST_CHECK_EQUAL(complex.siopt.get<int64_t>(), 42);
@@ -513,10 +510,10 @@ ELLE_TEST_SCHEDULED(protogen)
 ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 {
   // Test GRPC API with multiple concurrent clients
-  auto make_kouncil = [](infinit::model::doughnut::Doughnut& dht,
-                         std::shared_ptr<infinit::model::doughnut::Local> local)
+  auto make_kouncil = [](memo::model::doughnut::Doughnut& dht,
+                         std::shared_ptr<memo::model::doughnut::Local> local)
   {
-    return std::make_unique<infinit::overlay::kouncil::Kouncil>(&dht, local);
+    return std::make_unique<memo::overlay::kouncil::Kouncil>(&dht, local);
   };
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   std::vector<std::unique_ptr<DHT>> servers;
@@ -541,13 +538,13 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*servers[0]->dht, "127.0.0.1:0",
+      memo::grpc::serve_grpc(*servers[0]->dht, "127.0.0.1:0",
                                 &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
   auto mutable_block = client->dht
-    ->make_block<infinit::model::blocks::MutableBlock>(std::string("{}"));
+    ->make_block<memo::model::blocks::MutableBlock>(std::string("{}"));
   ELLE_TRACE("insert mb");
   client->dht->seal_and_insert(*mutable_block);
   auto task = [&](int id) {
@@ -621,9 +618,9 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   DHTs dhts(3);
   auto client = dhts.client();
   auto const alice = elle::cryptography::rsa::keypair::generate(512);
-  auto ubf = std::make_unique<infinit::model::doughnut::UB>(
+  auto ubf = std::make_unique<memo::model::doughnut::UB>(
       client.dht.dht.get(), "alice", alice.K(), false);
-  auto ubr = std::make_unique<infinit::model::doughnut::UB>(
+  auto ubr = std::make_unique<memo::model::doughnut::UB>(
       client.dht.dht.get(), "alice", alice.K(), true);
   client.dht.dht->insert(std::move(ubf));
   client.dht.dht->insert(std::move(ubr));
@@ -633,7 +630,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      infinit::grpc::serve_grpc(*client.dht.dht,
+      memo::grpc::serve_grpc(*client.dht.dht,
                                 "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);
@@ -649,7 +646,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       ::memo::vs::FetchRequest req;
       ::memo::vs::FetchResponse repl;
       req.set_address(
-        std::string((const char*)infinit::model::Address::null.value(), 32));
+        std::string((const char*)memo::model::Address::null.value(), 32));
       ELLE_LOG("call...");
       auto res = stub->Fetch(&context, req, &repl);
       ELLE_LOG("...called");
@@ -674,7 +671,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       BOOST_CHECK_EQUAL(chb.address().size(), 32);
       BOOST_CHECK_EQUAL(chb.data(), "bok");
       ELLE_TRACE("addr: %s",
-        infinit::model::Address((const uint8_t*)chb.address().data()));
+        memo::model::Address((const uint8_t*)chb.address().data()));
     }
     { // store
       grpc::ClientContext context;
@@ -687,7 +684,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
     // dht fetch check
-    auto a = infinit::model::Address((const uint8_t*)chb.address().data());
+    auto a = memo::model::Address((const uint8_t*)chb.address().data());
     std::string data;
     sched.mt_run<void>("recheck", [&] {
         auto b = client.dht.dht->fetch(a);
@@ -714,7 +711,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       BOOST_CHECK_EQUAL(okb.address().size(), 32);
       BOOST_CHECK_EQUAL(okb.data(), "");
       ELLE_TRACE("addr: %s",
-        infinit::model::Address((const uint8_t*)okb.address().data()));
+        memo::model::Address((const uint8_t*)okb.address().data()));
     }
     okb.set_data_plain("bokbok");
     { // store
@@ -798,7 +795,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       BOOST_CHECK_EQUAL(acb.address().size(), 32);
       BOOST_CHECK_EQUAL(acb.data(), "");
       ELLE_TRACE("addr: %s",
-        infinit::model::Address((const uint8_t*)acb.address().data()));
+        memo::model::Address((const uint8_t*)acb.address().data()));
     }
     acb.set_data("bokbok");
     { // store
@@ -897,7 +894,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
     // check read from alice
     sched.mt_run<void>("alice", [&] {
         auto ac = dhts.client(false, alice);
-        auto block = ac.dht.dht->fetch(infinit::model::Address((uint8_t*)abs.block().address().data()));
+        auto block = ac.dht.dht->fetch(memo::model::Address((uint8_t*)abs.block().address().data()));
         BOOST_CHECK_EQUAL(block->data(), "merow");
     });
 #endif

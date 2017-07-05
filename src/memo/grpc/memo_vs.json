@@ -1,0 +1,643 @@
+{
+  "syntax": "proto3",
+  "package": "memo.vs",
+  "services": [{
+    "name": "ValueStore",
+    "rpcs": [
+      {
+        "name": "MakeImmutableBlock",
+        "arguments": ["MakeImmutableBlockRequest"],
+        "returns": "Block",
+        "documentation": {
+          "abstract": "Ask for a brand new block Block, representing an ImmutableBlock",
+          "description": "The address of an ImmutableBlock on its owner public key and the payload of the block, given by the MakeImmutableBlockRequest. N.B. The Block is not pushed yet",
+          "related": ["ImmutableBlock"]
+        }
+      },
+      {
+        "name": "MakeMutableBlock",
+        "arguments": ["MakeMutableBlockRequest"],
+        "returns": "Block",
+        "documentation": {
+          "abstract": "Ask for a brand new Block, representing a MutableBlock",
+          "description": "The address is chosen randomly by the key-value store. Hence, the MakeMutableBlockRequest has no attributes. N.B. The Block is not pushed yet",
+          "related": ["MutableBlock"]
+        }
+      },
+      {
+        "name": "Fetch",
+        "arguments": ["FetchRequest"],
+        "returns": "FetchResponse",
+        "documentation": {
+          "abstract": "Fetch the block at given address"
+        }
+      },
+      {
+        "name": "Insert",
+        "arguments": ["InsertRequest"],
+        "returns": "InsertResponse",
+        "documentation": {
+          "abstract": "Insert a new Block",
+          "description": "The Block to insert is given by the InsertRequest. The Block should have been created by using Make<...>Block. Insert returns an InsertResponse, containing the information related to the Insertion"
+        }
+      },
+      {
+        "name": "Update",
+        "arguments": ["UpdateRequest"],
+        "returns": "UpdateResponse",
+        "documentation": {
+          "abstract": "Update an existing block",
+          "description": "The address and the new content of the Block are given by the UpdateRequest. Update doesn't perform an upsert, hence, the update will fail if the block doesn't exist, but also you are not allowed to update it. The UpdateResponse will contain the information related to the result of the insertion attempt",
+          "related": []
+        }
+      },
+      {
+        "name": "Delete",
+        "arguments": ["DeleteRequest"],
+        "returns": "DeleteResponse",
+        "documentation": {
+          "abstract": "Erase the block at the given address",
+          "description": "The address of the Block is given by the DeleteRequest. The ability to remove a Block is determined by two factors: The existence of the Block and the permission to delete it. The DeleteResponse will contain the information related to result of the deletion attempt"
+        }
+      }
+    ]
+  }],
+  "messages": [
+    {
+      "name": "MakeMutableBlockRequest",
+      "documentation": {
+        "abstract": "Create a request for a MutableBlock",
+        "related": ["MutableBlock", "MakeMutableBlock", "InsertRequest"]
+      }
+    },
+    {
+      "name": "MakeImmutableBlockRequest",
+      "documentation": {
+        "abstract": "Create a request for an ImmutableBlock",
+        "related": ["MakeImmutableBlock", "InsertRequest"]
+      },
+      "attributes": [
+        {
+          "name": "data",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The payload of the ImmutableBlock"
+          },
+          "index": 1
+        },
+        {
+          "name": "owner",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the owner block",
+            "description": "This address is used to find the ACB in charge of the Block, to sign the Block and control remove permissions. Until ACB are introduced to this API, leave this field empty to base the signature on the key-value store keys"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "InsertRequest",
+      "documentation": {
+        "abstract": "Create a request to insert a Block in the key-value store",
+        "description": "The InsertRequest contains informations to pass to the Insert rpc. Use Make<...>BlockRequest to create the Block to insert"
+      },
+      "attributes": [
+        {
+          "name": "block",
+          "type": "Block",
+          "documentation": {
+            "abstract": "The block to insert"
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "UpdateRequest",
+      "documentation": {
+        "abstract": "Create a request to Update a MutableBlock",
+        "description": "Update an existing MutableBlock. "
+      },
+      "attributes": [
+        {
+          "name": "block",
+          "type": "Block",
+          "documentation": {
+            "abstract": "The new value of the block"
+          },
+          "index": 1
+        },
+        {
+          "name": "decrypt_data",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether to decrypt data automatically",
+            "documentation": "In the case the update fails, the current version of the Block is attached to the UpdateResponse. Becausse MutableBlocks have, by design, their payload encrypted, enabling `decrypt_data` will cause the key-value store to set the `data` field of the Block with the decrypted payload"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "FetchRequest",
+      "documentation": {
+        "abstract": "Create a request to fetch a Block from the key-value store"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the Block to fetch"
+          },
+          "index": 1
+        },
+        {
+          "name": "decrypt_data",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether to decrypt data automatically",
+            "documentation": "MutableBlocks have, by design, their payload encrypted. Enabling `decrypt_data` will cause the key-value store to set the `data` field of the Block with the decrypted payload"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "DeleteRequest",
+      "documentation": {
+        "abstract": "A request to remove a Block"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the Block to remove"
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "Version",
+      "documentation": {
+        "abstract": "A Version, represented as a tuple of three integers"
+      },
+      "attributes": [
+        {
+          "name": "major",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The major"
+          },
+          "index": 1
+        },
+        {
+          "name": "minor",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The minor"
+          },
+          "index": 2
+        },
+        {
+          "name": "subminor",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The subminor"
+          },
+          "index": 3
+        }
+      ]
+    },
+    {
+      "name": "ACLEntry",
+      "documentation": {
+        "abstract": "An object representing Access Control List Entry",
+        "description": "Readings or writings on ACB are secured by ACLEntries, containing permissions and encrypted tokens for each users allowed"
+      },
+      "attributes": [
+        {
+          "name": "key_koh",
+          "type": "Key",
+          "documentation": {
+            "abstract": "The key public to manage permissions of"
+          },
+          "index": 1
+        },
+        {
+          "name": "read",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether read permission is granted"
+          },
+          "index": 2
+        },
+        {
+          "name": "write",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether write permission is granted"
+          },
+          "index": 3
+        },
+        {
+          "name": "token",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "Token, containing the secret to read encrypted data",
+            "description": "ACB data is encrypted using a secret key. Every authorized user has a version of this secret, him and only him can decrypt"
+          },
+          "index": 4
+        }
+      ]
+    },
+    {
+      "name": "PublicKey",
+      "documentation": {
+        "abstract": "An object representing a PublicKey"
+      },
+      "attributes": [
+        {
+          "name": "rsa",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The DER representation of the PublicKey (RSA)"
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "Key",
+      "documentation": {
+        "abstract": "XXX"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "XXX"
+          },
+          "index": 1
+        },
+        {
+          "name": "public_key",
+          "type": "PublicKey",
+          "documentation": {
+            "abstract": "XXX"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "Block",
+      "documentation": {
+        "abstract": "A generic Block, of any kind",
+        "description": "A Block is generic object that can represent any kind of block"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "The type of Block",
+            "description": "The Block is generic. Block::type can be used to determine the nature of the Block, hence, know relevant attributes. The possible values are NB, UB, NB, OKB, GB, ACB or CHB"
+          },
+          "index": 1
+        },
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the Block"
+          },
+          "index": 2
+        },
+        {
+          "name": "payload",
+          "type": "oneof",
+          "documentation": {
+            "abstract": "The payload of the block, data or data_plain, depeding of the Block"
+          },
+          "values": [
+            {
+              "name": "data",
+              "type": "bytes",
+              "documentation": {
+                "abstract": "The raw data of the block (N.B. This can be encrypted)"
+              },
+              "index": 3
+            },
+            {
+              "name": "data_plain",
+              "type": "bytes",
+              "documentation": {
+                "abstract": "The decyphered data payload of the block"
+              },
+              "index": 22
+            }
+          ]
+        },
+        {
+          "name": "salt",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "A constant salt, used when computing the address of the block",
+            "specific": ["CHB"]
+          },
+          "index": 4
+        },
+        {
+          "type": "bytes",
+          "name": "owner",
+          "documentation": {
+            "abstract": "The representation of the owner public key",
+            "specific": ["NB"]
+          },
+          "index": 5
+        },
+        {
+          "name": "signature",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The signature of the block content. The signature proves the integrity of the block by ensuring data have been signed using the owner private key",
+            "specific": ["NamedBlock"]
+          },
+          "index": 6
+        },
+        {
+          "name": "owner_rsa",
+          "type": "bytes",
+          "documentation": {
+            "abstract": ""
+          },
+          "index": 7
+        },
+        {
+          "name": "name",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The name of the block",
+            "specific": ["NamedBlock"]
+          },
+          "index": 8
+        },
+        {
+          "name": "key_koh",
+          "type": "Key",
+          "documentation": {
+            "abstract": "A Key object, that can be a hash, used to the find the a User Block (UB) or the public key of the owner of the Block",
+            "documentation": "XXX"
+          },
+          "index": 9
+        },
+        {
+          "name": "version",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The version of the Block",
+            "description": "This represents the number of times the block has been changed"
+          },
+          "index": 10
+        },
+        {
+          "name": "editor",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The index of the editor in the `acl` or `acl_group` to check permissions",
+            "description": "Access Control Blocks, ACBs, contains two lists of ACL entries, one for users, one for groups. The `editor` attribute determine which ACL entry to use",
+            "specific": ["ACB"]
+          },
+          "index": 11
+        },
+        {
+          "name": "owner_token",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "A token, containing the secret used encipher the data",
+            "specific": ["ACB"]
+          },
+          "index": 12
+        },
+        {
+          "name": "acl",
+          "type": "ACLEntry",
+          "documentation": {
+            "abstract": "The list of ACL entries (one for each user referenced in the ACB)",
+            "specific": ["ACB"]
+          },
+          "rule": "repeated",
+          "index": 13
+        },
+        {
+          "name": "data_version",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The version of the data",
+            "description": "Each time data are changed, this version is increased by one",
+            "specific": ["ACB"]
+          },
+          "index": 14
+        },
+        {
+          "name": "data_signature",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The signature of the data",
+            "specific": ["ACB"]
+          },
+          "index": 15
+        },
+        {
+          "name": "world_readable",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether the Block is readable by everybody",
+            "specific": ["ACB"]
+          },
+          "index": 16
+        },
+        {
+          "name": "world_writable",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether the Block is writable by everybody",
+            "specific": ["ACB"]
+          },
+          "index": 17
+        },
+        {
+          "name": "group_acl",
+          "type": "ACLEntry",
+          "documentation": {
+            "abstract": "A list of ACL entries (one for each group reference in the ACB)",
+            "specific": ["ACB"]
+          },
+          "rule": "repeated",
+          "index": 18
+        },
+        {
+          "name": "group_version",
+          "type": "int64",
+          "documentation": {
+            "abstract": "XXX",
+            "specific": ["ACB"]
+          },
+          "rule": "repeated",
+          "index": 19
+        },
+        {
+          "name": "deleted",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Wheter the Block was marked for deletion",
+            "specific": ["ACB"]
+          },
+          "index": 20
+        },
+        {
+          "name": "seal_version",
+          "type": "Version",
+          "documentation": {
+            "abstract": "The version to determine the type of algorithm used / to use when sealing the Block",
+            "description": "If the seal version is at least 0.7.0, use encrypt, less costy than seal",
+            "specific": ["MutableBlock", "ACB"]
+          },
+          "index": 21
+        },
+        {
+          "name": "next_seal_version",
+          "type": "int64",
+          "documentation": {
+            "abstract": "The version of the seal to use during next sealing",
+            "specific": ["OKB"]
+          },
+          "index": 23
+        }
+      ]
+    },
+    {
+      "name": "FetchResponse",
+      "documentation": {
+        "abstract": "The response to a FetchRequest",
+        "description": "Fetching a Block guarantees to return the latest version of the Block. If the Block doesn't exist or if you don't have permission to read the content of the Block, the fetch procedure will fail"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "[unknown]",
+            "description": "Always empty"
+          },
+          "index": 1
+        },
+        {
+          "name": "block",
+          "type": "Block",
+          "documentation": {
+            "abstract": "The fetched Block, at it latest version"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "InsertResponse",
+      "documentation": {
+        "abstract": "The response to a InsertRequest"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "[unknown]",
+            "description": "Always empty"
+          },
+          "index": 1
+        },
+        {
+          "name": "bool",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether the update succeeded"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "UpdateResponse",
+      "documentation": {
+        "abstract": "The response to an UpdateRequest",
+        "description": "Updating a Block is the trickiest part of the key-value store, because you are in charge of the conflict resolutuon. In case of conflict, the UpdateRequest::current will be set to current version of the Block. Once you have updated the current Block, you can re-attempt to update the block"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "[unknown]",
+            "description": "Always empty"
+          },
+          "index": 1
+        },
+        {
+          "name": "message",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "A message describing the error"
+          },
+          "index": 2
+        },
+        {
+          "name": "current",
+          "type": "Block",
+          "documentation": {
+            "abstract": "The current block stored at the address"
+          },
+          "index": 3
+        },
+        {
+          "name": "bool",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether the update succeeded"
+          },
+          "index": 4
+        }
+      ]
+    },
+    {
+      "name": "DeleteResponse",
+      "documentation": {
+        "abstract": "The response to a DeleteRequest"
+      },
+      "attributes": [
+        {
+          "name": "type",
+          "type": "string",
+          "documentation": {
+            "abstract": "[unknown]",
+            "description": "Always empty"
+          },
+          "index": 1
+        },
+        {
+          "name": "bool",
+          "type": "bool",
+          "documentation": {
+            "abstract": "Whether the update was successful"
+          },
+          "index": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 #include <elle/log.hh>
 
-#include <infinit/filesystem/filesystem.hh>
+#include <memo/filesystem/filesystem.hh>
 
 #include "DHT.hh" // XXX Shared with tests.
 
 ELLE_LOG_COMPONENT("bench");
 
-using Consensus = infinit::model::doughnut::consensus::Consensus;
+using Consensus = memo::model::doughnut::consensus::Consensus;
 
 std::unique_ptr<Consensus>
 same_consensus(std::unique_ptr<Consensus> c)
@@ -50,9 +50,9 @@ public:
     Client(std::string const& name, DHT dht)
       : dht(std::move(dht))
       , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
-             std::make_unique<infinit::filesystem::FileSystem>(
+             std::make_unique<memo::filesystem::FileSystem>(
                name, this->dht.dht,
-               infinit::filesystem::allow_root_creation = true),
+               memo::filesystem::allow_root_creation = true),
              true))
     {}
 

@@ -4,7 +4,7 @@ from utils import *
 
 with TemporaryDirectory() as tmp, \
      Beyond() as beyond, \
-     Infinit(beyond = beyond) as bob:
+     Memo(beyond = beyond) as bob:
   server = '%s/crash/report' % beyond.domain
   email = 'crash@infinit.sh'
   template = 'Internal/Crash Report'

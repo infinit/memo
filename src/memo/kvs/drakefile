@@ -1,0 +1,157 @@
+import os
+
+import drake
+import drake.go
+
+header = None
+library = None
+rule_build = None
+
+service_proto = None
+gen_cpp = None
+gen_go = None
+gen_py = None
+
+def configure(
+  go_toolkit,
+  go_config,
+  grpc,
+  git = None
+):
+  global header, library, rule_build
+  global service_proto, gen_cpp, gen_go, gen_py
+
+  windows = go_toolkit.os == 'windows'
+
+  rule_build = drake.Rule('build')
+
+  local_config = drake.go.Config(go_config)
+
+  gen_vs = grpc.GRPCGoGen(grpc.memo_vs_with_named_proto, grpc.grpc.protoc,
+                          toolkit = go_toolkit)
+  class CopyToEmptyDirectory(drake.Copy):
+
+    def execute(self):
+      import shutil
+      folder = str(self.targets()[0].path().dirname())
+      shutil.rmtree(folder)
+      os.makedirs(folder)
+      return super().execute()
+
+    def hash(self):
+      return {}
+
+  vs_grpc = drake.copy(gen_vs.targets(), 'src/memo/vs',
+                       strip_prefix = True,
+                       builder = CopyToEmptyDirectory)
+  service_proto = drake.node('protobuf/memo_kvs.proto')
+  gen_go = grpc.GRPCGoGen(service_proto,
+                          grpc.grpc.protoc,
+                          toolkit = go_toolkit)
+  kvs_grpc = drake.copy(gen_go.targets(), 'src/kvs/service',
+                        strip_prefix = True)
+  gen_kvs_data = grpc.GRPCGoGen(drake.node('protobuf/memo_kvs_data.proto'),
+                                grpc.grpc.protoc,
+                                toolkit = go_toolkit)
+  kvs_data = drake.copy(gen_kvs_data.targets(), 'src/kvs/data',
+                        strip_prefix = True)
+  local_config.add_include_path(drake.path_build())
+
+  # XXX: Dynamic dependency fetching does not work in parallel for some
+  # packages so declare them statically. This is the case when a single git repo
+  # contains several dependencies - grpc, protobuf, etc.
+  grpc_package_tgts = \
+    [drake.node(t % (go_toolkit.path, go_toolkit.platform_str())) for t in [
+    '%s/pkg/%s/github.com/golang/protobuf/proto.a',
+    '%s/pkg/%s/github.com/golang/protobuf/ptypes/any.a',
+    '%s/pkg/%s/golang.org/x/net/context.a',
+    '%s/pkg/%s/golang.org/x/net/http2/hpack.a',
+    '%s/pkg/%s/golang.org/x/net/http2.a',
+    '%s/pkg/%s/golang.org/x/net/idna.a',
+    '%s/pkg/%s/golang.org/x/net/internal/timeseries.a',
+    '%s/pkg/%s/golang.org/x/net/lex/httplex.a',
+    '%s/pkg/%s/golang.org/x/net/trace.a',
+    '%s/pkg/%s/golang.org/x/text/secure/bidirule.a',
+    '%s/pkg/%s/golang.org/x/text/transform.a',
+    '%s/pkg/%s/golang.org/x/text/unicode/bidi.a',
+    '%s/pkg/%s/golang.org/x/text/unicode/norm.a',
+    '%s/pkg/%s/google.golang.org/genproto/googleapis/rpc/status.a',
+    '%s/pkg/%s/google.golang.org/grpc/codes.a',
+    '%s/pkg/%s/google.golang.org/grpc/credentials.a',
+    '%s/pkg/%s/google.golang.org/grpc/grpclb/grpc_lb_v1.a',
+    '%s/pkg/%s/google.golang.org/grpc/grpclog.a',
+    '%s/pkg/%s/google.golang.org/grpc/internal.a',
+    '%s/pkg/%s/google.golang.org/grpc/keepalive.a',
+    '%s/pkg/%s/google.golang.org/grpc/metadata.a',
+    '%s/pkg/%s/google.golang.org/grpc/naming.a',
+    '%s/pkg/%s/google.golang.org/grpc/peer.a',
+    '%s/pkg/%s/google.golang.org/grpc/stats.a',
+    '%s/pkg/%s/google.golang.org/grpc/status.a',
+    '%s/pkg/%s/google.golang.org/grpc/tap.a',
+    '%s/pkg/%s/google.golang.org/grpc/transport.a',
+    '%s/pkg/%s/google.golang.org/grpc.a',
+  ]]
+  drake.go.FetchPackage('google.golang.org/grpc', go_toolkit,
+                        targets = grpc_package_tgts)
+
+  sources = drake.nodes(
+    'src/server/server.go',
+  ) + vs_grpc + kvs_grpc + kvs_data
+  source_include = drake.path_source() / drake.Drake.current.prefix
+  local_config.add_include_path(source_include)
+
+  if not windows:
+    kvs_lib_builder = drake.go.CDyLibBuilder(
+      drake.go.Source('src/lib/library.go'),
+      go_toolkit, local_config,
+      target = 'lib/libkvs%s' % go_toolkit.dylib_ext(),
+      sources = sources,
+    )
+  else:
+    kvs_lib_builder = drake.go.CStaticLibBuilder(
+      drake.go.Source('src/lib/library.go'),
+      go_toolkit, local_config,
+      target = 'lib/libkvs%s' % go_toolkit.staticlib_ext(),
+      sources = sources,
+    )
+  header = kvs_lib_builder.header
+  library = kvs_lib_builder.library
+  rule_build << header
+  rule_build << library
+
+  gen_cpp = grpc.GRPCCxxGen(
+    service_proto,
+    grpc.grpc.protoc,
+    drake.node(grpc.grpc.grpc_cpp_plugin))
+  gen_py = grpc.GRPCPyGen(
+    service_proto,
+    grpc.grpc.protoc,
+    drake.node(grpc.grpc.grpc_python_plugin))
+
+  ## -------------------- ##
+  ## Docker python client ##
+  ## -------------------- ##
+
+  git = git or drake.git.Git()
+
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'memo-kvs-client-python', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apk add --update python3' \
+                  '&& apk add --virtual build-deps python3-dev gcc g++' \
+                  '&& pip3 install grpcio ' \
+                  '&& apk del build-deps ' \
+                  '&& rm -rf /var/cache/apk/*')
+  docker_file.env('PYTHONPATH', '/root')
+  docker_file.add(drake.copy([drake.node('memo_kvs.py')] + gen_py.targets(),
+                             docker_path, strip_prefix = True), '/root/')
+  docker_file.entry_point(
+    ['/usr/bin/env', 'python3', '-i', '-m', 'memo_kvs'])
+  drake.docker.DockerBuilder(docker_image, docker_file)
