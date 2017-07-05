@@ -18,7 +18,7 @@ namespace memo
       {}
 
       static const elle::serialization::Hierarchy<elle::Exception>::
-      Register<HandshakeFailed> _register_serialization;
+      Register<HandshakeFailed> _register_serialization{"infinit::model::doughnut::HandshakeFailed"};
     }
   }
 }

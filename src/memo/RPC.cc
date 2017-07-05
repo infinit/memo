@@ -22,6 +22,8 @@ namespace memo
   namespace
   {
     auto const _register_serialization =
-      elle::serialization::Hierarchy<elle::Exception>::Register<UnknownRPC>{};
+      elle::serialization::Hierarchy<elle::Exception>::Register<UnknownRPC>{
+      "infinit::UnknownRPC"
+    };
   }
 }

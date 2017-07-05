@@ -2200,6 +2200,14 @@ namespace memo
 
         static const elle::serialization::Hierarchy<Configuration>::
         Register<Paxos::Configuration> _register_Configuration("paxos");
+
+        static const elle::serialization::Hierarchy<elle::Exception>::
+        Register<Paxos::PaxosServer::WrongQuorum> _register_paxos_WrongQuorum(
+          "athena::paxos::Server<std::shared_ptr<infinit::model::blocks::Block>, int, infinit::model::Address, infinit::model::Address>::WrongQuorum");
+
+        static const elle::serialization::Hierarchy<elle::Exception>::
+        Register<Paxos::PaxosServer::PartialState> _register_paxos_PartialState(
+          "athena::paxos::Server<std::shared_ptr<infinit::model::blocks::Block>, int, infinit::model::Address, infinit::model::Address>::PartialState");
       }
     }
   }
