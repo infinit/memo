@@ -31,25 +31,46 @@ namespace crash_report
 {
   namespace
   {
-    /// Called by breakpad once the minidump saved.
+    /// Typed callback invoked by breakpad once the minidump saved.
+    void
+    dump(CrashReporter& report, std::string const& base)
+    {
+      if (report.make_payload)
+        report.make_payload(base);
+    }
+
 #if defined MEMO_LINUX
+    /// Untyped callback invoked by breakpad once the minidump saved.
     bool
     dump_callback(const breakpad::MinidumpDescriptor& descriptor,
                   void* context,
                   bool succeeded)
+    {
+      std::string base = descriptor.path();
+      if (boost::ends_with(base, ".dmp"))
+      {
+        base.substr(base.size() - 4);
+        dump(*static_cast<CrashReporter*>(context), base);
+        return succeeded;
+      }
+      else
+      {
+        ELLE_ERR("unexpected minidump extension: %s", base);
+        return false;
+      }
+    }
 #elif defined MEMO_MACOSX
+    /// Untyped callback invoked by breakpad once the minidump saved.
     bool
-    dump_callback(const char* dump_dir,
-                  const char* minidump_id,
+    dump_callback(const char* dump_dir, const char* minidump_id,
                   void* context,
                   bool succeeded)
-#endif
     {
-      auto& report = *static_cast<CrashReporter*>(context);
-      if (report.make_payload)
-        report.make_payload(elle::print("{}/{}", dump_dir, minidump_id));
+      dump(*static_cast<CrashReporter*>(context),
+           elle::print("{}/{}", dump_dir, minidump_id));
       return succeeded;
     }
+#endif
 
     /// Prepare the exception handler.
     auto
