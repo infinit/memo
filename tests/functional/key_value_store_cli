@@ -147,6 +147,7 @@ with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
     threads.append(t)
   for t in threads:
     t.start()
+  for t in threads:
     t.join()
   # Check data.
   for k, v in data.items():
