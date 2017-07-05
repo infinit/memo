@@ -613,3 +613,9 @@ class KeyValueStoreInfrastructure():
           log('STDOUT: %s' % out.decode('utf-8'))
           log('STDERR: %s' % err.decode('utf-8'))
           raise
+
+  def client(self):
+    import grpc
+    import memo_kvs_pb2_grpc
+    channel = grpc.insecure_channel(self.__endpoint)
+    return memo_kvs_pb2_grpc.KeyValueStoreStub(channel)
