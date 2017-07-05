@@ -1,3 +1,7 @@
+# memo, an elastic and resilient key-value store
+
+<img src="docs/static_files/memo-logotype-docker@2x.png" alt="Logo - Memo" title="Memo logotype" width="300" style="max-width:300px;">
+
 The memo project combines a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
 
 `memo` is supported by the Docker's Infinit team and is the backend of the Infinit Storage Platform project.
