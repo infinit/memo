@@ -1489,15 +1489,17 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_new_block, (bool, immutable))
   {
-    auto dht_a = DHT(dht::consensus_builder = instrument(2));
+    auto dht_a = DHT(id = special_id(10),
+                     dht::consensus_builder = instrument(2));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(dht::consensus_builder = instrument(2));
+    auto dht_b = DHT(id = special_id(11),
+                     dht::consensus_builder = instrument(2));
     auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     local_b.store_barrier().close();
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    auto client = DHT(storage = nullptr);
+    auto client = DHT(id = special_id(11), storage = nullptr);
     client.overlay->connect(*dht_a.overlay);
     auto b = make_block(client, immutable, "expand_new_block");
     ELLE_LOG("write block to one DHT")
