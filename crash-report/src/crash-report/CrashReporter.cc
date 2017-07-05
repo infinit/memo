@@ -30,20 +30,47 @@ namespace crash_report
 {
   namespace
   {
+    /// Called by breakpad once the minidump saved.
 #if defined MEMO_LINUX
     bool
     dump_callback(const breakpad::MinidumpDescriptor& descriptor,
                   void* context,
-                  bool success)
+                  bool succeeded)
 #elif defined MEMO_MACOSX
     bool
     dump_callback(const char* dump_dir,
                   const char* minidump_id,
                   void* context,
-                  bool success)
+                  bool succeeded)
 #endif
     {
-      return success;
+      return succeeded;
+    }
+
+    /// Prepare the exception handler.
+    auto
+    make_exception_handler(std::string const& dumps_path)
+    {
+#if defined MEMO_LINUX
+      breakpad::MinidumpDescriptor descriptor(dumps_path);
+      return
+        std::make_unique<breakpad::ExceptionHandler>
+        (descriptor,
+         nullptr, // filter
+         dump_callback,
+         nullptr, // callback context
+         true,    // install handler
+         -1);     // server-fd.
+#elif defined MEMO_MACOSX
+      return
+        std::make_unique<breakpad::ExceptionHandler>
+        (dumps_path,
+         nullptr, // filter
+         dump_callback,
+         nullptr, // callback context.
+         true,    // install handler
+         nullptr);
+#endif
     }
 
     bool
@@ -83,27 +110,10 @@ namespace crash_report
     , _version(std::move(version))
   {
     using elle::os::getenv;
-    if (getenv("MEMO_CRASH_REPORT",
-               getenv("MEMO_CRASH_REPORTER", production_build)))
+    if (getenv("MEMO_CRASH_REPORT", production_build))
     {
-#if defined MEMO_LINUX
-      breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
-      this->_exception_handler =
-        std::make_unique<breakpad::ExceptionHandler>(descriptor,
-                                                     nullptr,
-                                                     dump_callback,
-                                                     nullptr,
-                                                     true,
-                                                     -1);
-#elif defined MEMO_MACOSX
-      this->_exception_handler =
-        std::make_unique<breakpad::ExceptionHandler>(this->_dumps_path.string(),
-                                                     nullptr,
-                                                     dump_callback,
-                                                     nullptr,
-                                                     true,
-                                                     nullptr);
-#endif
+      this->_exception_handler
+        = make_exception_handler(this->_dumps_path.string());
       ELLE_TRACE("crash handler started");
     }
   }
