@@ -4,7 +4,7 @@
 
 The memo project combines a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
 
-`memo` is supported by the Docker's Infinit team and is the backend of the Infinit Storage Platform project.
+`memo` is supported by Docker and is used as backend by the Infinit Storage Platform project.
 
 ## What is the difference between the value store and the key-value store
 
@@ -14,7 +14,7 @@ The value store is the lowest brick of the architecture, providing the fundament
 
 For more details you can consult [XXX: When shoould I use the value store against the key-value store]().
 
-## Getting memo
+## How to get memo
 
 To download the source code and build memo by yourself, get it from GitHub.
 
