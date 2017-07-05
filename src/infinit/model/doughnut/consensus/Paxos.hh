@@ -93,10 +93,6 @@ namespace infinit
           void
           _fetch(std::vector<AddressVersion> const& addresses,
                  ReceiveBlock res) override;
-          std::unique_ptr<blocks::Block>
-          _fetch(Address address,
-                 PaxosClient::Peers peers,
-                 boost::optional<int> local_version);
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
           bool
@@ -112,9 +108,6 @@ namespace infinit
           _resign() override;
 
         private:
-          PaxosClient::Peers
-          _peers(Address const& address,
-                 boost::optional<int> local_version = {});
           PaxosClient
           _client(Address const& addr);
           PaxosClient::State
@@ -340,7 +333,9 @@ namespace infinit
             _disappeared_evict(Address id);
           private:
             void
-            _propagate(Address a);
+            _propagate(Address a,
+                       PaxosServer::Quorum old_quorum,
+                       PaxosServer::Quorum new_quorum);
             void
             _rebalance();
             ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
