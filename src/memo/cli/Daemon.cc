@@ -394,8 +394,8 @@ namespace memo
             elle::setegid(prev_egid);
           }
 
-          std::string const prev_home = elle::os::getenv("MEMO_HOME", "");
-          std::string const prev_data_home = elle::os::getenv("MEMO_DATA_HOME", "");
+          std::string const prev_home = memo::getenv("HOME", "");
+          std::string const prev_data_home = memo::getenv("DATA_HOME", "");
           int const prev_euid = geteuid();
           int const prev_egid = getegid();
         };
