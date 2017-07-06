@@ -53,7 +53,7 @@ namespace memo
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
-        if (!elle::os::getenv("INFINIT_DISABLE_SIGNAL_HANDLER", false))
+        if (!memo::getenv("DISABLE_SIGNAL_HANDLER", false))
         {
           static const auto signals = {SIGINT, SIGTERM
 #ifndef MEMO_WINDOWS
@@ -147,8 +147,7 @@ namespace memo
     std::string
     Memo::default_user_name() const
     {
-      static auto const res =
-        elle::os::getenv("MEMO_USER", elle::system::username());
+      static auto const res = memo::getenv("USER", elle::system::username());
       return res;
     }
 
@@ -504,7 +503,7 @@ main(int argc, char** argv)
   catch (elle::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-    if (elle::os::getenv("MEMO_BACKTRACE", false))
+    if (memo::getenv("BACKTRACE", false))
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
