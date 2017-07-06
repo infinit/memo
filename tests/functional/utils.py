@@ -238,9 +238,18 @@ class Memo(TemporaryDirectory):
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
 
+def here():
+  '''Find the top-level call.'''
+  import inspect
+  frame = inspect.currentframe()
+  while frame.f_back:
+    frame = frame.f_back
+  finfo = inspect.getframeinfo(frame)
+  return finfo.filename + ":" + str(finfo.lineno)
+
 def assertEq(a, b):
   if a == b:
-    print('PASS: {} == {}'.format(a, b), file=sys.stderr)
+    print('PASS: {}: {} == {}'.format(here(), a, b), file=sys.stderr)
   else:
     def lines(s):
       s = str(s)
@@ -251,7 +260,7 @@ def assertEq(a, b):
     diff = ''.join(udiff(lines(a),
                          lines(b),
                          fromfile='a', tofile='b'))
-    raise AssertionError('%r != %r\n%s' % (a, b, diff))
+    raise AssertionError('%s: %r != %r\n%s' % (here(), a, b, diff))
 
 def assertNeq(a, b):
   if a != b:
