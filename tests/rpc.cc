@@ -186,6 +186,7 @@ ELLE_TEST_SCHEDULED(parallel)
       elle::reactor::wait(s);
     };
     auto duration = std::chrono::system_clock::now() - start;
+    BOOST_TEST_MESSAGE("delay: " << delay << ", duration: " << duration);
     BOOST_TEST(delay * 2 <= duration);
     BOOST_TEST(duration <= delay * 3);
   }
