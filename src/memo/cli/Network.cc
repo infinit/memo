@@ -231,9 +231,8 @@ namespace memo
             return 1;
         }();
         if (timeout)
-          res->contact_timeout_ms =
-            std::chrono::duration_from_string<std::chrono::milliseconds>(
-              *timeout).count();
+          res->contact_timeout =
+            std::chrono::duration_from_string<elle::Duration>(*timeout);
         // encrypt support.
         {
           auto enc = encrypt.value_or("yes");

@@ -943,10 +943,10 @@ ELLE_TEST_SCHEDULED(
       {
         is_kelips = true;
         kelips->config().query_put_retries = 6;
-        kelips->config().query_timeout_ms = valgrind(2000, 4);
-        kelips->config().contact_timeout_ms = valgrind(100000,20);
-        kelips->config().ping_interval_ms = valgrind(500, 10);
-        kelips->config().ping_timeout_ms = valgrind(2000, 20);
+        kelips->config().query_timeout = valgrind(2s, 4);
+        kelips->config().contact_timeout = valgrind(100s,20);
+        kelips->config().ping_interval = valgrind(500ms, 10);
+        kelips->config().ping_timeout = valgrind(2s, 20);
       }
       servers.emplace_back(std::move(dht));
     }
@@ -984,10 +984,10 @@ ELLE_TEST_SCHEDULED(
       {
         kelips->config().query_put_retries = 6;
         kelips->config().query_get_retries = 20;
-        kelips->config().query_timeout_ms = valgrind(2000, 4);
-        kelips->config().contact_timeout_ms = valgrind(100000,20);
-        kelips->config().ping_interval_ms = valgrind(500, 10);
-        kelips->config().ping_timeout_ms = valgrind(2000, 20);
+        kelips->config().query_timeout = valgrind(2s, 4);
+        kelips->config().contact_timeout = valgrind(100s,20);
+        kelips->config().ping_interval = valgrind(500ms, 10);
+        kelips->config().ping_timeout = valgrind(2s, 20);
       }
       clients.emplace_back(std::move(dht));
     }
@@ -1650,7 +1650,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
   if (auto kelips = get_kelips(client))
   {
     kelips->config().query_put_retries = 6;
-    kelips->config().query_timeout_ms = valgrind(1000, 4);
+    kelips->config().query_timeout = valgrind(1s, 4);
   }
   // Wait for it to discover the first server.
   discover(client, *servers[0], false);
@@ -1966,12 +1966,11 @@ ELLE_TEST_SUITE()
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
       conf.query_put_insert_ttl = 0;
-      conf.query_timeout_ms = valgrind(200 * windows_factor, 20);
-      conf.contact_timeout_ms = windows_factor * valgrind(500, 20);
-      conf.ping_interval_ms = windows_factor * valgrind(20, 10);
-      conf.ping_timeout_ms = windows_factor * valgrind(100, 2);
-      return std::make_unique<kelips::Node>(
-        conf, local, &dht);
+      conf.query_timeout = valgrind(200ms * windows_factor, 20);
+      conf.contact_timeout = windows_factor * valgrind(500ms, 20);
+      conf.ping_interval = windows_factor * valgrind(20ms, 10);
+      conf.ping_timeout = windows_factor * valgrind(100ms, 2);
+      return std::make_unique<kelips::Node>(conf, local, &dht);
     }};
 
   auto make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)

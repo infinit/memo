@@ -189,9 +189,9 @@ run_nodes(bfs::path const& where,
   config.encrypt = true;
   config.accept_plain = false;
   int factor = IF_WINDOWS(5, 1);
-  config.contact_timeout_ms = factor * valgrind(2000,20);
-  config.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
-  config.ping_timeout_ms = factor * valgrind(500, 20);
+  config.contact_timeout = factor * valgrind(2s,20);
+  config.ping_interval = factor * valgrind(1s, 10) / count / 3;
+  config.ping_timeout = factor * valgrind(500ms, 20);
   config.query_get_retries = 2;
   for (int n=0; n<count; ++n)
   {
@@ -260,7 +260,7 @@ namespace
     config.encrypt = true;
     config.accept_plain = false;
     config.query_get_retries = 3;
-    config.ping_timeout_ms = valgrind(500, 20);
+    config.ping_timeout = valgrind(500ms, 20);
     auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
     auto make_consensus =
       [&] (memo::model::doughnut::Doughnut& dht)

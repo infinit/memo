@@ -104,11 +104,11 @@ namespace memo
         void
         serialize(elle::serialization::Serializer& s);
 
-        int interval_ms;
+        elle::Duration interval;
         /// entry considered new if gossip_count < threshold
         int new_threshold;
         /// entry considered old if last_gossip below that duration
-        int old_threshold_ms;
+        elle::Duration old_threshold;
         ///how many files per packet
         int files;
         /// how many nodes in other groups per packet
@@ -143,7 +143,7 @@ namespace memo
         /// query retry
         int query_put_retries;
         /// query timeout
-        int query_timeout_ms;
+        elle::Duration query_timeout;
         /// query initial ttl
         int query_get_ttl;
         /// query initial ttl
@@ -151,11 +151,11 @@ namespace memo
         /// query initial ttl
         int query_put_insert_ttl;
         /// entry lifetime before supression
-        int contact_timeout_ms;
+        elle::Duration contact_timeout;
         /// entry lifetime before supression
-        int file_timeout_ms;
-        int ping_interval_ms;
-        int ping_timeout_ms;
+        elle::Duration file_timeout;
+        elle::Duration ping_interval;
+        elle::Duration ping_timeout;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
