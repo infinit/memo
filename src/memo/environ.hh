@@ -1,6 +1,6 @@
 #pragma once
 
-#include <elle/os/getenv.hh>
+#include <elle/os/environ.hh>
 
 namespace memo
 {
