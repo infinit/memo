@@ -46,7 +46,7 @@ For a detailed procedure, visit our [wiki: How to build](https://github.com/infi
 First you need to install Python dependencies.
 
 ```bash
-sudo pip3 install -r drake/requirements.txt
+sudo pip3 install -r requirements.txt -r drake/requirements.txt
 ```
 > *Note:* If you don't want dependencies to be installed system-wide, you should consider using [virtualenv](https://virtualenv.pypa.io/en/stable/installation).
 
