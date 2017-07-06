@@ -459,7 +459,7 @@ namespace
     };
 
     struct LeftoversResult
-      :  public Result
+      : public Result
     {
       /*-------------.
       | Construction |
@@ -2136,8 +2136,12 @@ namespace
         elle::reactor::yield();
       }
     }
-    for (auto const& p: bfs::recursive_directory_iterator(memo::xdg_cache_home()))
+    for (auto it = bfs::recursive_directory_iterator(memo::xdg_cache_home());
+         it != bfs::recursive_directory_iterator();
+         ++it)
     {
+      do_not_recurse_deeper(it, memo::xdg_cache_home() / "logs");
+      auto p = *it;
       if (is_visible_file(p))
       {
         try
@@ -2161,9 +2165,7 @@ namespace
       {
         try
         {
-          if (p.path() == memo::xdg_state_home() / "critical.log")
-          {}
-          else
+          if (p.path() != memo::xdg_state_home() / "critical.log")
             store(leftovers, p.path().string());
         }
         catch (...)
