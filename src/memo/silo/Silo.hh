@@ -31,12 +31,6 @@ namespace memo
       unknown
     };
 
-    /// Conversion to bool.
-    ///
-    /// To move eventually to elle.
-    bool
-    to_bool(std::string const& s);
-
     class Silo
     {
     public:

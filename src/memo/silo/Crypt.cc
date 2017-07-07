@@ -1,8 +1,10 @@
 #include <memo/silo/Crypt.hh>
-#include <memo/model/Address.hh>
-#include <elle/cryptography/SecretKey.hh>
 
+#include <elle/cryptography/SecretKey.hh>
 #include <elle/factory.hh>
+#include <elle/from-string.hh>
+
+#include <memo/model/Address.hh>
 
 namespace memo
 {
@@ -15,7 +17,7 @@ namespace memo
       {
         auto backend = instantiate(args[0], args[1]);
         auto const& password = args[2];
-        auto const salt = 3 < args.size() ? to_bool(args[3]) : false;
+        auto const salt = 3 < args.size() ? elle::from_string<bool>(args[3]) : false;
         return std::make_unique<Crypt>(std::move(backend), password, salt);
       }
     }

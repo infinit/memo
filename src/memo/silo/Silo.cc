@@ -23,30 +23,6 @@ namespace memo
 {
   namespace silo
   {
-    bool
-    to_bool(std::string const& s)
-    {
-      static auto const map = std::unordered_map<std::string, bool>
-        {
-          {"0",     false},
-          {"1",     true},
-          {"false", false},
-          {"n",     false},
-          {"no",    false},
-          {"true",  true},
-          {"y",     true},
-          {"yes",   true},
-        };
-      if (auto it = elle::find(map, boost::to_lower_copy(s)))
-        return it->second;
-      else
-      {
-        ELLE_LOG_COMPONENT("to_bool");
-        ELLE_WARN("unexpected boolean value: %s", s);
-        return false;
-      }
-    }
-
     Silo::Silo(boost::optional<int64_t> capacity)
       : _capacity(std::move(capacity))
       , _usage(0) // recovered in the child ctor.
