@@ -85,8 +85,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(grpc_port_file, 0, "write gRPC listening port to file", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
-    // XXX[Storage]: Silo or Storage.
-    ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
+    ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false); // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
     ELLE_DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
     ELLE_DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon", false);
@@ -95,7 +94,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(k, 0, "number of groups (default: 1)", false);
     ELLE_DAS_CLI_SYMBOL(kalimero, 0, "use a Kalimero overlay network. Used for local testing", false);
     ELLE_DAS_CLI_SYMBOL(kelips, 0, "use a Kelips overlay network (default)", false);
-    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, 0, "ping timeout before considering a peer lost (default: 2min)", false);
+    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, 0, "ping timeout before considering a peer lost", false);
     ELLE_DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key", false);
     ELLE_DAS_CLI_SYMBOL(kouncil, 0, "use a Kouncil overlay network", false);
     ELLE_DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);

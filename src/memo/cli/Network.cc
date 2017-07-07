@@ -69,7 +69,7 @@ namespace memo
                // Kelips options,
                cli::nodes = boost::none,
                cli::k = boost::none,
-               cli::kelips_contact_timeout = boost::none,
+               cli::kelips_contact_timeout = elle::Duration{2min},
                cli::encrypt = boost::none,
                // Generic options
                cli::protocol = boost::none,
@@ -210,7 +210,7 @@ namespace memo
       auto
       make_kelips_config(boost::optional<int> nodes,
                          boost::optional<int> k,
-                         boost::optional<std::string> const& timeout,
+                         elle::Duration& timeout,
                          boost::optional<std::string> const& encrypt,
                          boost::optional<std::string> const& protocol)
       {
@@ -230,9 +230,7 @@ namespace memo
           else
             return 1;
         }();
-        if (timeout)
-          res->contact_timeout =
-            std::chrono::duration_from_string<elle::Duration>(*timeout);
+        res->contact_timeout = timeout;
         // encrypt support.
         {
           auto enc = encrypt.value_or("yes");
@@ -360,7 +358,7 @@ namespace memo
       // Kelips options,
       boost::optional<int> nodes,
       boost::optional<int> k,
-      boost::optional<std::string> kelips_contact_timeout,
+      elle::Duration kelips_contact_timeout,
       boost::optional<std::string> encrypt,
       boost::optional<std::string> protocol,
       elle::DurationOpt tcp_heartbeat,
