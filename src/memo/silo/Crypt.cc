@@ -15,6 +15,7 @@ namespace memo
       std::unique_ptr<memo::silo::Silo>
       make(std::vector<std::string> const& args)
       {
+        // FIXME: crash if not enough arguments.
         auto backend = instantiate(args[0], args[1]);
         auto const& password = args[2];
         auto const salt = 3 < args.size() ? elle::from_string<bool>(args[3]) : false;

@@ -24,6 +24,8 @@ namespace memo
 {
   namespace cli
   {
+    namespace bfs = boost::filesystem;
+
     Silo::Silo(Memo& memo)
       : Object(memo)
       , create(memo)
@@ -109,19 +111,21 @@ namespace memo
       )
     {}
 
-    static
-    void
-    mode_create(Memo& cli,
-                boost::optional<std::string> output,
-                std::unique_ptr<memo::silo::SiloConfig> config)
+    namespace
     {
-      if (auto o = cli.get_output(output, false))
+      void
+      mode_create(Memo& cli,
+                  boost::optional<std::string> output,
+                  std::unique_ptr<memo::silo::SiloConfig> config)
       {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
+        if (auto o = cli.get_output(output, false))
+        {
+          elle::serialization::json::SerializerOut s(*o, false);
+          s.serialize_forward(config);
+        }
+        else
+          cli.memo().silo_save(config->name, config);
       }
-      else
-        cli.memo().silo_save(config->name, config);
     }
 
     MEMO_ENTREPRISE(
@@ -154,14 +158,13 @@ namespace memo
                                   boost::optional<std::string> output,
                                   boost::optional<std::string> root)
     {
-      auto path = root ?
-        memo::canonical_folder(root.get()) :
-        (memo::xdg_data_home() / "blocks" / name);
-      if (boost::filesystem::exists(path))
+      auto const path = root ? memo::canonical_folder(root.get())
+        : (memo::xdg_data_home() / "blocks" / name);
+      if (bfs::exists(path))
       {
-        if (!boost::filesystem::is_directory(path))
+        if (!bfs::is_directory(path))
           elle::err("path is not directory: %s", path);
-        if (!boost::filesystem::is_empty(path))
+        if (!bfs::is_empty(path))
           std::cout << "WARNING: Path is not empty: " << path << '\n'
                     << "WARNING: You may encounter unexpected behavior.\n";
       }

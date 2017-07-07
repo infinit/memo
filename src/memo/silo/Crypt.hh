@@ -45,8 +45,8 @@ namespace memo
     {
       using Super = SiloConfig;
       CryptSiloConfig(std::string name,
-                         boost::optional<int64_t> capacity,
-                         boost::optional<std::string> description);
+                      boost::optional<int64_t> capacity,
+                      boost::optional<std::string> description);
       CryptSiloConfig(elle::serialization::SerializerIn& in);
 
       void

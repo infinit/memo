@@ -16,7 +16,7 @@
 
 using namespace std::literals;
 
-ELLE_LOG_COMPONENT("memo.storage.Filesystem");
+ELLE_LOG_COMPONENT("memo.silo.Filesystem");
 
 namespace memo
 {

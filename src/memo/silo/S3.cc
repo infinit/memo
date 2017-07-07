@@ -13,7 +13,7 @@
 #include <memo/model/blocks/Block.hh>
 #include <memo/silo/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.S3");
+ELLE_LOG_COMPONENT("memo.silo.S3");
 
 using namespace std::literals;
 

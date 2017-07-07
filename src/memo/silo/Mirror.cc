@@ -8,7 +8,7 @@
 
 #include <memo/model/Address.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.Mirror");
+ELLE_LOG_COMPONENT("memo.silo.Mirror");
 
 namespace memo
 {

@@ -11,7 +11,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-ELLE_LOG_COMPONENT("memo.storage.Silo");
+ELLE_LOG_COMPONENT("memo.silo.Silo");
 
 namespace
 {
