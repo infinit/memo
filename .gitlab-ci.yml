@@ -86,7 +86,7 @@ x86_64-ubuntu-gcc4:
     - smv "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - time python3 drake //docker
-    - docker run --rm $PROJECT:$DESC memo help # Check if the image works.
+    - docker run --rm $PROJECT:$DESC memo --help # Check if the image works.
     - docker tag $PROJECT:${DESC} infinit/$PROJECT:${DESC}
     - time docker push infinit/$PROJECT:${DESC}
     - docker rmi {,infinit/}$PROJECT:${DESC}
@@ -116,7 +116,7 @@ x86_64-alpine-gcc:
     - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
     - python3 drake //docker-alpine
-    - docker run --rm $PROJECT-alpine:$DESC memo help # Check if the image works.
+    - docker run --rm $PROJECT-alpine:$DESC memo --help # Check if the image works.
     - docker tag $PROJECT-alpine:$DESC infinit/$PROJECT-alpine:$DESC
     - docker push infinit/$PROJECT-alpine:$DESC
     - docker rmi {,infinit/}$PROJECT-alpine:$DESC
