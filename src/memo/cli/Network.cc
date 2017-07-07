@@ -13,6 +13,7 @@
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
 #include <memo/cli/xattrs.hh>
+#include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
@@ -775,7 +776,7 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (elle::os::getenv("INFINIT_CRASH", false))
+      if (memo::getenv("CRASH", false))
         *(volatile int*)nullptr = 0;
 
       auto& cli = this->cli();

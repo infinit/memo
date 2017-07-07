@@ -848,7 +848,7 @@ def configure(
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
           'MEMO_BINARIES': str(binaries_path),
-          'MEMO_WITH_KEY_VALUE_STORE': str(with_kvs),
+          'TEST_MEMO_WITH_KVS': str(with_kvs),
         }
         env.update(t.get('env', {}))
         if windows:

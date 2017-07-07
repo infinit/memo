@@ -14,6 +14,7 @@
 #include <elle/reactor/network/resolve.hh>
 
 #include <memo/Memo.hh>
+#include <memo/environ.hh>
 #include <memo/utility.hh>
 
 #include <memo/cli/Error.hh>
@@ -40,8 +41,8 @@ namespace memo
       , _network(network)
       , _self(self)
     {
-      bool v4 = !elle::os::getenv("MEMO_NO_IPV4", false);
-      bool v6 = !elle::os::getenv("MEMO_NO_IPV6", false)
+      bool v4 = !memo::getenv("NO_IPV4", false);
+      bool v6 = !memo::getenv("NO_IPV6", false)
        && network.dht()->version >= elle::Version(0, 7, 0);
       Endpoints endpoints;
       if (advertise)
@@ -51,8 +52,7 @@ namespace memo
         {
           try
           {
-            auto host = elle::reactor::network::resolve_tcp(a, port,
-              elle::os::inenv("MEMO_NO_IPV6"))[0];
+            auto host = elle::reactor::network::resolve_tcp(a, port, !v6)[0];
             endpoints.addresses.push_back(host.address().to_string());
           }
           catch (elle::reactor::network::ResolutionError const& e)
@@ -85,7 +85,7 @@ namespace memo
       {
         try
         {
-          auto host = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890");
+          auto host = memo::getenv("RDV", "rdv.infinit.sh:7890");
           if (host.empty())
             throw std::runtime_error("RDV disabled");
           int port = 7890;
@@ -119,7 +119,8 @@ namespace memo
           if (socket.public_endpoint().port())
           {
             auto addr = socket.public_endpoint().address();
-            if ( (addr.is_v4() && v4) || (addr.is_v6() && v6))
+            if (addr.is_v4() && v4
+                || addr.is_v6() && v6)
               endpoints.addresses.push_back(addr.to_string());
           }
         }
