@@ -42,7 +42,9 @@ namespace memo
     create_directories(log_dir);
     auto const log_base = log_dir / "main";
     elle::log::logger_add(std::make_unique<elle::log::FileLogger>
-                          (log_base.string(), "LOG", 100_KiB));
+       (log_base.string(),
+        "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
+        100_KiB));
   }
 
   bool
