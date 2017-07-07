@@ -560,15 +560,17 @@ class Beyond:
       'version': json.get('version', 'Unknown'),
     }
     with tempfile.TemporaryDirectory() as temp_dir:
-      files = [] # A list of files (not file names).
+      # A list of files (not file names), as requested by sendwithus.
+      files = []
       for k, v in json.items():
         if k not in ['platform', 'version']:
           fname = '{}/client.{}'.format(temp_dir, k)
-          file = open(fname, 'wb')
-          file.write(b64decode(v))
-          files.append(file)
+          with open(fname, 'wb') as f:
+            f.write(b64decode(v))
           if k in ['dump']:
             symbolize_dump(fname)
+          # 'rb' is requested by sendwithus.
+          files.append(open(fname, 'rb'))
       self.__emailer.send_one(
         recipient_email = 'crash@infinit.sh',
         recipient_name = 'Crash',
