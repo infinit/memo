@@ -6,11 +6,13 @@
 
 namespace memo
 {
-  /// Make sure the environment variables make sense.
+  /// Make sure the environment variables make sense for the given prefix.
+  ///
+  /// Note that '_' will be added after the prefix.
   ///
   /// Memoed, actually runs only once.
   void
-  environ_check();
+  environ_check(std::string prefix);
 
   /// Whether this is a known variable suffix (e.g., "HOME", not "MEMO_HOME").
   bool

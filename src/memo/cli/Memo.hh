@@ -164,6 +164,12 @@ namespace memo
       /// Signal handler for termination.
       boost::signals2::signal<void ()> killed;
     };
+
+    auto const options = elle::das::cli::Options
+    {
+      {"help", {'h', "show this help message"}},
+      {"version", {'v', "show software version"}},
+    };
   }
 }
 

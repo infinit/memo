@@ -555,12 +555,20 @@ def configure(
       additional_libs.append(
         drake.copy(drake.cxx.DynLib(path), libdir, strip_prefix = True))
 
-  memo_cli = drake.cxx.Executable(
-    'bin/memo',
-    memo_cli_sources + memo_cli_deps + additional_libs,
+  memo_cli_lib  = libtype(
+    libdir + '/memo_cli',
+    memo_cli_sources + memo_cli_deps,
     cxx_toolkit,
     cli_cxx_config,
     strip = windows)
+
+  memo_cli = drake.cxx.Executable(
+    'bin/memo',
+    drake.nodes('src/memo/cli/Memo_main.cc',) + [memo_cli_lib] + memo_cli_deps,
+    cxx_toolkit,
+    cli_cxx_config,
+    strip = windows)
+
   binaries.append(memo_cli)
   installed_binaries.append(memo_cli)
   for lib in memo_cli.dynamic_libraries:
