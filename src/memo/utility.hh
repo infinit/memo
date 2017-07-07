@@ -16,6 +16,7 @@
 
 namespace memo
 {
+  using namespace std::literals;
   namespace bfs = boost::filesystem;
 
   elle::Version
@@ -108,7 +109,7 @@ namespace memo
   bfs::path
   home()
   {
-    auto const memo_home = elle::os::getenv("MEMO_HOME", "");
+    auto const memo_home = elle::os::getenv("MEMO_HOME", ""s);
     return memo_home.empty() ? elle::system::home_directory() : memo_home;
   }
 
@@ -117,8 +118,8 @@ namespace memo
   _xdg(std::string const& type,
        bfs::path const& def)
   {
-    auto const memo = elle::os::getenv("MEMO_" + type, "");
-    auto const xdg = elle::os::getenv("XDG_" + type, "");
+    auto const memo = elle::os::getenv("MEMO_" + type, ""s);
+    auto const xdg = elle::os::getenv("XDG_" + type, ""s);
     auto const dir =
       !memo.empty() ? memo :
       !xdg.empty() ? bfs::path(xdg) / "infinit/memo" :

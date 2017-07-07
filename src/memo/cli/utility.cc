@@ -71,8 +71,8 @@ namespace memo
           _port_map_udp = _upnp->setup_redirect(elle::reactor::network::Protocol::utp, port);
           _port_map_tcp = _upnp->setup_redirect(elle::reactor::network::Protocol::tcp, port);
           ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
-          if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)
-            || (v6 && _port_map_udp.external_host.find_first_of(':') != std::string::npos))
+          if ( (v4 && _port_map_udp.external_host.find(':') == std::string::npos)
+            || (v6 && _port_map_udp.external_host.find(':') != std::string::npos))
             endpoints.addresses.push_back(_port_map_udp.external_host);
         }
         catch (std::exception const& e)
@@ -85,7 +85,7 @@ namespace memo
       {
         try
         {
-          auto host = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890");
+          auto host = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890"s);
           if (host.empty())
             throw std::runtime_error("RDV disabled");
           int port = 7890;
