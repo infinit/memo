@@ -13,10 +13,12 @@
 
 ELLE_LOG_COMPONENT("memo.prometheus");
 
+using namespace std::literals;
+
 namespace
 {
   auto prometheus_endpoint
-    = elle::os::getenv("MEMO_PROMETHEUS_ENDPOINT", "127.0.0.1:8080");
+    = elle::os::getenv("MEMO_PROMETHEUS_ENDPOINT", "127.0.0.1:8080"s);
 }
 
 namespace memo

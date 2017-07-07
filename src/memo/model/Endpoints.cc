@@ -4,6 +4,7 @@
 
 #include <elle/reactor/network/resolve.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/Endpoints.hh>
 
 namespace boost
@@ -41,7 +42,7 @@ namespace boost
 namespace
 {
   /// Whether IPv6 support is disabled.
-  static bool ipv4_only = !elle::os::getenv("MEMO_NO_IPV6", "").empty();
+  static bool ipv4_only = !memo::getenv("NO_IPV6", false);
 }
 
 namespace memo

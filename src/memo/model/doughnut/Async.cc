@@ -271,7 +271,7 @@ namespace memo
         {
           op.index = -1; // for nice debug prints, we will set that later
           // squash check
-          static bool squash_enabled = elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", "").empty();
+          static bool squash_enabled = !elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", false);
           auto its = this->_operations.get<0>().equal_range(op.address);
           if (squash_enabled && its.second != its.first && op.resolver)
           {
