@@ -18,6 +18,10 @@ from itertools import chain
 git = None
 
 elle = None
+
+cxx_config = None
+cxx_toolkit = None
+
 # The installed executables: bin/memo.
 installed_binaries = []
 
@@ -39,6 +43,14 @@ name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 beyond_delegate_user = 'hub'
 
 license_file = None
+
+def set_cxx_config(config):
+  global cxx_config
+  cxx_config = config
+
+def set_cxx_toolkit(toolkit):
+  global cxx_toolkit
+  cxx_toolkit = toolkit
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -80,6 +92,7 @@ def configure(
     prefix = drake.path_build(prefix, absolute = True)
 
   cxx_config = drake.cxx.Config(cxx_config)
+  set_cxx_config(cxx_config)
   cxx_config.warnings.parentheses = False
   cxx_config.warnings.sign_compare = drake.cxx.Config.Warnings.Error;
   if production_build:
@@ -123,6 +136,7 @@ def configure(
   dokan_lib = elle.reactor.dokan_lib if windows else None
 
   cxx_toolkit = elle.cxx_toolkit
+  set_cxx_toolkit(cxx_toolkit)
   cxx_config += elle.config
   cxx_config += elle.dropbox.config
   cxx_config += elle.athena.config
