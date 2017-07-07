@@ -85,7 +85,7 @@ namespace memo
       {
         try
         {
-          auto host = memo::getenv("RDV", "rdv.infinit.sh:7890");
+          auto host = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890");
           if (host.empty())
             throw std::runtime_error("RDV disabled");
           int port = 7890;
