@@ -794,7 +794,7 @@ def configure(
               # 'passport-sign-delegate',
               'passport_cli',
               'sanity',
-              'storage_cli',
+              'silo-cli',
               'user_cli',
             ]))
       if not windows:
