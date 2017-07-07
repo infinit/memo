@@ -3868,25 +3868,7 @@ namespace memo
         return output;
       }
 
-      Configuration::Configuration()
-        : overlay::Configuration()
-        , k(1)
-        , max_other_contacts(6)
-        , query_get_retries(30)
-        , query_put_retries(12)
-        , query_timeout(1s)
-        , query_get_ttl(10)
-        , query_put_ttl(10)
-        , query_put_insert_ttl(3)
-        , contact_timeout(12s)
-        , file_timeout(1200s)
-        , ping_interval(1s)
-        , ping_timeout(1s)
-        , wait(0)
-        , encrypt(false)
-        , accept_plain(true)
-        , gossip()
-      {}
+      Configuration::Configuration() = default;
 
       Configuration::Configuration(elle::serialization::SerializerIn& input)
         : overlay::Configuration()
@@ -3897,35 +3879,20 @@ namespace memo
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
-        auto serialize_duration = [&s](std::string const& name, auto& d)
-          {
-            using milliseconds = std::chrono::milliseconds;
-            if (s.out())
-            {
-              int ms = std::chrono::duration_cast<milliseconds>(d).count();
-              s.serialize(name + "_ms", ms);
-            }
-            else
-            {
-              int ms;
-              s.serialize(name + "_ms", ms);
-              d = milliseconds(ms);
-            }
-          };
-
+        using elle::serialize_duration_ms;
         overlay::Configuration::serialize(s);
         s.serialize("k", k);
         s.serialize("max_other_contacts", max_other_contacts);
         s.serialize("query_get_retries", query_get_retries);
         s.serialize("query_put_retries", query_put_retries);
-        serialize_duration("query_timeout", query_timeout);
+        serialize_duration_ms(s, "query_timeout", query_timeout);
         s.serialize("query_get_ttl", query_get_ttl);
         s.serialize("query_put_ttl", query_put_ttl);
         s.serialize("query_put_insert_ttl", query_put_insert_ttl);
-        serialize_duration("contact_timeout", contact_timeout);
-        serialize_duration("file_timeout", file_timeout);
-        serialize_duration("ping_interval", ping_interval);
-        serialize_duration("ping_timeout", ping_timeout);
+        serialize_duration_ms(s, "contact_timeout", contact_timeout);
+        serialize_duration_ms(s, "file_timeout", file_timeout);
+        serialize_duration_ms(s, "ping_interval", ping_interval);
+        serialize_duration_ms(s, "ping_timeout", ping_timeout);
         s.serialize("gossip", gossip);
         {
           // Backward
@@ -3959,25 +3926,10 @@ namespace memo
       void
       GossipConfiguration::serialize(elle::serialization::Serializer& s)
       {
-        auto serialize_duration = [&s](std::string const& name, auto& d)
-          {
-            using milliseconds = std::chrono::milliseconds;
-            if (s.out())
-            {
-              int ms = std::chrono::duration_cast<milliseconds>(d).count();
-              s.serialize(name + "_ms", ms);
-            }
-            else
-            {
-              int ms;
-              s.serialize(name + "_ms", ms);
-              d = milliseconds(ms);
-            }
-          };
-
-        serialize_duration("interval", interval);
+        using elle::serialize_duration_ms;
+        serialize_duration_ms(s, "interval", interval);
         s.serialize("new_threshold", new_threshold);
-        serialize_duration("old_threshold", old_threshold);
+        serialize_duration_ms(s, "old_threshold", old_threshold);
         s.serialize("files", files);
         s.serialize("contacts_group", contacts_group);
         s.serialize("contacts_other", contacts_other);

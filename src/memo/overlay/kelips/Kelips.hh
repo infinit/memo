@@ -135,31 +135,31 @@ namespace memo
         void
         serialize(elle::serialization::Serializer& s) override;
         /// number of groups
-        int k;
+        int k = 1;
         /// max number of contacts on each other group
-        int max_other_contacts;
+        int max_other_contacts = 6;
         /// query retry
-        int query_get_retries;
+        int query_get_retries = 30;
         /// query retry
-        int query_put_retries;
+        int query_put_retries = 12;
         /// query timeout
-        elle::Duration query_timeout;
+        elle::Duration query_timeout = 1s;
         /// query initial ttl
-        int query_get_ttl;
+        int query_get_ttl = 10;
         /// query initial ttl
-        int query_put_ttl;
+        int query_put_ttl = 10;
         /// query initial ttl
-        int query_put_insert_ttl;
+        int query_put_insert_ttl = 3;
         /// entry lifetime before supression
-        elle::Duration contact_timeout;
+        elle::Duration contact_timeout = 12s;
         /// entry lifetime before supression
-        elle::Duration file_timeout;
-        elle::Duration ping_interval;
-        elle::Duration ping_timeout;
+        elle::Duration file_timeout = 1200s;
+        elle::Duration ping_interval = 1s;
+        elle::Duration ping_timeout = 1s;
         /// wait for 'wait' nodes before starting
-        int wait;
-        bool encrypt;
-        bool accept_plain;
+        int wait = 0;
+        bool encrypt = false;
+        bool accept_plain = true;
         GossipConfiguration gossip;
         std::unique_ptr<memo::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> server,
