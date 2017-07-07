@@ -54,16 +54,17 @@ namespace memo
     static std::unique_ptr<Silo>
     make(std::vector<std::string> const& args)
     {
-      std::unique_ptr<Silo> backend = instantiate(args[0], args[1]);
-      elle::reactor::Duration latency_get, latency_set, latency_erase;
-      if (args.size() > 2)
-        latency_get = std::chrono::milliseconds(std::stoi(args[2]));
-      if (args.size() > 3)
-        latency_set = std::chrono::milliseconds(std::stoi(args[3]));
-      if (args.size() > 4)
-        latency_erase = std::chrono::milliseconds(std::stoi(args[4]));
+      // backend_name, backend_args, latency_get, latency_set, latency_erase;
+      auto backend = instantiate(args[0], args[1]);
+      auto get = [&](unsigned num) -> elle::Duration
+        {
+          if (num < args.size())
+            return std::chrono::milliseconds(std::stoi(args[num]));
+          else
+            return {};
+        };
       return std::make_unique<Latency>(std::move(backend),
-        latency_get, latency_set, latency_erase);
+                                       get(2), get(3), get(4));
     }
 
     struct LatencySiloConfig
