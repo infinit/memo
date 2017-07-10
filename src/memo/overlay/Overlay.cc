@@ -16,16 +16,14 @@ namespace
 {
 #if MEMO_ENABLE_PROMETHEUS
 
-#define MAKE_GAUGE_BUILDER(gauge_name, gauge_desc)                          \
-  memo::prometheus::GaugePtr                                             \
-  make_##gauge_name##_gauge(memo::model::doughnut::Doughnut const& dht)  \
-  {                                                                         \
-    static auto* family                                                     \
-      = memo::prometheus::instance().make_gauge_family(                  \
-          "memo_"  #gauge_name,                                          \
-          gauge_desc);                                                      \
-    return memo::prometheus::instance()                                  \
-      .make(family, {{"id", elle::sprintf("%f", dht.id())}});               \
+# define MAKE_GAUGE_BUILDER(gauge_name, gauge_desc)                     \
+  memo::prometheus::GaugePtr                                            \
+  make_##gauge_name##_gauge(memo::model::doughnut::Doughnut const& dht) \
+  {                                                                     \
+    using namespace memo::prometheus;                                   \
+    static auto* family                                                 \
+      = make_gauge_family("memo_"  #gauge_name, gauge_desc);            \
+    return make(family, {{"id", elle::sprintf("%f", dht.id())}});       \
   }
 
   /// A set of gauges to track the number of reachable blocks.
