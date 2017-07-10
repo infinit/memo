@@ -221,7 +221,7 @@ namespace crash_report
         for (auto const& p: bfs::directory_iterator(path.parent_path()))
           if (boost::starts_with(p.path().string(), base))
             {
-              ELLE_DUMP("%s: removing uploaded crash dump: %s", this, path);
+              ELLE_DUMP("%s: removing uploaded file: %s", this, p);
               _try_remove_file(p);
             }
       }
