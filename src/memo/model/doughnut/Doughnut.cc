@@ -40,6 +40,8 @@
 #include <memo/model/MonitoringServer.hh>
 #include <memo/silo/MissingKey.hh>
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("memo.model.doughnut.Doughnut");
 
 namespace
@@ -107,7 +109,7 @@ namespace
   std::chrono::milliseconds
   _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
-    static auto const env = elle::os::getenv("MEMO_CONNECT_TIMEOUT", "");
+    static auto const env = elle::os::getenv("MEMO_CONNECT_TIMEOUT", ""s);
     if (arg || env.empty())
       return arg.get();
     else
@@ -117,7 +119,7 @@ namespace
   std::chrono::milliseconds
   _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
-    static auto const env = elle::os::getenv("MEMO_SOFTFAIL_TIMEOUT", "");
+    static auto const env = elle::os::getenv("MEMO_SOFTFAIL_TIMEOUT", ""s);
     if (arg || env.empty())
       return arg.get();
     else

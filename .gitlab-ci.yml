@@ -40,7 +40,6 @@ x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - time scl enable devtoolset-4 rh-python34 "pip3 install -q -r drake/requirements.txt"
     - time scl enable devtoolset-4 rh-python34 "pip3 install -q -r requirements.txt"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
@@ -70,8 +69,7 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - time pip3 install -q -r drake/requirements.txt
-    - time pip3 install -q -r requirements.txt
+    - time pip3 install --user -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -88,6 +86,7 @@ x86_64-ubuntu-gcc4:
     - smv "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - time python3 drake //docker
+    - docker run --rm $PROJECT:$DESC memo --help # Check if the image works.
     - docker tag $PROJECT:${DESC} infinit/$PROJECT:${DESC}
     - time docker push infinit/$PROJECT:${DESC}
     - docker rmi {,infinit/}$PROJECT:${DESC}
@@ -100,8 +99,7 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - time pip3 install -q -r drake/requirements.txt
-    - time pip3 install -q -r requirements.txt
+    - time pip3 install --user -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -118,6 +116,7 @@ x86_64-alpine-gcc:
     - tar -cvjf "$TARBALL" -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
     - python3 drake //docker-alpine
+    - docker run --rm $PROJECT-alpine:$DESC memo --help # Check if the image works.
     - docker tag $PROJECT-alpine:$DESC infinit/$PROJECT-alpine:$DESC
     - docker push infinit/$PROJECT-alpine:$DESC
     - docker rmi {,infinit/}$PROJECT-alpine:$DESC
@@ -136,8 +135,7 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - time pip3 install -q -r drake/requirements.txt
-    - time pip3 install -q -r requirements.txt
+    - time pip3 install --user -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -163,8 +161,7 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - time pip3 install -q -r drake/requirements.txt
-    - time pip3 install -q -r requirements.txt
+    - time pip3 install --user -r requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="$SOURCE_DIR/_install"
@@ -192,13 +189,12 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - time pip3 install -q -r drake/requirements.txt
-    - time pip3 install -q -r requirements.txt
     - SOURCE_DIR=${CI_PROJECT_DIR}
     - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
     - INSTALL_DIR=$SOURCE_DIR/_install
     - DESC=$(git describe)
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
+    - pip3 install --user -r requirements.txt
     - farm/configure --arch x86_64 --os osx --compiler clang --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 drake -j 4 //build

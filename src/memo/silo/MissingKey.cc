@@ -26,6 +26,6 @@ namespace memo
     }
 
     static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<MissingKey> _register_serialization;
+    Register<MissingKey> _register_serialization{"infinit::storage::MissingKey"};
   }
 }

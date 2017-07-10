@@ -67,13 +67,13 @@ namespace memo
     auto warn = false;
     ELLE_DUMP("checking: %s", elle::os::environ());
     for (auto const& p: elle::os::environ())
-      if (auto v = elle::tail(p.first, "INFINIT_"))
+      if (auto v = elle::tail(p.first, "MEMO_"))
         if (!elle::contains(vars, *v))
         {
-          ELLE_WARN("suspicious environment variable: INFINIT_%s", *v);
+          ELLE_WARN("suspicious environment variable: MEMO_%s", *v);
           warn = true;
         }
     if (warn)
-      ELLE_WARN("known INFINIT_* environment variables: %s", elle::keys(vars));
+      ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars));
   }
 }

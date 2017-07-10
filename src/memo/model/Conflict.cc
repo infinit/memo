@@ -46,6 +46,6 @@ namespace memo
 
     // Exception was moved, but we cannot change the name for backward compatibility
     static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<Conflict> _register_serialization("memo::model::doughnut::Conflict");
+    Register<Conflict> _register_serialization("infinit::model::doughnut::Conflict");
   }
 }

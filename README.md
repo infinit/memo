@@ -1,6 +1,10 @@
+# memo, an elastic and resilient key-value store
+
+<img src="docs/static_files/memo-logotype-docker@2x.png" alt="Logo - Memo" title="Memo logotype" width="300" style="max-width:300px;">
+
 The memo project combines a value store (where you manipulate blocks and addresses) and a key-value store (where you manipulate arbitrary data and arbitrary keys).
 
-`memo` is supported by the Docker's Infinit team and is the backend of the Infinit Storage Platform project.
+`memo` is supported by Docker and is used as backend by the Infinit Storage Platform project.
 
 ## What is the difference between the value store and the key-value store
 
@@ -10,7 +14,7 @@ The value store is the lowest brick of the architecture, providing the fundament
 
 For more details you can consult [XXX: When shoould I use the value store against the key-value store]().
 
-## Getting memo
+## How to get memo
 
 To download the source code and build memo by yourself, get it from GitHub.
 
@@ -42,7 +46,7 @@ For a detailed procedure, visit our [wiki: How to build](https://github.com/infi
 First you need to install Python dependencies.
 
 ```bash
-sudo pip3 install -r requirements.txt -r drake/requirements.txt
+sudo pip3 install -r drake/requirements.txt
 ```
 > *Note:* If you don't want dependencies to be installed system-wide, you should consider using [virtualenv](https://virtualenv.pypa.io/en/stable/installation).
 

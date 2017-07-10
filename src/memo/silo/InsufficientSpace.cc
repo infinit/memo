@@ -44,6 +44,6 @@ namespace memo
     }
 
     static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<InsufficientSpace> _register_serialization;
+    Register<InsufficientSpace> _register_serialization{"infinit::storage::InsufficientSpace"};
   }
 }

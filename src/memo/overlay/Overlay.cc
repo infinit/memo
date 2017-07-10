@@ -22,7 +22,7 @@ namespace
   {                                                                         \
     static auto* family                                                     \
       = memo::prometheus::instance().make_gauge_family(                  \
-          "infinit_"  #gauge_name,                                          \
+          "memo_"  #gauge_name,                                          \
           gauge_desc);                                                      \
     return memo::prometheus::instance()                                  \
       .make(family, {{"id", elle::sprintf("%f", dht.id())}});               \
