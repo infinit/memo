@@ -5,6 +5,7 @@
 #include <boost/range/algorithm/count_if.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/filesystem.hh>
 #include <elle/format/base64.hh>
 #include <elle/json/json.hh>
 #include <elle/log.hh>
@@ -111,15 +112,6 @@ namespace crash_report
       return _is_crash_report(p.path());
     }
 
-    void
-    _try_remove_file(bfs::path const& path)
-    {
-      boost::system::error_code erc;
-      bfs::remove(path, erc);
-      if (erc)
-        ELLE_WARN("unable to remove file %s: %s", path, erc.message());
-    }
-
     /// The content of this file, encoded in base64.
     std::string
     contents_base64(bfs::path const& path)
@@ -222,7 +214,7 @@ namespace crash_report
           if (boost::starts_with(p.path().string(), base))
             {
               ELLE_DUMP("%s: removing uploaded file: %s", this, p);
-              _try_remove_file(p);
+              elle::try_remove(p);
             }
       }
       else
