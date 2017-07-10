@@ -44,7 +44,7 @@ namespace memo
     elle::log::logger_add(std::make_unique<elle::log::FileLogger>
        (log_base.string(),
         "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
-        100_KiB));
+        1_GiB));
   }
 
   bool
