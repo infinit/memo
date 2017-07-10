@@ -29,7 +29,8 @@ namespace memo
     {
       ELLE_TRACE("setting endpoint to %s", e);
       ::prometheus_endpoint = std::move(e);
-      instance().bind(::prometheus_endpoint);
+      if (!instance()._exposer)
+        instance().bind(::prometheus_endpoint);
     }
 
     std::string const& endpoint()
