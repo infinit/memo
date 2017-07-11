@@ -991,6 +991,7 @@ def configure(
       'BUILD_DIR': drake.path_build(),
       'BOOST_TEST_COLOR_OUTPUT': '1',
       'BOOST_TEST_LOG_LEVEL': 'all',
+      'BOOST_TEST_LOG_SINK': 'stderr',  # Keep our logs, and Boost's, together.
       'SOURCE_DIR': drake.path_source(),
     }
     #  _____ _____  ____  __ _____
