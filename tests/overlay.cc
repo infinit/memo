@@ -1126,20 +1126,17 @@ ELLE_TEST_SCHEDULED(
   constexpr auto npeers = nservers - 1;
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto servers = std::vector<std::unique_ptr<DHT>>{};
-  for (int i=0; i<nservers; ++i)
-  {
-    auto dht = std::make_unique<DHT>(
+  for (int i = 0; i < nservers; ++i)
+    servers.emplace_back(std::make_unique<DHT>(
       ::keys = keys,
       ::version = config.version,
       ::make_overlay = config.overlay_builder,
-      ::paxos = false);
-    servers.emplace_back(std::move(dht));
-  }
+      ::paxos = false));
   elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
   {
-    for (int i=0; i<rand()%5; ++i)
+    for (int i = 0; i < elle::pick_one(5); ++i)
       elle::reactor::yield();
-    for (int i=1; i<nservers; ++i)
+    for (int i = 1; i < nservers; ++i)
       s.run_background("discover", [&,i] {
           discover(*servers[i], *servers[0], anonymous);
       });
@@ -1147,7 +1144,7 @@ ELLE_TEST_SCHEDULED(
   };
   // Number of servers that know all their peers.
   auto c = 0;
-  // Previously we limit ourselves to 50 attempts.  When run
+  // Previously we limited ourselves to 50 attempts.  When run
   // repeatedly, it did happen to fail for lack of time.
   for (auto i = 0; i < 100 && c != nservers; ++i)
   {
@@ -1156,7 +1153,7 @@ ELLE_TEST_SCHEDULED(
         return peer_count(*s) == npeers;
       });
   }
-  BOOST_CHECK_EQUAL(c, nservers);
+  BOOST_TEST(c == nservers);
 }
 
 ELLE_TEST_SCHEDULED(
@@ -1992,7 +1989,7 @@ ELLE_TEST_SUITE()
                  [=] { ::Function(BOOST_PP_CAT(Overlay, _config),       \
                                   ##__VA_ARGS__); },                    \
                  Name),                                                 \
-             0, valgrind(Timeout));                                     \
+             0, valgrind(Timeout))
 
 #define TEST_ANON(Overlay, Name, F, Timeout, ...)                       \
   {                                                                     \

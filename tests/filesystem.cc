@@ -9,12 +9,12 @@
 #endif
 
 #ifdef MEMO_WINDOWS
-#undef stat
+# undef stat
 #endif
 
-#ifdef MEMO_LINUX
+#if defined MEMO_LINUX
 # include <attr/xattr.h>
-#elif defined(MEMO_MACOSX)
+#elif defined MEMO_MACOSX
 # include <sys/xattr.h>
 #endif
 
@@ -22,6 +22,7 @@
 #include <random>
 
 #include <boost/filesystem/fstream.hpp>
+#include <boost/range/irange.hpp>
 
 #include <elle/UUID.hh>
 #include <elle/Version.hh>
@@ -773,26 +774,29 @@ ELLE_TEST_SCHEDULED(sparse_file)
   auto servers = DHTs(-1);
   auto client = servers.client();
   client.fs->path("/");
+  auto const size = 2'500'000;
   for (int iter = 0; iter < 2; ++iter)
   { // run twice to get 'non-existing' and 'existing' initial states
     auto h = client.fs->path("/file")->create(O_RDWR | O_CREAT|O_TRUNC, 0666);
     char buf[191];
     char obuf[191];
-    for (int i=0; i<191; ++i)
+    for (auto i: boost::irange(0, 191))
       buf[i] = i%191;
-    int sz = 191 * (1 + 2500000/191);
+    int sz = 191 * (1 + size/191);
     h->ftruncate(sz);
-    for (int i=0;i<2500000; i+= 191)
-    {
+    for (auto i: boost::irange(0, size, 191))
       h->write(elle::ConstWeakBuffer(buf, 191), 191, i);
-    }
     h->close();
     h = client.fs->path("/file")->open(O_RDONLY, 0666);
-    for (int i=0;i<2500000; i+= 191)
+    for (auto i: boost::irange(0, size, 191))
     {
       h->read(elle::WeakBuffer(obuf, 191), 191, i);
-      BOOST_CHECK(!memcmp(obuf, buf, 191));
+      // Don't send 2.5M lines of logs: call BOOST_CHECK at most once.
+      if (memcmp(obuf, buf, 191))
+        BOOST_CHECK(!memcmp(obuf, buf, 191));
     }
+    // Show the result at least once.
+    BOOST_CHECK(!memcmp(obuf, buf, 191));
   }
 }
 
