@@ -1383,19 +1383,24 @@ namespace memo
                                     std::shared_ptr<blocks::Block> block,
                                     Paxos::PaxosClient::Proposal p)
         {
-          ELLE_TRACE_SCOPE("%s: propagate %f on %f at %f",
-                           this, block->address(), q, p);
-          auto& decision = this->_load_paxos(block->address(), q, block);
-          decision.paxos.propose(q, p);
-          decision.paxos.accept(q, p, q);
-          decision.paxos.confirm(q, p);
-          BlockOrPaxos data(&decision);
-          this->storage()->set(
-            block->address(),
-            elle::serialization::binary::serialize(data,
-                                                   this->doughnut().version()),
-            true, true);
-          this->on_store()(*block);
+          if (!elle::find(this->_addresses, address))
+          {
+            ELLE_TRACE_SCOPE("%s: propagate %f on %f at %f",
+                             this, block->address(), q, p);
+            auto& decision = this->_load_paxos(block->address(), q, block);
+            decision.paxos.propose(q, p);
+            decision.paxos.accept(q, p, q);
+            decision.paxos.confirm(q, p);
+            BlockOrPaxos data(&decision);
+            this->storage()->set(
+              block->address(),
+              elle::serialization::binary::serialize(
+                data, this->doughnut().version()),
+              true, true);
+            this->on_store()(*block);
+          }
+          else
+            ELLE_TRACE("%s: %f is already propagated", this, block->address());
         }
 
         void
