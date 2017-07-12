@@ -19,6 +19,18 @@ from datetime import timedelta
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 binary = 'memo'
 
+def here():
+  '''Find the top-level call.'''
+  import inspect
+  frame = inspect.currentframe()
+  while frame.f_back:
+    frame = frame.f_back
+  finfo = inspect.getframeinfo(frame)
+  return finfo.filename + ":" + str(finfo.lineno)
+
+def log(*args):
+  print(here() + ':', *args, file=sys.stderr, flush=True)
+
 class TemporaryDirectory:
 
   def __init__(self, path = None):
@@ -132,7 +144,7 @@ class Memo(TemporaryDirectory):
     if gdb:
       args = ['/usr/bin/gdb', '--args'] + args + ['-s']
       if input is not None:
-        print('GDB input: %s' % json.dumps(input))
+        log('GDB input: %s' % json.dumps(input))
         input = None
     elif valgrind:
       args = ['/usr/bin/valgrind'] + args
@@ -165,7 +177,7 @@ class Memo(TemporaryDirectory):
       pretty = 'echo %s | %s' % (
         pipes.quote(input.strip()), pretty)
       input = input.encode('utf-8')
-    print(pretty)
+    log(pretty)
     process = subprocess.Popen(
       args,
       env = env_,
@@ -204,12 +216,12 @@ class Memo(TemporaryDirectory):
       try:
         out, err = process.communicate(timeout = 15)
       except ValueError as e:
-        print("Got exception while trying to kill process:", e)
+        log("Got exception while trying to kill process:", e)
         # Python bug, throws ValueError. But in that case blocking read is fine
         # out = process.stdout.read()
         # err = process.stderr.read()
-      print('STDOUT: %s' % out.decode('utf-8'))
-      print('STDERR: %s' % err.decode('utf-8'))
+      log('STDOUT: %s' % out.decode('utf-8'))
+      log('STDERR: %s' % err.decode('utf-8'))
       if kill:
         return out, err
       raise
@@ -239,18 +251,9 @@ class Memo(TemporaryDirectory):
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
 
-def here():
-  '''Find the top-level call.'''
-  import inspect
-  frame = inspect.currentframe()
-  while frame.f_back:
-    frame = frame.f_back
-  finfo = inspect.getframeinfo(frame)
-  return finfo.filename + ":" + str(finfo.lineno)
-
 def assertEq(a, b):
   if a == b:
-    print('PASS: {}: {} == {}'.format(here(), a, b), file=sys.stderr)
+    log('PASS: {} == {}'.format(a, b))
   else:
     def lines(s):
       s = str(s)
@@ -265,13 +268,13 @@ def assertEq(a, b):
 
 def assertNeq(a, b):
   if a != b:
-    print('PASS: {} != {}'.format(a, b), file=sys.stderr)
+    log('PASS: {} != {}'.format(a, b))
   else:
     raise AssertionError('%r == %r' % (a, b))
 
 def assertIn(a, b):
   if a in b:
-    print('PASS: {} in {}'.format(a, b), file=sys.stderr)
+    log('PASS: {} in {}'.format(a, b))
   else:
     raise AssertionError('%r not in %r' % (a, b))
 
@@ -603,10 +606,10 @@ class KeyValueStoreInfrastructure():
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
-          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
-          print('STDERR: %s' % err.decode('utf-8'), flush=True)
+          log('STDOUT: %s' % out.decode('utf-8'))
+          log('STDERR: %s' % err.decode('utf-8'))
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
-          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
-          print('STDERR: %s' % err.decode('utf-8'), flush=True)
+          log('STDOUT: %s' % out.decode('utf-8'))
+          log('STDERR: %s' % err.decode('utf-8'))
           raise
