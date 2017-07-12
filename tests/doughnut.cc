@@ -38,7 +38,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
+ELLE_LOG_COMPONENT("memo.model.doughnut.test");
 
 namespace blocks = memo::model::blocks;
 namespace dht = memo::model::doughnut;
