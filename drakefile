@@ -944,6 +944,9 @@ def configure(
                                 grpc.grpc.protoc,
                                 drake.node(grpc.grpc.grpc_cpp_plugin))
   tests_names = [
+    # test_name               , deps     , args = ['name-extension', tests-args...]
+    # tests-args offer a means to run a binaries with different cli options,
+    # and generate separated outputs.
     ('async-conflict'         , []       , None),
     ('backward-compatibility' , []       , None),
     ('bandwidth'              , []       , None),
@@ -1015,19 +1018,16 @@ def configure(
     #
     # Really, really do run these tests on valgrind !!!
     if args:
-      name = '{}-{}'.format(test, args[0])
+      test_name = '{}-{}'.format(test_name, args[0])
       args = args[1:]
-    else:
-      name = test.name_relative
     if valgrind_tests and test_name not in ['filesystem']:
-      runner = drake.valgrind.ValgrindRunner(
-        name = name,
-        exe = test,
-        args = args,
-        valgrind = elle.valgrind,
-        env = env)
+      runner = drake.valgrind.ValgrindRunner(name = test_name,
+                                             exe = test,
+                                             args = args,
+                                             valgrind = elle.valgrind,
+                                             env = env)
     else:
-      runner = drake.Runner(name = name,
+      runner = drake.Runner(name = test_name,
                             exe = test,
                             args = args,
                             env = env)
