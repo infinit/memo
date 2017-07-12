@@ -505,9 +505,22 @@ def configure(
   if enable_crash_report:
     memo_cli_deps.append(crash_report_lib)
 
+  # Ship libstdc++ and libgcc_s.
+  additional_libs = []
+  if linux and cxx_toolkit.architecture is not drake.architecture.arm:
+    for l in ['libstdc++', 'libgcc_s']:
+      cmd = [cxx_toolkit.cxx] \
+            + cxx_toolkit.cflags(cli_cxx_config) \
+            + cxx_toolkit.ldflags(cli_cxx_config) \
+            + ['-print-file-name={}.so'.format(l)]
+      output = subprocess.check_output(cmd).decode('utf-8').strip()
+      path = drake.Path(output)
+      additional_libs.append(
+        drake.copy(drake.cxx.DynLib(path), libdir, strip_prefix = True))
+
   memo_cli = drake.cxx.Executable(
     'bin/memo',
-    memo_cli_sources + memo_cli_deps,
+    memo_cli_sources + memo_cli_deps + additional_libs,
     cxx_toolkit,
     cli_cxx_config,
     strip = windows)
