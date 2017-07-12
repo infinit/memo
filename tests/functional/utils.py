@@ -203,10 +203,11 @@ class Memo(TemporaryDirectory):
       process.kill()
       try:
         out, err = process.communicate(timeout = 15)
-      except ValueError:
+      except ValueError as e:
+        print("Got exception while trying to kill process:", e)
         # Python bug, throws ValueError. But in that case blocking read is fine
-        out = process.stdout.read()
-        err = process.stderr.read()
+        # out = process.stdout.read()
+        # err = process.stderr.read()
       print('STDOUT: %s' % out.decode('utf-8'))
       print('STDERR: %s' % err.decode('utf-8'))
       if kill:
