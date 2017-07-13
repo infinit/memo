@@ -2004,34 +2004,34 @@ ELLE_TEST_SUITE()
 #define TEST_NAMED(Overlay, Name, Func, Timeout, ...)                   \
   TEST(Overlay, Overlay, #Name, Timeout, Func, ##__VA_ARGS__)           \
 
-#define OVERLAY(Name)                                                   \
-  auto Name = BOOST_TEST_SUITE(#Name);                                  \
-  master.add(Name);                                                     \
-  TEST_ANON(Name, basics, basics, 5);                                   \
-  TEST_ANON(Name, dead_peer, dead_peer, 5);                             \
-  TEST_ANON(Name, discover_endpoints, discover_endpoints, 10);          \
-  TEST_ANON(Name, reciprocate, reciprocate, 10);                        \
-  TEST_ANON(Name, key_cache_invalidation, key_cache_invalidation, 10);  \
-  TEST_ANON(Name, data_spread, data_spread, 30);                        \
-  TEST_ANON(Name, data_spread2, data_spread2, 30);                      \
-  TEST_ANON(Name, chain_connect_sync, chain_connect, 30, true);         \
-  TEST_ANON(Name, chain_connect_async, chain_connect, 30, false);       \
-  TEST_ANON(Name, parallel_discover, parallel_discover, 20);            \
-  TEST_ANON(Name, change_endpoints_back, change_endpoints, 20, true);   \
-  TEST_ANON(Name, change_endpoints_forth, change_endpoints, 20, false); \
+#define OVERLAY(Overlay)                                                \
+  auto Overlay = BOOST_TEST_SUITE(#Overlay);                            \
+  master.add(Overlay);                                                  \
+  TEST_ANON(Overlay, basics, basics, 5);                                \
+  TEST_ANON(Overlay, dead_peer, dead_peer, 5);                          \
+  TEST_ANON(Overlay, discover_endpoints, discover_endpoints, 10);       \
+  TEST_ANON(Overlay, reciprocate, reciprocate, 10);                     \
+  TEST_ANON(Overlay, key_cache_invalidation, key_cache_invalidation, 10); \
+  TEST_ANON(Overlay, data_spread, data_spread, 30);                     \
+  TEST_ANON(Overlay, data_spread2, data_spread2, 30);                   \
+  TEST_ANON(Overlay, chain_connect_sync, chain_connect, 30, true);      \
+  TEST_ANON(Overlay, chain_connect_async, chain_connect, 30, false);    \
+  TEST_ANON(Overlay, parallel_discover, parallel_discover, 20);         \
+  TEST_ANON(Overlay, change_endpoints_back, change_endpoints, 20, true); \
+  TEST_ANON(Overlay, change_endpoints_forth, change_endpoints, 20, false); \
   TEST_NAMED(                                                           \
-    Name, change_endpoints_stale_forth, change_endpoints_stale,         \
+    Overlay, change_endpoints_stale_forth, change_endpoints_stale,      \
     20, false);                                                         \
   TEST_NAMED(                                                           \
-    Name, change_endpoints_stale_back, change_endpoints_stale,          \
+    Overlay, change_endpoints_stale_back, change_endpoints_stale,       \
     20, true);                                                          \
-  TEST_ANON(Name, reboot, reboot_node, 5);                              \
+  TEST_ANON(Overlay, reboot, reboot_node, 5);                           \
   /* long, wild tests*/                                                 \
-  TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
-  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
-  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200);           \
-  TEST_NAMED(Name, churn, churn, 600, false, true, true);               \
-  TEST_NAMED(Name, churn_socket, churn_socket, 600);                    \
+  TEST_ANON(Overlay, chain_connect_doom, chain_connect_doom, 30);       \
+  TEST_NAMED(Overlay, storm_paxos, storm, 60, true, 5, 5, 100);         \
+  TEST_NAMED(Overlay, storm,       storm, 60, false, 5, 5, 200);        \
+  TEST_NAMED(Overlay, churn, churn, 600, false, true, true);            \
+  TEST_NAMED(Overlay, churn_socket, churn_socket, 600);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
