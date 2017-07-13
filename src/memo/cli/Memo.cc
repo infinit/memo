@@ -480,7 +480,7 @@ namespace
 }
 
 int
-main(int argc, char** argv)
+main(int const argc, char const* const* const argv)
 {
   argv_0 = argv[0];
   memo_exe = (bfs::path(argv_0).parent_path() / BIN).string();
@@ -503,14 +503,14 @@ main(int argc, char** argv)
   }
   catch (elle::Error const& e)
   {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
     if (memo::getenv("BACKTRACE", false))
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
   catch (bfs::filesystem_error const& e)
   {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
     return 1;
   }
   catch (elle::Exit const& e)
