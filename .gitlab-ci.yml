@@ -35,16 +35,16 @@ before_script:
 # Use a tmp to avoid partial upload when interrupted.
 # A single call to ssh, rather than scp and then ssh.
     - function smv { dst=$3/$(basename "$1") && time ssh $2 "cat > '$dst.tmp' && mv '$dst.tmp' '$dst'" < "$1" && rm -f "$1"; }
+    - SOURCE_DIR=${CI_PROJECT_DIR}
+    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
+    - INSTALL_DIR=$SOURCE_DIR/_install
+    - DESC=$(git describe)
 
 x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
     - time scl enable devtoolset-4 rh-python34 "pip3 install -q -r requirements.txt"
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="$SOURCE_DIR/_install"
-    - DESC=$(git describe)
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time scl enable devtoolset-4 rh-python34 "./buildenv --pick-build-tree --branch $CI_BUILD_REF_NAME --link-build-tree $BUILD_DIR --build-trees-root /cache/$CI_PROJECT_NAME"
     - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose"
@@ -70,10 +70,6 @@ x86_64-ubuntu-gcc4:
   stage: build
   script:
     - time pip3 install --user -r requirements.txt
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="$SOURCE_DIR/_install"
-    - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
@@ -100,10 +96,6 @@ x86_64-alpine-gcc:
   stage: build
   script:
     - time pip3 install --user -r requirements.txt
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="$SOURCE_DIR/_install"
-    - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
@@ -136,10 +128,6 @@ x86_64-jessie-gcc4:
   stage: build
   script:
     - time pip3 install --user -r requirements.txt
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="$SOURCE_DIR/_install"
-    - DESC=$(git describe)
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
@@ -162,10 +150,6 @@ x86_64-windows-mingw4:
   stage: build
   script:
     - time pip3 install --user -r requirements.txt
-    - SOURCE_DIR="${CI_PROJECT_DIR}"
-    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
-    - INSTALL_DIR="$SOURCE_DIR/_install"
-    - DESC=$(git describe)
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
     - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
@@ -189,10 +173,6 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - SOURCE_DIR=${CI_PROJECT_DIR}
-    - BUILD_DIR=$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build
-    - INSTALL_DIR=$SOURCE_DIR/_install
-    - DESC=$(git describe)
     - IS_RELEASE=$(if git -C "$SOURCE_DIR" describe --exact-match HEAD; then echo true; else echo false; fi)
     - pip3 install --user -r requirements.txt
     - farm/configure --arch x86_64 --os osx --compiler clang --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
