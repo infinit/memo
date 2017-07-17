@@ -528,6 +528,48 @@ namespace memo
               }
             return res;
           }
+
+          static
+          void
+          _propagate(Paxos::LocalPeer& self,
+                     Address a,
+                     PaxosClient::Proposal const& proposal,
+                     PaxosClient::Quorum old_quorum,
+                     PaxosClient::Quorum new_quorum)
+          {
+            if (auto it = elle::find(self._addresses, a))
+            {
+              auto& paxos = it->second.paxos;
+              if (auto value = paxos.current_value())
+              {
+                elle::reactor::for_each_parallel(
+                  Details::lookup_nodes(
+                    self.doughnut(),
+                    new_quorum |
+                    filtered([&] (auto id)
+                             { return !elle::find(old_quorum, id); }),
+                    a),
+                  [&] (auto const& peer)
+                  {
+                    ELLE_DEBUG_SCOPE("propagate block value to %f at %f",
+                                     peer, proposal);
+                    ELLE_ENFORCE(paxos.state());
+                    if (auto p = peer->member().lock())
+                      p->propagate(
+                        new_quorum,
+                        value->value.get<std::shared_ptr<model::blocks::Block>>(),
+                        proposal);
+                  });
+              }
+            }
+            else
+            {
+              ELLE_WARN(
+                "block %f was rebalanced from %f to %f but is not held locally",
+                a, old_quorum, new_quorum);
+              return;
+            }
+          }
         };
 
         /*-----.
@@ -1012,44 +1054,6 @@ namespace memo
                 }
               }
             }
-          }
-        }
-
-        void
-        Paxos::LocalPeer::_propagate(Address a,
-                                     PaxosClient::Quorum old_quorum,
-                                     PaxosClient::Quorum new_quorum)
-        {
-          if (auto it = elle::find(this->_addresses, a))
-          {
-            auto& paxos = it->second.paxos;
-            if (auto value = paxos.current_value())
-            {
-              elle::reactor::for_each_parallel(
-                Details::lookup_nodes(
-                  this->doughnut(),
-                  new_quorum |
-                  filtered([&] (auto id)
-                           { return !elle::find(old_quorum, id); }),
-                  a),
-                [&] (auto const& peer)
-                {
-                  ELLE_DEBUG_SCOPE("propagate block value to %f", peer);
-                  ELLE_ENFORCE(paxos.state());
-                  if (auto p = peer->member().lock())
-                    p->propagate(
-                      new_quorum,
-                      value->value.get<std::shared_ptr<model::blocks::Block>>(),
-                      paxos.state()->proposal);
-                });
-            }
-          }
-          else
-          {
-            ELLE_WARN(
-              "block %f was rebalanced from %f to %f but is not held locally",
-              a, old_quorum, new_quorum);
-            return;
           }
         }
 
@@ -2042,6 +2046,14 @@ namespace memo
           auto new_quorum = make_quorum(state.quorum);
           if (new_quorum == state.quorum)
             return false;
+          auto const propagate = [&] (PaxosClient::Proposal const& p)
+            {
+              auto local =
+              std::static_pointer_cast<LocalPeer>(this->doughnut().local());
+              Details::_propagate(*local, address, p, state.quorum, new_quorum);
+              local->_rebalanced(address);
+              return true;
+            };
           std::unique_ptr<PaxosClient> replace;
           int version = state.proposal ? state.proposal->version : -1;
           while (true)
@@ -2062,8 +2074,9 @@ namespace memo
                   auto quorum = conflict->get<PaxosServer::Quorum>();
                   if (quorum == new_quorum)
                   {
-                    ELLE_TRACE("conflicted rebalancing to the quorum we picked");
-                    break;
+                    ELLE_TRACE(
+                      "conflicted rebalancing to the quorum we picked");
+                    return propagate(conflict.proposal());
                   }
                   else if (signed(quorum.size()) == this->_factor)
                   {
@@ -2072,7 +2085,7 @@ namespace memo
                     {
                       ELLE_TRACE(
                         "conflicted rebalancing to a satisfying quorum");
-                      break;
+                      return propagate(conflict.proposal());
                     }
                     else
                     {
@@ -2101,7 +2114,7 @@ namespace memo
               {
                 ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
                            new_quorum.size(), version + 1);
-                break;
+                return propagate(conflict.proposal());
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
@@ -2118,11 +2131,6 @@ namespace memo
               return false;
             }
           }
-          auto local =
-            std::static_pointer_cast<LocalPeer>(this->doughnut().local());
-          local->_propagate(address, state.quorum, new_quorum);
-          local->_rebalanced(address);
-          return true;
         }
 
         void

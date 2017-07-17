@@ -333,10 +333,6 @@ namespace memo
             _disappeared_evict(Address id);
           private:
             void
-            _propagate(Address a,
-                       PaxosServer::Quorum old_quorum,
-                       PaxosServer::Quorum new_quorum);
-            void
             _rebalance();
             ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
                            rebalancable);
