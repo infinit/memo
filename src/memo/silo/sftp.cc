@@ -76,7 +76,7 @@ enum PacketType
 #define SSH_FILEXFER_ATTR_ACMODTIME     0x00000008
 #define SSH_FILEXFER_ATTR_EXTENDED      0x80000000
 
-ELLE_LOG_COMPONENT("memo.fs.sftp");
+ELLE_LOG_COMPONENT("memo.silo.sftp");
 
 #define BENCH(name)                                             \
   static auto bench = elle::Bench("bench.sftp." name, 10000s);  \
@@ -298,9 +298,7 @@ namespace memo
 
     unsigned char Packet::readByte()
     {
-      unsigned char res = contents()[_pos];
-      ++_pos;
-      return res;
+      return contents()[_pos++];
     }
 
     int Packet::readInt()
@@ -445,7 +443,7 @@ namespace memo
       {
         p.expectType(SSH_FXP_HANDLE);
       }
-      catch(PacketError const&)
+      catch (PacketError const&)
       {
         throw memo::silo::MissingKey(k);
       }
@@ -508,7 +506,7 @@ namespace memo
       BENCH("erase");
       /*elle::reactor::Lock lock(_sem);*/
       ELLE_TRACE("_erase %x", k);
-      std::string path = elle::sprintf("%s/%x", _path, k);
+      auto const path = elle::sprintf("%s/%x", _path, k);
       Packet p;
       int req = ++_req;
       p.make(SSH_FXP_REMOVE, req, path);
@@ -632,10 +630,10 @@ namespace memo
 
     SFTPSiloConfig::
       SFTPSiloConfig(std::string const& name,
-                        std::string const& host,
-                        std::string const& path,
-                        boost::optional<int64_t> capacity,
-                        boost::optional<std::string> description)
+                     std::string const& host,
+                     std::string const& path,
+                     boost::optional<int64_t> capacity,
+                     boost::optional<std::string> description)
       : SiloConfig(
           std::move(name), std::move(capacity), std::move(description))
       , host(host)

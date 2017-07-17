@@ -29,7 +29,8 @@ namespace memo
     {
       ELLE_TRACE("setting endpoint to %s", e);
       ::prometheus_endpoint = std::move(e);
-      instance().bind(::prometheus_endpoint);
+      if (!instance()._exposer)
+        instance().bind(::prometheus_endpoint);
     }
 
     std::string const& endpoint()
@@ -56,7 +57,7 @@ namespace memo
         {
           if (this->_exposer)
           {
-            ELLE_LOG("%s: listen on %s", this, addr);
+            ELLE_LOG("%s: rebind on %s", this, addr);
             this->_exposer->rebind(addr);
           }
           else
@@ -64,12 +65,6 @@ namespace memo
             ELLE_LOG("%s: listen on %s", this, addr);
             this->_exposer = std::make_unique<::prometheus::Exposer>(addr);
           }
-        }
-        catch (elle::Error const&)
-        {
-          ELLE_WARN("%s: creation failed, metrics will not be exposed: %s",
-                    this, elle::exception_string());
-          this->_exposer.reset();
         }
         catch (std::runtime_error const&)
         {

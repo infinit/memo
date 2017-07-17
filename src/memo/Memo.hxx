@@ -2,6 +2,16 @@
 
 namespace memo
 {
+  namespace
+  {
+    inline
+    std::string
+    plural(std::string const& type)
+    {
+      return elle::sprintf("%s%s", type, type.back() == 's' ? "" : "s");
+    }
+  }
+
   template <typename T>
   std::vector<std::unique_ptr<T, std::default_delete<Credentials>>>
   Memo::credentials(std::string const& name) const
@@ -63,7 +73,7 @@ namespace memo
   Memo::hub_fetch(std::string const& type,
                   std::string const& name) const
   {
-    return hub_fetch<T>(elle::sprintf("%s/%s", _type_plural(type), name),
+    return hub_fetch<T>(elle::sprintf("%s/%s", plural(type), name),
                         type, name);
   }
 
@@ -99,7 +109,7 @@ namespace memo
                  bool hub_error,
                  bool update) const
   {
-    hub_push<Serializer>(elle::sprintf("%s/%s", _type_plural(type), name),
+    hub_push<Serializer>(elle::sprintf("%s/%s", plural(type), name),
                          type, name, o, self, hub_error, update);
   }
 }

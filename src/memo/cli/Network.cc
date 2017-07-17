@@ -13,6 +13,7 @@
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
 #include <memo/cli/xattrs.hh>
+#include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
@@ -22,7 +23,6 @@
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/NB.hh>
 #include <memo/model/doughnut/consensus/Paxos.hh>
-#include <memo/model/prometheus.hh>
 #include <memo/overlay/Kalimero.hh>
 #include <memo/overlay/kelips/Kelips.hh>
 #include <memo/overlay/kouncil/Configuration.hh>
@@ -175,9 +175,6 @@ namespace memo
             cli::advertise_host = Strings{},
             cli::grpc = boost::none,
             cli::grpc_port_file = boost::none,
-#if MEMO_ENABLE_PROMETHEUS
-            cli::prometheus = boost::none,
-#endif
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none,
             cli::resign_on_shutdown = boost::none)
@@ -779,7 +776,7 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (elle::os::getenv("INFINIT_CRASH", false))
+      if (memo::getenv("CRASH", false))
         *(volatile int*)nullptr = 0;
 
       auto& cli = this->cli();
@@ -856,9 +853,6 @@ namespace memo
                   Strings advertise_host = {},
                   boost::optional<std::string> grpc = {},
                   boost::optional<std::string> grpc_port_file = {},
-#if MEMO_ENABLE_PROMETHEUS
-                  boost::optional<std::string> prometheus = {},
-#endif
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
                   boost::optional<bool> resign_on_shutdown = {},
@@ -912,10 +906,6 @@ namespace memo
             port_to_file(grpc_port, *grpc_port_file);
           }
         }
-#if MEMO_ENABLE_PROMETHEUS
-        if (prometheus)
-          memo::prometheus::endpoint(*prometheus);
-#endif
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -1034,9 +1024,6 @@ namespace memo
          advertise_host,
          {}, // grpc
          {}, // grpc_port_file
-#if MEMO_ENABLE_PROMETHEUS
-         {}, // prometheus
-#endif
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
          {}, // resign_on_shutdown
@@ -1197,9 +1184,6 @@ namespace memo
                       Strings advertise_host,
                       boost::optional<std::string> grpc,
                       boost::optional<std::string> const& grpc_port_file,
-#if MEMO_ENABLE_PROMETHEUS
-                      boost::optional<std::string> prometheus,
-#endif
                       boost::optional<bool> paxos_rebalancing_auto_expand,
                       boost::optional<bool> paxos_rebalancing_inspect,
                       boost::optional<bool> resign_on_shutdown)
@@ -1235,9 +1219,6 @@ namespace memo
          advertise_host,
          grpc,
          grpc_port_file,
-#if MEMO_ENABLE_PROMETHEUS
-         prometheus,
-#endif
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
          resign_on_shutdown,

@@ -1,7 +1,7 @@
 [submodule "elle"]
 	path = elle
 	url = ../elle
-[submodule "beyond/couchdb-python"]
+[submodule "couchdb-python"]
 	path = beyond/couchdb-python
 	url = https://github.com/infinitdotio/couchdb-python.git
 [submodule "bottle"]
@@ -10,10 +10,10 @@
 [submodule "sendwithus_python"]
 	path = sendwithus_python
 	url = https://github.com/infinit/sendwithus_python.git
-[submodule "crash-report/breakpad"]
+[submodule "breakpad"]
 	path = crash-report/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
-[submodule "src/infinit/grpc/grpc"]
+[submodule "grpc"]
 	path = src/memo/grpc/grpc
 	url = https://github.com/infinit/grpc.git
 [submodule "prometheus-cpp"]

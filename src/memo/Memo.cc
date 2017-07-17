@@ -3,8 +3,11 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include <memo/utility.hh>
+#include <elle/bytes.hh>
+#include <elle/log.hh>
+#include <elle/log/FileLogger.hh>
 
+#include <memo/utility.hh>
 #include <memo/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("memo");
@@ -33,6 +36,20 @@ namespace memo
     }
   }
 
+  Memo::Memo()
+  {
+    auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
+    create_directories(log_dir);
+    auto const spec =
+      elle::print("file://{}?"
+                  "time,microsec,"
+                  "append,size=64MiB,rotate=15,"
+                  "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
+                  (log_dir / "main").string());
+    ELLE_DUMP("building critical log: {}", spec);
+    elle::log::logger_add(elle::log::make_logger(spec));
+  }
+
   bool
   Memo::is_qualified_name(std::string const& name)
   {
@@ -57,8 +74,8 @@ namespace memo
 
   bool
   Memo::_delete(bfs::path const& path,
-                   std::string const& type,
-                   std::string const& name)
+                std::string const& type,
+                std::string const& name)
   {
     boost::system::error_code erc;
     if (!bfs::exists(path))
@@ -75,8 +92,8 @@ namespace memo
 
   bool
   Memo::_delete_all(bfs::path const& path,
-                       std::string const& type,
-                       std::string const& name)
+                    std::string const& type,
+                    std::string const& name)
   {
     boost::system::error_code erc;
     if (!bfs::exists(path))
@@ -93,8 +110,8 @@ namespace memo
 
   Network
   Memo::network_get(std::string const& name_,
-                       User const& user,
-                       bool require_model)
+                    User const& user,
+                    bool require_model)
   {
     auto name = qualified_name(name_, user);
     bfs::ifstream f;
@@ -183,7 +200,7 @@ namespace memo
 
   std::vector<User>
   Memo::network_linked_users(std::string const& name_,
-                                boost::optional<User> user)
+                             boost::optional<User> user)
   {
     ELLE_ASSERT(is_qualified_name(name_) || user);
     auto const name = user ? qualified_name(name_, *user) : name_;
@@ -196,7 +213,7 @@ namespace memo
 
   void
   Memo::network_unlink(std::string const& name_,
-                          User const& user)
+                       User const& user)
   {
     auto name = qualified_name(name_, user);
     auto network = this->network_get(name, user, true);
@@ -218,8 +235,8 @@ namespace memo
 
   bool
   Memo::network_delete(std::string const& name_,
-                          User const& user,
-                          bool unlink)
+                       User const& user,
+                       bool unlink)
   {
     // Ensure if unqualified name is passed, we qualify with passed user.
     auto name = qualified_name(name_, user);
@@ -266,8 +283,8 @@ namespace memo
 
   NetworkDescriptor
   Memo::network_descriptor_get(std::string const& name_,
-                                  User const& owner,
-                                  bool or_network)
+                               User const& owner,
+                               bool or_network)
   {
     auto name = qualified_name(name_, owner);
     try
@@ -314,7 +331,7 @@ namespace memo
 
   void
   Memo::network_save(User const& self,
-                        Network const& network, bool overwrite) const
+                     Network const& network, bool overwrite) const
   {
     bfs::ofstream f;
     bool existed = this->_open_write(f, this->_network_path(network.name, self),
@@ -350,7 +367,7 @@ namespace memo
 
   bool
   Memo::passport_delete(std::string const& network_name,
-                           std::string const& user_name)
+                        std::string const& user_name)
   {
     ELLE_ASSERT(this->is_qualified_name(network_name));
     return this->_delete(this->_passport_path(network_name, user_name),
@@ -385,7 +402,7 @@ namespace memo
 
   void
   Memo::passport_save(model::doughnut::Passport const& passport,
-                         bool overwrite)
+                      bool overwrite)
   {
     bfs::ofstream f;
     auto users = this->users_get();
@@ -412,8 +429,7 @@ namespace memo
   }
 
   void
-  Memo::user_save(User const& user,
-                     bool overwrite)
+  Memo::user_save(User const& user, bool overwrite)
   {
     auto path = this->_user_path(user.name);
     bfs::ofstream f;
@@ -526,8 +542,7 @@ namespace memo
   }
 
   void
-  Memo::silo_save(std::string const& name,
-                     SiloConfigPtr const& silo)
+  Memo::silo_save(std::string const& name, SiloConfigPtr const& silo)
   {
     bfs::ofstream f;
     bool existed = this->_open_write(f, this->_silo_path(name), name,
@@ -541,8 +556,7 @@ namespace memo
   }
 
   bool
-  Memo::silo_delete(SiloConfigPtr const& silo,
-                       bool clear)
+  Memo::silo_delete(SiloConfigPtr const& silo, bool clear)
   {
     auto const& name = silo->name;
     if (clear)
@@ -658,7 +672,7 @@ namespace memo
 
   bool
   Memo::credentials_delete(std::string const& type,
-                              std::string const& account_name)
+                           std::string const& account_name)
   {
     return this->_delete(this->_credentials_path(type, account_name),
                          elle::sprintf("%s credentials", type),
@@ -831,8 +845,8 @@ namespace memo
 
   bfs::path
   Memo::_network_path(std::string const& name,
-                         User const& user,
-                         bool create_dir) const
+                      User const& user,
+                      bool create_dir) const
   {
     auto network_name = this->qualified_name(name, user);
     return this->_networks_path(user, create_dir) / network_name;
@@ -897,9 +911,9 @@ namespace memo
 
   void
   Memo::_open_read(bfs::ifstream& f,
-                    bfs::path const& path,
-                    std::string const& name,
-                    std::string const& type)
+                   bfs::path const& path,
+                   std::string const& name,
+                   std::string const& type)
   {
     ELLE_DEBUG("open %s \"%s\" (%s) for reading", type, name, path);
     f.open(path);
@@ -910,11 +924,11 @@ namespace memo
 
   bool
   Memo::_open_write(bfs::ofstream& f,
-                       bfs::path const& path,
-                       std::string const& name,
-                       std::string const& type,
-                       bool overwrite,
-                       std::ios_base::openmode mode)
+                    bfs::path const& path,
+                    std::string const& name,
+                    std::string const& type,
+                    bool overwrite,
+                    std::ios_base::openmode mode)
   {
     ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
     create_directories(path.parent_path());
@@ -970,7 +984,8 @@ namespace memo
     return elle::json::read(r);
   }
 
-  static
+  namespace
+  {
   std::unique_ptr<elle::reactor::http::Request>
   fetch_data(std::string const& url,
              std::string const& type,
@@ -1023,13 +1038,14 @@ namespace memo
     }
     return r;
   }
+  }
 
   std::unique_ptr<elle::reactor::http::Request>
   Memo::hub_fetch_request(std::string const& where,
-                             std::string const& type,
-                             std::string const& name,
-                             boost::optional<User const&> self,
-                             Headers const& extra_headers) const
+                          std::string const& type,
+                          std::string const& name,
+                          boost::optional<User const&> self,
+                          Headers const& extra_headers) const
   {
     auto headers =
       self
@@ -1044,10 +1060,10 @@ namespace memo
 
   elle::json::Json
   Memo::hub_fetch_json(std::string const& where,
-                             std::string const& type,
-                             std::string const& name,
-                             boost::optional<User const&> self,
-                             Headers const& extra_headers) const
+                       std::string const& type,
+                       std::string const& name,
+                       boost::optional<User const&> self,
+                       Headers const& extra_headers) const
   {
     auto r = hub_fetch_request(where, type, name, self, extra_headers);
     return elle::json::read(*r);
@@ -1055,11 +1071,11 @@ namespace memo
 
   bool
   Memo::hub_delete(std::string const& where,
-                         std::string const& type,
-                         std::string const& name,
-                         User const& self,
-                         bool ignore_missing,
-                         bool purge) const
+                   std::string const& type,
+                   std::string const& name,
+                   User const& self,
+                   bool ignore_missing,
+                   bool purge) const
   {
     auto c = elle::reactor::http::Request::Configuration{};
     c.header_add(signature_headers(elle::reactor::http::Method::DELETE,
@@ -1110,24 +1126,24 @@ namespace memo
 
   bool
   Memo::hub_delete(std::string const& type,
-                         std::string const& name,
-                         User const& self,
-                         bool ignore_missing,
-                         bool purge) const
+                   std::string const& name,
+                   User const& self,
+                   bool ignore_missing,
+                   bool purge) const
   {
-    return hub_delete(elle::sprintf("%s/%s", _type_plural(type), name),
+    return hub_delete(elle::sprintf("%s/%s", plural(type), name),
                       type, name, self, ignore_missing, purge);
   }
 
   Memo::PushResult
   Memo::hub_push_data(std::string const& where,
-                            std::string const& type,
-                            std::string const& name,
-                            elle::ConstWeakBuffer const& object,
-                            std::string const& content_type,
-                            User const& self,
-                            bool hub_error,
-                            bool update) const
+                      std::string const& type,
+                      std::string const& name,
+                      elle::ConstWeakBuffer const& object,
+                      std::string const& content_type,
+                      User const& self,
+                      bool hub_error,
+                      bool update) const
   {
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);
@@ -1196,7 +1212,7 @@ namespace memo
     }
     else
     {
-      auto error = [&] {
+      auto const error = [&] {
         try
         {
           auto s = elle::serialization::json::SerializerIn{r, false};
@@ -1214,11 +1230,5 @@ namespace memo
         elle::err("unexpected HTTP error %s pushing %s:\n%s",
                   r.status(), type, error);
     }
-  }
-
-  std::string
-  Memo::_type_plural(std::string const& type) const
-  {
-    return elle::sprintf("%s%s", type, type.back() == 's' ? "" : "s");
   }
 }

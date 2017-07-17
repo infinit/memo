@@ -25,13 +25,16 @@ namespace memo
   class Memo
   {
   public:
-    /// ReportAction represents a signal Memo will triggers when it perform
-    /// an action related to the resources / objects (e.g. Users, Networks,
-    /// etc.)
+    Memo();
+
+  public:
+    /// ReportAction is a signal Memo triggers when it performs an
+    /// action related to the resources / objects (e.g. Users,
+    /// Networks, etc.).
     using ReportAction =
-      boost::signals2::signal<void (std::string const& action,
+      boost::signals2::signal<auto (std::string const& action,
                                     std::string const& type,
-                                    std::string const& name)>;
+                                    std::string const& name) -> void>;
   public:
     /// Whether the resource name contains a `/`.
     static bool
@@ -48,7 +51,7 @@ namespace memo
     | Network.  |
     `----------*/
 
-    /// Return a network for a given user and name.
+    /// The network for a given user and name.
     ///
     /// @param name The name of the network to get. If the name is unqualifed,
     ///             it gets qualified by the user name.
@@ -64,17 +67,17 @@ namespace memo
     network_get(std::string const& name,
                 User const& user,
                 bool ensure_linked = true);
-    /// Return the networks associated with a user (or by default, by the
+    /// The networks associated with a user (or by default, by the
     /// default memo user).
     ///
-    /// @param self The user.
-    /// @param linked_only Filter non-linked networks.
+    /// @param self The user.  @param linked_only Filter non-linked
+    /// networks.
     ///
     /// @return The list of networks.
     std::vector<Network>
     networks_get(boost::optional<memo::User> self,
                  bool linked_only = false) const;
-    /// Return the list of users who linked the given network.
+    /// The list of users who linked the given network.
     ///
     /// @param name The name of the network.
     /// @param user An optional user used to qualify unqualifed network names.
@@ -83,8 +86,7 @@ namespace memo
     std::vector<User>
     network_linked_users(std::string const& name,
                          boost::optional<User> user = boost::none);
-    ///
-    ///
+
     void
     network_unlink(std::string const& name_,
                    User const& user);
@@ -131,22 +133,22 @@ namespace memo
     user_get(std::string const& user, bool hub_fallback = false) const;
     std::vector<User>
     users_get() const;
-    boost::filesystem::path
+    bfs::path
     _avatars_path() const;
-    boost::filesystem::path
+    bfs::path
     _avatar_path(std::string const& name) const;
     bool
     avatar_delete(User const& user);
 
-    /*----------.
-    | Storage.  |
-    `----------*/
+    /*-------.
+    | Silo.  |
+    `-------*/
 
     using SiloConfigPtr = std::unique_ptr<silo::SiloConfig>;
     SiloConfigPtr
     silo_get(std::string const& name);
 
-    struct Pred
+    struct SiloByName
     {
       bool
       operator() (SiloConfigPtr const& lhs,
@@ -156,7 +158,7 @@ namespace memo
       }
     };
 
-    using Silos = boost::container::flat_set<SiloConfigPtr, Pred>;
+    using Silos = boost::container::flat_set<SiloConfigPtr, SiloByName>;
 
     Silos
     silos_get();
@@ -237,44 +239,44 @@ namespace memo
     credentials_gcs() const;
     std::unique_ptr<OAuthCredentials, std::default_delete<memo::Credentials>>
       credentials_gcs(std::string const& uid) const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path() const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path(std::string const& service) const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path(std::string const& service, std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _network_descriptors_path() const;
-    boost::filesystem::path
+    bfs::path
     _network_descriptor_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _networks_path(bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _networks_path(User const& user, bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _network_path(std::string const& name,
                   User const& user,
                   bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _passports_path() const;
-    boost::filesystem::path
+    bfs::path
     _passport_path(std::string const& network, std::string const& user) const;
-    boost::filesystem::path
+    bfs::path
     _silos_path() const;
-    boost::filesystem::path
+    bfs::path
     _silo_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _users_path() const;
-    boost::filesystem::path
+    bfs::path
     _user_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _key_value_stores_path() const;
-    boost::filesystem::path
+    bfs::path
     _key_value_store_path(std::string const& name) const;
     static
     void
-    _open_read(boost::filesystem::ifstream& f,
-               boost::filesystem::path const& path,
+    _open_read(bfs::ifstream& f,
+               bfs::path const& path,
                std::string const& name,
                std::string const& type);
     /// Open the given path, associating it with the given ofstream f.
@@ -285,21 +287,21 @@ namespace memo
     /// Otherwise, return whether the resource already exists and was
     /// overwritten.
     ///
-    /// \param f The stream to associate with the file.
-    /// \param path The path to the file to open.
-    /// \param name The name of the resource (e.g. "root")
-    /// \param type The type of the resource (e.g. "User")
-    /// \param overwrite Whether if the function is allowed to overwrite an
+    /// @param f The stream to associate with the file.
+    /// @param path The path to the file to open.
+    /// @param name The name of the resource (e.g. "root")
+    /// @param type The type of the resource (e.g. "User")
+    /// @param overwrite Whether if the function is allowed to overwrite an
     ///                  existing file.
-    /// \param mode Flags describing the requested input/output mode for the
+    /// @param mode Flags describing the requested input/output mode for the
     ///                   file.
-    /// \return Whether if a file was overwritten.
-    /// \throw ResourceAlreadyFetched if the file already exists and overwrite
+    /// @return Whether if a file was overwritten.
+    /// @throw ResourceAlreadyFetched if the file already exists and overwrite
     ///        was false.
     static
     bool
-    _open_write(boost::filesystem::ofstream& f,
-                boost::filesystem::path const& path,
+    _open_write(bfs::ofstream& f,
+                bfs::path const& path,
                 std::string const& name,
                 std::string const& type,
                 bool overwrite = false,
@@ -320,11 +322,11 @@ namespace memo
     save(std::ostream& output, T const& resource, bool pretty = true);
   private:
     bool
-    _delete(boost::filesystem::path const& path,
+    _delete(bfs::path const& path,
             std::string const& type,
             std::string const& name);
     bool
-    _delete_all(boost::filesystem::path const& path,
+    _delete_all(bfs::path const& path,
                 std::string const& type,
                 std::string const& name);
   public:
@@ -535,10 +537,6 @@ namespace memo
                bool purge = false) const;
 
   private:
-    std::string
-    _type_plural(std::string const& type) const;
-
-
     /// report_local_action is triggered when a local resource is edited:
     /// - saved
     /// - updated
@@ -553,8 +551,7 @@ namespace memo
 
   namespace deprecated
   {
-      boost::filesystem::path
-      storages_path();
+    bfs::path storages_path();
   }
 }
 

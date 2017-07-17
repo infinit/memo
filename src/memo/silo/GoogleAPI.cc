@@ -7,7 +7,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/log.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.GoogleAPI");
+ELLE_LOG_COMPONENT("memo.silo.GoogleAPI");
 
 #define BENCH(name)                                                     \
   static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \

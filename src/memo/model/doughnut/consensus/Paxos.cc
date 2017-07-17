@@ -564,7 +564,7 @@ namespace memo
               if (this->_rebalance_auto_expand)
               {
                 ELLE_LOG_COMPONENT(
-                  "infinit.model.doughnut.consensus.Paxos.rebalance");
+                  "memo.model.doughnut.consensus.Paxos.rebalance");
                 PaxosServer::Quorum q;
                 if (!elle::contains(this->_quorums, address))
                 {
@@ -711,7 +711,7 @@ namespace memo
         Paxos::LocalPeer::_disappeared_evict(model::Address lost_id)
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: evict node %f", this, lost_id);
           auto range = elle::equal_range(
             this->_node_blocks.get<by_node>(), lost_id);
@@ -891,7 +891,7 @@ namespace memo
         Paxos::LocalPeer::_rebalance()
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           while (true)
           {
             auto elt = this->_rebalancable.get();
@@ -1912,7 +1912,7 @@ namespace memo
         Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
           auto latest = this->_latest(client, address);
@@ -2007,7 +2007,7 @@ namespace memo
         Paxos::_resign()
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           elle::reactor::Backoff backoff(
             std::chrono::milliseconds(10), std::chrono::milliseconds(10000));
           auto local = this->doughnut().local();

@@ -146,6 +146,13 @@ namespace memo
     /// A managed gauge.
     using GaugePtr = UniquePtr<Gauge>;
 
+    /// Set the Prometheus publishing address.
+    inline
+    void endpoint(std::string e)
+    {
+      elle::err("prometheus is not supported on this platform");
+    }
+
     /// Create a family of gauges.
     inline
     Family<Gauge>*

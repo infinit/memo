@@ -1172,14 +1172,14 @@ class Bottle(bottle.Bottle):
     content_type = bottle.request.headers.get('Content-Type')
     # Old crash reports only contained dump data.
     if content_type == 'application/octet-stream':
-      self.__beyond.crash_report_send(bottle.request.body)
+      json = {
+        'dump': bottle.request.body,
+        'platform': 'Unknown',
+        'version': 'Unknown',
+        }
     elif content_type == 'application/json':
       json = bottle.request.json
-      from base64 import b64decode
-      dump = b64decode(json.get('dump', ''))
-      self.__beyond.crash_report_send(dump,
-                                      json.get('platform', 'Unknown'),
-                                      json.get('version', 'Unknown'))
+    self.__beyond.crash_report_send(json)
     return {}
 
   ## --- ##

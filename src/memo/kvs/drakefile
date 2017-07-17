@@ -61,35 +61,37 @@ def configure(
   # packages so declare them statically. This is the case when a single git repo
   # contains several dependencies - grpc, protobuf, etc.
   grpc_package_tgts = \
-    [drake.node(t % (go_toolkit.path, go_toolkit.platform_str())) for t in [
-    '%s/pkg/%s/github.com/golang/protobuf/proto.a',
-    '%s/pkg/%s/github.com/golang/protobuf/ptypes/any.a',
-    '%s/pkg/%s/golang.org/x/net/context.a',
-    '%s/pkg/%s/golang.org/x/net/http2/hpack.a',
-    '%s/pkg/%s/golang.org/x/net/http2.a',
-    '%s/pkg/%s/golang.org/x/net/idna.a',
-    '%s/pkg/%s/golang.org/x/net/internal/timeseries.a',
-    '%s/pkg/%s/golang.org/x/net/lex/httplex.a',
-    '%s/pkg/%s/golang.org/x/net/trace.a',
-    '%s/pkg/%s/golang.org/x/text/secure/bidirule.a',
-    '%s/pkg/%s/golang.org/x/text/transform.a',
-    '%s/pkg/%s/golang.org/x/text/unicode/bidi.a',
-    '%s/pkg/%s/golang.org/x/text/unicode/norm.a',
-    '%s/pkg/%s/google.golang.org/genproto/googleapis/rpc/status.a',
-    '%s/pkg/%s/google.golang.org/grpc/codes.a',
-    '%s/pkg/%s/google.golang.org/grpc/credentials.a',
-    '%s/pkg/%s/google.golang.org/grpc/grpclb/grpc_lb_v1.a',
-    '%s/pkg/%s/google.golang.org/grpc/grpclog.a',
-    '%s/pkg/%s/google.golang.org/grpc/internal.a',
-    '%s/pkg/%s/google.golang.org/grpc/keepalive.a',
-    '%s/pkg/%s/google.golang.org/grpc/metadata.a',
-    '%s/pkg/%s/google.golang.org/grpc/naming.a',
-    '%s/pkg/%s/google.golang.org/grpc/peer.a',
-    '%s/pkg/%s/google.golang.org/grpc/stats.a',
-    '%s/pkg/%s/google.golang.org/grpc/status.a',
-    '%s/pkg/%s/google.golang.org/grpc/tap.a',
-    '%s/pkg/%s/google.golang.org/grpc/transport.a',
-    '%s/pkg/%s/google.golang.org/grpc.a',
+    [drake.node('{}/pkg/{}/{}'
+                .format(go_toolkit.path, go_toolkit.platform_str(), t))
+     for t in [
+       'github.com/golang/protobuf/proto.a',
+       'github.com/golang/protobuf/ptypes/any.a',
+       'golang.org/x/net/context.a',
+       'golang.org/x/net/http2/hpack.a',
+       'golang.org/x/net/http2.a',
+       'golang.org/x/net/idna.a',
+       'golang.org/x/net/internal/timeseries.a',
+       'golang.org/x/net/lex/httplex.a',
+       'golang.org/x/net/trace.a',
+       'golang.org/x/text/secure/bidirule.a',
+       'golang.org/x/text/transform.a',
+       'golang.org/x/text/unicode/bidi.a',
+       'golang.org/x/text/unicode/norm.a',
+       'google.golang.org/genproto/googleapis/rpc/status.a',
+       'google.golang.org/grpc/codes.a',
+       'google.golang.org/grpc/credentials.a',
+       'google.golang.org/grpc/grpclb/grpc_lb_v1.a',
+       'google.golang.org/grpc/grpclog.a',
+       'google.golang.org/grpc/internal.a',
+       'google.golang.org/grpc/keepalive.a',
+       'google.golang.org/grpc/metadata.a',
+       'google.golang.org/grpc/naming.a',
+       'google.golang.org/grpc/peer.a',
+       'google.golang.org/grpc/stats.a',
+       'google.golang.org/grpc/status.a',
+       'google.golang.org/grpc/tap.a',
+       'google.golang.org/grpc/transport.a',
+       'google.golang.org/grpc.a',
   ]]
   drake.go.FetchPackage('google.golang.org/grpc', go_toolkit,
                         targets = grpc_package_tgts)
@@ -155,3 +157,7 @@ def configure(
   docker_file.entry_point(
     ['/usr/bin/env', 'python3', '-i', '-m', 'memo_kvs'])
   drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:

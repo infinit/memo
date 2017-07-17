@@ -1,13 +1,14 @@
 #include <memo/silo/Mirror.hh>
-#include <memo/model/Address.hh>
-
-#include <elle/reactor/Scope.hh>
 
 #include <boost/algorithm/string.hpp>
 
 #include <elle/factory.hh>
+#include <elle/from-string.hh>
+#include <elle/reactor/Scope.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.Mirror");
+#include <memo/model/Address.hh>
+
+ELLE_LOG_COMPONENT("memo.silo.Mirror");
 
 namespace memo
 {
@@ -87,8 +88,8 @@ namespace memo
       std::unique_ptr<Silo>
       make(std::vector<std::string> const& args)
       {
-        bool balance_reads = to_bool(args[0]);
-        bool parallel = to_bool(args[1]);
+        bool const balance_reads = elle::from_string<bool>(args[0]);
+        bool const parallel = elle::from_string<bool>(args[1]);
         auto backends = std::vector<std::unique_ptr<Silo>>{};
         // FIXME: we don't check that i+1 is ok.
         for (int i = 2; i < signed(args.size()); i += 2)

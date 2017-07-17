@@ -25,6 +25,22 @@ class CouchDB:
   def __path(self, p):
     return '%s/couchdb.%s' % (self.__dir, p)
 
+  def __wait_until(self, msg, fun):
+    '''Run the function until it passes.  Be ready to time out.'''
+    count = 100
+    while not fun():
+      count -= 1
+      if count:
+        time.sleep(0.1)
+      else:
+        err = ""
+        with open(self.__path('stderr')) as f:
+          for line in f:
+            err += "  couchdb stderr: " + line
+        raise RuntimeError("time out waiting for: {}\n"
+                           "{}"
+                           .format(msg, err))
+
   def __enter__(self):
     if self.__dir is None:
       self.__dir = tempfile.mkdtemp()
@@ -39,7 +55,7 @@ class CouchDB:
     stdout = self.__path('stdout')
     stderr = self.__path('stderr')
     with open(config, 'w') as f:
-      print('''\
+      conf = '''\
 [couchdb]
 database_dir = %(root)s/db-data
 view_index_dir = %(root)s/db-data
@@ -53,8 +69,8 @@ file = %(root)s/db.log
 
 [query_servers]
 python=python3 -m couchdb
-''' % {'root': self.__dir, 'port': self.__port},
-            file = f)
+''' % {'root': self.__dir, 'port': self.__port}
+      print(conf, file = f)
     try:
       os.remove(self.__path('uri'))
     except:
@@ -63,13 +79,12 @@ python=python3 -m couchdb
       ['couchdb', '-a', config,
        '-b', '-p', pid, '-o', stdout, '-e', stderr])
     status_cmd = ['couchdb', '-a', config, '-p', pid, '-s']
-    while subprocess.call(status_cmd, stderr = subprocess.PIPE) != 0:
-      time.sleep(0.1)
-    while not os.path.exists(self.__path('uri')):
-      time.sleep(0.1)
-    # Wait for the file to be written.
-    while os.stat(self.__path('uri')).st_size == 0:
-      time.sleep(0.1)
+    self.__wait_until("couchdb is started",
+                      lambda: subprocess.call(status_cmd) == 0)
+    self.__wait_until("uri file exists",
+                      lambda: os.path.exists(self.__path('uri')))
+    self.__wait_until("uri file is filled",
+                      lambda: os.stat(self.__path('uri')).st_size != 0)
     with open(self.__path('uri'), 'r') as f:
       self.__uri = f.read().strip()
     while True:

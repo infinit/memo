@@ -505,9 +505,39 @@ def configure(
   if enable_crash_report:
     memo_cli_deps.append(crash_report_lib)
 
+  # Ship libstdc++ and libgcc_s.
+  additional_libs = []
+  if linux and cxx_toolkit.architecture is not drake.architecture.arm:
+    # On alpine, libgcc.so is not a symlink to the real library, rather
+    # it's a small text file:
+    #
+    # bash-4.3# cat /usr/lib/libgcc_s.so
+    # /* GNU ld script
+    #    Use the shared library, but some functions are only in
+    #    the static library.  */
+    # GROUP ( libgcc_s.so.1 -lgcc )
+    #
+    # so bringing it does not help us.  Rather that explicitly looking
+    # for these names, one would prefer to run `ldd` on the binaries
+    # (say bin/memo) and look for the dependencies, unfortunately this
+    # would be done at Drake build-time, during which it is already
+    # too late to build these nodes.  So we encode the names here.
+    #
+    # On the other architectures (Jessie, Xenial), the names without
+    # version do fine.
+    for l in ['libstdc++.so.6', 'libgcc_s.so.1']:
+      cmd = [cxx_toolkit.cxx] \
+            + cxx_toolkit.cflags(cli_cxx_config) \
+            + cxx_toolkit.ldflags(cli_cxx_config) \
+            + ['-print-file-name={}'.format(l)]
+      output = subprocess.check_output(cmd).decode('utf-8').strip()
+      path = drake.Path(output)
+      additional_libs.append(
+        drake.copy(drake.cxx.DynLib(path), libdir, strip_prefix = True))
+
   memo_cli = drake.cxx.Executable(
     'bin/memo',
-    memo_cli_sources + memo_cli_deps,
+    memo_cli_sources + memo_cli_deps + additional_libs,
     cxx_toolkit,
     cli_cxx_config,
     strip = windows)
@@ -708,8 +738,6 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(install_nodes(docker_path), '/usr')
-  docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
-  docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
   drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
@@ -794,7 +822,7 @@ def configure(
               # 'passport-sign-delegate',
               'passport_cli',
               'sanity',
-              'storage_cli',
+              'silo-cli',
               'user_cli',
             ]))
       if not windows:
@@ -848,7 +876,7 @@ def configure(
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
           'MEMO_BINARIES': str(binaries_path),
-          'MEMO_WITH_KEY_VALUE_STORE': str(with_kvs),
+          'TEST_MEMO_WITH_KVS': str(with_kvs),
         }
         env.update(t.get('env', {}))
         if windows:
@@ -931,6 +959,9 @@ def configure(
                                 grpc.grpc.protoc,
                                 drake.node(grpc.grpc.grpc_cpp_plugin))
   tests_names = [
+    # test_name               , deps     , args = ['name-extension', tests-args...]
+    # tests-args offer a means to run a binaries with different cli options,
+    # and generate separated outputs.
     ('async-conflict'         , []       , None),
     ('backward-compatibility' , []       , None),
     ('bandwidth'              , []       , None),
@@ -991,6 +1022,7 @@ def configure(
       'BUILD_DIR': drake.path_build(),
       'BOOST_TEST_COLOR_OUTPUT': '1',
       'BOOST_TEST_LOG_LEVEL': 'all',
+      'BOOST_TEST_LOG_SINK': 'stderr',  # Keep our logs, and Boost's, together.
       'SOURCE_DIR': drake.path_source(),
     }
     #  _____ _____  ____  __ _____
@@ -1001,19 +1033,16 @@ def configure(
     #
     # Really, really do run these tests on valgrind !!!
     if args:
-      name = '{}-{}'.format(test, args[0])
+      test_name = '{}-{}'.format(test_name, args[0])
       args = args[1:]
-    else:
-      name = test.name_relative
     if valgrind_tests and test_name not in ['filesystem']:
-      runner = drake.valgrind.ValgrindRunner(
-        name = name,
-        exe = test,
-        args = args,
-        valgrind = elle.valgrind,
-        env = env)
+      runner = drake.valgrind.ValgrindRunner(name = test_name,
+                                             exe = test,
+                                             args = args,
+                                             valgrind = elle.valgrind,
+                                             env = env)
     else:
-      runner = drake.Runner(name = name,
+      runner = drake.Runner(name = test_name,
                             exe = test,
                             args = args,
                             env = env)

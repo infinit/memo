@@ -15,17 +15,14 @@ ELLE_LOG_COMPONENT("memo.overlay.Overlay");
 namespace
 {
 #if MEMO_ENABLE_PROMETHEUS
-
-#define MAKE_GAUGE_BUILDER(gauge_name, gauge_desc)                          \
-  memo::prometheus::GaugePtr                                             \
-  make_##gauge_name##_gauge(memo::model::doughnut::Doughnut const& dht)  \
-  {                                                                         \
-    static auto* family                                                     \
-      = memo::prometheus::instance().make_gauge_family(                  \
-          "memo_"  #gauge_name,                                          \
-          gauge_desc);                                                      \
-    return memo::prometheus::instance()                                  \
-      .make(family, {{"id", elle::sprintf("%f", dht.id())}});               \
+# define MAKE_GAUGE_BUILDER(gauge_name, gauge_desc)                     \
+  memo::prometheus::GaugePtr                                            \
+  make_##gauge_name##_gauge(memo::model::doughnut::Doughnut const& dht) \
+  {                                                                     \
+    using namespace memo::prometheus;                                   \
+    static auto* family                                                 \
+      = make_gauge_family("memo_"  #gauge_name, gauge_desc);            \
+    return make(family, {{"id", elle::sprintf("%f", dht.id())}});       \
   }
 
   /// A set of gauges to track the number of reachable blocks.
@@ -261,27 +258,20 @@ namespace memo
         this->_reachable_blocks = this->_compute_reachable_blocks();
         this->_reachable_blocks_updated.signal();
 #if MEMO_ENABLE_PROMETHEUS
-        if (this->_reachable_blocks_gauge.get())
-          this->_reachable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.total_blocks);
-        if (this->_reachable_mutable_blocks_gauge.get())
-          this->_reachable_mutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.mutable_blocks);
-        if (this->_reachable_immutable_blocks_gauge.get())
-          this->_reachable_immutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.immutable_blocks);
-        if (this->_underreplicated_immutable_blocks_gauge.get())
-          this->_underreplicated_immutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.underreplicated_immutable_blocks);
-        if (this->_overreplicated_immutable_blocks_gauge.get())
-          this->_overreplicated_immutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.overreplicated_immutable_blocks);
-        if (this->_underreplicated_mutable_blocks_gauge.get())
-          this->_underreplicated_mutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.underreplicated_mutable_blocks);
-        if (this->_under_quorum_mutable_blocks_gauge.get())
-          this->_under_quorum_mutable_blocks_gauge.get()->Set(
-            this->_reachable_blocks.under_quorum_mutable_blocks);
+        if (auto g = this->_reachable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.total_blocks);
+        if (auto g = this->_reachable_mutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.mutable_blocks);
+        if (auto g = this->_reachable_immutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.immutable_blocks);
+        if (auto g = this->_underreplicated_immutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.underreplicated_immutable_blocks);
+        if (auto g = this->_overreplicated_immutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.overreplicated_immutable_blocks);
+        if (auto g = this->_underreplicated_mutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.underreplicated_mutable_blocks);
+        if (auto g = this->_under_quorum_mutable_blocks_gauge.get())
+          g->Set(this->_reachable_blocks.under_quorum_mutable_blocks);
 #endif
         elle::reactor::sleep(this->_reachable_max_update_period);
       }

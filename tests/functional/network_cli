@@ -3,7 +3,7 @@
 from utils import *
 import json
 
-with_kvs = os.environ.get('MEMO_WITH_KEY_VALUE_STORE', '1') == '1'
+with_kvs = os.environ.get('TEST_MEMO_WITH_KVS', '1') == '1'
 
 # Creating and deleting networks locally.
 with Beyond() as beyond, Memo(beyond = beyond) as bob, \

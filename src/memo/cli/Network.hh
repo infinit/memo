@@ -346,9 +346,6 @@ namespace memo
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::grpc = boost::optional<std::string>()),
                  decltype(cli::grpc_port_file = boost::optional<std::string>()),
-#if MEMO_ENABLE_PROMETHEUS
-                 decltype(cli::prometheus = boost::optional<std::string>()),
-#endif
                  // Options that used to be hidden.
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),
@@ -388,9 +385,6 @@ namespace memo
                Strings advertise_host = {},
                boost::optional<std::string> grpc = {},
                boost::optional<std::string> const& grpc_port_file = {},
-#if MEMO_ENABLE_PROMETHEUS
-               boost::optional<std::string> prometheus = {},
-#endif
                // Options that used to be hidden.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
                boost::optional<bool> paxos_rebalancing_inspect = {},
