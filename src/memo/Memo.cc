@@ -40,11 +40,14 @@ namespace memo
   {
     auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
     create_directories(log_dir);
-    auto const log_base = log_dir / "main";
-    elle::log::logger_add(std::make_unique<elle::log::FileLogger>
-       (log_base.string(),
-        "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
-        64_MiB, 15));
+    auto const spec =
+      elle::print("file://{}?"
+                  "time,microsec,"
+                  "append,size=64MiB,rotate=15,"
+                  "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
+                  (log_dir / "main").string());
+    ELLE_DUMP("building critical log: {}", spec);
+    elle::log::logger_add(elle::log::make_logger(spec));
   }
 
   bool
