@@ -1383,7 +1383,7 @@ namespace memo
                                     std::shared_ptr<blocks::Block> block,
                                     Paxos::PaxosClient::Proposal p)
         {
-          if (!elle::find(this->_addresses, address))
+          if (!elle::find(this->_addresses, block->address()))
           {
             ELLE_TRACE_SCOPE("%s: propagate %f on %f at %f",
                              this, block->address(), q, p);
@@ -1788,27 +1788,29 @@ namespace memo
                 {
                   auto mb = dynamic_cast<blocks::MutableBlock*>(b.get());
                   auto version = mb->version();
-                  boost::optional<Paxos::PaxosServer::Accepted> chosen;
-                  ELLE_DEBUG("run Paxos for version %s", version)
-                    chosen = client.choose(version, b);
+                  auto const chosen = [&]
+                    {
+                      ELLE_DEBUG("run Paxos for version %s", version)
+                        return client.choose(version, b);
+                    }();
                   if (chosen)
                   {
-                    if (chosen->value.is<PaxosServer::Quorum>())
+                    if (chosen->is<PaxosServer::Quorum>())
                     {
-                      auto const& q = chosen->value.get<PaxosServer::Quorum>();
+                      auto const& q = chosen->get<PaxosServer::Quorum>();
                       ELLE_DEBUG_SCOPE("Paxos elected another quorum: %f", q);
-                      b->seal(chosen->proposal.version + 1);
+                      b->seal(chosen.proposal().version + 1);
                       throw Paxos::PaxosServer::WrongQuorum(
-                        q, peers_id, chosen->proposal);
+                        q, peers_id, chosen.proposal());
                     }
                     else
                     {
                       auto block =
-                        chosen->value.get<std::shared_ptr<blocks::Block>>();
+                        chosen->get<std::shared_ptr<blocks::Block>>();
                       if (auto* mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
-                        mb->seal_version(chosen->proposal.version + 1);
+                        mb->seal_version(chosen.proposal().version + 1);
                       if (auto* mb = dynamic_cast<blocks::MutableBlock*>(b.get()))
-                        mb->seal_version(chosen->proposal.version + 1);
+                        mb->seal_version(chosen.proposal().version + 1);
                       if (!(b = resolve(*b, *block, resolver.get())))
                         break;
                       ELLE_DEBUG("seal resolved block")
@@ -2055,9 +2057,9 @@ namespace memo
                 // FIXME: Retry balancing.
                 // FIXME: We should still try block propagation in the case that
                 // "someone else" failed to perform it.
-                if (conflict->value.is<PaxosServer::Quorum>())
+                if (conflict->is<PaxosServer::Quorum>())
                 {
-                  auto quorum = conflict->value.get<PaxosServer::Quorum>();
+                  auto quorum = conflict->get<PaxosServer::Quorum>();
                   if (quorum == new_quorum)
                   {
                     ELLE_TRACE("conflicted rebalancing to the quorum we picked");
