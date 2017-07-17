@@ -11,6 +11,7 @@ Node churn intensive testing and rebalancing robustification.
   nodes on exit.
 - Prometheus gauges for reachable blocks and under-replicated blocks.
 - Add centralized crash reporting.
+- Option `--log` to control the generated logs.
 
 ### Changed
 
@@ -27,13 +28,13 @@ Node churn intensive testing and rebalancing robustification.
 - When reading, be resilient to a minority of node missing a block.
 - Transmit immutable block ownership information to new node holding
   them so they can handle replication themselves.
-- Protect against concurrent updates to the same address via the GRPC
+- Protect against concurrent updates to the same address via the gRPC
   interface.
 - Various minor issues in the command-line parsing.
 
 ## [0.8.0] 2017-05-22
 
-Kouncil improvements and completion, GRPC interface for the KV store,
+Kouncil improvements and completion, gRPC interface for the KV store,
 basic prometheus monitoring.
 
 ### Added
