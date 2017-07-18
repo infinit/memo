@@ -957,7 +957,7 @@ def configure(
                                              strip_prefix = True)
   tests_proto = grpc.GRPCCxxGen(drake.node('tests/grpc.proto'),
                                 grpc.grpc.protoc,
-                                drake.node(grpc.grpc.grpc_cpp_plugin))
+                                grpc.grpc.grpc_cpp_plugin)
   tests_names = [
     # test_name               , deps     , args = ['name-extension', tests-args...]
     # tests-args offer a means to run a binaries with different cli options,
