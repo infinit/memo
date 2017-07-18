@@ -124,11 +124,11 @@ def configure(
   gen_cpp = grpc.GRPCCxxGen(
     service_proto,
     grpc.grpc.protoc,
-    drake.node(grpc.grpc.grpc_cpp_plugin))
+    grpc.grpc.grpc_cpp_plugin)
   gen_py = grpc.GRPCPyGen(
     service_proto,
     grpc.grpc.protoc,
-    drake.node(grpc.grpc.grpc_python_plugin))
+    grpc.grpc.grpc_python_plugin)
 
   ## -------------------- ##
   ## Docker python client ##
