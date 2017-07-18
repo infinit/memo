@@ -562,13 +562,6 @@ namespace memo
                   });
               }
             }
-            else
-            {
-              ELLE_WARN(
-                "block %f was rebalanced from %f to %f but is not held locally",
-                a, old_quorum, new_quorum);
-              return;
-            }
           }
         };
 
