@@ -1,7 +1,6 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_FWD_HH
-# define INFINIT_MODEL_DOUGHNUT_FWD_HH
+#pragma once
 
-# include <elle/das/printer.hh>
+#include <elle/das/printer.hh>
 
 namespace memo
 {
@@ -18,5 +17,3 @@ namespace memo
     }
   }
 }
-
-#endif

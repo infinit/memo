@@ -118,10 +118,9 @@ namespace memo
         }
       }
 
-      struct ParanoidModelConfig:
-        public ModelConfig
+      struct ParanoidModelConfig
+        : ModelConfig
       {
-      public:
         // boost::optional does not support in-place construction, use a
         // std::unique_ptr instead since KeyPair is not copiable.
         std::unique_ptr<elle::cryptography::rsa::KeyPair> keys;
@@ -145,7 +144,6 @@ namespace memo
           s.serialize("keys", this->keys);
         }
 
-        virtual
         std::unique_ptr<memo::model::Model>
         make(bool,
              boost::filesystem::path const&) override

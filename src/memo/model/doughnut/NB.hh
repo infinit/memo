@@ -1,13 +1,12 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_NB_HH
-# define INFINIT_MODEL_DOUGHNUT_NB_HH
+#pragma once
 
-# include <elle/attribute.hh>
+#include <elle/attribute.hh>
 
-# include <elle/cryptography/rsa/PublicKey.hh>
-# include <elle/cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-# include <memo/model/blocks/ImmutableBlock.hh>
-# include <memo/model/doughnut/fwd.hh>
+#include <memo/model/blocks/ImmutableBlock.hh>
+#include <memo/model/doughnut/fwd.hh>
 
 namespace memo
 {
@@ -22,7 +21,7 @@ namespace memo
       | Types |
       `------*/
       public:
-        using Self = memo::model::doughnut::NB;
+        using Self = NB;
         using Super = blocks::ImmutableBlock;
 
       /*-------------.
@@ -99,5 +98,3 @@ namespace memo
     }
   }
 }
-
-#endif

@@ -6,11 +6,13 @@ namespace memo
   {
     namespace doughnut
     {
-      User::User(elle::cryptography::rsa::PublicKey key, std::string const& name)
+      User::User(elle::cryptography::rsa::PublicKey key, std::string name)
         : _key(std::move(key))
-        , _name(name)
+        , _name(std::move(name))
       {}
-      std::string User::name()
+
+      std::string
+      User::name() const
       {
         return _name;
       }

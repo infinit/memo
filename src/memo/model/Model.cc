@@ -154,8 +154,7 @@ namespace memo
     std::unique_ptr<blocks::GroupBlock>
     Model::make_block(elle::Buffer data, Address) const
     {
-      auto res = this->_make_group_block();
-      return res;
+      return this->_make_group_block();
     }
 
     std::unique_ptr<blocks::ACLBlock>
