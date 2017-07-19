@@ -171,7 +171,7 @@ namespace memo
       }
       else
       {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
         return std::make_unique<elle::reactor::FDStream>(0);
 #else
         // Windows does not support async io on stdin
@@ -200,7 +200,7 @@ namespace memo
       return memo::xdg_runtime_dir() / "daemon.sock";
     }
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     DaemonHandle
     daemon_hold(int nochdir, int noclose)
     {
@@ -251,7 +251,7 @@ namespace memo
     void
     hook_stats_signals(memo::model::doughnut::Doughnut& dht)
     {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       elle::reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
           auto& o = dht.overlay();
           try

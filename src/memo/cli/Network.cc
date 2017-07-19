@@ -29,7 +29,7 @@
 #include <memo/silo/Silo.hh>
 #include <memo/silo/Strip.hh>
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
@@ -93,7 +93,7 @@ namespace memo
       , import(*this,
                "Fetch a network",
                cli::input = boost::none)
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       , inspect(*this,
                 "Get information about a running network",
                 cli::name,
@@ -148,7 +148,7 @@ namespace memo
             "Run a network",
             cli::name,
             cli::input = boost::none,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             cli::daemon = false,
             cli::monitoring = true,
 #endif
@@ -589,7 +589,7 @@ namespace memo
       cli.report_imported("network", desc.name);
     }
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     /*----------------.
     | Mode: inspect.  |
     `----------------*/
@@ -828,7 +828,7 @@ namespace memo
       void
       network_run(Memo& cli,
                   std::string const& network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                   bool daemon = false,
                   bool monitoring = true,
 #endif
@@ -886,7 +886,7 @@ namespace memo
           cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
           async, cache_disk_size, cli.compatibility_version(), port,
           listen_address, resign_on_shutdown
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
           , monitoring
 #endif
         );
@@ -926,7 +926,7 @@ namespace memo
           if (endpoints_file)
             endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
         }
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
         auto daemon_handle = daemon ? daemon_hold(0, 1) : daemon_invalid;
 #endif
         auto run = [&, push_p]
@@ -942,7 +942,7 @@ namespace memo
                   network.make_poll_hub_thread(*dht, eps,
                                                   *fetch_endpoints_interval);
             }
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             if (daemon)
             {
               ELLE_TRACE("releasing daemon");
@@ -998,7 +998,7 @@ namespace memo
         (
          cli,
          network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
          // Passing explicitly the default values.  This is not nice.
          false,
          true,
@@ -1157,7 +1157,7 @@ namespace memo
     void
     Network::mode_run(std::string const& network_name,
                       boost::optional<std::string> const& commands,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                       bool daemon,
                       bool monitoring,
 #endif
@@ -1194,7 +1194,7 @@ namespace memo
         (
          cli,
          network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
          daemon,
          monitoring,
 #endif

@@ -1944,7 +1944,7 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
 ELLE_TEST_SUITE()
 {
   static int windows_factor =
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
     5;
 #else
     1;

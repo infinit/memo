@@ -57,13 +57,13 @@ namespace memo
         if (!memo::getenv("DISABLE_SIGNAL_HANDLER", false))
         {
           static const auto signals = {SIGINT, SIGTERM
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                                        , SIGQUIT
 #endif
           };
           for (auto signal: signals)
           {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             ELLE_DEBUG("set signal handler for %s", strsignal(signal));
 #endif
             elle::reactor::scheduler().signal_handle(
@@ -80,7 +80,7 @@ namespace memo
       void
       check_broken_locale()
       {
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
         // boost::filesystem uses the default locale, detect here if
         // it can't be instantiated.  Not required on OS X, see
         // boost/libs/filesystem/src/path.cpp:819.
@@ -372,7 +372,7 @@ namespace memo
       void
       echo_mode(bool enable)
       {
-#if defined MEMO_WINDOWS
+#if defined ELLE_WINDOWS
         HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
         DWORD mode;
         GetConsoleMode(hStdin, &mode);

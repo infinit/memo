@@ -29,14 +29,14 @@
 
 ELLE_LOG_COMPONENT("test");
 
-#if defined MEMO_WINDOWS
+#if defined ELLE_WINDOWS
 # undef stat
 # define IF_WINDOWS(Then, Else) (Then)
 #else
 # define IF_WINDOWS(Then, Else) (Else)
 #endif
 
-#if defined MEMO_MACOSX
+#if defined ELLE_MACOS
 # define IF_MACOS(Then, Else) (Then)
 #else
 # define IF_MACOS(Then, Else) (Else)

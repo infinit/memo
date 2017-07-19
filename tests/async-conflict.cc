@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include <cstdlib>
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 

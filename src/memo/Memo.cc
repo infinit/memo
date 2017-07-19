@@ -437,7 +437,7 @@ namespace memo
     save(f, user);
     this->report_local_action()(existed ? "updated" : "saved", "user",
                                 user.name);
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     bfs::permissions(path,
                      bfs::remove_perms | bfs::others_all | bfs::group_all);
 #endif

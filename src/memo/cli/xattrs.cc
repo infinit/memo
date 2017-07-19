@@ -1,9 +1,9 @@
 #include <memo/cli/xattrs.hh>
 
 #include <memo/cli/xattrs.hh>
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
 # include <attr/xattr.h>
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
 # include <sys/xattr.h>
 #endif
 
@@ -37,8 +37,8 @@ namespace memo
               std::string const& value,
               bool fallback)
     {
-#ifndef MEMO_WINDOWS
-# ifdef MEMO_MACOSX
+#ifndef ELLE_WINDOWS
+# ifdef ELLE_MACOS
       int res = ::setxattr(
         file.c_str(), key.c_str(), value.data(), value.size(), 0,
         XATTR_NOFOLLOW);
@@ -68,9 +68,9 @@ namespace memo
               int val_size,
               bool fallback)
     {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       int res = -1;
-# ifdef MEMO_MACOSX
+# ifdef ELLE_MACOS
       res = ::getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
 # else
       res = lgetxattr(file.c_str(), key.c_str(), val, val_size);

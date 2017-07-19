@@ -26,7 +26,7 @@
 #include <memo/model/doughnut/User.hh>
 
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 

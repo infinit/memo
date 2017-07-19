@@ -12,7 +12,7 @@
 #include <memo/silo/GCS.hh>
 #include <memo/silo/GoogleDrive.hh>
 #include <memo/silo/S3.hh>
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <memo/silo/sftp.hh>
 #endif
 #include <memo/cli/Memo.hh>

@@ -1,5 +1,5 @@
 #include <unistd.h>
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <arpa/inet.h>
 # include <sys/wait.h>
 #endif

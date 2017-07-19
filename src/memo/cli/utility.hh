@@ -82,7 +82,7 @@ namespace memo
     bfs::path
     daemon_sock_path();
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     using DaemonHandle = int;
     constexpr auto daemon_invalid = -1;
 

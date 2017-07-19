@@ -558,13 +558,13 @@ namespace memo
 //             auto native = socket->socket()->native();
 //             uid_t uid;
 //             gid_t gid;
-// #ifdef MEMO_MACOSX
+// #ifdef ELLE_MACOS
 //             if (getpeereid(native, &uid, &gid))
 //             {
 //               ELLE_ERR("getpeerid failed: %s", strerror(errno));
 //               continue;
 //             }
-// #elif defined MEMO_LINUX
+// #elif defined ELLE_LINUX
 //             struct ucred ucred;
 //             socklen_t len = sizeof ucred;
 //             if (getsockopt(native, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)

@@ -4,17 +4,17 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <sys/statvfs.h>
 #endif
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
 # include <attr/xattr.h>
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
 # include <sys/xattr.h>
 #endif
 
@@ -59,7 +59,7 @@ namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # define O_CREAT _O_CREAT
 # define O_RDWR _O_RDWR
 # define O_EXCL _O_EXCL
@@ -1798,7 +1798,7 @@ ELLE_TEST_SUITE()
   // This is needed to ignore child process exiting with nonzero
   // There is unfortunately no more specific way.
   elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no");
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
   signal(SIGCHLD, SIG_IGN);
 #endif
   auto& suite = boost::unit_test::framework::master_test_suite();
