@@ -29,7 +29,7 @@ git clone https://github.com/infinit/memo --recursive # Clone memo and its submo
 
 #### Core library
 
-`memo` uses [Elle](https://github.com/infinit/drake), Infinit's core library.
+`memo` uses [Elle](https://github.com/infinit/elle), Infinit's core library.
 
 #### Build system
 
