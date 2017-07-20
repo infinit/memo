@@ -10,7 +10,6 @@
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
-#include <elle/utility/Move.hh>
 
 #include <elle/das/model.hh>
 #include <elle/das/serializer.hh>

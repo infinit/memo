@@ -64,8 +64,9 @@ namespace memo
   check_environment()
   {
     auto warn = false;
-    ELLE_DUMP("checking: %s", elle::os::environ());
-    for (auto const& p: elle::os::environ())
+    auto const env = elle::os::environ();
+    ELLE_DUMP("checking: %s", env);
+    for (auto const& p: env)
       if (auto v = elle::tail(p.first, "MEMO_"))
         if (!elle::contains(vars, *v))
         {

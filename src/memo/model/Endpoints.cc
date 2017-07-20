@@ -42,7 +42,7 @@ namespace boost
 namespace
 {
   /// Whether IPv6 support is disabled.
-  static bool ipv4_only = !memo::getenv("NO_IPV6", false);
+  static bool ipv4_only = memo::getenv("NO_IPV6", false);
 }
 
 namespace memo
