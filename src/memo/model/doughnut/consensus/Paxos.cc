@@ -1057,7 +1057,7 @@ namespace memo
             {
               try
               {
-                ELLE_TRACE_SCOPE("%s: rebalance block %f", this, address);
+                ELLE_TRACE_SCOPE("%s: rebalance %f", this, address);
                 auto block = this->_load(address);
                 if (block.paxos)
                 {
