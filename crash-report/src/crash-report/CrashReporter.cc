@@ -50,7 +50,7 @@ namespace crash_report
       std::string base = descriptor.path();
       if (boost::ends_with(base, ".dmp"))
       {
-        base.substr(base.size() - 4);
+        base.resize(base.size() - 4);
         dump(*static_cast<CrashReporter*>(context), base);
         return succeeded;
       }
