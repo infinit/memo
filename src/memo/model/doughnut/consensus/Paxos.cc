@@ -1010,12 +1010,6 @@ namespace memo
                     client.choose(decision.paxos.current_version() + 1, q);
                     ELLE_TRACE("%s: evicted %f from %f quorum",
                                this, lost_id, address);
-                    if (signed(q.size()) < this->_factor)
-                    {
-                      ELLE_DUMP("schedule %f for rebalancing after eviction",
-                                address);
-                      this->_rebalancable.emplace(address, false);
-                    }
                   }
                   break;
                 }
