@@ -31,8 +31,8 @@ using Serializer = elle::serialization::Binary;
 
 namespace
 {
-  auto const ipv4_enabled = !memo::getenv("NO_IPV4", false);
-  auto const ipv6_enabled = !memo::getenv("NO_IPV6", false);
+  auto const ipv4_enabled = memo::getenv("IPV4", true);
+  auto const ipv6_enabled = memo::getenv("IPV6", true);
 }
 
 namespace memo

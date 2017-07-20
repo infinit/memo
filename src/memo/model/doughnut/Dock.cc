@@ -22,7 +22,7 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.Dock")
 namespace
 {
   bool const disable_key = memo::getenv("RPC_DISABLE_CRYPTO", false);
-  auto const ipv6_enabled = !memo::getenv("NO_IPV6", false);
+  auto const ipv6_enabled = memo::getenv("IPV6", true);
 
   template <typename Action>
   auto

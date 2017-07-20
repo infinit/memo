@@ -41,8 +41,8 @@ namespace memo
       , _network(network)
       , _self(self)
     {
-      bool v4 = !memo::getenv("NO_IPV4", false);
-      bool v6 = !memo::getenv("NO_IPV6", false)
+      bool v4 = memo::getenv("IPV4", true);
+      bool v6 = memo::getenv("IPV6", true)
        && network.dht()->version >= elle::Version(0, 7, 0);
       Endpoints endpoints;
       if (advertise)

@@ -855,8 +855,8 @@ namespace memo
           _config.encrypt = false;
           _config.accept_plain = true;
         }
-        bool v4 = !memo::getenv("NO_IPV4", false);
-        bool v6 = !memo::getenv("NO_IPV6", false)
+        bool v4 = memo::getenv("IPV4", true);
+        bool v6 = memo::getenv("IPV6", true)
           && doughnut->version() >= elle::Version(0, 7, 0);
         this->_self = Address(this->doughnut()->id());
         if (!local)

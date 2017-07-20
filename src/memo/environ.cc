@@ -29,6 +29,8 @@ namespace
     {"FIRST_BLOCK_DATA_SIZE", ""},
     {"HOME", ""},
     {"HOME_OVERRIDE", ""},
+    {"IPV4", "Enable IPv4 (default: true)"},
+    {"IPV6", "Enable IPv6 (default: true)"},
     {"KELIPS_ASYNC", ""},
     {"KELIPS_ASYNC_SEND", ""},
     {"KELIPS_NO_SNUB", ""},
@@ -56,24 +58,55 @@ namespace
     {"USER", ""},
     {"UTP", ""},
   };
-}  
 
-namespace memo
-{
-  void
-  check_environment()
+  bool
+  check_environment_()
   {
     auto warn = false;
     auto const env = elle::os::environ();
     ELLE_DUMP("checking: %s", env);
     for (auto const& p: env)
       if (auto v = elle::tail(p.first, "MEMO_"))
+      {
         if (!elle::contains(vars, *v))
         {
           ELLE_WARN("suspicious environment variable: MEMO_%s", *v);
           warn = true;
         }
+        if (auto v2 = elle::tail(*v, "NO_"))
+        {
+          const auto var = "MEMO_" + *v2;
+          // MEMO_NO_FOO=b stands for MEMO_FOO=!b.
+          if (elle::os::inenv(var)
+              && elle::os::getenv(p.first, false) != !elle::os::getenv(var, true))
+          {
+            ELLE_WARN("MEMO_NO_%s=%s and MEMO_%s=%s conflict:"
+                      " proceeding with the latter",
+                      *v, elle::os::getenv(p.first),
+                      var, elle::os::getenv(var));
+          }
+          else
+          {
+            ELLE_WARN("prefer MEMO_%s=%s to MEMO_NO_%s=%s",
+                      *v, !elle::os::getenv(p.first, false),
+                      var, elle::os::getenv(p.first, false));
+            elle::os::setenv(var,
+                             elle::print("%s", !elle::os::getenv(p.first, false)));
+          }
+        }
+      }
     if (warn)
       ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars));
+    return true;
+  }
+}
+
+namespace memo
+{
+  void
+  check_environment()
+  {
+    ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
+    static auto _ = check_environment_();
   }
 }
