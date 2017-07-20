@@ -1950,14 +1950,12 @@ ELLE_TEST_SUITE()
     1;
 #endif
 
-  // elle::os::setenv("MEMO_CONNECT_TIMEOUT",
-  //                  elle::sprintf("%sms", valgrind(100, 20)));
-  // elle::os::setenv("MEMO_SOFTFAIL_TIMEOUT",
-  //                  elle::sprintf("%sms", valgrind(100, 20)));
-  elle::os::setenv("MEMO_KOUNCIL_WATCHER_INTERVAL",
-                   elle::sprintf("%sms", windows_factor * valgrind(20, 50)));
-  elle::os::setenv("MEMO_KOUNCIL_WATCHER_MAX_RETRY",
-                   elle::sprintf("%sms", valgrind(20, 50)));
+  // memo::setenv("CONNECT_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
+  // memo::setenv("SOFTFAIL_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
+  memo::setenv("KOUNCIL_WATCHER_INTERVAL",
+               elle::sprintf("%sms", windows_factor * valgrind(20, 50)));
+  memo::setenv("KOUNCIL_WATCHER_MAX_RETRY",
+               elle::sprintf("%sms", valgrind(20, 50)));
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_config = TestConfiguration{
     [] (Doughnut& dht, std::shared_ptr<Local> local)

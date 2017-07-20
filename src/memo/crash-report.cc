@@ -27,7 +27,7 @@ namespace memo
   auto
   make_reporter()
   {
-    auto const host = elle::os::getenv("MEMO_CRASH_REPORT_HOST", beyond());
+    auto const host = memo::getenv("CRASH_REPORT_HOST", beyond());
     auto const url = elle::sprintf("%s/crash/report", host);
 
     auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");

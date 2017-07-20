@@ -196,7 +196,7 @@ namespace memo
                       elle::cryptography::rsa::PrivateKey const& k,
                       bool use_encrypt)
       {
-        static bool bg = !elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", false);
+        static bool bg = memo::getenv("BACKGROUND_DECODE", true);
         if (bg)
         {
           elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
@@ -839,8 +839,8 @@ namespace memo
           }
           ELLE_DUMP("new block secret: %s", key.get());
           auto seal_version = this->doughnut()->version();
-          static bool no_encrypt = elle::os::inenv("INFINIT_DISABLE_TOKEN_ENCRYPT");
-          if (no_encrypt)
+          static bool encrypt = memo::getenv("TOKEN_ENCRYPT", true);
+          if (!encrypt)
             seal_version = std::min(seal_version, elle::Version(0, 6, 0));
           auto elle_version = elle_serialization_version(seal_version);
           elle::Buffer secret_buffer;

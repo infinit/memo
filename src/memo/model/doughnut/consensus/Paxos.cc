@@ -160,8 +160,7 @@ namespace memo
                      std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
-          , _lenient_fetch(elle::os::getenv("INFINIT_PAXOS_LENIENT_FETCH",
-                                            lenient_fetch))
+          , _lenient_fetch(memo::getenv("PAXOS_LENIENT_FETCH", lenient_fetch))
           , _rebalance_auto_expand(rebalance_auto_expand)
           , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
@@ -1779,7 +1778,7 @@ namespace memo
               else
               {
                 static bool const balance =
-                  !elle::os::getenv("INFINIT_DISABLE_BALANCED_TRANSFERS", false);
+                  !memo::getenv("DISABLE_BALANCED_TRANSFERS", false);
                 if (balance && peers.size() > 1)
                 {
                   elle::shuffle(peers);

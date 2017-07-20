@@ -20,24 +20,25 @@
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
+#include <memo/environ.hh>
 #include <memo/model/MissingBlock.hh>
+#include <memo/model/MonitoringServer.hh>
 #include <memo/model/blocks/ImmutableBlock.hh>
 #include <memo/model/blocks/MutableBlock.hh>
 #include <memo/model/doughnut/ACB.hh>
+#include <memo/model/doughnut/Async.hh>
 #include <memo/model/doughnut/CHB.hh>
+#include <memo/model/doughnut/Cache.hh>
+#include <memo/model/doughnut/Consensus.hh>
 #include <memo/model/doughnut/GB.hh>
+#include <memo/model/doughnut/Group.hh>
 #include <memo/model/doughnut/Local.hh>
 #include <memo/model/doughnut/NB.hh>
 #include <memo/model/doughnut/OKB.hh>
 #include <memo/model/doughnut/Remote.hh>
 #include <memo/model/doughnut/UB.hh>
 #include <memo/model/doughnut/User.hh>
-#include <memo/model/doughnut/Group.hh>
-#include <memo/model/doughnut/Consensus.hh>
-#include <memo/model/doughnut/Async.hh>
-#include <memo/model/doughnut/Cache.hh>
 #include <memo/model/doughnut/conflict/UBUpserter.hh>
-#include <memo/model/MonitoringServer.hh>
 #include <memo/silo/MissingKey.hh>
 
 using namespace std::literals;
@@ -109,7 +110,7 @@ namespace
   std::chrono::milliseconds
   _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
-    static auto const env = elle::os::getenv("MEMO_CONNECT_TIMEOUT", ""s);
+    static auto const env = memo::getenv("CONNECT_TIMEOUT", ""s);
     if (arg || env.empty())
       return arg.get();
     else
@@ -119,7 +120,7 @@ namespace
   std::chrono::milliseconds
   _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
-    static auto const env = elle::os::getenv("MEMO_SOFTFAIL_TIMEOUT", ""s);
+    static auto const env = memo::getenv("SOFTFAIL_TIMEOUT", ""s);
     if (arg || env.empty())
       return arg.get();
     else
@@ -132,7 +133,7 @@ namespace
     static auto const inenv = elle::os::inenv("MEMO_SOFTFAIL_RUNNING");
     if (inenv)
     {
-      static auto const env = elle::os::getenv("MEMO_SOFTFAIL_RUNNING");
+      static auto const env = memo::getenv("SOFTFAIL_RUNNING", ""s);
       if (arg || env.empty())
         return arg.get();
       else
@@ -210,7 +211,7 @@ namespace memo
       Protocol
       deprecate_utp(Protocol const& p)
       {
-        auto utp_guard = elle::os::getenv("MEMO_UTP", false);
+        auto utp_guard = memo::getenv("UTP", false);
         if (!utp_guard && p == Protocol::all)
         {
           ELLE_WARN(

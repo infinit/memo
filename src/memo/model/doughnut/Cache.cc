@@ -226,7 +226,7 @@ namespace memo
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
             elle::err("invalid block");
           }
-          static bool decode = !elle::os::getenv("MEMO_NO_PREEMPT_DECODE", false);
+          static bool decode = memo::getenv("PREEMPT_DECODE", true);
           if (decode)
             try
             {
@@ -509,7 +509,7 @@ namespace memo
                   }
                 }
                 static const int batch_size =
-                  elle::os::getenv("MEMO_CACHE_REFRESH_BATCH_SIZE", 20);
+                  memo::getenv("CACHE_REFRESH_BATCH_SIZE", 20);
                 for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
                 {
                   std::vector<Model::AddressVersion> batch;

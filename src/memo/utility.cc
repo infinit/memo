@@ -92,7 +92,7 @@ namespace memo
   {
     // FIXME: no static here, tests/kelips.cc changes this environment
     // variable. We should change the test and fix this.
-    auto const res = elle::os::getenv("MEMO_BEYOND", std::string{BEYOND_HOST});
+    auto const res = memo::getenv("BEYOND", std::string{BEYOND_HOST});
     if (help && res == BEYOND_HOST)
       return "the Hub";
     else

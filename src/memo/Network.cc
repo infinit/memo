@@ -221,7 +221,7 @@ namespace memo
                bool enable_monitoring)
   {
     ELLE_LOG("client version: %s", memo::version_describe());
-    auto rdv_env = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890"s);
+    auto rdv_env = memo::getenv("RDV", "rdv.infinit.sh:7890"s);
     boost::optional<std::string> rdv_host;
     if (!rdv_env.empty())
       rdv_host = std::move(rdv_env);

@@ -452,8 +452,7 @@ namespace memo
       // FIXME: check mcr max size
       if (auto mcr = dynamic_cast<MergeConflictResolver*>(&prev))
       {
-        static auto const max_size
-          = elle::os::getenv("MEMO_MAX_SQUASH_SIZE", 20u);
+        static auto const max_size = memo::getenv("MAX_SQUASH_SIZE", 20u);
         if (mcr->resolvers().size() < max_size)
           return this->squashable(mcr->resolvers());
         else

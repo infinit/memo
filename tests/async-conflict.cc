@@ -110,8 +110,8 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("MEMO_HOME", path.string());
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
+  memo::setenv("HOME", path.string());
+  memo::setenv("PREFETCH_THREADS", 0);
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -141,7 +141,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("basic journal")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     fs.reset();
     fs = make(path, node_id, true, 10, kp);
     handle = fs->path("/")->child("foo2")->create(O_RDWR, 0666 | S_IFREG);
@@ -152,7 +152,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     handle->close();
     handle.reset();
     fs->path("/")->child("dir")->mkdir(777 | S_IFDIR);
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     fs.reset();
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -172,7 +172,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict dir")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "file", "foo");
@@ -181,7 +181,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     fs = make(path, node_id, false, 0, kp);
     writefile(fs, "file2", "bar");
     fs.reset();
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -191,7 +191,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict dir 2")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
@@ -200,7 +200,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -210,7 +210,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("conflict file")
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
@@ -219,7 +219,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -234,7 +234,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   {
     auto kp2 = elle::cryptography::rsa::keypair::generate(1024);
     auto pub2 = elle::serialization::json::serialize(kp2.K());
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     fs = make(path, node_id, true, 10, kp);
     // queue a attr change
     fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",
@@ -244,7 +244,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -263,8 +263,8 @@ ELLE_TEST_SCHEDULED(async_groups)
   auto const path = bfs::temp_directory_path() / bfs::unique_path();
   auto const kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("MEMO_HOME", path.string());
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
+  memo::setenv("HOME", path.string());
+  memo::setenv("PREFETCH_THREADS", 0);
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -285,7 +285,7 @@ ELLE_TEST_SCHEDULED(async_groups)
 
   // stash agroup update
   {
-    elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+    memo::setenv("ASYNC_NOPOP", 1);
     auto const fs = make(path, node_id, true, 10, kp);
     auto const root = fs->path("/");
     auto const dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
@@ -321,7 +321,7 @@ ELLE_TEST_SCHEDULED(async_groups)
 
   // unstash
   {
-    elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+    memo::unsetenv("ASYNC_NOPOP");
     auto const fs = make(path, node_id, true, 10, kp);
     auto const dn = dynamic_cast<memo::model::doughnut::Doughnut*>(
       dynamic_cast<memo::filesystem::FileSystem*>(fs->operations().get())
@@ -351,21 +351,21 @@ ELLE_TEST_SCHEDULED(async_squash2)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("MEMO_HOME", path.string());
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
+  memo::setenv("HOME", path.string());
+  memo::setenv("PREFETCH_THREADS", 0);
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
 
   // squash creating directories
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+  memo::setenv("ASYNC_NOPOP", 1);
   auto fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
     fs->path(elle::sprintf("/f%s", i))->mkdir(0600);
   auto a = async(fs);
   a->print_queue();
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   a = async(fs);
@@ -373,14 +373,14 @@ ELLE_TEST_SCHEDULED(async_squash2)
   fs.reset();
 
   // squash creating files
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+  memo::setenv("ASYNC_NOPOP", 1);
   fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
     writefile(fs, elle::sprintf("file%s", i), "foo");
   a = async(fs);
   a->print_queue();
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   a = async(fs);
@@ -388,7 +388,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   fs.reset();
 
   // squash other op barrier
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+  memo::setenv("ASYNC_NOPOP", 1);
   fs = make(path, node_id, true, 100, kp);
   for (int i=0; i<10; ++i)
   {
@@ -399,7 +399,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
   a = async(fs);
   a->print_queue();
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   a = async(fs);
@@ -414,12 +414,12 @@ ELLE_TEST_SCHEDULED(async_squash)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("MEMO_HOME", path.string());
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
+  memo::setenv("HOME", path.string());
+  memo::setenv("PREFETCH_THREADS", 0);
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+  memo::setenv("ASYNC_NOPOP", 1);
   auto fs = make(path, node_id, true, 100, kp);
   fs->path("/d1")->mkdir(0600);
   fs->path("/d2")->mkdir(0600);
@@ -428,13 +428,13 @@ ELLE_TEST_SCHEDULED(async_squash)
   BOOST_CHECK_EQUAL(root_count(fs), 6);
 
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   BOOST_CHECK_EQUAL(root_count(fs), 6);
 
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, false, 0, kp);
   BOOST_CHECK_EQUAL(root_count(fs), 6);
 }
@@ -445,8 +445,8 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
-  elle::os::setenv("MEMO_HOME", path.string());
-  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0");
+  memo::setenv("HOME", path.string());
+  memo::setenv("PREFETCH_THREADS", 0);
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
@@ -455,7 +455,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   BOOST_CHECK_EQUAL(root_count(fs), 2);
   fs.reset();
 
-  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1");
+  memo::setenv("ASYNC_NOPOP", 1);
   fs = make(path, node_id, true, 100, kp);
   fs->path("/d1")->mkdir(0600);
   fs->path("/d2")->mkdir(0600);
@@ -473,7 +473,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   BOOST_CHECK_EQUAL(root_count(fs), 3);
 
   fs.reset();
-  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  memo::unsetenv("ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   // Async operation so check multiple times to avoid timing issues.

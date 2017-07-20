@@ -13,10 +13,12 @@ namespace
 {
   auto const vars = std::map<std::string, std::string>
   {
-    {"ASYNC_DISABLE_SQUASH", ""},
     {"ASYNC_NOPOP", ""},
     {"ASYNC_POP_DELAY", ""},
+    {"ASYNC_SQUASH", ""},
+    {"BACKGROUND_DECODE", ""},
     {"BACKTRACE", ""},
+    {"BALANCED_TRANSFERS", ""},
     {"BEYOND", ""},
     {"CACHE_REFRESH_BATCH_SIZE", ""},
     {"CONNECT_TIMEOUT", ""},
@@ -24,8 +26,6 @@ namespace
     {"CRASH_REPORT", "Activate crash-reporting"},
     {"CRASH_REPORT_HOST", ""},
     {"DATA_HOME", ""},
-    {"DISABLE_BALANCED_TRANSFERS", ""},
-    {"DISABLE_SIGNAL_HANDLER", ""},
     {"FIRST_BLOCK_DATA_SIZE", ""},
     {"HOME", ""},
     {"HOME_OVERRIDE", ""},
@@ -39,7 +39,6 @@ namespace
     {"LOOKAHEAD_THREADS", ""},
     {"MAX_EMBED_SIZE", ""},
     {"MAX_SQUASH_SIZE", ""},
-    {"NO_BACKGROUND_DECODE", ""},
     {"NO_IPV4", "Disable IPv4"},
     {"NO_IPV6", "Disable IPv6"},
     {"NO_PREEMPT_DECODE", ""},
@@ -53,6 +52,7 @@ namespace
     {"RDV", ""},
     {"RPC_DISABLE_CRYPTO", ""},
     {"RPC_SERVE_THREADS", ""},
+    {"SIGNAL_HANDLER", ""},
     {"SOFTFAIL_RUNNING", ""},
     {"SOFTFAIL_TIMEOUT", ""},
     {"USER", ""},
@@ -73,27 +73,28 @@ namespace
           ELLE_WARN("suspicious environment variable: MEMO_%s", *v);
           warn = true;
         }
-        if (auto v2 = elle::tail(*v, "NO_"))
-        {
-          const auto var = "MEMO_" + *v2;
-          // MEMO_NO_FOO=b stands for MEMO_FOO=!b.
-          if (elle::os::inenv(var)
-              && elle::os::getenv(p.first, false) != !elle::os::getenv(var, true))
+        // Map MEMO_NO_FOO=1 to MEMO_FOO=0, and MEMO_DISABLE_FOO=1 to MEMO_FOO=0.
+        for (auto prefix: {"DISABLE_", "NO_"})
+          if (auto v2 = elle::tail(*v, prefix))
           {
-            ELLE_WARN("MEMO_NO_%s=%s and MEMO_%s=%s conflict:"
-                      " proceeding with the latter",
-                      *v, elle::os::getenv(p.first),
-                      var, elle::os::getenv(var));
+            const auto var = "MEMO_" + *v2;
+            if (elle::os::inenv(var)
+                && elle::os::getenv(p.first, false) != !elle::os::getenv(var, true))
+            {
+              ELLE_WARN("MEMO_%s%s=%s and MEMO_%s=%s conflict:"
+                        " proceeding with the latter",
+                        prefix, *v, elle::os::getenv(p.first),
+                        var, elle::os::getenv(var));
+            }
+            else
+            {
+              ELLE_WARN("prefer MEMO_%s=%s to MEMO_%s%s=%s",
+                        *v, !elle::os::getenv(p.first, false),
+                        prefix, var, elle::os::getenv(p.first, false));
+              elle::os::setenv(var,
+                               elle::print("%s", !elle::os::getenv(p.first, false)));
+            }
           }
-          else
-          {
-            ELLE_WARN("prefer MEMO_%s=%s to MEMO_NO_%s=%s",
-                      *v, !elle::os::getenv(p.first, false),
-                      var, elle::os::getenv(p.first, false));
-            elle::os::setenv(var,
-                             elle::print("%s", !elle::os::getenv(p.first, false)));
-          }
-        }
       }
     if (warn)
       ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars));
