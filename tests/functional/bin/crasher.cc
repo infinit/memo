@@ -52,7 +52,7 @@ main(int argc, char** argv)
     std::cout << desc << std::endl;
   else
   {
-    bool crash = vm.count("crash");
+    bool const crash = vm.count("crash");
     auto const dumps = option_str(vm, "dumps");
     auto const server = option_str(vm, "server");
     auto const version =

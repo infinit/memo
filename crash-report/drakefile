@@ -141,7 +141,8 @@ class SymbolsCommit(drake.Builder):
 
       self.cmd('Update symbols directory',
                ['bin/make-symbols'],
-               cwd = repo)
+               cwd = repo,
+               throw = True)
 
       if no_diff():
         # Nothing to commit.

@@ -50,7 +50,7 @@ namespace crash_report
       std::string base = descriptor.path();
       if (boost::ends_with(base, ".dmp"))
       {
-        base.substr(base.size() - 4);
+        base.resize(base.size() - 4);
         dump(*static_cast<CrashReporter*>(context), base);
         return succeeded;
       }
@@ -150,8 +150,7 @@ namespace crash_report
     , _dumps_path(std::move(dumps_path))
     , _version(std::move(version))
   {
-    using elle::os::getenv;
-    if (getenv("MEMO_CRASH_REPORT", production_build))
+    if (elle::os::getenv("MEMO_CRASH_REPORT", production_build))
     {
       this->_exception_handler = make_exception_handler(*this);
       ELLE_TRACE("crash handler started");

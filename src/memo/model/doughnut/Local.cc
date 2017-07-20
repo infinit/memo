@@ -3,8 +3,6 @@
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
-#include <elle/os/environ.hh>
-#include <elle/utility/Move.hh>
 
 #include <elle/cryptography/random.hh>
 #include <elle/cryptography/rsa/PublicKey.hh>
@@ -13,6 +11,7 @@
 #include <elle/reactor/Scope.hh>
 #include <elle/reactor/network/utp-server.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/Conflict.hh>
 #include <memo/model/Endpoints.hh>
 #include <memo/model/MissingBlock.hh>
@@ -20,10 +19,10 @@
 #include <memo/model/blocks/MutableBlock.hh>
 #include <memo/model/doughnut/ACB.hh>
 #include <memo/model/doughnut/Doughnut.hh>
+#include <memo/model/doughnut/HandshakeFailed.hh>
 #include <memo/model/doughnut/OKB.hh>
 #include <memo/model/doughnut/Remote.hh>
 #include <memo/model/doughnut/ValidationFailed.hh>
-#include <memo/model/doughnut/HandshakeFailed.hh>
 #include <memo/silo/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("memo.model.doughnut.Local");
@@ -32,8 +31,8 @@ using Serializer = elle::serialization::Binary;
 
 namespace
 {
-  auto const ipv4_enabled = !elle::os::getenv("MEMO_NO_IPV4", false);
-  auto const ipv6_enabled = !elle::os::getenv("MEMO_NO_IPV6", false);
+  auto const ipv4_enabled = memo::getenv("IPV4", true);
+  auto const ipv6_enabled = memo::getenv("IPV6", true);
 }
 
 namespace memo

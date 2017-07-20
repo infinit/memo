@@ -163,7 +163,7 @@ namespace memo
     static int gid_position = 0;
     static std::vector<
       std::unique_ptr<model::blocks::Block>> acl_save(gid_count);
-    static bool acl_preserver = getenv("INFINIT_PRESERVE_ACLS");
+    static bool acl_preserver = memo::getenv("PRESERVE_ACLS", false);
 
     void
     Node::rename(bfs::path const& where)

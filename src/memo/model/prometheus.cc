@@ -8,6 +8,8 @@
 # include <elle/os/environ.hh>
 # include <elle/printf.hh>
 
+# include <memo/environ.hh>
+
 # include <prometheus/exposer.h>
 # include <prometheus/registry.h>
 
@@ -18,7 +20,7 @@ using namespace std::literals;
 namespace
 {
   auto prometheus_endpoint
-    = elle::os::getenv("MEMO_PROMETHEUS_ENDPOINT", "127.0.0.1:8080"s);
+    = memo::getenv("PROMETHEUS_ENDPOINT", "127.0.0.1:8080"s);
 }
 
 namespace memo

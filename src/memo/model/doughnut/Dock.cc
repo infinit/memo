@@ -1,16 +1,16 @@
-#include <memory>
-
 #include <memo/model/doughnut/Dock.hh>
+
+#include <memory>
 
 #include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/multi_index_container.hh>
 #include <elle/network/Interface.hh>
-#include <elle/os.hh>
 #include <elle/range.hh>
 
 #include <elle/reactor/network/utp-server.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/HandshakeFailed.hh>
 #include <memo/model/doughnut/Local.hh>
@@ -21,9 +21,8 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.Dock")
 
 namespace
 {
-  using elle::os::getenv;
-  bool const disable_key = getenv("MEMO_RPC_DISABLE_CRYPTO", false);
-  auto const ipv6_enabled = !getenv("MEMO_NO_IPV6", false);
+  bool const disable_key = memo::getenv("RPC_DISABLE_CRYPTO", false);
+  auto const ipv6_enabled = memo::getenv("IPV6", true);
 
   template <typename Action>
   auto

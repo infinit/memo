@@ -22,7 +22,6 @@
 #include <elle/find.hh>
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
-#include <elle/os/environ.hh>
 #include <elle/random.hh>
 #include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
@@ -44,12 +43,13 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/reactor/Thread.hh>
 
-#include <memo/silo/Filesystem.hh>
+#include <memo/environ.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/Passport.hh>
 #include <memo/model/doughnut/Remote.hh>
 #include <memo/model/doughnut/consensus/Paxos.hh> // FIXME
+#include <memo/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("memo.overlay.kelips");
 
@@ -246,7 +246,7 @@ namespace memo
       namespace packet
       {
         static auto disable_compression
-          = elle::os::getenv("KELIPS_DISABLE_COMPRESSION", false);
+          = memo::getenv("KELIPS_DISABLE_COMPRESSION", false);
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -809,7 +809,7 @@ namespace memo
         bool
         without_timeouts(typename Contacts::value_type const& c)
         {
-          static auto disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
+          static auto disable = memo::getenv("KELIPS_NO_SNUB", false);
           return disable || c.second.ping_timeouts == 0;
         }
 
@@ -855,8 +855,8 @@ namespace memo
           _config.encrypt = false;
           _config.accept_plain = true;
         }
-        bool v4 = !elle::os::getenv("INFINIT_NO_IPV4", false);
-        bool v6 = !elle::os::getenv("INFINIT_NO_IPV6", false)
+        bool v4 = memo::getenv("IPV4", true);
+        bool v6 = memo::getenv("IPV6", true)
           && doughnut->version() >= elle::Version(0, 7, 0);
         this->_self = Address(this->doughnut()->id());
         if (!local)
@@ -1072,7 +1072,7 @@ namespace memo
         auto lock = this->_in_use.lock();
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
         auto buf = elle::Buffer(nbuf.contents()+8, nbuf.size()-8);
-        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC", false);
+        static auto async = memo::getenv("KELIPS_ASYNC", false);
         elle::reactor::run(async,
                            "process",
                            [=] { this->process(buf, source);});
@@ -1352,7 +1352,7 @@ namespace memo
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
         auto& sock = this->doughnut()->dock().utp_server().socket();
-        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC_SEND", false);
+        static auto async = memo::getenv("KELIPS_ASYNC_SEND", false);
         if (async)
         {
           auto sbuf = std::make_shared<elle::Buffer>(std::move(b));
