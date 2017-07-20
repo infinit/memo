@@ -505,7 +505,7 @@ class SharedLogicCLITests():
     with Beyond() as beyond, \
         Memo(beyond = beyond) as bob, Memo(beyond) as alice:
       e_name = self.random_sequence()
-      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
       bob.run(['network', 'create', 'network', '--as', 'bob',
                '--push'])
       bob.run([entity, 'create', e_name, '-N', 'network',
@@ -529,7 +529,7 @@ class SharedLogicCLITests():
       e_name2 = e_name
       while e_name2 == e_name:
         e_name2 = self.random_sequence()
-      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
       bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
       # Local and Beyond.
       bob.run([entity, 'create', '--as', 'bob', e_name,

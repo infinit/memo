@@ -6,9 +6,9 @@ import json
 # Using hub to retreive a user.
 with Beyond() as b, Memo(beyond = b) as bob, Memo(beyond = b) as alice:
   bob.run(['user', 'signup',
-           '--name', 'bob', '--email', 'bob@infinit.io'])
+           '--name', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(['user', 'signup', '--full',
-             '--name', 'alice', '--email', 'alice@infinit.io',
+             '--name', 'alice', '--email', 'alice@infinit.sh',
              '--password', 'loremipsword',
              '--description', 'something about this person'])
   try:
@@ -27,7 +27,7 @@ with Beyond() as b, Memo(beyond = b) as bob, Memo(beyond = b) as alice:
 with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io',
+             '--email', 'alice@infinit.sh',
              '--password', 'loremipsword'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
@@ -46,7 +46,7 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push', '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io',
+             '--email', 'alice@infinit.sh',
              '--password', 'loremipsword'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
@@ -65,7 +65,7 @@ with Beyond() as b, Memo(beyond = b) as alice:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'push',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
   try:
@@ -81,7 +81,7 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'push',
              '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'],
+             '--email', 'alice@infinit.sh'],
             input = 'loremipsword')
   alice2.run(['user', 'login',
               '--name', 'alice',
@@ -93,7 +93,7 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'push',
              '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io',
+             '--email', 'alice@infinit.sh',
              '--password', 'loremipsword'])
   alice2.run(['user', 'login', '--name', 'alice'],
              input = 'loremipsword')
@@ -105,7 +105,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice.run(['user', 'push',
              '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'],
+             '--email', 'alice@infinit.sh'],
             input = 'loremipsword')
   alice2.run(['user', 'login', '--name', 'alice'],
              input = 'loremipsword')
@@ -125,7 +125,7 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
 with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io',
+             '--email', 'alice@infinit.sh',
              '--password', 'loremipsword'])
   try:
     alice2.run(['user', 'login',
@@ -139,11 +139,11 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as alice2:
 with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as bob:
   alice.run(['user', 'signup', '--full',
              '--name', 'alice',
-             '--email', 'alice@infinit.io',
+             '--email', 'alice@infinit.sh',
              '--password', 'loremipsword'])
   bob.run(['user', 'signup',
            '--name', 'bob',
-           '--email', 'bob@infinit.io'])
+           '--email', 'bob@infinit.sh'])
   alice.run(['user', 'fetch', '--name', 'bob'])
   try:
     alice.run(['user', 'pull', '--as', 'bob'])
@@ -155,7 +155,7 @@ with Beyond() as b, Memo(beyond = b) as alice, Memo(beyond = b) as bob:
 with Beyond() as b, Memo(beyond = b) as bob, Memo(beyond = b) as alice:
   def create_with_name(name):
     bob.run(['user', 'create',
-               '--name', name, '--email', '%s@infinit.io' % name])
+               '--name', name, '--email', '%s@infinit.sh' % name])
 
   def create_with_name_throw(name):
     try:
@@ -191,7 +191,7 @@ with Beyond() as b, Memo(beyond = b) as alice:
   # Test deleting user with --force and then deleting a user with only a public
   # key.
   alice.run(
-    ['user', 'create', '--name', 'eve', '--email', 'eve@infinit.io'])
+    ['user', 'create', '--name', 'eve', '--email', 'eve@infinit.sh'])
   alice.run(['user', 'push', '--name', 'eve'])
   alice.run(['user', 'delete', 'eve', '--script'])
   alice.run(['user', 'fetch', '--name', 'eve'])
@@ -202,7 +202,7 @@ with Beyond() as b, Memo(beyond = b) as alice:
   alice.run(['user', 'create', '--name', 'alice'])
   alice.run(['user', 'create', '--name', 'bob'])
   alice.run(
-    ['user', 'push', '--name', 'bob', '--email', 'bob@infinit.io'])
+    ['user', 'push', '--name', 'bob', '--email', 'bob@infinit.sh'])
   # In the future, we may have a chain of trust allowing a user to pull another.
   try:
     alice.run(['user', 'pull', '--name', 'bob'])
@@ -216,7 +216,7 @@ with Beyond() as beyond, \
     Memo(beyond = beyond) as bob, \
     Memo(beyond = beyond) as alice:
   bob.run(
-    ['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.io'])
+    ['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(['user', 'create', '--name', 'alice'])
   # Local and Beyond.
   bob.run(
@@ -236,8 +236,8 @@ with Beyond() as beyond, \
     Memo(beyond = beyond) as bob, \
     Memo(beyond = beyond) as alice:
   from os import path
-  bob.run(['user', 'signup', 'b', '--email', 'b@infinit.io'])
-  alice.run(['user', 'signup', 'a', '--email', 'b@infinit.io'])
+  bob.run(['user', 'signup', 'b', '--email', 'b@infinit.sh'])
+  alice.run(['user', 'signup', 'a', '--email', 'b@infinit.sh'])
   # Create basic infrastructure.
   bob.run(['silo', 'create', 'filesystem', '--as', 'b', 's'])
   bob.run(
