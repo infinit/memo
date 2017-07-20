@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.9.1] 2017-10-20
+
+Fix error report generation.
+
+### Changed
+
+- Rename `INFINIT_{FOO}` environment variables as `MEMO_{FOO}`.
+- Prefer `MEMO_{FOO}=0` to `MEMO_NO_{FOO}=1` or `MEMO_DISABLE_{FOO}=1`.
 
 ## [0.9.0] 2017-10-19
 
