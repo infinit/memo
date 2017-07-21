@@ -1302,6 +1302,7 @@ namespace memo
           if (block.paxos)
           {
             auto& decision = *block.paxos;
+            bool had_value = bool(decision.paxos.current_value());
             decision.paxos.confirm(peers, p);
             ELLE_DEBUG("store confirmed paxos")
             {
@@ -1315,21 +1316,32 @@ namespace memo
               }();
               this->storage()->set(address, ser, true, true);
             }
-            auto const& quorum = decision.paxos.current_quorum();
-            if (!contains(quorum, this->doughnut().id()))
-              ELLE_TRACE("%s: evicted from %f quorum", this, address)
-                this->_remove(address);
-            else
-            {
-              this->_cache(address, false, quorum);
-              if (
-                this->_rebalance_auto_expand &&
-                decision.paxos.current_value() &&
-                signed(decision.paxos.current_quorum().size()) < this->_factor)
+            if (auto quorum = [&] () -> boost::optional<Quorum>
               {
-                ELLE_DUMP("schedule %f for rebalancing after confirmation",
-                          address);
-                this->_rebalancable.emplace(address, false);
+                if (!had_value)
+                  return decision.paxos.current_quorum();
+                else if (
+                  auto res =
+                  decision.paxos.state()->accepted->value.template is<Quorum>())
+                  return *res;
+                else
+                  return boost::none;
+              }())
+            {
+              if (!contains(*quorum, this->doughnut().id()))
+                ELLE_TRACE("%s: evicted from %f quorum", this, address)
+                  this->_remove(address);
+              else
+              {
+                this->_cache(address, false, *quorum);
+                if (this->_rebalance_auto_expand &&
+                    decision.paxos.current_value() &&
+                    signed(quorum->size()) < this->_factor)
+                {
+                  ELLE_DEBUG("schedule %f for rebalancing after confirmation",
+                             address);
+                  this->_rebalancable.emplace(address, false);
+                }
               }
             }
           }
