@@ -59,44 +59,60 @@ namespace
     {"UTP", ""},
   };
 
+  /// Whether this is a known variable suffix (e.g., "HOME", not "MEMO_HOME").
+  bool
+  known_name(std::string const& v)
+  {
+    if (elle::contains(vars, v))
+      return true;
+    else
+    {
+      ELLE_WARN("suspicious environment variable: MEMO_%s", v);
+      return false;
+    }
+  }
+
   bool
   check_environment_()
   {
-    auto warn = false;
+    // Number of unknown var names.
+    auto unknown = 0;
     auto const env = elle::os::environ();
     ELLE_DUMP("checking: %s", env);
     for (auto const& p: env)
       if (auto v = elle::tail(p.first, "MEMO_"))
       {
-        if (!elle::contains(vars, *v))
-        {
-          ELLE_WARN("suspicious environment variable: MEMO_%s", *v);
-          warn = true;
-        }
+        // Whether we checked the variable name.
+        auto checked = false;
+
         // Map MEMO_NO_FOO=1 to MEMO_FOO=0, and MEMO_DISABLE_FOO=1 to MEMO_FOO=0.
         for (auto prefix: {"DISABLE_", "NO_"})
-          if (auto v2 = elle::tail(*v, prefix))
+          if (auto suffix = elle::tail(*v, prefix))
           {
-            const auto var = "MEMO_" + *v2;
-            if (elle::os::inenv(var)
-                && elle::os::getenv(p.first, false) != !elle::os::getenv(var, true))
+            const auto& old_var = p.first;
+            const auto old_val = elle::os::getenv(old_var, false);
+            const auto new_var = "MEMO_" + *suffix;
+            const auto new_val = elle::os::getenv(new_var, true);
+            if (elle::os::inenv(new_var) && old_val != !new_val)
             {
-              ELLE_WARN("MEMO_%s%s=%s and MEMO_%s=%s conflict:"
-                        " proceeding with the latter",
-                        prefix, *v, elle::os::getenv(p.first),
-                        var, elle::os::getenv(var));
+              ELLE_WARN("%s=%s and %s=%s conflict: proceeding with the latter",
+                        old_var, old_val, new_var, new_val);
             }
             else
             {
-              ELLE_WARN("prefer MEMO_%s=%s to MEMO_%s%s=%s",
-                        *v, !elle::os::getenv(p.first, false),
-                        prefix, var, elle::os::getenv(p.first, false));
-              elle::os::setenv(var,
-                               elle::print("%s", !elle::os::getenv(p.first, false)));
+              ELLE_WARN("prefer %s=%s to %s=%s",
+                        new_var, !old_val, old_var, old_val);
+              elle::os::setenv(new_var, elle::print("%s", !old_val));
             }
+            unknown += !known_name(*suffix);
+            checked = true;
           }
+
+        // Check variables that are not MEMO_NO_* nor MEMO_DISABLE_*.
+        if (!checked)
+          unknown += !known_name(*v);
       }
-    if (warn)
+    if (unknown)
       ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars));
     return true;
   }
