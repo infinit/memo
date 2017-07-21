@@ -1777,8 +1777,8 @@ namespace memo
               }
               else
               {
-                static bool const balance =
-                  !memo::getenv("DISABLE_BALANCED_TRANSFERS", false);
+                static bool const balance
+                  = memo::getenv("BALANCED_TRANSFERS", true);
                 if (balance && peers.size() > 1)
                 {
                   elle::shuffle(peers);

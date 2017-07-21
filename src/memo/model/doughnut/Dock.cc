@@ -21,7 +21,7 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.Dock")
 
 namespace
 {
-  bool const disable_key = memo::getenv("RPC_DISABLE_CRYPTO", false);
+  bool const key_enabled = memo::getenv("RPC_CRYPTO", true);
   auto const ipv6_enabled = memo::getenv("IPV6", true);
 
   template <typename Action>
@@ -312,7 +312,7 @@ namespace memo
                   std::make_unique<elle::protocol::ChanneledStream>(*serializer);
                 try
                 {
-                  if (!disable_key)
+                  if (key_enabled)
                     this->_key_exchange(*channels);
                   ELLE_TRACE("connected");
                   this->_socket = std::move(socket);

@@ -245,8 +245,7 @@ namespace memo
 
       namespace packet
       {
-        static auto disable_compression
-          = memo::getenv("KELIPS_DISABLE_COMPRESSION", false);
+        static auto compression = memo::getenv("KELIPS_COMPRESSION", true);
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -258,7 +257,7 @@ namespace memo
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
           output.set_context(&dn);
-          if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
+          if (dn.version() >= elle::Version(0, 7, 0) && compression)
             output.set_context(CompressPeerLocations{});
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
@@ -308,7 +307,7 @@ namespace memo
               elle::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
-            if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
+            if (dn.version() >= elle::Version(0, 7, 0) && compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
             auto res = std::unique_ptr<packet::Packet>{};
@@ -809,8 +808,8 @@ namespace memo
         bool
         without_timeouts(typename Contacts::value_type const& c)
         {
-          static auto disable = memo::getenv("KELIPS_NO_SNUB", false);
-          return disable || c.second.ping_timeouts == 0;
+          static auto enable = memo::getenv("KELIPS_SNUB", true);
+          return !enable || c.second.ping_timeouts == 0;
         }
 
         /// A container of count random elements of src.

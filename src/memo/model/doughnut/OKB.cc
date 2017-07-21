@@ -99,7 +99,7 @@ namespace memo
           }
           else
           {
-            static bool hash_enabled = !memo::getenv("DISABLE_KEY_HASH", false);
+            static bool hash_enabled = memo::getenv("KEY_HASH", true);
             Local* local = nullptr;
             elle::unconst(s.context()).get(local, (Local*)nullptr);
             Remote* remote = nullptr;
