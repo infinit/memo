@@ -186,7 +186,7 @@ x86_64-osx-clang:
     - TARBALL=/tmp/$PROJECT-x86_64-osx-clang3-$DESC.tbz
     - gtar -cvjf "$TARBALL" -C "$INSTALL_DIR" . --show-transformed-names --transform "s,^\\./,$PROJECT-$DESC/,"
     - smv "$TARBALL" buildslave@packages.infinit.sh tmp
-    - ssh debian@debian.infinit.sh 'make brew'
+    - ssh debian@packages.infinit.sh 'make brew'
     - time if $IS_RELEASE; then python3 ./drake -j $NPROC //symbols-commit; fi
   tags:
     - x86_64
