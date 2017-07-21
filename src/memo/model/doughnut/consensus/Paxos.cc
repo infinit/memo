@@ -1320,10 +1320,13 @@ namespace memo
               {
                 if (!had_value)
                   return decision.paxos.current_quorum();
-                else if (
-                  auto res =
-                  decision.paxos.state()->accepted->value.template is<Quorum>())
-                  return *res;
+                else if (auto& accepted = decision.paxos.state()->accepted)
+                {
+                  if (auto res = accepted->value.template is<Quorum>())
+                    return *res;
+                  else
+                    return boost::none;
+                }
                 else
                   return boost::none;
               }())
