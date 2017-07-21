@@ -2078,6 +2078,38 @@ namespace rebalancing
       elle::reactor::wait(scope);
     };
   }
+
+  ELLE_TEST_SCHEDULED(peeking_node)
+  {
+    auto dht_a = make_dht(0, true);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto dht_b = make_dht(1);
+    dht_b->overlay->connect(*dht_a->overlay);
+    auto block = [&]
+      {
+        ELLE_LOG_SCOPE("write block");
+        auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+          std::string("peeking_node"));
+        dht_a->dht->seal_and_insert(*b);
+        return b;
+      }();
+    // wait for initial rebalancing to fail
+    elle::reactor::wait(dht_a->overlay->looked_up(), block->address());
+    auto waiter = elle::reactor::waiter(local_a.rebalanced(), block->address());
+    ELLE_LOG("peek DHT 0x0c")
+    {
+      auto dht_c = make_dht(2);
+      dht_a->overlay->connect(*dht_c->overlay);
+      dht_b->overlay->connect(*dht_c->overlay);
+    }
+    // local_a.evict()();
+    auto dht_d = make_dht(3);
+    auto& local_d = dynamic_cast<Local&>(*dht_a->dht->local());
+    dht_a->overlay->connect(*dht_d->overlay);
+    dht_b->overlay->connect(*dht_d->overlay);
+    elle::reactor::wait(waiter);
+    BOOST_CHECK_NO_THROW(local_d.storage()->get(block->address()));
+  }
 }
 
 ELLE_TEST_SCHEDULED(CHB_unavailable)
@@ -2344,6 +2376,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(5));
       auto update_while_evicting = &rebalancing::update_while_evicting;
       rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
+      auto peeking_node = &rebalancing::peeking_node;
+      rebalancing->add(BOOST_TEST_CASE(peeking_node), 0, valgrind(3));
     }
     {
       auto evict_chain = BOOST_TEST_SUITE("evict_chain");

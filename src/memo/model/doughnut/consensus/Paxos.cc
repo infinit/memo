@@ -1126,6 +1126,14 @@ namespace memo
                 "%s: rebalance %s blocks to newly discovered peer %f",
                 this, targets.size(), address);
               for (auto target: targets)
+              {
+                if (!elle::find(this->_nodes, address) ||
+                    elle::find(this->_node_timeouts, address))
+                {
+                  ELLE_TRACE("%s: peer %f disappeared, stop rebalancing to it",
+                             this, address);
+                  break;
+                }
                 try
                 {
                   if (target.immutable)
@@ -1190,6 +1198,7 @@ namespace memo
                 {
                   ELLE_WARN("rebalancing of %f failed: %s", target.address, e);
                 }
+              }
             }
           }
         }
