@@ -1197,23 +1197,7 @@ namespace memo
         bool
         Paxos::LocalPeer::rebalance(PaxosClient& client, Address address)
         {
-          if (this->_paxos._rebalance(client, address))
-          {
-            if (auto it = elle::find(this->_addresses, address))
-            {
-              auto q = it->second.paxos.current_quorum();
-              this->_quorums.modify(
-                this->_quorums.find(address),
-                [&] (BlockRepartition& r) {r.quorum = q;});
-              for (auto const& node: q)
-                this->_node_blocks.emplace(node, address);
-            }
-            else
-              ; // The block was deleted in the meantime.
-            return true;
-          }
-          else
-            return false;
+          return this->_paxos._rebalance(client, address);
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
