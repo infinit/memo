@@ -11,59 +11,65 @@ ELLE_LOG_COMPONENT("memo.environ");
 
 namespace
 {
-  auto const vars = std::map<std::string, std::string>
+  using Vars = std::map<std::string, std::string>;
+
+  // Silly Singleton imposed by static initialization failure on our
+  // Mingw build.
+  Vars const& vars()
   {
-    {"ASYNC_NOPOP", ""},
-    {"ASYNC_POP_DELAY", ""},
-    {"ASYNC_SQUASH", ""},
-    {"BACKGROUND_DECODE", ""},
-    {"BACKTRACE", ""},
-    {"BALANCED_TRANSFERS", ""},
-    {"BEYOND", ""},
-    {"CACHE_REFRESH_BATCH_SIZE", ""},
-    {"CONNECT_TIMEOUT", ""},
-    {"CRASH", "Generate a crash"},
-    {"CRASH_REPORT", "Activate crash-reporting"},
-    {"CRASH_REPORT_HOST", ""},
-    {"DATA_HOME", ""},
-    {"FIRST_BLOCK_DATA_SIZE", ""},
-    {"HOME", ""},
-    {"HOME_OVERRIDE", ""},
-    {"IPV4", "Enable IPv4 (default: true)"},
-    {"IPV6", "Enable IPv6 (default: true)"},
-    {"KELIPS_ASYNC", ""},
-    {"KELIPS_ASYNC_SEND", ""},
-    {"KELIPS_NO_SNUB", ""},
-    {"LOG_REACHABILITY", ""},
-    {"LOOKAHEAD_BLOCKS", ""},
-    {"LOOKAHEAD_THREADS", ""},
-    {"MAX_EMBED_SIZE", ""},
-    {"MAX_SQUASH_SIZE", ""},
-    {"NO_IPV4", "Disable IPv4"},
-    {"NO_IPV6", "Disable IPv6"},
-    {"NO_PREEMPT_DECODE", ""},
-    {"PAXOS_LENIENT_FETCH", ""},
-    {"PREFETCH_DEPTH", ""},
-    {"PREFETCH_GROUP", ""},
-    {"PREFETCH_TASKS", ""},
-    {"PREFETCH_THREADS", ""},
-    {"PRESERVE_ACLS", ""},
-    {"PROMETHEUS_ENDPOINT", ""},
-    {"RDV", ""},
-    {"RPC_DISABLE_CRYPTO", ""},
-    {"RPC_SERVE_THREADS", ""},
-    {"SIGNAL_HANDLER", ""},
-    {"SOFTFAIL_RUNNING", ""},
-    {"SOFTFAIL_TIMEOUT", ""},
-    {"USER", ""},
-    {"UTP", ""},
-  };
+    static auto const res = Vars
+    {
+      {"ASYNC_NOPOP", ""},
+      {"ASYNC_POP_DELAY", ""},
+      {"ASYNC_SQUASH", ""},
+      {"BACKGROUND_DECODE", ""},
+      {"BACKTRACE", ""},
+      {"BALANCED_TRANSFERS", ""},
+      {"BEYOND", ""},
+      {"CACHE_REFRESH_BATCH_SIZE", ""},
+      {"CONNECT_TIMEOUT", ""},
+      {"CRASH", "Generate a crash"},
+      {"CRASH_REPORT", "Activate crash-reporting"},
+      {"CRASH_REPORT_HOST", ""},
+      {"DATA_HOME", ""},
+      {"FIRST_BLOCK_DATA_SIZE", ""},
+      {"HOME", ""},
+      {"HOME_OVERRIDE", ""},
+      {"IPV4", "Enable IPv4 (default: true)"},
+      {"IPV6", "Enable IPv6 (default: true)"},
+      {"KELIPS_ASYNC", ""},
+      {"KELIPS_ASYNC_SEND", ""},
+      {"KELIPS_NO_SNUB", ""},
+      {"LOG_REACHABILITY", ""},
+      {"LOOKAHEAD_BLOCKS", ""},
+      {"LOOKAHEAD_THREADS", ""},
+      {"MAX_EMBED_SIZE", ""},
+      {"MAX_SQUASH_SIZE", ""},
+      {"PAXOS_LENIENT_FETCH", ""},
+      {"PREEMPT_DECODE", ""},
+      {"PREFETCH_DEPTH", ""},
+      {"PREFETCH_GROUP", ""},
+      {"PREFETCH_TASKS", ""},
+      {"PREFETCH_THREADS", ""},
+      {"PRESERVE_ACLS", ""},
+      {"PROMETHEUS_ENDPOINT", ""},
+      {"RDV", ""},
+      {"RPC_DISABLE_CRYPTO", ""},
+      {"RPC_SERVE_THREADS", ""},
+      {"SIGNAL_HANDLER", ""},
+      {"SOFTFAIL_RUNNING", ""},
+      {"SOFTFAIL_TIMEOUT", ""},
+      {"USER", ""},
+      {"UTP", ""},
+    };
+    return res;
+  }
 
   /// Whether this is a known variable suffix (e.g., "HOME", not "MEMO_HOME").
   bool
   known_name(std::string const& v)
   {
-    if (elle::contains(vars, v))
+    if (elle::contains(vars(), v))
       return true;
     else
     {
@@ -113,7 +119,7 @@ namespace
           unknown += !known_name(*v);
       }
     if (unknown)
-      ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars));
+      ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars()));
     return true;
   }
 }
