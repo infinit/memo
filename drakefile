@@ -18,6 +18,7 @@ from itertools import chain
 git = None
 
 elle = None
+# The installed executables: bin/memo.
 installed_binaries = []
 
 # //build: Build libraries and binaries.

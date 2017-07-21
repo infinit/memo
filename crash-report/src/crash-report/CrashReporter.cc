@@ -26,7 +26,7 @@
 # error Unsupported platform.
 #endif
 
-ELLE_LOG_COMPONENT("CrashReporter");
+ELLE_LOG_COMPONENT("crash-report");
 
 namespace crash_report
 {
@@ -171,6 +171,13 @@ namespace crash_report
     ELLE_DEBUG("%s: %s %s awaiting upload",
                this, res, res == 1 ? "crash" : "crashes");
     return res;
+  }
+
+  void
+  CrashReporter::write_minidump() const
+  {
+    if (auto& h = this->_exception_handler)
+      h->WriteMinidump();
   }
 
   void

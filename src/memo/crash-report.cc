@@ -1,8 +1,9 @@
 #include <memo/crash-report.hh>
 
+#include <elle/assert.hh>
 #include <elle/log.hh>
 
-ELLE_LOG_COMPONENT("CrashReporter");
+ELLE_LOG_COMPONENT("memo.crash-report");
 
 
 
@@ -43,6 +44,7 @@ namespace memo
     // reactor::Threads prevents it.
     auto res
       = std::make_shared<CrashReporter>(url, dumps_path, version_describe());
+    // Attach the logs to the crash dump.
     res->make_payload = [log_dir, log_base] (auto const& base)
       {
         // Collect the existing numbers in logs/main.<NUM> file names.
@@ -74,6 +76,13 @@ namespace memo
           }
         }
       };
+
+    // Hook elle::assert to generate the minidumps when an assertion
+    // is broken.  We do not want to die immediately though, as we
+    // might have some clean up to do.
+    elle::on_abort([res](auto const& error) {
+        res->write_minidump();
+      });
     return res;
   }
 

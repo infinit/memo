@@ -36,6 +36,9 @@ namespace crash_report
     int
     crashes_pending_upload() const;
 
+    /// Generate a minidump now, and resume normal execution.
+    void write_minidump() const;
+
     /// This function is called when a minidump was saved.  Use it to
     /// add payload when the minidump will be uploaded.  This payload
     /// must be a file.  Its name must be based on `base`, the

@@ -776,13 +776,20 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (memo::getenv("CRASH", false))
-        *(volatile int*)nullptr = 0;
+
+#ifndef MEMO_PRODUCTION_BUILD
+      {
+        auto crash = memo::getenv("CRASH", ""s);
+        if (crash == "assert")
+          ELLE_ASSERT_EQ(42, 51);
+        else if (!crash.empty())
+          *(volatile int*)nullptr = 0;
+      }
+#endif
 
       auto& cli = this->cli();
       auto& memo = cli.memo();
       auto owner = cli.as_user();
-
       if (cli.script())
       {
         auto const l = elle::json::make_array(memo.networks_get(owner),
