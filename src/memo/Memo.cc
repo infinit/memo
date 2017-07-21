@@ -62,7 +62,7 @@ namespace memo
     if (is_qualified_name(name))
       return name;
     else
-      return elle::sprintf("%s/%s", owner.name, name);
+      return elle::print("%s/%s", owner.name, name);
   }
 
   std::string
@@ -129,7 +129,7 @@ namespace memo
       move = true;
     }
     auto res = elle::serialization::json::deserialize<Network>(f, false);
-    std::string const not_linked_msg = elle::sprintf(
+    std::string const not_linked_msg = elle::print(
       "%s has not yet linked to the network \"%s\" on this device. "
       "Link using 'memo network link'", user.name, res.name);
     if (!res.model && require_model)
@@ -347,7 +347,7 @@ namespace memo
   {
     bfs::ifstream f;
     this->_open_read(f, this->_passport_path(network, user),
-                     elle::sprintf("%s: %s", network, user), "passport");
+                     elle::print("%s: %s", network, user), "passport");
     return load<Passport>(f);
   }
 
@@ -372,7 +372,7 @@ namespace memo
     ELLE_ASSERT(this->is_qualified_name(network_name));
     return this->_delete(this->_passport_path(network_name, user_name),
                          "passport",
-                         elle::sprintf("%s: %s", network_name, user_name));
+                         elle::print("%s: %s", network_name, user_name));
   }
 
   auto
@@ -413,14 +413,14 @@ namespace memo
         bool existed = this->_open_write(
           f,
           this->_passport_path(passport.network(), user.name),
-          elle::sprintf("%s: %s", passport.network(),
+          elle::print("%s: %s", passport.network(),
                         user.name),
           "passport", overwrite);
         elle::serialization::json::SerializerOut s(f, false, true);
         s.serialize_forward(passport);
         this->report_local_action()(
           existed ? "updated" : "saved" , "passport",
-          elle::sprintf("%s: %s", passport.network(), user.name));
+          elle::print("%s: %s", passport.network(), user.name));
         return;
       }
     }
@@ -661,12 +661,12 @@ namespace memo
   void
   Memo::credentials_add(std::string const& name, std::unique_ptr<Credentials> a)
   {
-    auto path = this->_credentials_path(name, elle::sprintf("%s", a->uid()));
+    auto path = this->_credentials_path(name, elle::print("%s", a->uid()));
     bfs::ofstream f;
     bool existed = this->_open_write(f, path, name, "credential", true);
     save(f, a);
     this->report_local_action()(
-      existed ? "updated" : "saved", elle::sprintf("%s credentials", name),
+      existed ? "updated" : "saved", elle::print("%s credentials", name),
       a->display_name());
   }
 
@@ -675,7 +675,7 @@ namespace memo
                            std::string const& account_name)
   {
     return this->_delete(this->_credentials_path(type, account_name),
-                         elle::sprintf("%s credentials", type),
+                         elle::print("%s credentials", type),
                          account_name);
   }
 
@@ -975,7 +975,7 @@ namespace memo
     elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
     auto r = elle::reactor::http::Request
-      (elle::sprintf("%s/users/%s/login", beyond(), name),
+      (elle::print("%s/users/%s/login", beyond(), name),
        elle::reactor::http::Method::POST, std::move(c));
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
@@ -1052,7 +1052,7 @@ namespace memo
       ? signature_headers(elle::reactor::http::Method::GET, where, self.get())
       : Headers{};
     headers.insert(extra_headers.begin(), extra_headers.end());
-    return fetch_data(elle::sprintf("%s/%s", beyond(), where),
+    return fetch_data(elle::print("%s/%s", beyond(), where),
                       type,
                       name,
                       headers);
@@ -1081,7 +1081,7 @@ namespace memo
     c.header_add(signature_headers(elle::reactor::http::Method::DELETE,
                                    where,
                                    self));
-    auto url = elle::sprintf("%s/%s", beyond(), where);
+    auto url = elle::print("%s/%s", beyond(), where);
     elle::reactor::http::Request::QueryDict query;
     if (purge)
       query["purge"] = "true";
@@ -1131,7 +1131,7 @@ namespace memo
                    bool ignore_missing,
                    bool purge) const
   {
-    return hub_delete(elle::sprintf("%s/%s", plural(type), name),
+    return hub_delete(elle::print("%s/%s", plural(type), name),
                       type, name, self, ignore_missing, purge);
   }
 
@@ -1150,7 +1150,7 @@ namespace memo
     c.header_add(signature_headers(
       elle::reactor::http::Method::PUT, where, self, object));
     auto r = elle::reactor::http::Request(
-      elle::sprintf("%s/%s", beyond(), where),
+      elle::print("%s/%s", beyond(), where),
       elle::reactor::http::Method::PUT, std::move(c));
     r << object.string();
     r.finalize();
