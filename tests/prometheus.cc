@@ -66,8 +66,7 @@ int main(int argc, const char* argv[])
   }
   catch (elle::Error const& e)
   {
-    ELLE_ERR("exception escaped test prometheus: %s",
-             BOOST_PP_STRINGIZE(Name), e);
+    ELLE_ERR("exception escaped test prometheus: %s", e);
     ELLE_ERR("%s", e.backtrace());
     throw;
   }
