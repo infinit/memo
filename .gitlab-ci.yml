@@ -3,9 +3,10 @@ stages:
 
 variables:
   DRAKE_DEBUG_BACKTRACE: "1"
-  DRAKE_EXPLAIN: "1" # still testing the whole cache thing
-  DRAKE_MTIME: "0"   # rsync and mtime comparisons don't play along very well
-#  DRAKE_RAW: "1"     # debuging cmake issues
+  DRAKE_EXPLAIN: "1"    # still testing the whole cache thing.
+  DRAKE_MTIME: "0"      # rsync and mtime comparisons don't play along very well.
+#  DRAKE_RAW: "1"       # debug cmake issues.
+  DRAKE_TIMEOUT: "1800" # More than what's needed for the longest test on Valgrind.
   LC_ALL: "C.UTF-8"
   PROJECT: "memo"
   PYTHONUNBUFFERED: "1"
