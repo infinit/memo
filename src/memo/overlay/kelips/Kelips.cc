@@ -1029,7 +1029,7 @@ namespace memo
               elle::err("%s is duplicate but not found in cache", id);
             remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
           }
-          if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
+          if (this->doughnut()->version() < elle::Version(0, 7, 0) || !packet::compression)
           {
             auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -1382,7 +1382,7 @@ namespace memo
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
         input.set_context(this->doughnut());
-        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !packet::disable_compression)
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && packet::compression)
           input.set_context(packet::CompressPeerLocations{});
         try
         {
