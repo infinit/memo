@@ -1,13 +1,21 @@
 # Change Log
 
-## [0.9.1] 2017-10-20
+## [0.9.2] 2017-10-21
 
-Fix error report generation.
+Fix serialization versioning.
+
+## [0.9.1] 2017-10-20 [YANKED]
+
+Skipped release because of unrecognized version in RPCs.
 
 ### Changed
 
 - Rename `INFINIT_{FOO}` environment variables as `MEMO_{FOO}`.
 - Prefer `MEMO_{FOO}=0` to `MEMO_NO_{FOO}=1` or `MEMO_DISABLE_{FOO}=1`.
+
+### Fixed
+
+- Fix error report generation.
 
 ## [0.9.0] 2017-10-19
 

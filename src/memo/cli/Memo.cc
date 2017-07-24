@@ -54,7 +54,7 @@ namespace memo
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
-        if (!memo::getenv("DISABLE_SIGNAL_HANDLER", false))
+        if (memo::getenv("SIGNAL_HANDLER", true))
         {
           static const auto signals = {SIGINT, SIGTERM
 #ifndef ELLE_WINDOWS

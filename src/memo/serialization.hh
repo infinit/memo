@@ -8,11 +8,13 @@ namespace memo
 {
   struct serialization_tag
   {
-    static elle::Version version;
-    static elle::unordered_map<
-      elle::Version, elle::serialization::Serializer::Versions> dependencies;
+    using Dependencies
+      = elle::unordered_map<elle::Version,
+                            elle::serialization::Serializer::Versions>;
+    static elle::Version const version;
+    static Dependencies const dependencies;
   };
 
   elle::Version
-  elle_serialization_version(elle::Version const& infinit_version);
+  elle_serialization_version(elle::Version const& memo_version);
 }
