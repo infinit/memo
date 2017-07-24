@@ -254,7 +254,7 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.run('apk add --update python3' \
+  docker_file.run('apk add --update python3 libgcc' \
                   '&& apk add --virtual build-deps python3-dev gcc g++' \
                   '&& pip3 install grpcio ' \
                   '&& apk del build-deps ' \
