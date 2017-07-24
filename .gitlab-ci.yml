@@ -45,7 +45,7 @@ before_script:
     - NPROC=$((nproc || sysctl -n hw.physicalcpu) 2>/dev/null)
 # rmkdir DIR -- remove and recreate a directory, which is possibly a symlink.
 # realpath about everywhere, readlink -f on CentOS
-    - function rmkdir { dir=$(realpath "$1" || readlink -f "$1") 2>/dev/null && rm -rf "$dir" && mkdir -p "$dir" }
+    - function rmkdir { dir=$(realpath "$1" || readlink -f "$1") 2>/dev/null && rm -rf "$dir" && mkdir -p "$dir"; }
 
 x86_64-centos6-gcc4:
   stage: build
@@ -77,7 +77,7 @@ x86_64-ubuntu-gcc4:
   script:
     - time pip3 install --user -r requirements.txt
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - if test -n "$FROM_SCRATCH"; then then rmkdir "$BUILD_DIR"; time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; done
+    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; else time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; fi
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 ./drake -j $NPROC //build //beyond/build
@@ -103,7 +103,7 @@ x86_64-alpine-gcc:
   script:
     - time pip3 install --user -r requirements.txt
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; done
+    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; else time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; fi
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 ./drake --beyond=false -j $NPROC //build
@@ -135,7 +135,7 @@ x86_64-jessie-gcc4:
   script:
     - time pip3 install --user -r requirements.txt
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; done
+    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; else time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; fi
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - time python3 ./drake --beyond=false -j $NPROC //build
@@ -156,7 +156,7 @@ x86_64-windows-mingw4:
   script:
     - time pip3 install --user -r requirements.txt
     - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; done
+    - if test -n "$FROM_SCRATCH"; then rmkdir "$BUILD_DIR"; else time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose; fi
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project $PROJECT --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
     - python3 ./drake -j $NPROC //build
