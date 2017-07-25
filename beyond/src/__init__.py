@@ -568,7 +568,7 @@ class Beyond:
           fname = '{}/client.{}'.format(temp_dir, k)
           with open(fname, 'wb') as f:
             f.write(b64decode(v))
-          if k in ['dump']:
+          if k in ['dmp', 'dump']:
             symbolize_dump(fname)
           # 'rb' is requested by sendwithus.
           files.append(open(fname, 'rb'))

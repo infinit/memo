@@ -227,6 +227,8 @@ class Memo(TemporaryDirectory):
       raise
     out = out.decode('utf-8')
     err = err.decode('utf-8')
+    # log('STDOUT: %s' % out)
+    # log('STDERR: %s' % err)
     if process.returncode != return_code:
       raise Exception(
         'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \

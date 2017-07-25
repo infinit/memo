@@ -1,9 +1,9 @@
 #include <boost/program_options.hpp>
 
-#include <elle/os/environ.hh>
 #include <elle/reactor/scheduler.hh>
 #include <elle/reactor/Thread.hh>
 
+#include <memo/environ.hh>
 #include <crash-report/CrashReporter.hh>
 
 namespace po = boost::program_options;
@@ -39,7 +39,6 @@ main(int argc, char** argv)
     ("dumps", po::value<std::string>(), "Crash dump location")
     ("help", "Help!")
     ("server", po::value<std::string>(), "Server to upload to")
-    ("version", po::value<std::string>(), "Version to send to server")
   ;
   auto const vm = [&]
     {
@@ -54,13 +53,9 @@ main(int argc, char** argv)
   {
     bool const crash = vm.count("crash");
     auto const dumps = option_str(vm, "dumps");
-    auto const server = option_str(vm, "server");
-    auto const version =
-      vm.count("version") ? option_str(vm, "version") : "test_version";
-    // Enable crash handling.
-    elle::os::setenv("MEMO_CRASH_REPORT", "1");
-    auto crash_reporter =
-      std::make_unique<crash_report::CrashReporter>(server, dumps, version);
+    memo::setenv("CRASH_REPORT", true);
+    memo::setenv("CRASH_REPORT_HOST", option_str(vm, "server"));
+    auto crash_reporter = std::make_unique<crash_report::CrashReporter>(dumps);
     if (crash)
       do_crash();
     elle::reactor::Scheduler sched;

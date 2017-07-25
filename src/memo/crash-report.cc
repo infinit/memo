@@ -16,6 +16,7 @@ ELLE_LOG_COMPONENT("memo.crash-report");
 #include <elle/algorithm.hh>
 #include <elle/assert.hh>
 #include <elle/bytes.hh>
+#include <elle/fstream.hh> // rotate_versions.
 #include <elle/log.hh>
 #include <elle/log/FileLogger.hh>
 
@@ -31,41 +32,35 @@ namespace memo
   auto
   make_reporter()
   {
-    auto const host = memo::getenv("CRASH_REPORT_HOST", beyond());
-    auto const url = elle::sprintf("%s/crash/report", host);
-
     auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
     ELLE_DEBUG("dump to %s", dumps_path);
 
     auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
-    auto const log_base = (log_dir / "main.").string();
+    auto const log_base = (log_dir / "main").string();
 
     // FIXME: Should be unique_ptr, but something in our handling of
     // reactor::Threads prevents it.
-    auto res
-      = std::make_shared<CrashReporter>(url, dumps_path, version_describe());
+    auto res = std::make_shared<CrashReporter>(dumps_path);
     // Attach the logs to the crash dump.
     res->make_payload = [log_dir, log_base] (auto const& base)
       {
-        // Collect the existing numbers in logs/main.<NUM> file names.
-        auto nums = std::vector<int>{};
-        for (auto& p: bfs::directory_iterator(log_dir))
-          if (auto n = elle::tail(p.path().string(), log_base))
-            try
-            {
-              nums.emplace_back(std::stoi(*n));
-            }
-            catch (std::invalid_argument)
-            {}
-        auto i = boost::max_element(nums);
-        if (i != end(nums))
+        // The greatest NUM in logs/main.<NUM> file names.
+        auto const last = [&log_base]() -> boost::optional<int>
+        {
+          auto const nums = elle::rotate_versions(log_base);
+          if (nums.empty())
+            return {};
+          else
+            return *boost::max_element(nums);
+        }();
+        if (last)
         {
           // The log file next to the minidump file.
           auto const minilog = elle::print("{}.log", base);
           // Get the two last logs in the log directory, if they do
           // match (i.e., don't concatenate main.1 with main.3).
           auto&& o = std::ofstream(minilog);
-          for (auto n: {*i - 1, *i})
+          for (auto const n: {*last - 1, *last})
           {
             auto const name = elle::print("{}{}", log_base, n);
             if (bfs::exists(name))

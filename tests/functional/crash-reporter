@@ -5,7 +5,7 @@ from utils import *
 with TemporaryDirectory() as tmp, \
      Beyond() as beyond, \
      Memo(beyond = beyond) as bob:
-  server = '%s/crash/report' % beyond.domain
+  server = beyond.domain
   email = 'crash@infinit.sh'
   template = 'Internal/Crash Report'
 
@@ -54,7 +54,7 @@ with TemporaryDirectory() as tmp, \
   # Unable to upload, then upload
   crash()
   assertEq(len(dumps()), 1)
-  upload(server = beyond.domain)
+  upload(server = server + '/invalid/route')
   assertEq(len(dumps()), 1)
   upload()
   assertEq(len(dumps()), 0)

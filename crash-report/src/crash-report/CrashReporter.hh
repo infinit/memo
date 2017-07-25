@@ -20,12 +20,8 @@ namespace crash_report
   public:
     /// If production build, install the crash handler.
     ///
-    /// @param crash_url  where to upload the crash reports.
     /// @param dumps_path directory where to find the dumps to save/send.
-    /// @param version   of the program currently running.
-    CrashReporter(std::string crash_url,
-                  bfs::path dumps_path,
-                  std::string version);
+    CrashReporter(bfs::path dumps_path);
     ~CrashReporter();
 
     /// Upload the existing crash reports (and possible associated payloads).
@@ -49,8 +45,7 @@ namespace crash_report
     MakePayload make_payload;
 
   private:
-    void
-    _upload(bfs::path const& path) const;
+    void _upload(bfs::path const& path) const noexcept;
     ELLE_ATTRIBUTE(std::string, crash_url);
     ELLE_ATTRIBUTE(std::unique_ptr<breakpad::ExceptionHandler>, exception_handler);
     ELLE_ATTRIBUTE_R(bfs::path, dumps_path);

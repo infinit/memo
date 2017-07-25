@@ -1179,6 +1179,11 @@ class Bottle(bottle.Bottle):
         }
     elif content_type == 'application/json':
       json = bottle.request.json
+    else:
+      raise Response(404, {
+        'error': 'crash/unknown',
+        'reason': 'invalid content type: {}'.format(content_type)
+      })
     self.__beyond.crash_report_send(json)
     return {}
 
