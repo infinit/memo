@@ -6,8 +6,8 @@
 #include <elle/bytes.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
-#include <elle/log/FileLogger.hh>
 
+#include <memo/environ.hh>
 #include <memo/utility.hh>
 #include <memo/silo/Filesystem.hh>
 
@@ -43,14 +43,30 @@ namespace memo
   {
     auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
     create_directories(log_dir);
+    auto const level =
+      memo::getenv("MEMO_LOG_LEVEL",
+                   "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
+                   ",*grpc*:DEBUG,*prometheus:LOG"s);
     auto const spec =
-      elle::print("file://{}?"
+      elle::print("file://{file}?"
                   "time,microsec,"
                   "append,size=64MiB,rotate=15,"
-                  "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
-                  (log_dir / "main").string());
+                  "{level}",
+                  {
+                    {"file", (log_dir / "main").string()},
+                    {"level", level},
+                  });
     ELLE_DUMP("building critical log: {}", spec);
-    elle::log::logger_add(elle::log::make_logger(spec));
+    auto logger = elle::log::make_logger(spec);
+    logger->message(elle::log::Logger::Level::log,
+                    elle::log::Logger::Type::warning,
+                    _trace_component_,
+                    std::string(80, '-') + '\n'
+                    + std::string(80, '-') + '\n'
+                    + std::string(80, '-') + '\n'
+                    + "starting memo " + version_describe(),
+                    __FILE__, __LINE__, "Memo::Memo");
+    elle::log::logger_add(std::move(logger));
   }
 
   bool
