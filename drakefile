@@ -186,13 +186,13 @@ def configure(
     drake.node('src/memo/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   memo_sources = drake.nodes(
-    'src/memo/Memo.cc',
-    'src/memo/Memo.hh',
-    'src/memo/Memo.hxx',
     'src/memo/KeyValueStore.cc',
     'src/memo/KeyValueStore.hh',
     'src/memo/LoginCredentials.cc',
     'src/memo/LoginCredentials.hh',
+    'src/memo/Memo.cc',
+    'src/memo/Memo.hh',
+    'src/memo/Memo.hxx',
     'src/memo/MountOptions.cc',
     'src/memo/MountOptions.hh',
     'src/memo/Network.cc',
@@ -777,7 +777,10 @@ def configure(
         minidump_stackwalk = minidump_stackwalk,
       )
       if enable_crash_report:
-        crash_test_libs = [
+        crash_test_bin = drake.cxx.Executable(
+          'tests/functional/bin/crasher', [
+            drake.node('tests/functional/bin/crasher.cc'),
+            memo_lib,
             crash_report_lib,
             cryptography_lib,
             elle_lib,
@@ -785,18 +788,14 @@ def configure(
             elle.boost.program_options_dynamic,
             elle.boost.filesystem_dynamic,
             elle.boost.regex_dynamic,
-          ]
-        crash_test_bin = drake.cxx.Executable(
-          'tests/functional/bin/crasher', [
-            drake.node('tests/functional/bin/crasher.cc')
-          ] + crash_test_libs,
+          ],
           cxx_toolkit,
           cxx_config_memo)
       def functional_test(name, env = {}, binaries = []):
         t = {
-          'name': name
+          'name': name,
+          'dependencies': [],
         }
-        t['dependencies'] = []
         if env:
           t['env'] = env
         if binaries:

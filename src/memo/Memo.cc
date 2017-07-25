@@ -4,6 +4,7 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/bytes.hh>
+#include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/log/FileLogger.hh>
 
@@ -14,6 +15,8 @@ ELLE_LOG_COMPONENT("memo");
 
 namespace memo
 {
+  namespace http = elle::reactor::http;
+
   // Deprecated locations for resources.
   namespace deprecated
   {
@@ -972,75 +975,62 @@ namespace memo
   Memo::hub_login(std::string const& name,
                         LoginCredentials const& o) const
   {
-    elle::reactor::http::Request::Configuration c;
+    http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
-    auto r = elle::reactor::http::Request
+    auto r = http::Request
       (elle::print("%s/users/%s/login", beyond(), name),
-       elle::reactor::http::Method::POST, std::move(c));
+       http::Method::POST, std::move(c));
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
-    if (r.status() != elle::reactor::http::StatusCode::OK)
+    if (r.status() != http::StatusCode::OK)
       memo::read_error<BeyondError>(r, "login", name);
     return elle::json::read(r);
   }
 
   namespace
   {
-  std::unique_ptr<elle::reactor::http::Request>
-  fetch_data(std::string const& url,
-             std::string const& type,
-             std::string const& name,
-             memo::Headers const& extra_headers = {})
-  {
-    auto headers = extra_headers;
-    elle::reactor::http::Request::Configuration c;
-    c.header_add(headers);
-    auto r = std::make_unique<elle::reactor::http::Request>(
-      url, elle::reactor::http::Method::GET, std::move(c));
-    elle::reactor::wait(*r);
-    if (r->status() == elle::reactor::http::StatusCode::OK)
+    std::unique_ptr<http::Request>
+    fetch_data(std::string const& url,
+               std::string const& type,
+               std::string const& name,
+               Headers const& headers = {})
     {
-    }
-    else if (r->status() == elle::reactor::http::StatusCode::Not_Found)
-    {
-      memo::read_error<MissingResource>(*r, type, name);
-    }
-    else if (r->status() == elle::reactor::http::StatusCode::Gone)
-    {
-      memo::read_error<ResourceGone>(*r, type, name);
-    }
-    else if (r->status() == elle::reactor::http::StatusCode::Forbidden)
-    {
-      memo::read_error<ResourceProtected>(*r, type, name);
-    }
-    else if (r->status() == elle::reactor::http::StatusCode::See_Other
-             || r->status() == elle::reactor::http::StatusCode::Temporary_Redirect)
-    {
-      auto redirection = r->headers().find("Location");
-      if (redirection != r->headers().end())
+      auto c = http::Request::Configuration{};
+      c.header_add(headers);
+      auto res = std::make_unique<http::Request>(
+        url, http::Method::GET, std::move(c));
+      elle::reactor::wait(*res);
+      switch (res->status())
       {
-        auto new_url = redirection->second;
-        if (!new_url.empty() && new_url != url)
+      case http::StatusCode::OK:
+        break;
+      case http::StatusCode::Not_Found:
+        read_error<MissingResource>(*res, type, name);
+      case http::StatusCode::Gone:
+        read_error<ResourceGone>(*res, type, name);
+      case http::StatusCode::Forbidden:
+        read_error<ResourceProtected>(*res, type, name);
+      case http::StatusCode::See_Other:
+      case http::StatusCode::Temporary_Redirect:
+        if (auto redirection = elle::find(res->headers(), "Location"))
         {
-          return fetch_data(new_url, type, name);
+          auto const& new_url = redirection->second;
+          if (!new_url.empty() && new_url != url)
+            return fetch_data(new_url, type, name);
         }
+        break;
+      case http::StatusCode::Unauthorized:
+        elle::err("Unauthorized fetching %s \"%s\", check the system clock",
+                  type, name);
+      default:
+        elle::err("unexpected HTTP error %s fetching %s",
+                  res->status(), type);
       }
+      return res;
     }
-    else if (r->status() == elle::reactor::http::StatusCode::Unauthorized)
-    {
-      elle::err("Unauthorized fetching %s \"%s\", check the system clock",
-                type, name);
-    }
-    else
-    {
-      elle::err("unexpected HTTP error %s fetching %s",
-                r->status(), type);
-    }
-    return r;
-  }
   }
 
-  std::unique_ptr<elle::reactor::http::Request>
+  std::unique_ptr<http::Request>
   Memo::hub_fetch_request(std::string const& where,
                           std::string const& type,
                           std::string const& name,
@@ -1049,7 +1039,7 @@ namespace memo
   {
     auto headers =
       self
-      ? signature_headers(elle::reactor::http::Method::GET, where, self.get())
+      ? signature_headers(http::Method::GET, where, self.get())
       : Headers{};
     headers.insert(extra_headers.begin(), extra_headers.end());
     return fetch_data(elle::print("%s/%s", beyond(), where),
@@ -1077,51 +1067,44 @@ namespace memo
                    bool ignore_missing,
                    bool purge) const
   {
-    auto c = elle::reactor::http::Request::Configuration{};
-    c.header_add(signature_headers(elle::reactor::http::Method::DELETE,
+    auto c = http::Request::Configuration{};
+    c.header_add(signature_headers(http::Method::DELETE,
                                    where,
                                    self));
     auto url = elle::print("%s/%s", beyond(), where);
-    elle::reactor::http::Request::QueryDict query;
+    auto query = http::Request::QueryDict{};
     if (purge)
       query["purge"] = "true";
-    elle::reactor::http::Request r(url, elle::reactor::http::Method::DELETE, std::move(c));
+    auto r = http::Request(url, http::Method::DELETE, std::move(c));
     r.query_string(query);
     r.finalize();
     elle::reactor::wait(r);
-    if (r.status() == elle::reactor::http::StatusCode::OK)
+    switch (r.status())
     {
+    case http::StatusCode::OK:
       this->report_remote_action()("deleted", type, name);
       return true;
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
-    {
-      if (!ignore_missing)
+    case http::StatusCode::Not_Found:
+      if (ignore_missing)
+        return false;
+      else
         read_error<MissingResource>(r, type, name);
-      return false;
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::See_Other ||
-             r.status() == elle::reactor::http::StatusCode::Temporary_Redirect)
-    {
+    case http::StatusCode::See_Other:
+    case http::StatusCode::Temporary_Redirect:
       throw Redirected(url);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Unauthorized)
-    {
+    case http::StatusCode::Unauthorized:
       elle::err("Unauthorized deleting %s \"%s\", check the system clock",
                 type, name);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Forbidden)
-    {
+    case http::StatusCode::Forbidden:
       elle::err("Forbidden deleting %s \"%s\", "
                 "ensure the user has been set using --as or MEMO_USER",
                 type, name);
-    }
-    else
-    {
+    default:
       ELLE_LOG("HTTP response: %s", r.response());
       elle::err("unexpected HTTP error %s deleting %s \"%s\"",
                 r.status(), type, name);
     }
+    elle::unreachable();
   }
 
   bool
@@ -1145,23 +1128,22 @@ namespace memo
                       bool hub_error,
                       bool update) const
   {
-    elle::reactor::http::Request::Configuration c;
+    auto c = http::Request::Configuration{};
     c.header_add("Content-Type", content_type);
     c.header_add(signature_headers(
-      elle::reactor::http::Method::PUT, where, self, object));
-    auto r = elle::reactor::http::Request(
+      http::Method::PUT, where, self, object));
+    auto r = http::Request(
       elle::print("%s/%s", beyond(), where),
-      elle::reactor::http::Method::PUT, std::move(c));
+      http::Method::PUT, std::move(c));
     r << object.string();
     r.finalize();
     elle::reactor::wait(r);
-    if (r.status() == elle::reactor::http::StatusCode::Created)
+    switch (r.status())
     {
+    case http::StatusCode::Created:
       this->report_remote_action()("created", type, name);
       return Memo::PushResult::pushed;
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::OK)
-    {
+    case http::StatusCode::OK:
       if (update)
       {
         this->report_remote_action()("updated", type, name);
@@ -1172,46 +1154,30 @@ namespace memo
         this->report_remote_action()("already updated", type, name);
         return Memo::PushResult::alreadyPushed;
       }
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Conflict)
-    {
+    case http::StatusCode::Conflict:
       elle::err("%s \"%s\" already exists with a different key", type, name);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Payment_Required)
-    {
+    case http::StatusCode::Payment_Required:
       elle::err("Pushing %s failed (limit reached):"
                 " Please contact sales@infinit.sh.",
                 type);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
-    {
+    case http::StatusCode::Not_Found:
       if (hub_error)
         read_error<BeyondError>(r, type, name);
       else
         read_error<MissingResource>(r, type, name);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::See_Other ||
-             r.status() == elle::reactor::http::StatusCode::Temporary_Redirect)
-    {
+    case http::StatusCode::See_Other:
+    case http::StatusCode::Temporary_Redirect:
       throw Redirected(r.url());
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Gone)
-    {
+    case http::StatusCode::Gone:
       read_error<ResourceGone>(r, type, name);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Unauthorized)
-    {
+    case http::StatusCode::Unauthorized:
       elle::err("Unauthorized pushing %s \"%s\", check the system clock",
                 type, name);
-    }
-    else if (r.status() == elle::reactor::http::StatusCode::Forbidden)
-    {
+    case http::StatusCode::Forbidden:
       elle::err("Forbidden pushing %s \"%s\", "
                 "ensure the user has been set using --as or MEMO_USER",
                 type, name);
-    }
-    else
-    {
+    default:
       auto const error = [&] {
         try
         {
@@ -1230,5 +1196,6 @@ namespace memo
         elle::err("unexpected HTTP error %s pushing %s:\n%s",
                   r.status(), type, error);
     }
+    elle::unreachable();
   }
 }
