@@ -28,16 +28,6 @@ namespace memo
         decltype(elle::meta::list(memo::symbols::addresses,
                                   memo::symbols::port))>;
     };
-
-    template <typename T>
-    T const&
-    mandatory(boost::optional<T> const& opt, std::string const& name)
-    {
-      if (opt)
-        return *opt;
-      else
-        throw elle::das::cli::MissingOption(name);
-    }
   }
 }
 

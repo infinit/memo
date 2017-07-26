@@ -42,7 +42,7 @@ namespace memo
 
         MEMO_ENTREPRISE(
 
-        // Dropbox.
+        /// Dropbox.
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,
                    decltype(cli::account)::Formal<std::string const&>,
@@ -62,7 +62,7 @@ namespace memo
 
         );
 
-        // Filesystem.
+        /// Filesystem.
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,
                    decltype(cli::description = boost::optional<std::string>()),
@@ -80,6 +80,7 @@ namespace memo
 
         MEMO_ENTREPRISE(
 
+        /// GCS.
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,
                    decltype(cli::account)::Formal<std::string const&>,
@@ -99,6 +100,7 @@ namespace memo
                  boost::optional<std::string> output = {},
                  boost::optional<std::string> path = {});
 
+        /// Google Drive.
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,
                    decltype(cli::account)::Formal<std::string const&>,
@@ -116,6 +118,7 @@ namespace memo
                           boost::optional<std::string> output = {},
                           boost::optional<std::string> root = {});
 
+        /// S3.
         Mode<Create,
              void (decltype(cli::name)::Formal<std::string const&>,
                    decltype(cli::account)::Formal<std::string const&>,
