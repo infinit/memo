@@ -11,18 +11,35 @@ namespace memo
   /// The directory for the critical logs (`~/.cache/infinit/memo/logs`).
   bfs::path log_dir();
 
-  /// The log family name (`log_dir() / "main"`).
-  std::string log_base();
+  /// The log family name (`log_dir() / base`).
+  ///
+  /// Ensures that the parent directory exists.
+  std::string log_base(std::string const& base = "main");
 
-  /// Set up the "critical" log, i.e., the log family typically stored
-  /// in `~/.cache/infinit/memo/logs/main.*`.
+  /// Set up rotating logs for a given base.
   ///
   /// Reads `$MEMO_LOG_LEVEL`.
-  void make_critical_log();
+  void make_log(std::string const& base);
 
-  /// The list of the @a n latest critical log files.
-  std::vector<bfs::path> latest_logs(int n = 1);
+  /// Set up the main log, i.e., the log family typically stored in
+  /// `~/.cache/infinit/memo/logs/main.*`.  Same as
+  /// `make_log("main")`.
+  ///
+  /// Reads `$MEMO_LOG_LEVEL`.
+  void make_main_log();
 
-  /// Generate a tarball with the @a n latest critical log files.
-  void tar_logs(bfs::path const& tgz, int n = 1);
+  /// The list of the @a n latest log files in a family.
+  ///
+  /// @param base  the family base name.  A period will be added.
+  /// @param n     the maximum number of contiguous logs to gather.
+  std::vector<bfs::path>
+  latest_logs(std::string const& base = "main", int n = 1);
+
+  /// Generate a tgz with the latest critical log files.
+  ///
+  /// @param tgz   where the archive will be made.
+  /// @param base  the family base name.  A period will be added.
+  /// @param n     the maximum number of contiguous logs to gather.
+  void tar_logs(bfs::path const& tgz,
+                std::string const& base = "main", int n = 1);
 }

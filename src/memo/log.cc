@@ -18,14 +18,16 @@ namespace memo
     return canonical_folder(xdg_cache_home() / "logs");
   }
 
-  std::string log_base()
+  std::string log_base(std::string const& base)
   {
-    return (log_dir() / "main").string();
+    auto const path = log_dir() / base;
+    auto const dir = path.parent_path().empty() ? "." : path.parent_path();
+    create_directories(dir);
+    return path.string();
   }
 
-  void make_critical_log()
+  void make_log(std::string const& base)
   {
-    create_directories(log_dir());
     auto const level =
       memo::getenv("LOG_LEVEL",
                    "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
@@ -36,10 +38,10 @@ namespace memo
                   "append,size=64MiB,rotate=15,"
                   "{level}",
                   {
-                    {"file", log_base()},
+                    {"file", log_base(base)},
                     {"level", level},
                   });
-    ELLE_DUMP("building critical log: {}", spec);
+    ELLE_DUMP("building log: {}", spec);
     auto logger = elle::log::make_logger(spec);
     auto const dashes = std::string(80, '-') + '\n';
     logger->message(elle::log::Logger::Level::log,
@@ -51,13 +53,18 @@ namespace memo
     elle::log::logger_add(std::move(logger));
   }
 
+  void make_main_log()
+  {
+    make_log("main");
+  }
+
   std::vector<bfs::path>
-  latest_logs(int n)
+  latest_logs(std::string const& base, int n)
   {
     // The greatest NUM in logs/main.<NUM> file names.
-    auto const last = []() -> boost::optional<int>
+    auto const last = [&base]() -> boost::optional<int>
       {
-        auto const nums = elle::rotate_versions(log_base());
+        auto const nums = elle::rotate_versions(log_base(base));
         if (nums.empty())
           return {};
         else
@@ -70,7 +77,7 @@ namespace memo
       // consecutive (i.e., don't take main.1 with main.3).
       for (auto i: boost::irange(*last, *last - n, -1))
       {
-        auto const name = elle::print("{}.{}", log_base(), i);
+        auto const name = elle::print("{}.{}", log_base(base), i);
         if (bfs::exists(name))
           res.emplace_back(name);
         else
@@ -80,9 +87,9 @@ namespace memo
     return res;
   }
 
-  void tar_logs(bfs::path const& tgz, int n)
+  void tar_logs(bfs::path const& tgz, std::string const& base, int n)
   {
-    auto const files = latest_logs(n);
+    auto const files = latest_logs(base, n);
     if (files.empty())
       ELLE_LOG("there are no log files");
     else

@@ -39,7 +39,8 @@ namespace memo
     // Attach the logs to the crash dump.
     res->make_payload = [](auto const& base)
       {
-        tar_logs(elle::print("{}.log.tgz", base), 2);
+        tar_logs(elle::print("{}.log.tgz", base),
+                 "main", 2);
       };
 
     // Hook elle::assert to generate the minidumps when an assertion

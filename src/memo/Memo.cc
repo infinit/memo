@@ -42,7 +42,7 @@ namespace memo
 
   Memo::Memo()
   {
-    make_critical_log();
+    make_main_log();
   }
 
   bool

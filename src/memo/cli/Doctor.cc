@@ -254,7 +254,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("report");
       auto tgz = elle::filesystem::TemporaryFile{"main.log.tgz"};
-      tar_logs(tgz.path(), 2);
+      tar_logs(tgz.path(), "main", 2);
       if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
         std::cout << "successfully uploaded logs\n";
       else
