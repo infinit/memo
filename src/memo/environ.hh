@@ -1,5 +1,6 @@
 #pragma once
 
+#include <elle/assert.hh>
 #include <elle/os/environ.hh>
 #include <elle/print.hh>
 
@@ -9,7 +10,11 @@ namespace memo
   ///
   /// Memoed, actually runs only once.
   void
-  check_environment();
+  environ_check();
+
+  /// Whether this is a known variable suffix (e.g., "HOME", not "MEMO_HOME").
+  bool
+  environ_valid_name(std::string const& v);
 
   /// Get the value of this Memo variable.
   ///
@@ -18,7 +23,7 @@ namespace memo
   T
   getenv(std::string const& v, T const& def)
   {
-    check_environment();
+    ELLE_ASSERT(environ_valid_name(v));
     return elle::os::getenv("MEMO_" + v, def);
   }
 
@@ -29,7 +34,7 @@ namespace memo
   void
   setenv(std::string const& v, T const& val)
   {
-    check_environment();
+    ELLE_ASSERT(environ_valid_name(v));
     elle::os::setenv("MEMO_" + v, elle::print("%s", val));
   }
 
@@ -40,7 +45,7 @@ namespace memo
   void
   unsetenv(std::string const& v)
   {
-    check_environment();
+    ELLE_ASSERT(environ_valid_name(v));
     return elle::os::unsetenv("MEMO_" + v);
   }
 }

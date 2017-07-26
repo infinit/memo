@@ -241,7 +241,7 @@ namespace memo
       {
         auto report_thread = make_reporter_thread();
         check_broken_locale();
-        check_environment();
+        environ_check();
         main_impl(args);
         if (report_thread)
           elle::reactor::wait(*report_thread);

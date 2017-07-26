@@ -874,7 +874,7 @@ def configure(
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'MEMO_BINARIES': str(binaries_path),
+          'BIN_DIR': str(binaries_path),
           'TEST_MEMO_WITH_KVS': str(with_kvs),
         }
         env.update(t.get('env', {}))

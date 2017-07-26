@@ -113,7 +113,7 @@ os.environ['MEMO_CRASH_REPORT'] = '0'
 
 def find_binaries():
   for path in chain(
-      [os.environ.get('MEMO_BINARIES')],
+      [os.environ.get('BIN_DIR')],
       os.environ.get('PATH', '').split(':'),
       ['bin', '/opt/memo/bin'],
   ):

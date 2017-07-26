@@ -17,6 +17,7 @@ namespace
   // Mingw build.
   Vars const& vars()
   {
+    // git grep memo::\\w+env | sed -e 's/.*env("//;s/".*//' | sort -u
     static auto const res = Vars
     {
       {"ASYNC_NOPOP", ""},
@@ -39,8 +40,12 @@ namespace
       {"IPV6", "Enable IPv6 (default: true)"},
       {"KELIPS_ASYNC", ""},
       {"KELIPS_ASYNC_SEND", ""},
+      {"KELIPS_COMPRESSION", ""},
       {"KELIPS_SNUB", ""},
       {"KEY_HASH", ""},
+      {"KOUNCIL_WATCHER_INTERVAL", ""},
+      {"KOUNCIL_WATCHER_MAX_RETRY", ""},
+      {"LOG_LEVEL", ""},
       {"LOG_REACHABILITY", ""},
       {"LOOKAHEAD_BLOCKS", ""},
       {"LOOKAHEAD_THREADS", ""},
@@ -55,11 +60,13 @@ namespace
       {"PRESERVE_ACLS", ""},
       {"PROMETHEUS_ENDPOINT", ""},
       {"RDV", ""},
+      {"RPC_CRYPTO", ""},
       {"RPC_DISABLE_CRYPTO", ""},
       {"RPC_SERVE_THREADS", ""},
       {"SIGNAL_HANDLER", ""},
       {"SOFTFAIL_RUNNING", ""},
       {"SOFTFAIL_TIMEOUT", ""},
+      {"TOKEN_ENCRYPT", ""},
       {"USER", ""},
       {"UTP", ""},
     };
@@ -80,7 +87,7 @@ namespace
   }
 
   bool
-  check_environment_()
+  environ_check_()
   {
     // Number of unknown var names.
     auto unknown = 0;
@@ -128,9 +135,16 @@ namespace
 namespace memo
 {
   void
-  check_environment()
+  environ_check()
   {
     ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
-    static auto _ = check_environment_();
+    static auto _ = environ_check_();
+  }
+
+  bool
+  environ_valid_name(std::string const& v)
+  {
+    environ_check();
+    return known_name(v);
   }
 }
