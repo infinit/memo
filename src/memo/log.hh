@@ -40,6 +40,9 @@ namespace memo
   /// @param tgz   where the archive will be made.
   /// @param base  the family base name.  A period will be added.
   /// @param n     the maximum number of contiguous logs to gather.
-  void tar_logs(bfs::path const& tgz,
+  ///
+  /// @return  whether the tarball was created (i.e., there are
+  ///          logs under that base name).
+  bool tar_logs(bfs::path const& tgz,
                 std::string const& base = "main", int n = 1);
 }

@@ -87,15 +87,19 @@ namespace memo
     return res;
   }
 
-  void tar_logs(bfs::path const& tgz, std::string const& base, int n)
+  bool tar_logs(bfs::path const& tgz, std::string const& base, int n)
   {
     auto const files = latest_logs(base, n);
     if (files.empty())
+    {
       ELLE_LOG("there are no log files");
+      return false;
+    }
     else
     {
       ELLE_DUMP("generating {} containing {}", tgz, files);
       archive(elle::archive::Format::tar_gzip, files, tgz);
+      return true;
     }
   }
 }

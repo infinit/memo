@@ -24,9 +24,10 @@ namespace memo
         = decltype(elle::meta::list(cli::all,
                                     cli::configuration,
                                     cli::connectivity,
+                                    cli::log,
                                     cli::networking,
-                                    cli::report,
                                     cli::system));
+      using Objects = decltype(elle::meta::list(cli::log));
 
       /*------------.
       | Mode: all.  |
@@ -80,6 +81,30 @@ namespace memo
                         bool no_color,
                         bool verbose);
 
+      /*------------.
+      | Mode: log.  |
+      `------------*/
+      class Log
+        : public Object<Log, Doctor>
+      {
+      public:
+        using Super = Object<Log, Doctor>;
+        using Modes = decltype(elle::meta::list(
+                                 cli::push));
+        Log(Memo& memo);
+
+        // log push.
+        Mode<Log,
+             void (decltype(cli::name = "main"s)),
+             decltype(modes::mode_push)>
+        push;
+        void
+        mode_push(std::string const& name);
+
+        std::string const description = "Manage logs";
+      } log;
+
+
       /*-------------------.
       | Mode: networking.  |
       `-------------------*/
@@ -113,15 +138,6 @@ namespace memo
                       bool no_color = false,
                       bool verbose = false);
 
-      /*---------------.
-      | Mode: report.  |
-      `---------------*/
-      Mode<Doctor,
-           void (),
-           decltype(modes::mode_report)>
-      report;
-      void
-      mode_report();
 
       /*---------------.
       | Mode: system.  |

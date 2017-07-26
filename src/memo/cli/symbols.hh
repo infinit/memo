@@ -232,7 +232,6 @@ namespace memo
     ELLE_DAS_SYMBOL(networking);
     ELLE_DAS_SYMBOL(populate_hub);
     ELLE_DAS_SYMBOL(populate_network);
-    ELLE_DAS_SYMBOL(report);
     ELLE_DAS_SYMBOL(run);
     ELLE_DAS_SYMBOL(s3);
     ELLE_DAS_SYMBOL(set);
@@ -284,6 +283,7 @@ namespace memo
       ELLE_DAS_SYMBOL(mode_list);
       ELLE_DAS_SYMBOL(mode_list_services);
       ELLE_DAS_SYMBOL(mode_list_silos);
+      ELLE_DAS_SYMBOL(mode_log);
       ELLE_DAS_SYMBOL(mode_login);
       ELLE_DAS_SYMBOL(mode_manage_volumes);
       ELLE_DAS_SYMBOL(mode_mount);
@@ -294,7 +294,6 @@ namespace memo
       ELLE_DAS_SYMBOL(mode_push);
       ELLE_DAS_SYMBOL(mode_receive);
       ELLE_DAS_SYMBOL(mode_register);
-      ELLE_DAS_SYMBOL(mode_report);
       ELLE_DAS_SYMBOL(mode_run);
       ELLE_DAS_SYMBOL(mode_s3);
       ELLE_DAS_SYMBOL(mode_set);

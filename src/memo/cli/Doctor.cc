@@ -81,6 +81,7 @@ namespace memo
                      cli::server = connectivity_server,
                      cli::no_color = false,
                      cli::verbose = false)
+      , log(memo)
       , networking(*this,
                    "Perform networking speed tests between nodes",
                    elle::das::cli::Options{
@@ -105,8 +106,6 @@ namespace memo
                    cli::xored = std::string{"both"},
                    cli::no_color = false,
                    cli::verbose = false)
-      , report(*this,
-               "Upload logs to {hub}")
       , system(*this,
                "Perform sanity checks on your system",
                cli::no_color = false,
@@ -190,6 +189,34 @@ namespace memo
     }
 
 
+    /*------------.
+    | Mode: log.  |
+    `------------*/
+
+    Doctor::Log::Log(Memo& memo)
+      : Object(memo)
+      , push(*this,
+             "Upload logs to {hub}",
+             cli::name = "main"s)
+    {}
+
+    void
+    Doctor::Log::mode_push(std::string const& name)
+    {
+      ELLE_TRACE_SCOPE("log.push");
+      auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
+      if (tar_logs(tgz.path(), name, 2))
+      {
+        if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
+          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
+        else
+          elle::print(std::cerr, "failed to upload '{}' logs\n", name);
+      }
+      else
+        elle::print(std::cerr, "there are no '{}' logs\n", name);
+    }
+
+
     /*-------------------.
     | Mode: networking.  |
     `-------------------*/
@@ -214,7 +241,7 @@ namespace memo
       auto const v = cli.compatibility_version().value_or(memo::version());
       if (host)
       {
-        elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
+        elle::print(std::cout, "Client mode (version: %s):\n", v);
         memo::networking::perform(mode_name,
                                   protocol_name,
                                   packet_size,
@@ -230,7 +257,7 @@ namespace memo
       }
       else
       {
-        elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
+        elle::print(std::cout, "Server mode (version: %s):\n", v);
         auto const servers
           = memo::networking::Servers(protocol_name,
                                       port,
@@ -242,23 +269,6 @@ namespace memo
                                       v);
         elle::reactor::sleep();
       }
-    }
-
-
-    /*---------------.
-    | Mode: report.  |
-    `---------------*/
-
-    void
-    Doctor::mode_report()
-    {
-      ELLE_TRACE_SCOPE("report");
-      auto tgz = elle::filesystem::TemporaryFile{"main.log.tgz"};
-      tar_logs(tgz.path(), "main", 2);
-      if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
-        std::cout << "successfully uploaded logs\n";
-      else
-        std::cout << "failed to upload logs\n";
     }
 
 
