@@ -25,6 +25,7 @@ namespace memo
                                     cli::configuration,
                                     cli::connectivity,
                                     cli::networking,
+                                    cli::report,
                                     cli::system));
 
       /*------------.
@@ -111,6 +112,16 @@ namespace memo
                       boost::optional<std::string> const& xored = std::string{"both"},
                       bool no_color = false,
                       bool verbose = false);
+
+      /*---------------.
+      | Mode: report.  |
+      `---------------*/
+      Mode<Doctor,
+           void (),
+           decltype(modes::mode_report)>
+      report;
+      void
+      mode_report();
 
       /*---------------.
       | Mode: system.  |

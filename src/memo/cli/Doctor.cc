@@ -14,6 +14,7 @@
 #include <elle/algorithm.hh>
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
+#include <elle/filesystem/TemporaryFile.hh>
 #include <elle/filesystem/path.hh>
 #include <elle/log.hh>
 #include <elle/network/Interface.hh>
@@ -29,7 +30,9 @@
 #include <elle/reactor/TimeoutGuard.hh>
 #include <elle/reactor/http/exceptions.hh>
 
+#include <memo/Hub.hh>
 #include <memo/cli/Memo.hh>
+#include <memo/log.hh>
 #include <memo/silo/Dropbox.hh>
 #include <memo/silo/Filesystem.hh>
 #include <memo/silo/GCS.hh>
@@ -102,6 +105,8 @@ namespace memo
                    cli::xored = std::string{"both"},
                    cli::no_color = false,
                    cli::verbose = false)
+      , report(*this,
+               "Upload logs to {hub}")
       , system(*this,
                "Perform sanity checks on your system",
                cli::no_color = false,
@@ -238,6 +243,24 @@ namespace memo
         elle::reactor::sleep();
       }
     }
+
+
+    /*---------------.
+    | Mode: report.  |
+    `---------------*/
+
+    void
+    Doctor::mode_report()
+    {
+      ELLE_TRACE_SCOPE("report");
+      auto tgz = elle::filesystem::TemporaryFile{"main.log.tgz"};
+      tar_logs(tgz.path(), 2);
+      if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
+        std::cout << "successfully uploaded logs\n";
+      else
+        std::cout << "failed to upload logs\n";
+    }
+
 
     /*---------------.
     | Mode: system.  |
