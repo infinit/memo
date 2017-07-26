@@ -1254,6 +1254,15 @@ namespace memo
                      ("success", true)
                      ("value", block);
                  }
+                 else if (op == "create_mutable")
+                 {
+                   auto block = dht.make_mutable_block();
+                   auto addr = block->address();
+                   dht.insert(std::move(block));
+                   Respond
+                     ("success", true)
+                     ("address", addr);
+                 }
                  else if (op == "insert" || op == "update")
                  {
                    auto block = command.deserialize<
