@@ -15,6 +15,7 @@
 #include <memo/cli/xattrs.hh>
 #include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/log.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
 #include <memo/model/blocks/ACLBlock.hh>
@@ -865,6 +866,7 @@ namespace memo
                   boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
+        make_log(network_name);
         auto& memo = cli.memo();
         auto owner = cli.as_user();
         auto network = memo.network_get(network_name, owner);
