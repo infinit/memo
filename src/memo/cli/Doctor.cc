@@ -35,7 +35,6 @@
 #include <memo/silo/GCS.hh>
 #include <memo/silo/GoogleDrive.hh>
 #include <memo/silo/Strip.hh>
-#include <elle/cryptography/random.hh>
 #ifndef ELLE_WINDOWS
 # include <memo/silo/sftp.hh>
 #endif
@@ -61,7 +60,6 @@ namespace memo
       : Object(memo)
       , all(*this,
             "Perform all possible checks",
-            elle::das::cli::Options(),
             cli::ignore_non_linked = false,
             cli::upnp_tcp_port = boost::none,
             cli::upnp_udt_port = boost::none,
@@ -70,13 +68,11 @@ namespace memo
             cli::verbose = false)
       , configuration(*this,
                       "Perform integrity checks on the Memo configuration files",
-                      elle::das::cli::Options(),
                       cli::ignore_non_linked = false,
                       cli::no_color = false,
                       cli::verbose = false)
       , connectivity(*this,
                      "Perform connectivity checks",
-                     elle::das::cli::Options(),
                      cli::upnp_tcp_port = boost::none,
                      cli::upnp_udt_port = boost::none,
                      cli::server = connectivity_server,
@@ -108,7 +104,6 @@ namespace memo
                    cli::verbose = false)
       , system(*this,
                "Perform sanity checks on your system",
-               elle::das::cli::Options(),
                cli::no_color = false,
                cli::verbose = false)
     {}
@@ -211,34 +206,35 @@ namespace memo
       ELLE_TRACE_SCOPE("networking");
       auto& cli = this->cli();
 
-      auto v = cli.compatibility_version().value_or(memo::version());
+      auto const v = cli.compatibility_version().value_or(memo::version());
       if (host)
       {
         elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
         memo::networking::perform(mode_name,
-                                     protocol_name,
-                                     packet_size,
-                                     packets_count,
-                                     *host,
-                                     port,
-                                     tcp_port,
-                                     utp_port,
-                                     xored_utp_port,
-                                     xored,
-                                     verbose,
-                                     v);
+                                  protocol_name,
+                                  packet_size,
+                                  packets_count,
+                                  *host,
+                                  port,
+                                  tcp_port,
+                                  utp_port,
+                                  xored_utp_port,
+                                  xored,
+                                  verbose,
+                                  v);
       }
       else
       {
         elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
-        auto servers = memo::networking::Servers(protocol_name,
-                                                    port,
-                                                    tcp_port,
-                                                    utp_port,
-                                                    xored_utp_port,
-                                                    xored,
-                                                    verbose,
-                                                    v);
+        auto const servers
+          = memo::networking::Servers(protocol_name,
+                                      port,
+                                      tcp_port,
+                                      utp_port,
+                                      xored_utp_port,
+                                      xored,
+                                      verbose,
+                                      v);
         elle::reactor::sleep();
       }
     }
