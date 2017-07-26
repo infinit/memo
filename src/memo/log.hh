@@ -4,6 +4,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <elle/flat-set.hh>
+
 namespace memo
 {
   namespace bfs = boost::filesystem;
@@ -34,6 +36,9 @@ namespace memo
   /// @param n     the maximum number of contiguous logs to gather.
   std::vector<bfs::path>
   latest_logs(std::string const& base = "main", int n = 1);
+
+  /// The existing log families of existing logs.
+  boost::container::flat_set<std::string> log_families();
 
   /// Generate a tgz with the latest critical log files.
   ///

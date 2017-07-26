@@ -195,10 +195,20 @@ namespace memo
 
     Doctor::Log::Log(Memo& memo)
       : Object(memo)
+      , list(*this,
+             "List existing logs")
       , push(*this,
              "Upload logs to {hub}",
              cli::name = "main"s)
     {}
+
+    void
+    Doctor::Log::mode_list()
+    {
+      ELLE_TRACE_SCOPE("log.list");
+      elle::print(std::cout, "existing log families: {}\n",
+                  log_families());
+    }
 
     void
     Doctor::Log::mode_push(std::string const& name)

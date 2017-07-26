@@ -90,8 +90,17 @@ namespace memo
       public:
         using Super = Object<Log, Doctor>;
         using Modes = decltype(elle::meta::list(
+                                 cli::list,
                                  cli::push));
         Log(Memo& memo);
+
+        // log list.
+        Mode<Log,
+             void (),
+             decltype(modes::mode_list)>
+        list;
+        void
+        mode_list();
 
         // log push.
         Mode<Log,
