@@ -210,6 +210,8 @@ def configure(
     'src/memo/crash-report.hh',
     'src/memo/environ.cc',
     'src/memo/environ.hh',
+    'src/memo/log.cc',
+    'src/memo/log.hh',
     'src/memo/serialization.cc',
     'src/memo/serialization.hh',
     'src/memo/utility.hh',
