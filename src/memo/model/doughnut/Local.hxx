@@ -50,7 +50,7 @@ namespace memo
                 ELLE_WARN("error contacting %s: %s", c, e);
               }
             },
-            elle::sprintf("%s: broadcast RPC %s", this, name));
+            elle::print("{}: broadcast {}", this, name));
         }
         catch (...)
         {

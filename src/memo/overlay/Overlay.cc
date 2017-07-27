@@ -337,7 +337,7 @@ namespace memo
               yield(WeakMember(new model::doughnut::DummyPeer(
                                  *this->doughnut(), address)));
             },
-            "fetch node by address");
+            elle::print("fetch nodes"));
         };
     }
 

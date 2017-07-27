@@ -1922,7 +1922,8 @@ namespace memo
               {
                 res(p.first, {}, std::current_exception());
               }
-            });
+            },
+            elle::print("multifetch"));
         }
 
         std::unique_ptr<blocks::Block>
