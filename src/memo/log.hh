@@ -40,6 +40,9 @@ namespace memo
   /// The existing log families of existing logs.
   boost::container::flat_set<std::string> log_families();
 
+  /// Remove all the log files.
+  void log_remove_all();
+
   /// Generate a tgz with the latest critical log files.
   ///
   /// @param tgz   where the archive will be made.

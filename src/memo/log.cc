@@ -109,6 +109,17 @@ namespace memo
     return res;
   }
 
+  void
+  log_remove_all()
+  {
+    auto ps = std::vector<bfs::path>{};
+    for (auto const& p: bfs::recursive_directory_iterator(log_dir()))
+      if (is_visible_file(p))
+        ps.emplace_back(std::move(p));
+    for (auto const& p: ps)
+      elle::try_remove(p);
+  }
+
   bool tar_logs(bfs::path const& tgz, std::string const& base, int n)
   {
     auto const files = latest_logs(base, n);

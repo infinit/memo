@@ -90,9 +90,18 @@ namespace memo
       public:
         using Super = Object<Log, Doctor>;
         using Modes = decltype(elle::meta::list(
+                                 cli::delete_,
                                  cli::list,
                                  cli::push));
         Log(Memo& memo);
+
+        // log delete.
+        Mode<Log,
+             void (decltype(cli::all = false)),
+             decltype(modes::mode_delete)>
+        delete_;
+        void
+        mode_delete(bool all = false);
 
         // log list.
         Mode<Log,

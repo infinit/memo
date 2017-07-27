@@ -195,12 +195,23 @@ namespace memo
 
     Doctor::Log::Log(Memo& memo)
       : Object(memo)
+      , delete_(*this,
+                "Delete logs locally",
+                cli::all = false)
       , list(*this,
-             "List existing logs")
+             "List existing log families")
       , push(*this,
              "Upload logs to {hub}",
              cli::name = "main"s)
     {}
+
+    void
+    Doctor::Log::mode_delete(bool all)
+    {
+      ELLE_TRACE_SCOPE("log.delete");
+      if (all)
+        log_remove_all();
+    }
 
     void
     Doctor::Log::mode_list()
