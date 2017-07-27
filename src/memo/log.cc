@@ -17,13 +17,16 @@ namespace memo
 {
   bfs::path log_dir()
   {
-    return canonical_folder(xdg_cache_home() / "logs");
+    auto const d = memo::getenv("LOG_DIR",
+                                (xdg_cache_home() / "logs").string());
+    return canonical_folder(d);
   }
 
   std::string log_base(std::string const& base)
   {
     auto const path = log_dir() / base;
     auto const dir = path.parent_path().empty() ? "." : path.parent_path();
+    // log_dir is created, but base may also contain `/`.
     create_directories(dir);
     return path.string();
   }

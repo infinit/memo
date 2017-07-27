@@ -157,7 +157,8 @@ class Memo(TemporaryDirectory):
     if self.__user is not None:
       env_['MEMO_USER'] = self.__user
     env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
-    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
+    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME',
+              'MEMO_CACHE_HOME']:
       if k in os.environ:
         env_[k] = os.environ[k]
     if self.__beyond is not None:
@@ -167,7 +168,7 @@ class Memo(TemporaryDirectory):
     if input is not None and not noscript:
       args.append('-s')
     pretty = '%s %s' % (
-      ' '.join('%s=%s' % (k, v) for k, v in env_.items()),
+      ' '.join('%s=%s' % (k, v) for k, v in sorted(env_.items())),
       ' '.join(pipes.quote(arg) for arg in args))
     if input is not None:
       if isinstance(input, list):
