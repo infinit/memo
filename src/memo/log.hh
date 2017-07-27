@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/flat-set.hh>
+#include <elle/log/fwd.hh>
 
 namespace memo
 {
@@ -18,10 +19,8 @@ namespace memo
   /// Ensures that the parent directory exists.
   std::string log_base(std::string const& base = "main");
 
-  /// Set up rotating logs for a given base.
-  ///
-  /// Reads `$MEMO_LOG_LEVEL`.
-  void make_log(std::string const& base);
+  /// The main logger.
+  elle::log::FileLogger*& main_log();
 
   /// Set up the main log, i.e., the log family typically stored in
   /// `~/.cache/infinit/memo/logs/main.*`.  Same as
@@ -29,6 +28,9 @@ namespace memo
   ///
   /// Reads `$MEMO_LOG_LEVEL`.
   void make_main_log();
+
+  /// Change the base of the main log.
+  void main_log_base(std::string const& base);
 
   /// The list of the @a n latest log files in a family.
   ///

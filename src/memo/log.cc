@@ -2,12 +2,16 @@
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/range/irange.hpp>
 
 #include <elle/archive/archive.hh>
 #include <elle/fstream.hh> // rotate_versions.
 #include <elle/log.hh>
+#include <elle/log/FileLogger.hh>
+#include <elle/system/getpid.hh>
 
 #include <memo/utility.hh>
 
@@ -25,42 +29,73 @@ namespace memo
   std::string log_base(std::string const& base)
   {
     auto const path = log_dir() / base;
-    auto const dir = path.parent_path().empty() ? "." : path.parent_path();
     // log_dir is created, but base may also contain `/`.
-    create_directories(dir);
+    elle::create_parent_directories(path);
     return path.string();
   }
 
-  void make_log(std::string const& base)
+  namespace
   {
-    auto const level =
-      memo::getenv("LOG_LEVEL",
-                   "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
-                   ",*grpc*:DEBUG,*prometheus:LOG"s);
-    auto const spec =
-      elle::print("file://{file}?"
-                  "time,microsec,"
-                  "append,size=64MiB,rotate=15,"
-                  "{level}",
-                  {
-                    {"file", log_base(base)},
-                    {"level", level},
-                  });
-    ELLE_DUMP("building log: {}", spec);
-    auto logger = elle::log::make_logger(spec);
-    auto const dashes = std::string(80, '-') + '\n';
-    logger->message(elle::log::Logger::Level::log,
-                    elle::log::Logger::Type::warning,
-                    _trace_component_,
-                    dashes + dashes + dashes
-                    + "starting memo " + version_describe(),
-                    __FILE__, __LINE__, "Memo::Memo");
-    elle::log::logger_add(std::move(logger));
+    std::unique_ptr<elle::log::Logger>
+    make_log(std::string const& base)
+    {
+      auto const level =
+        memo::getenv("LOG_LEVEL",
+                     "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
+                     ",*grpc*:DEBUG,*prometheus:LOG"s);
+      auto const now =
+        to_iso_string(boost::posix_time::microsec_clock::universal_time());
+      auto const file =
+        log_base(elle::print("{base}-{now}",
+                             {
+                               {"now", now},
+                               {"base", base},
+                               {"pid", elle::system::getpid()},
+                             }));
+      auto const spec =
+        elle::print("file://{file}"
+                    "?"
+                    "time,microsec,"
+                    "size=64MiB,rotate=15,"
+                    "{level}",
+                    {
+                      {"file", file},
+                      {"level", level},
+                    });
+      ELLE_DUMP("building log: {}", spec);
+      auto logger = elle::log::make_logger(spec);
+      auto const dashes = std::string(80, '-') + '\n';
+      logger->message(elle::log::Logger::Level::log,
+                      elle::log::Logger::Type::warning,
+                      _trace_component_,
+                      dashes + dashes + dashes
+                      + "starting memo " + version_describe(),
+                      __FILE__, __LINE__, "Memo::Memo");
+      return logger;
+    }
+  }
+
+  elle::log::FileLogger*&
+  main_log()
+  {
+    static auto res = static_cast<elle::log::FileLogger*>(nullptr);
+    return res;
   }
 
   void make_main_log()
   {
-    make_log("main");
+    auto l = make_log("main");
+    main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
+    elle::log::logger_add(std::move(l));
+  }
+
+  void
+  main_log_base(std::string const& base)
+  {
+    auto const old_base = elle::base(main_log()->fstream().path());
+    auto const new_base = boost::replace_last_copy(old_base.string(), "main", base);
+    elle::create_parent_directories(new_base);
+    main_log()->base(new_base);
   }
 
   std::vector<bfs::path>

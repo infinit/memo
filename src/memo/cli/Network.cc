@@ -6,6 +6,7 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/log/FileLogger.hh>
 #include <elle/make-vector.hh>
 #include <elle/reactor/network/resolve.hh>
 
@@ -866,7 +867,7 @@ namespace memo
                   boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
-        make_log(network_name);
+        main_log_base(network_name);
         auto& memo = cli.memo();
         auto owner = cli.as_user();
         auto network = memo.network_get(network_name, owner);
