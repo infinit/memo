@@ -20,6 +20,8 @@
 #include <elle/cryptography/rsa/PublicKey.hh>
 #include <elle/cryptography/hash.hh>
 
+#include <elle/das/serializer.hh>
+
 #include <elle/reactor/Backoff.hh>
 #include <elle/reactor/for-each.hh>
 
@@ -42,6 +44,9 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Paxos");
 #define BENCH(name)                                      \
   static elle::Bench bench("bench.paxos." name, 10000s); \
   elle::Bench::BenchScope bs(bench)
+
+ELLE_DAS_SERIALIZE(
+  memo::model::doughnut::consensus::Paxos::PaxosServer::Response);
 
 namespace memo
 {
@@ -242,7 +247,7 @@ namespace memo
             }
           }
 
-          boost::optional<Paxos::PaxosClient::Accepted>
+          Paxos::PaxosServer::Response
           propose(Paxos::PaxosClient::Quorum const& q,
                   Paxos::PaxosClient::Proposal const& p) override
           {
@@ -577,7 +582,7 @@ namespace memo
         | RemotePeer |
         `-----------*/
 
-        boost::optional<Paxos::PaxosClient::Accepted>
+        Paxos::PaxosServer::Response
         Paxos::RemotePeer::propose(PaxosServer::Quorum const& peers,
                                    Address address,
                                    PaxosClient::Proposal const& p,
@@ -593,7 +598,7 @@ namespace memo
                         Address,
                         PaxosClient::Proposal const&,
                         bool)
-                  -> boost::optional<PaxosClient::Accepted>;
+                  -> Paxos::PaxosServer::Response;
                 auto propose = this->make_rpc<Propose>("propose");
                 propose.set_context<Doughnut*>(&this->_doughnut);
                 return propose(peers, address, p, insert);
@@ -604,7 +609,7 @@ namespace memo
                   auto (PaxosServer::Quorum,
                         Address,
                         PaxosClient::Proposal const&)
-                  -> boost::optional<PaxosClient::Accepted>;
+                  -> Paxos::PaxosServer::Response;
                 auto propose = this->make_rpc<Propose>("propose");
                 propose.set_context<Doughnut*>(&this->_doughnut);
                 return propose(peers, address, p);
@@ -1209,7 +1214,7 @@ namespace memo
           return this->_paxos._rebalance(client, address);
         }
 
-        boost::optional<Paxos::PaxosClient::Accepted>
+        Paxos::PaxosServer::Response
         Paxos::LocalPeer::propose(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p,

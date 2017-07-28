@@ -50,7 +50,7 @@ namespace memo
           elle::unreachable();
         }
 
-        boost::optional<consensus::Paxos::PaxosClient::Accepted>
+        consensus::Paxos::PaxosServer::Response
         propose(consensus::Paxos::PaxosServer::Quorum const&,
                 Address,
                 consensus::Paxos::PaxosClient::Proposal const&,

@@ -1099,7 +1099,7 @@ public:
     Super::store(block, mode);
   }
 
-  boost::optional<Paxos::PaxosClient::Accepted>
+  Paxos::PaxosServer::Response
   propose(PaxosServer::Quorum const& peers,
           Address address,
           PaxosClient::Proposal const& p,

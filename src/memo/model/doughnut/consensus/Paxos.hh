@@ -141,7 +141,7 @@ namespace memo
             using Super = doughnut::Peer;
             Peer(Doughnut& dht, model::Address id);
             virtual
-            boost::optional<PaxosClient::Accepted>
+            PaxosServer::Response
             propose(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p,
@@ -185,7 +185,7 @@ namespace memo
               , Paxos::Peer(dht, connection->location().id())
               , Super(dht, std::move(connection))
             {}
-            boost::optional<PaxosClient::Accepted>
+            PaxosServer::Response
             propose(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p,
@@ -260,7 +260,7 @@ namespace memo
           | Paxos |
           `------*/
           public:
-            boost::optional<PaxosClient::Accepted>
+            PaxosServer::Response
             propose(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p,
