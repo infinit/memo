@@ -64,7 +64,11 @@ namespace memo
     auto const url = elle::sprintf("%s/crash/report", host);
     ELLE_DUMP("uploading %s to %s", fs, url);
     namespace http = elle::reactor::http;
-    auto r = http::Request(url, http::Method::PUT, "application/json");
+    // It can extremely long to checkout the debug-symbols on the
+    // server side.  Of course it should be asynchronous, but
+    // currently it is not.  So cut it some five minutes of slack.
+    auto r = http::Request(url, http::Method::PUT, "application/json",
+                           {5_min});
     elle::json::write(r, content);
     if (r.status() == http::StatusCode::OK)
     {
