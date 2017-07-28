@@ -106,6 +106,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(log_path, "store volume logs in given path");
     ELLE_DAS_CLI_SYMBOL(login_user, "login with selected user(s), of form 'user:password'");
     ELLE_DAS_CLI_SYMBOL(map_other_permissions, "allow chmod to set world permissions");
+    ELLE_DAS_CLI_SYMBOL(match, "regular expression specifying names of the {object} {action}");
     ELLE_DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none");
     ELLE_DAS_CLI_SYMBOL(monitoring, "enable monitoring");
     ELLE_DAS_CLI_SYMBOL(mount, "mount given volumes on startup, keep trying on error");

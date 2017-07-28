@@ -39,11 +39,16 @@ namespace memo
   std::vector<bfs::path>
   latest_logs(std::string const& base = "main", int n = 1);
 
-  /// The existing log families of existing logs.
-  boost::container::flat_set<std::string> log_families();
+  /// The existing log families that match a pattern.
+  ///
+  /// @param pattern  a regex
+  boost::container::flat_set<std::string>
+  log_families(std::string const& pattern = {});
 
-  /// Remove all the log files.
-  void log_remove_all();
+  /// Remove all the log files whose family match a pattern.
+  ///
+  /// @param pattern  a regex
+  void log_remove(std::string const& pattern = {});
 
   /// Generate a tgz with the latest critical log files.
   ///

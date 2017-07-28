@@ -1,9 +1,12 @@
 #include <memo/log.hh>
 
+#include <regex>
+
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/range/irange.hpp>
 
@@ -127,34 +130,65 @@ namespace memo
     return res;
   }
 
-  boost::container::flat_set<std::string>
-  log_families()
+  namespace
   {
+    /// Whether a directory entry's name is alike
+    /// "~/.cache/infinit/memo/logs/foo/base.123".
+    auto
+    has_version(bfs::directory_entry const& e)
+    {
+      auto const name = e.path().string().substr(log_dir().size() + 1);
+      auto const dot = name.rfind('.');
+      return dot != name.npos
+        && dot != name.size()
+        && std::all_of(name.begin() + dot + 1, name.end(),
+                       boost::is_digit());
+    }
+
+    /// All the log files that match a given regex.
+    auto
+    log_files(std::string const& re)
+    {
+      using namespace boost::adaptors;
+      return bfs::recursive_directory_iterator(log_dir())
+        | filtered(is_visible_file)
+        | filtered(has_version)
+        | filtered([re = std::regex(re)](auto const& p)
+                   {
+                     return regex_search(p.path().string(), re);
+                   });
+    }
+  }
+
+  boost::container::flat_set<std::string>
+  log_families(std::string const& re)
+  {
+    auto const prefix = log_dir().string();
     auto res = boost::container::flat_set<std::string>{};
-    for (auto const& p: bfs::recursive_directory_iterator(log_dir()))
-      if (is_visible_file(p))
-      {
-        // Check that name = "~/.cache/infinit/memo/logs/foo/base.123",
-        // keep "foo/base".
-        auto const name = p.path().string().substr(log_dir().size() + 1);
-        auto const dot = name.rfind('.');
-        if (dot == name.npos
-            || !boost::all(name.substr(dot + 1), boost::is_digit()))
-          ELLE_DUMP("ignoring file: {}", name);
-        else
-          res.emplace(name.substr(0, dot));
-      }
+    for (auto const& p: log_files(re))
+    {
+      auto dir = elle::base(p.path()).string();
+      ELLE_ASSERT(boost::starts_with(dir, prefix));
+      // Also remove the directory separator.
+      boost::erase_head(dir, prefix.size() + 1);
+      res.emplace(std::move(dir));
+    }
     return res;
   }
 
   void
-  log_remove_all()
+  log_remove(std::string const& re)
   {
-    auto ps = std::vector<bfs::path>{};
-    for (auto const& p: bfs::recursive_directory_iterator(log_dir()))
-      if (is_visible_file(p))
-        ps.emplace_back(std::move(p));
-    for (auto const& p: ps)
+    // FIXME: the rvalue implementation of elle::make_vector and these
+    // ranges don't work together.
+    auto const paths = [&]
+      {
+        auto res = std::vector<bfs::path>{};
+        for (auto const& p: log_files(re))
+          res.emplace_back(p.path());
+        return res;
+      }();
+    for (auto const& p: paths)
       elle::try_remove(p);
   }
 

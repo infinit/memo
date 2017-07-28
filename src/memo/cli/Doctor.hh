@@ -97,19 +97,21 @@ namespace memo
 
         // log delete.
         Mode<Log,
-             void (decltype(cli::all = false)),
+             void (decltype(cli::all = false),
+                   decltype(cli::match = boost::optional<std::string>{})),
              decltype(modes::mode_delete)>
         delete_;
         void
-        mode_delete(bool all = false);
+        mode_delete(bool all,
+                    boost::optional<std::string> const& match);
 
         // log list.
         Mode<Log,
-             void (),
+             void (decltype(cli::match = boost::optional<std::string>{})),
              decltype(modes::mode_list)>
         list;
         void
-        mode_list();
+        mode_list(boost::optional<std::string> const& match);
 
         // log push.
         Mode<Log,

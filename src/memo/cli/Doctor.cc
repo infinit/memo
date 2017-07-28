@@ -197,28 +197,35 @@ namespace memo
       : Object(memo)
       , delete_(*this,
                 "Delete logs locally",
-                cli::all = false)
+                cli::all = false,
+                cli::match = boost::optional<std::string>{})
       , list(*this,
-             "List existing log families")
+             "List existing log families",
+             cli::match = boost::optional<std::string>{})
       , push(*this,
              "Upload logs to {hub}",
              cli::name = "main"s)
     {}
 
     void
-    Doctor::Log::mode_delete(bool all)
+    Doctor::Log::mode_delete(bool all,
+                             boost::optional<std::string> const& match)
     {
       ELLE_TRACE_SCOPE("log.delete");
+      if (match && all)
+        elle::err<CLIError>("cannot use --name and --match simultaneously");
       if (all)
-        log_remove_all();
+        log_remove();
+      else if (match)
+        log_remove(*match);
     }
 
     void
-    Doctor::Log::mode_list()
+    Doctor::Log::mode_list(boost::optional<std::string> const& match)
     {
       ELLE_TRACE_SCOPE("log.list");
       elle::print(std::cout, "existing log families: {}\n",
-                  log_families());
+                  log_families(match.value_or(""s)));
     }
 
     void
