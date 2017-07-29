@@ -164,7 +164,7 @@ ELLE_TEST_SCHEDULED(parallel)
 {
   auto const delay = valgrind(120ms, 4);
   {
-    elle::os::setenv("MEMO_RPC_SERVE_THREADS", "5");
+    memo::setenv("RPC_SERVE_THREADS", 5);
     Server s(
       [&] (memo::RPCServer& s)
       {
@@ -192,7 +192,7 @@ ELLE_TEST_SCHEDULED(parallel)
     BOOST_TEST(duration <= delay * 3);
   }
   {
-    elle::os::setenv("MEMO_RPC_SERVE_THREADS", "0");
+    memo::setenv("RPC_SERVE_THREADS", 0);
     Server s(
       [&] (memo::RPCServer& s)
       {

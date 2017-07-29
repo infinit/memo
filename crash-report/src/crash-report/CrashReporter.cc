@@ -15,9 +15,9 @@
 #include <elle/system/platform.hh>
 #include <elle/system/user_paths.hh>
 
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
 # include <client/linux/handler/exception_handler.h>
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
 # include <crash-report/gcc_fix.hh>
 // FIXME: Adding `pragma GCC diagnostic ignored "-Wdeprecated"` does not work
 // for removing #import warnings.
@@ -40,7 +40,7 @@ namespace crash_report
         report.make_payload(base);
     }
 
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
     /// Untyped callback invoked by breakpad once the minidump saved.
     bool
     dump_callback(const breakpad::MinidumpDescriptor& descriptor,
@@ -50,7 +50,7 @@ namespace crash_report
       std::string base = descriptor.path();
       if (boost::ends_with(base, ".dmp"))
       {
-        base.substr(base.size() - 4);
+        base.resize(base.size() - 4);
         dump(*static_cast<CrashReporter*>(context), base);
         return succeeded;
       }
@@ -60,7 +60,7 @@ namespace crash_report
         return false;
       }
     }
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
     /// Untyped callback invoked by breakpad once the minidump saved.
     bool
     dump_callback(const char* dump_dir, const char* minidump_id,
@@ -78,7 +78,7 @@ namespace crash_report
     make_exception_handler(CrashReporter& report)
     {
       auto const& dumps_path = report.dumps_path().string();
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
       breakpad::MinidumpDescriptor descriptor(dumps_path);
       return
         std::make_unique<breakpad::ExceptionHandler>
@@ -88,7 +88,7 @@ namespace crash_report
          &report, // callback context
          true,    // install handler
          -1);     // server-fd.
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
       return
         std::make_unique<breakpad::ExceptionHandler>
         (dumps_path,
@@ -150,8 +150,7 @@ namespace crash_report
     , _dumps_path(std::move(dumps_path))
     , _version(std::move(version))
   {
-    using elle::os::getenv;
-    if (getenv("MEMO_CRASH_REPORT", production_build))
+    if (elle::os::getenv("MEMO_CRASH_REPORT", production_build))
     {
       this->_exception_handler = make_exception_handler(*this);
       ELLE_TRACE("crash handler started");

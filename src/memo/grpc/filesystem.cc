@@ -1,4 +1,4 @@
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # include <fcntl.h>
 #endif
 

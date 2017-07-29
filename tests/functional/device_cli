@@ -12,7 +12,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as alice, \
   # Signup without sending private key.
   alice.run(['user', 'signup',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
   alice.run(
@@ -32,7 +32,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as alice, \
   # Signup without sending private key.
   alice.run(['user', 'signup',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
   alice.run(
@@ -53,7 +53,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as alice, \
    # Signup without sending private key.
    alice.run(['user', 'signup',
               '--name', 'alice',
-              '--email', 'alice@infinit.io'])
+              '--email', 'alice@infinit.sh'])
    alice_json = alice.run_json(
      ['user', 'export', '--name', 'alice', '--full'])
    alice.run(
@@ -76,7 +76,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as alice, \
   # Signup without sending private key.
   alice.run(['user', 'signup',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   alice_json = alice.run_json(
     ['user', 'export', '--name', 'alice', '--full'])
   alice.run(
@@ -99,7 +99,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as alice, \
   # Signup without sending private key.
   alice.run(['user', 'signup',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   try:
     alice.run(
       ['device', 'receive', '--user', '--name', 'alice'],
@@ -115,7 +115,7 @@ Memo(beyond = beyond) as alice2:
   passphrase = 'super_passphrase'
   alice.run(['user', 'signup',
              '--name', 'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   alice.run(
     ['device', 'transmit', '--user',
      '--as', 'alice', '--no-countdown'],

@@ -5,8 +5,7 @@ namespace memo
 {
   namespace cli
   {
-    // Instantiate
-    template class Object<Silo, Memo>;
+    template class Object<Silo>;
     template class Object<Silo::Create, Silo>;
   }
 }

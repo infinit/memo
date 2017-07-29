@@ -73,9 +73,9 @@ with Memo() as bob:
 with Beyond() as beyond, Memo(beyond = beyond) as tmp:
   bob = User(memo = tmp, name = 'bob')
   alice = User(memo = tmp, name = 'alice')
-  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(
-    ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])
+    ['user', 'signup', 'alice', '--email', 'alice@infinit.sh'])
   bob.run(['silo', 'create', 'filesystem', '--as', 'bob', 's'])
   assertEq(len(bob.run_json(['silo', 'list', '-s'])), 1)
   bob.run(['network', 'create', '--as', 'bob', 'n', '-S', 's', '-p'])

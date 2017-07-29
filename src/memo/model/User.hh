@@ -1,5 +1,4 @@
-#ifndef INFINIT_MODEL_USER_HH
-# define INFINIT_MODEL_USER_HH
+#pragma once
 
 namespace memo
 {
@@ -8,11 +7,8 @@ namespace memo
     class User
     {
     public:
-      virtual ~User()
-      {}
-      virtual std::string name() {return "";};
+      virtual ~User() {}
+      virtual std::string name() const { return {}; };
     };
   }
 }
-
-#endif

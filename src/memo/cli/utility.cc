@@ -41,8 +41,8 @@ namespace memo
       , _network(network)
       , _self(self)
     {
-      bool v4 = !memo::getenv("NO_IPV4", false);
-      bool v6 = !memo::getenv("NO_IPV6", false)
+      bool v4 = memo::getenv("IPV4", true);
+      bool v6 = memo::getenv("IPV6", true)
        && network.dht()->version >= elle::Version(0, 7, 0);
       Endpoints endpoints;
       if (advertise)
@@ -85,7 +85,7 @@ namespace memo
       {
         try
         {
-          auto host = elle::os::getenv("MEMO_RDV", "rdv.infinit.sh:7890"s);
+          auto host = memo::getenv("RDV", "rdv.infinit.sh:7890"s);
           if (host.empty())
             throw std::runtime_error("RDV disabled");
           int port = 7890;
@@ -171,7 +171,7 @@ namespace memo
       }
       else
       {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
         return std::make_unique<elle::reactor::FDStream>(0);
 #else
         // Windows does not support async io on stdin
@@ -200,7 +200,7 @@ namespace memo
       return memo::xdg_runtime_dir() / "daemon.sock";
     }
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     DaemonHandle
     daemon_hold(int nochdir, int noclose)
     {
@@ -251,7 +251,7 @@ namespace memo
     void
     hook_stats_signals(memo::model::doughnut::Doughnut& dht)
     {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       elle::reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
           auto& o = dht.overlay();
           try

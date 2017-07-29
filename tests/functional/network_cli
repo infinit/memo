@@ -108,8 +108,8 @@ with Memo() as tmp:
 with Beyond() as beyond, Memo(beyond = beyond) as bob, \
      Memo(beyond = beyond) as alice:
 
-  bob.run(['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.io'])
-  alice.run(['user', 'signup', '--name', 'alice', '--email', 'alice@infinit.io'])
+  bob.run(['user', 'signup', '--name', 'bob', '--email', 'bob@infinit.sh'])
+  alice.run(['user', 'signup', '--name', 'alice', '--email', 'alice@infinit.sh'])
   bob.run(['user', 'fetch', '--name', 'alice'])
   alice.run(['user', 'fetch', '--name', 'bob'])
 
@@ -156,8 +156,8 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob, \
 # Update network.
 with Beyond() as beyond, Memo(beyond = beyond) as bob, \
      Memo(beyond = beyond) as alice:
-  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.io'])
-  alice.run(['user', 'signup',  'alice', '--email', 'alice@infinit.io'])
+  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.sh'])
+  alice.run(['user', 'signup',  'alice', '--email', 'alice@infinit.sh'])
   bob.run(['user', 'fetch', '--name', 'alice'])
 
   bob.run(['network', 'create', '--name', 'n',
@@ -193,8 +193,8 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob, \
   assertEq(e0, e1)
 
 def setup(beyond, bob, alice):
-  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.io'])
-  alice.run(['user', 'signup',  'alice', '--email', 'alice@infinit.io'])
+  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.sh'])
+  alice.run(['user', 'signup',  'alice', '--email', 'alice@infinit.sh'])
   bob.run(['user', 'fetch', '--name', 'alice'])
   # Create network.
   bob.run(['network', 'create', '--name', 'n', '--as', 'bob', '--kelips', '--push', '--port', '8181', '--protocol', 'utp'])
@@ -260,9 +260,9 @@ for field, body in [
 # Create and link with multiple 'storage'.
 with Beyond() as beyond, Memo(beyond = beyond) as bob, \
      Memo(beyond = beyond) as alice:
-  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup',  'bob', '--email', 'bob@infinit.sh'])
   alice.run(['user', 'signup',  'alice',
-             '--email', 'alice@infinit.io'])
+             '--email', 'alice@infinit.sh'])
   bob.run(['user', 'fetch', '--name', 'alice'])
   bob.run(['silo', 'create', 'filesystem',
            '--name', 'bob_storage_1'])
@@ -290,7 +290,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob, \
 # Pull and delete.
 with Beyond() as beyond, Memo(beyond = beyond) as bob:
   # Local and Beyond.
-  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
   bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'],
@@ -390,9 +390,9 @@ remove_network_linked_by_two_users(owner_remove = False)
 # Purge.
 with Beyond() as beyond, \
     Memo(beyond = beyond) as bob, Memo(beyond = beyond) as alice:
-  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(
-    ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])
+    ['user', 'signup', 'alice', '--email', 'alice@infinit.sh'])
   bob.run(['silo', 'create', 'filesystem', '--as', 'bob', 's'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assertEq(len(bob.run_json(['network', 'list', '-s', '--as', 'bob'])), 1)

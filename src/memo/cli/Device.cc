@@ -158,7 +158,6 @@ namespace memo
         }
         cli.report_action("received", "user identity for", name);
       }
-
     }
 
     void
@@ -201,35 +200,37 @@ namespace memo
           int timeout = 5 * 60; // 5 min.
           bool timed_out = false;
           bool done = false;
-          elle::reactor::Thread hub_poller(elle::reactor::scheduler(), "beyond poller", [&]
+          auto&& hub_poller =
+            elle::reactor::Thread(elle::reactor::scheduler(), "beyond poller", [&]
             {
+              namespace http = elle::reactor::http;
               auto where = elle::sprintf("users/%s/pairing/status", user.name);
               while (timeout > 0)
               {
-                auto c = elle::reactor::http::Request::Configuration{};
+                auto c = http::Request::Configuration{};
                 auto headers =
-                  memo::signature_headers(elle::reactor::http::Method::GET, where, user);
+                  memo::signature_headers(http::Method::GET, where, user);
                 headers_add(c, headers);
-                auto r = elle::reactor::http::Request
+                auto r = http::Request
                   (elle::sprintf("%s/%s", memo::beyond(), where),
-                   elle::reactor::http::Method::GET,
+                   http::Method::GET,
                    std::move(c));
                 elle::reactor::wait(r);
                 switch (r.status())
                 {
-                case elle::reactor::http::StatusCode::OK:
+                case http::StatusCode::OK:
                   // Do nothing.
                   break;
 
-                case elle::reactor::http::StatusCode::Not_Found:
+                case http::StatusCode::Not_Found:
                   done = true;
                   return;
 
-                case elle::reactor::http::StatusCode::Gone:
+                case http::StatusCode::Gone:
                   timed_out = true;
                   return;
 
-                case elle::reactor::http::StatusCode::Forbidden:
+                case http::StatusCode::Forbidden:
                   memo::read_error<memo::ResourceProtected>
                     (r, "user identity", user.name);
                   break;

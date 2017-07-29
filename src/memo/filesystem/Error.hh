@@ -1,9 +1,9 @@
 #pragma once
 
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
 # include <sys/types.h>
 # include <attr/xattr.h>
-#elif defined MEMO_MACOSX
+#elif defined ELLE_MACOS
 # include <sys/xattr.h>
 #endif
 

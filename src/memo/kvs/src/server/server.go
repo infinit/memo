@@ -148,23 +148,34 @@ func (server *kvServer) Fetch(ctx context.Context, req *service.FetchRequest) (*
 	if key == "" {
 		return nil, grpc.Errorf(codes.InvalidArgument, "key is empty")
 	}
-	block, err := server.rootBlock()
-	if err != nil {
-		return nil, err
+	lastVersion := int64(0)
+	lastTime := time.Now()
+	for {
+		block, err := server.rootBlock()
+		if err != nil {
+			return nil, err
+		}
+		km, err := getMap(block)
+		if err != nil {
+			return nil, err
+		}
+		desc := km.GetMap()[key]
+		if desc == nil || desc.GetCurrent() == nil || desc.GetCurrent().GetAddress() == nil {
+			return nil, grpc.Errorf(codes.NotFound, "no value for key: %v", key)
+		}
+		chb, err := server.vStore.Fetch(context.Background(), &vs.FetchRequest{Address: desc.GetCurrent().GetAddress()})
+		if err != nil {
+			if block.Version != lastVersion {
+				lastTime = time.Now()
+				lastVersion = block.Version
+				continue
+			}
+			if time.Now().Sub(lastTime).Seconds() > 10 {
+				return nil, grpc.Errorf(codes.Internal, "unable to fetch value: %v", err)
+			}
+		}
+		return &service.FetchResponse{Value: chb.GetBlock().GetData()}, nil
 	}
-	km, err := getMap(block)
-	if err != nil {
-		return nil, err
-	}
-	desc := km.GetMap()[key]
-	if desc == nil || desc.GetCurrent() == nil || desc.GetCurrent().GetAddress() == nil {
-		return nil, grpc.Errorf(codes.NotFound, "no value for key: %v", key)
-	}
-	chb, err := server.vStore.Fetch(context.Background(), &vs.FetchRequest{Address: desc.GetCurrent().GetAddress()})
-	if err != nil {
-		return nil, grpc.Errorf(codes.Internal, "unable to fetch value: %v", err)
-	}
-	return &service.FetchResponse{Value: chb.GetBlock().GetData()}, nil
 }
 
 func (server *kvServer) Delete(ctx context.Context, req *service.DeleteRequest) (*service.DeleteResponse, error) {

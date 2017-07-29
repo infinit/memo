@@ -1,11 +1,10 @@
-#ifndef INFINIT_MODEL_PARANOID_PARANOID_HH
-# define INFINIT_MODEL_PARANOID_PARANOID_HH
+#pragma once
 
-# include <memory>
+#include <memory>
 
-# include <elle/cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-# include <memo/model/Model.hh>
+#include <memo/model/Model.hh>
 
 namespace memo
 {
@@ -24,7 +23,6 @@ namespace memo
         ~Paranoid();
 
       protected:
-        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
@@ -34,7 +32,6 @@ namespace memo
         void
         _update(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
         void
         _remove(Address address, blocks::RemoveSignature) override;
         ELLE_ATTRIBUTE_R(elle::cryptography::rsa::KeyPair, keys);
@@ -43,5 +40,3 @@ namespace memo
     }
   }
 }
-
-#endif

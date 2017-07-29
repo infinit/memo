@@ -20,8 +20,6 @@ namespace memo
   namespace bfs = boost::filesystem;
 
   /// This object is used to manipulate resources used by Memo.
-  ///
-  ///
   class Memo
   {
   public:

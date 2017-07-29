@@ -73,15 +73,13 @@ namespace memo
           , _queue()
           , _next_index(1)
           , _last_processed_index(0)
-          , _journal_dir(journal_dir)
+          , _journal_dir(std::move(journal_dir))
           , _exit_requested(false)
           , _process_thread(
             new elle::reactor::Thread(elle::sprintf("%s loop", *this),
                                 [this] {
-                                  bool freeze = getenv("INFINIT_ASYNC_NOPOP");
-                                  if (freeze)
-                                    return;
-                                  this->_process_loop();
+                                  if (!memo::getenv("ASYNC_NOPOP", false))
+                                    this->_process_loop();
                                 }))
           , _in_push(false)
           , _processed_op_count(0)
@@ -271,7 +269,7 @@ namespace memo
         {
           op.index = -1; // for nice debug prints, we will set that later
           // squash check
-          static bool squash_enabled = !elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", false);
+          static bool squash_enabled = memo::getenv("ASYNC_SQUASH", true);
           auto its = this->_operations.get<0>().equal_range(op.address);
           if (squash_enabled && its.second != its.first && op.resolver)
           {
@@ -581,8 +579,7 @@ namespace memo
         {
           ++_processed_op_count;
           static const auto delay
-            = std::chrono::milliseconds(elle::os::getenv(
-                "INFINIT_ASYNC_POP_DELAY", 0));
+            = std::chrono::milliseconds(memo::getenv("ASYNC_POP_DELAY", 0));
           if (delay != 0s)
             elle::reactor::sleep(delay);
           Address addr = op->address;

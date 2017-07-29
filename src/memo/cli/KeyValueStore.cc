@@ -425,7 +425,7 @@ namespace memo
             }));
         }
         static const auto signals = {SIGINT, SIGTERM
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                                      , SIGQUIT
 #endif
         };

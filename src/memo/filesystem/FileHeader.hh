@@ -7,7 +7,7 @@
 
 #include <memo/serialization.hh>
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 namespace
 {
   int getuid()

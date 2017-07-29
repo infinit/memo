@@ -35,6 +35,7 @@ namespace memo
         class CacheConflictResolver: public ConflictResolver
         {
         public:
+          using Slot = std::shared_ptr<std::unique_ptr<blocks::Block>*>;
           CacheConflictResolver(elle::serialization::SerializerIn& s,
                                 elle::Version const& v)
             : _slot(nullptr)
@@ -42,7 +43,7 @@ namespace memo
             this->serialize(s, v);
           }
 
-          CacheConflictResolver(std::unique_ptr<blocks::Block>* slot,
+          CacheConflictResolver(Slot slot,
                                 std::unique_ptr<ConflictResolver> backend)
             : _slot(slot)
             , _backend(std::move(backend))
@@ -53,7 +54,7 @@ namespace memo
                      blocks::Block& current) override
           {
             auto res = (*_backend)(b, current);
-            if (res && this->_slot)
+            if (res && this->_slot && *this->_slot)
             {
               res->validated(true); // block generated localy
               res->seal();
@@ -64,7 +65,7 @@ namespace memo
                 dynamic_cast<blocks::MutableBlock&>(current).version(),
                 dynamic_cast<blocks::MutableBlock&>(*res).version(),
                 _backend->description());
-              *this->_slot = res->clone();
+              **this->_slot = res->clone();
             }
             return res;
           }
@@ -81,7 +82,7 @@ namespace memo
           {
             return "cache wrapper for " + this->_backend->description();
           }
-          std::unique_ptr<blocks::Block>* _slot;
+          Slot _slot;
           std::unique_ptr<ConflictResolver> _backend;
         };
 
@@ -213,7 +214,7 @@ namespace memo
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
             elle::err("invalid block");
           }
-          static bool decode = !elle::os::getenv("MEMO_NO_PREEMPT_DECODE", false);
+          static bool decode = memo::getenv("PREEMPT_DECODE", true);
           if (decode)
             try
             {
@@ -368,12 +369,15 @@ namespace memo
           {
             static elle::Bench bench("bench.cache.store.store", 10000s);
             elle::Bench::BenchScope bs(bench);
-            this->_backend->store(
-              std::move(block), mode,
-              resolver ?
-                std::make_unique<CacheConflictResolver>(&cloned,
-                                                        std::move(resolver))
-                :  std::unique_ptr<ConflictResolver>());
+            std::unique_ptr<ConflictResolver> r;
+            auto slot = std::make_shared<std::unique_ptr<blocks::Block>*>(&cloned);
+            if (resolver)
+              r = std::make_unique<CacheConflictResolver>(slot,
+                                                          std::move(resolver));
+            this->_backend->store(std::move(block), mode, std::move(r));
+            // If async is enabled conflict resolver might be called
+            // asynchronously.
+            *slot = nullptr;
           }
           if (mb)
             this->insert(std::move(cloned));
@@ -489,7 +493,7 @@ namespace memo
                   }
                 }
                 static const int batch_size =
-                  elle::os::getenv("MEMO_CACHE_REFRESH_BATCH_SIZE", 20);
+                  memo::getenv("CACHE_REFRESH_BATCH_SIZE", 20);
                 for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
                 {
                   std::vector<Model::AddressVersion> batch;

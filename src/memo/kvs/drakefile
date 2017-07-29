@@ -124,11 +124,11 @@ def configure(
   gen_cpp = grpc.GRPCCxxGen(
     service_proto,
     grpc.grpc.protoc,
-    drake.node(grpc.grpc.grpc_cpp_plugin))
+    grpc.grpc.grpc_cpp_plugin)
   gen_py = grpc.GRPCPyGen(
     service_proto,
     grpc.grpc.protoc,
-    drake.node(grpc.grpc.grpc_python_plugin))
+    grpc.grpc.grpc_python_plugin)
 
   ## -------------------- ##
   ## Docker python client ##
@@ -146,14 +146,15 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.run('apk add --update python3' \
+  docker_file.run('apk add --update python3 libgcc' \
                   '&& apk add --virtual build-deps python3-dev gcc g++' \
                   '&& pip3 install grpcio ' \
                   '&& apk del build-deps ' \
                   '&& rm -rf /var/cache/apk/*')
-  docker_file.env('PYTHONPATH', '/root')
-  docker_file.add(drake.copy([drake.node('memo_kvs.py')] + gen_py.targets(),
-                             docker_path, strip_prefix = True), '/root/')
+  docker_file.env('PYTHONPATH', '/root/')
+  docker_file.add(list(map(lambda x: drake.copy(x, docker_path, strip_prefix = True),
+                           [drake.node('memo_kvs.py')] + gen_py.targets())),
+                  '/root/')
   docker_file.entry_point(
     ['/usr/bin/env', 'python3', '-i', '-m', 'memo_kvs'])
   drake.docker.DockerBuilder(docker_image, docker_file)

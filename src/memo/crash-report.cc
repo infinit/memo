@@ -4,6 +4,8 @@
 
 ELLE_LOG_COMPONENT("CrashReporter");
 
+
+
 #if MEMO_ENABLE_CRASH_REPORT
 
 #include <string>
@@ -11,6 +13,7 @@ ELLE_LOG_COMPONENT("CrashReporter");
 #include <boost/range/algorithm/max_element.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/assert.hh>
 #include <elle/bytes.hh>
 #include <elle/log.hh>
 #include <elle/log/FileLogger.hh>
@@ -27,7 +30,7 @@ namespace memo
   auto
   make_reporter()
   {
-    auto const host = elle::os::getenv("MEMO_CRASH_REPORT_HOST", beyond());
+    auto const host = memo::getenv("CRASH_REPORT_HOST", beyond());
     auto const url = elle::sprintf("%s/crash/report", host);
 
     auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");

@@ -129,15 +129,15 @@ def configure(
   cxx_config.define('_FILE_OFFSET_BITS=64')
 
   if cxx_toolkit.os == drake.os.linux:
-    cxx_config.define('MEMO_LINUX')
+    cxx_config.define('ELLE_LINUX')
   elif cxx_toolkit.os == drake.os.android:
-    cxx_config.define('MEMO_ANDROID')
+    cxx_config.define('ELLE_ANDROID')
   elif cxx_toolkit.os == drake.os.macos:
-    cxx_config.define('MEMO_MACOSX')
+    cxx_config.define('ELLE_MACOS')
   elif cxx_toolkit.os == drake.os.windows:
-    cxx_config.define('MEMO_WINDOWS')
+    cxx_config.define('ELLE_WINDOWS')
   elif cxx_toolkit.os is drake.os.ios:
-    cxx_config.define('MEMO_IOS')
+    cxx_config.define('ELLE_IOS')
 
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
@@ -186,13 +186,13 @@ def configure(
     drake.node('src/memo/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   memo_sources = drake.nodes(
-    'src/memo/Memo.cc',
-    'src/memo/Memo.hh',
-    'src/memo/Memo.hxx',
     'src/memo/KeyValueStore.cc',
     'src/memo/KeyValueStore.hh',
     'src/memo/LoginCredentials.cc',
     'src/memo/LoginCredentials.hh',
+    'src/memo/Memo.cc',
+    'src/memo/Memo.hh',
+    'src/memo/Memo.hxx',
     'src/memo/MountOptions.cc',
     'src/memo/MountOptions.hh',
     'src/memo/Network.cc',
@@ -777,7 +777,10 @@ def configure(
         minidump_stackwalk = minidump_stackwalk,
       )
       if enable_crash_report:
-        crash_test_libs = [
+        crash_test_bin = drake.cxx.Executable(
+          'tests/functional/bin/crasher', [
+            drake.node('tests/functional/bin/crasher.cc'),
+            memo_lib,
             crash_report_lib,
             cryptography_lib,
             elle_lib,
@@ -785,18 +788,14 @@ def configure(
             elle.boost.program_options_dynamic,
             elle.boost.filesystem_dynamic,
             elle.boost.regex_dynamic,
-          ]
-        crash_test_bin = drake.cxx.Executable(
-          'tests/functional/bin/crasher', [
-            drake.node('tests/functional/bin/crasher.cc')
-          ] + crash_test_libs,
+          ],
           cxx_toolkit,
           cxx_config_memo)
       def functional_test(name, env = {}, binaries = []):
         t = {
-          'name': name
+          'name': name,
+          'dependencies': [],
         }
-        t['dependencies'] = []
         if env:
           t['env'] = env
         if binaries:
@@ -844,7 +843,7 @@ def configure(
                     ).path().dirname())
                   ))))
       tests.append(doctor_configuration_test)
-      if enable_crash_report:
+      if False and enable_crash_report: # FIXME: reenable
         tests.append(functional_test('crash-reporter'))
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
@@ -875,7 +874,7 @@ def configure(
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'MEMO_BINARIES': str(binaries_path),
+          'BIN_DIR': str(binaries_path),
           'TEST_MEMO_WITH_KVS': str(with_kvs),
         }
         env.update(t.get('env', {}))
@@ -957,7 +956,7 @@ def configure(
                                              strip_prefix = True)
   tests_proto = grpc.GRPCCxxGen(drake.node('tests/grpc.proto'),
                                 grpc.grpc.protoc,
-                                drake.node(grpc.grpc.grpc_cpp_plugin))
+                                grpc.grpc.grpc_cpp_plugin)
   tests_names = [
     # test_name               , deps     , args = ['name-extension', tests-args...]
     # tests-args offer a means to run a binaries with different cli options,
@@ -1003,11 +1002,10 @@ def configure(
         that_test_libs += [dokan_lib_tests_consensus]
       else:
         that_test_libs += [dokan_lib_tests]
-    if test_name == 'grpc' and cxx_toolkit.os is drake.os.linux:
-      that_test_libs += grpc.gen_vs_w_named.targets()
-      that_test_libs.append(grpc.grpc.protobuf_lib)
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()
+      if cxx_toolkit.os is drake.os.linux:
+        that_test_libs += grpc.gen_vs_w_named.targets() + [grpc.grpc.protobuf_lib]
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [

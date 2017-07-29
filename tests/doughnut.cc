@@ -12,7 +12,7 @@
 #include <elle/utils.hh>
 #include <elle/Version.hh>
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
@@ -970,7 +970,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
 {
   auto keys_a = elle::cryptography::rsa::keypair::generate(key_size());
@@ -2265,7 +2265,7 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
   TEST(monitoring);
 #endif
   {

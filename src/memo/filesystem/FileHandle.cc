@@ -4,27 +4,25 @@
 #include <boost/range/algorithm/min_element.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/cast.hh>
 #include <elle/cryptography/SecretKey.hh>
 #include <elle/cryptography/random.hh>
-
-#include <memo/filesystem/Directory.hh>
-#include <elle/cast.hh>
-#include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
-#include <memo/model/doughnut/Doughnut.hh>
 
+#include <memo/environ.hh>
+#include <memo/filesystem/Directory.hh>
 #include <memo/model/MissingBlock.hh>
+#include <memo/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("memo.filesystem.FileHandle");
 
 namespace
 {
-  using elle::os::getenv;
-  auto const max_embed_size = getenv("INFINIT_MAX_EMBED_SIZE", 8192);
-  auto const lookahead_blocks = getenv("INFINIT_LOOKAHEAD_BLOCKS", 5);
-  auto const max_lookahead_threads = getenv("INFINIT_LOOKAHEAD_THREADS", 3);
+  auto const max_embed_size = memo::getenv("MAX_EMBED_SIZE", 8192);
+  auto const lookahead_blocks = memo::getenv("LOOKAHEAD_BLOCKS", 5);
+  auto const max_lookahead_threads = memo::getenv("LOOKAHEAD_THREADS", 3);
   using Size = elle::Buffer::Size;
-  auto const default_first_block_size = Size(getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", 0));
+  auto const default_first_block_size = Size(memo::getenv("FIRST_BLOCK_DATA_SIZE", 0));
 }
 
 namespace memo

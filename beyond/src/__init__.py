@@ -58,12 +58,13 @@ def symbols_update():
   if symbols_checkout():
     return True
   # We failed.  Maybe the repository is broken, erase it and restart.
-  try:
-    shutil.rmtree(repo_dir)
-  except Exception as e:
-    log('symbolize: symbols_update: cannot remove {}: {}',
-        repo_dir, e)
-    return False
+  if os.path.exists(repo_dir):
+    try:
+      shutil.rmtree(repo_dir)
+    except Exception as e:
+      log('symbolize: symbols_update: cannot remove {}: {}',
+          repo_dir, e)
+      return False
   p = run(['git', 'clone',
            'git@git.infinit.sh:infinit/debug-symbols.git',
            repo_dir])
@@ -112,7 +113,7 @@ os.environ['MEMO_CRASH_REPORT'] = '0'
 
 def find_binaries():
   for path in chain(
-      [os.environ.get('MEMO_BINARIES')],
+      [os.environ.get('BIN_DIR')],
       os.environ.get('PATH', '').split(':'),
       ['bin', '/opt/memo/bin'],
   ):

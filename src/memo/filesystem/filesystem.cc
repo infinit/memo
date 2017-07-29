@@ -46,7 +46,7 @@
 #include <memo/filesystem/Symlink.hh>
 #include <memo/filesystem/Unknown.hh>
 
-#ifdef MEMO_LINUX
+#ifdef ELLE_LINUX
   #include <attr/xattr.h>
 #endif
 

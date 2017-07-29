@@ -31,14 +31,14 @@ using namespace std::literals;
 
 ELLE_LOG_COMPONENT("test");
 
-#if defined MEMO_WINDOWS
+#if defined ELLE_WINDOWS
 # undef stat
 # define IF_WINDOWS(Then, Else) (Then)
 #else
 # define IF_WINDOWS(Then, Else) (Else)
 #endif
 
-#if defined MEMO_MACOSX
+#if defined ELLE_MACOS
 # define IF_MACOS(Then, Else) (Then)
 #else
 # define IF_MACOS(Then, Else) (Else)
@@ -123,7 +123,7 @@ public:
         ELLE_LOG("endpoints: %s", res);
         return res;
       });
-    elle::os::setenv("MEMO_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
+    memo::setenv("BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
   }
 
   void push(memo::model::Address id, Endpoints eps)
@@ -378,7 +378,7 @@ ELLE_TEST_SCHEDULED(basic)
 {
   auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -430,7 +430,7 @@ namespace
   {
     elle::filesystem::TemporaryDirectory d;
     auto tmp = d.path();
-    elle::os::setenv("MEMO_HOME", tmp.string());
+    memo::setenv("HOME", tmp.string());
     auto const kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
     auto fswrite = make_observer(tmp, kp, 1, replication_factor, true, false, false);
@@ -612,7 +612,7 @@ ELLE_TEST_SCHEDULED(conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -691,7 +691,7 @@ ELLE_TEST_SCHEDULED(times)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 1);
   auto fsp = make_observer(tmp, kp, 1, 1, false, false, false);
@@ -746,7 +746,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
@@ -783,7 +783,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   constexpr auto iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
@@ -809,7 +809,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
   auto const fss = node_to_fs(nodes);
@@ -947,10 +947,10 @@ ELLE_TEST_SCHEDULED(beyond_storage)
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("MEMO_CONNECT_TIMEOUT", "2");
-  elle::os::setenv("MEMO_SOFTFAIL_TIMEOUT", "5");
+  memo::setenv("CONNECT_TIMEOUT", 2);
+  memo::setenv("SOFTFAIL_TIMEOUT", 5);
   // disable RDV so that nodes won't find each other that way
-  elle::os::setenv("MEMO_RDV", "");
+  memo::setenv("RDV", "");
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));

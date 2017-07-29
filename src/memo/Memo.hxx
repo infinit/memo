@@ -8,7 +8,7 @@ namespace memo
     std::string
     plural(std::string const& type)
     {
-      return elle::sprintf("%s%s", type, type.back() == 's' ? "" : "s");
+      return elle::print("%s%s", type, type.back() == 's' ? "" : "s");
     }
   }
 
@@ -73,7 +73,7 @@ namespace memo
   Memo::hub_fetch(std::string const& type,
                   std::string const& name) const
   {
-    return hub_fetch<T>(elle::sprintf("%s/%s", plural(type), name),
+    return hub_fetch<T>(elle::print("%s/%s", plural(type), name),
                         type, name);
   }
 
@@ -109,7 +109,7 @@ namespace memo
                  bool hub_error,
                  bool update) const
   {
-    hub_push<Serializer>(elle::sprintf("%s/%s", plural(type), name),
+    hub_push<Serializer>(elle::print("%s/%s", plural(type), name),
                          type, name, o, self, hub_error, update);
   }
 }

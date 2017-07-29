@@ -1,9 +1,8 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_USER_HH
-# define INFINIT_MODEL_DOUGHNUT_USER_HH
+#pragma once
 
-# include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
 
-# include <memo/model/User.hh>
+#include <memo/model/User.hh>
 
 namespace memo
 {
@@ -15,13 +14,11 @@ namespace memo
         : public model::User
       {
       public:
-        User(elle::cryptography::rsa::PublicKey key, std::string const& name);
-        std::string name() override;
+        User(elle::cryptography::rsa::PublicKey key, std::string name);
+        std::string name() const override;
         ELLE_ATTRIBUTE_R(elle::cryptography::rsa::PublicKey, key);
-        ELLE_ATTRIBUTE_R(std::string, name);
+        ELLE_ATTRIBUTE(std::string, name);
       };
     }
   }
 }
-
-#endif
