@@ -360,10 +360,6 @@ def configure(
   ## Binaries ##
   ## -------- ##
 
-  def cpp_str_escape(string):
-    from json import dumps
-    return dumps(string).strip('"')
-
   cli_cxx_config = drake.cxx.Config(cxx_config)
   cli_cxx_config += elle.das.config
   cli_cxx_config += grpc.grpc.cxx_config
