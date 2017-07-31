@@ -6,16 +6,15 @@
 #include <elle/cast.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
-#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
-#include <elle/utility/Move.hh>
 
 #include <elle/cryptography/hash.hh>
 #include <elle/cryptography/random.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/blocks/ACLBlock.hh>
-#include <memo/model/blocks/MutableBlock.hh>
 #include <memo/model/blocks/GroupBlock.hh>
+#include <memo/model/blocks/MutableBlock.hh>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/Local.hh>
 #include <memo/model/doughnut/Remote.hh>
@@ -100,8 +99,7 @@ namespace memo
           }
           else
           {
-            static bool hash_enabled =
-              !elle::os::getenv("INFINIT_DISABLE_KEY_HASH", false);
+            static bool hash_enabled = memo::getenv("KEY_HASH", true);
             Local* local = nullptr;
             elle::unconst(s.context()).get(local, (Local*)nullptr);
             Remote* remote = nullptr;

@@ -17,6 +17,7 @@
 #include <elle/protocol/ChanneledStream.hh>
 #include <elle/protocol/Serializer.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/doughnut/Passport.hh>
 
 namespace memo
@@ -367,7 +368,7 @@ namespace memo
     _serve(elle::protocol::ChanneledStream& channels)
     {
       ELLE_LOG_COMPONENT("memo.RPC");
-      auto nthreads = elle::os::getenv("MEMO_RPC_SERVE_THREADS", 1);
+      auto nthreads = memo::getenv("RPC_SERVE_THREADS", 1);
       elle::reactor::Semaphore sem(nthreads? nthreads+1 : 1000000000);
       elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
       {

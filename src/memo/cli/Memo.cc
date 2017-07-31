@@ -54,16 +54,16 @@ namespace memo
       {
         auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
-        if (!memo::getenv("DISABLE_SIGNAL_HANDLER", false))
+        if (memo::getenv("SIGNAL_HANDLER", true))
         {
           static const auto signals = {SIGINT, SIGTERM
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                                        , SIGQUIT
 #endif
           };
           for (auto signal: signals)
           {
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             ELLE_DEBUG("set signal handler for %s", strsignal(signal));
 #endif
             elle::reactor::scheduler().signal_handle(
@@ -80,7 +80,7 @@ namespace memo
       void
       check_broken_locale()
       {
-#if defined MEMO_LINUX
+#if defined ELLE_LINUX
         // boost::filesystem uses the default locale, detect here if
         // it can't be instantiated.  Not required on OS X, see
         // boost/libs/filesystem/src/path.cpp:819.
@@ -241,7 +241,7 @@ namespace memo
       {
         auto report_thread = make_reporter_thread();
         check_broken_locale();
-        check_environment();
+        environ_check();
         main_impl(args);
         if (report_thread)
           elle::reactor::wait(*report_thread);
@@ -372,7 +372,7 @@ namespace memo
       void
       echo_mode(bool enable)
       {
-#if defined MEMO_WINDOWS
+#if defined ELLE_WINDOWS
         HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
         DWORD mode;
         GetConsoleMode(hStdin, &mode);
@@ -480,7 +480,7 @@ namespace
 }
 
 int
-main(int argc, char** argv)
+main(int const argc, char const* const* const argv)
 {
   argv_0 = argv[0];
   memo_exe = (bfs::path(argv_0).parent_path() / BIN).string();
@@ -503,14 +503,14 @@ main(int argc, char** argv)
   }
   catch (elle::Error const& e)
   {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
     if (memo::getenv("BACKTRACE", false))
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
   catch (bfs::filesystem_error const& e)
   {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
     return 1;
   }
   catch (elle::Exit const& e)

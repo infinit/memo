@@ -6,9 +6,9 @@ import json
 # Using hub to retreive passports.
 with Beyond() as beyond, Memo(beyond) as bob, Memo(beyond) as alice:
   bob.run(['user', 'signup',
-           '--name', 'bob', '--email', 'bob@infinit.io'])
+           '--name', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(['user', 'signup',
-             '--name', 'alice', '--email', 'alice@infinit.io',
+             '--name', 'alice', '--email', 'alice@infinit.sh',
            ])
   alice.run(['passport', 'fetch', '--as', 'alice'])
   bob.run(['user', 'fetch',
@@ -49,7 +49,7 @@ with Beyond() as beyond, Memo(beyond) as bob, Memo(beyond) as alice:
 limit = 2
 with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as beyond, Memo(beyond) as bob:
   bob.run(['user', 'signup',
-           '--name', 'bob', '--email', 'bob@infinit.io'])
+           '--name', 'bob', '--email', 'bob@infinit.sh'])
   bob.run(['network', 'create', '--push',
            '--name', 'network',
            '--as', 'bob'])
@@ -59,7 +59,7 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
     name = 'invitee%d' % i
     try:
       user.run(['user', 'signup',
-                '--name', name, '--email', '%s@infinit.io' % name])
+                '--name', name, '--email', '%s@infinit.sh' % name])
       bob.run(['user', 'fetch', '--as', 'bob', '--name', name])
       return bob.run(['passport', 'create', '--push',
                       '--network', 'network',
@@ -79,8 +79,8 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
 with Beyond() as beyond, \
     Memo(beyond = beyond) as bob, \
     Memo(beyond = beyond) as alice:
-  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
-  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
+  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.sh'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
   bob.run(['user', 'fetch', 'alice'])
   bob.run(['passport', 'create', '--as', 'bob',
@@ -104,9 +104,9 @@ with Beyond() as beyond, \
     Memo(beyond = beyond) as bob, \
     Memo(beyond = beyond) as eve, \
     Memo(beyond = beyond) as alice:
-  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
-  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.io'])
-  eve.run(['user', 'signup', 'eve', '--email', 'eve@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
+  alice.run(['user', 'signup', 'alice', '--email', 'a@infinit.sh'])
+  eve.run(['user', 'signup', 'eve', '--email', 'eve@infinit.sh'])
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
   bob.run(['user', 'fetch', 'alice'])
   bob.run(['passport', 'create', '--as', 'bob',

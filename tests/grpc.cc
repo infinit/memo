@@ -146,15 +146,17 @@ Protogen::protogen()
 
 namespace grpc
 {
-  std::ostream& operator << (std::ostream& o, ::grpc::Status const& s)
+  std::ostream& operator << (std::ostream& o, Status const& s)
   {
     return o << s.error_code() << ": " << s.error_message();
   }
+
   bool operator == (Status const& a, Status const& b)
   {
     return a.error_code() == b.error_code();
   }
-  bool operator == (Status const& a, grpc::StatusCode const& b)
+
+  bool operator == (Status const& a, StatusCode const& b)
   {
     return a.error_code() == b;
   }
@@ -228,6 +230,7 @@ public:
       dht.overlay->connect(*client.overlay);
     return client;
   }
+
   template<typename... Args>
   Client
   client(bool new_key,

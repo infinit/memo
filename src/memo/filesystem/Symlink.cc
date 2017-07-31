@@ -8,7 +8,7 @@
 
 #include <sys/stat.h> // S_IMFT...
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 
@@ -170,7 +170,7 @@ namespace memo
     std::unique_ptr<rfs::Handle>
     Symlink::open(int flags, mode_t mode)
     {
-#ifdef MEMO_MACOSX
+#ifdef ELLE_MACOS
 # define O_PATH O_SYMLINK
 #endif
 #ifdef O_PATH

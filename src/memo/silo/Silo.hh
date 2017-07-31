@@ -31,12 +31,6 @@ namespace memo
       unknown
     };
 
-    /// Conversion to bool.
-    ///
-    /// To move eventually to elle.
-    bool
-    to_bool(std::string const& s);
-
     class Silo
     {
     public:
@@ -155,8 +149,8 @@ namespace memo
     {
       SiloConfig() = default;
       SiloConfig(std::string name,
-                    boost::optional<int64_t> capacity,
-                    boost::optional<std::string> description);
+                 boost::optional<int64_t> capacity,
+                 boost::optional<std::string> description);
       SiloConfig(elle::serialization::SerializerIn& input);
 
       void

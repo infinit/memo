@@ -5,7 +5,7 @@
 #include <memo/silo/Collision.hh>
 #include <memo/silo/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.Dropbox");
+ELLE_LOG_COMPONENT("memo.silo.Dropbox");
 
 namespace memo
 {

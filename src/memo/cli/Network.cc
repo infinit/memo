@@ -13,6 +13,7 @@
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
 #include <memo/cli/xattrs.hh>
+#include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
@@ -22,14 +23,13 @@
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/NB.hh>
 #include <memo/model/doughnut/consensus/Paxos.hh>
-#include <memo/model/prometheus.hh>
 #include <memo/overlay/Kalimero.hh>
 #include <memo/overlay/kelips/Kelips.hh>
 #include <memo/overlay/kouncil/Configuration.hh>
 #include <memo/silo/Silo.hh>
 #include <memo/silo/Strip.hh>
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
@@ -93,7 +93,7 @@ namespace memo
       , import(*this,
                "Fetch a network",
                cli::input = boost::none)
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       , inspect(*this,
                 "Get information about a running network",
                 cli::name,
@@ -148,7 +148,7 @@ namespace memo
             "Run a network",
             cli::name,
             cli::input = boost::none,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             cli::daemon = false,
             cli::monitoring = true,
 #endif
@@ -175,9 +175,6 @@ namespace memo
             cli::advertise_host = Strings{},
             cli::grpc = boost::none,
             cli::grpc_port_file = boost::none,
-#if MEMO_ENABLE_PROMETHEUS
-            cli::prometheus = boost::none,
-#endif
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none,
             cli::resign_on_shutdown = boost::none)
@@ -592,7 +589,7 @@ namespace memo
       cli.report_imported("network", desc.name);
     }
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
     /*----------------.
     | Mode: inspect.  |
     `----------------*/
@@ -779,7 +776,7 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (elle::os::getenv("INFINIT_CRASH", false))
+      if (memo::getenv("CRASH", false))
         *(volatile int*)nullptr = 0;
 
       auto& cli = this->cli();
@@ -831,7 +828,7 @@ namespace memo
       void
       network_run(Memo& cli,
                   std::string const& network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                   bool daemon = false,
                   bool monitoring = true,
 #endif
@@ -856,9 +853,6 @@ namespace memo
                   Strings advertise_host = {},
                   boost::optional<std::string> grpc = {},
                   boost::optional<std::string> grpc_port_file = {},
-#if MEMO_ENABLE_PROMETHEUS
-                  boost::optional<std::string> prometheus = {},
-#endif
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
                   boost::optional<bool> resign_on_shutdown = {},
@@ -892,7 +886,7 @@ namespace memo
           cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
           async, cache_disk_size, cli.compatibility_version(), port,
           listen_address, resign_on_shutdown
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
           , monitoring
 #endif
         );
@@ -912,10 +906,6 @@ namespace memo
             port_to_file(grpc_port, *grpc_port_file);
           }
         }
-#if MEMO_ENABLE_PROMETHEUS
-        if (prometheus)
-          memo::prometheus::endpoint(*prometheus);
-#endif
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -936,7 +926,7 @@ namespace memo
           if (endpoints_file)
             endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
         }
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
         auto daemon_handle = daemon ? daemon_hold(0, 1) : daemon_invalid;
 #endif
         auto run = [&, push_p]
@@ -952,7 +942,7 @@ namespace memo
                   network.make_poll_hub_thread(*dht, eps,
                                                   *fetch_endpoints_interval);
             }
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
             if (daemon)
             {
               ELLE_TRACE("releasing daemon");
@@ -1008,7 +998,7 @@ namespace memo
         (
          cli,
          network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
          // Passing explicitly the default values.  This is not nice.
          false,
          true,
@@ -1034,9 +1024,6 @@ namespace memo
          advertise_host,
          {}, // grpc
          {}, // grpc_port_file
-#if MEMO_ENABLE_PROMETHEUS
-         {}, // prometheus
-#endif
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
          {}, // resign_on_shutdown
@@ -1170,7 +1157,7 @@ namespace memo
     void
     Network::mode_run(std::string const& network_name,
                       boost::optional<std::string> const& commands,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                       bool daemon,
                       bool monitoring,
 #endif
@@ -1197,9 +1184,6 @@ namespace memo
                       Strings advertise_host,
                       boost::optional<std::string> grpc,
                       boost::optional<std::string> const& grpc_port_file,
-#if MEMO_ENABLE_PROMETHEUS
-                      boost::optional<std::string> prometheus,
-#endif
                       boost::optional<bool> paxos_rebalancing_auto_expand,
                       boost::optional<bool> paxos_rebalancing_inspect,
                       boost::optional<bool> resign_on_shutdown)
@@ -1210,7 +1194,7 @@ namespace memo
         (
          cli,
          network_name,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
          daemon,
          monitoring,
 #endif
@@ -1235,9 +1219,6 @@ namespace memo
          advertise_host,
          grpc,
          grpc_port_file,
-#if MEMO_ENABLE_PROMETHEUS
-         prometheus,
-#endif
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
          resign_on_shutdown,
@@ -1272,6 +1253,15 @@ namespace memo
                    Respond
                      ("success", true)
                      ("value", block);
+                 }
+                 else if (op == "create_mutable")
+                 {
+                   auto block = dht.make_mutable_block();
+                   auto addr = block->address();
+                   dht.insert(std::move(block));
+                   Respond
+                     ("success", true)
+                     ("address", addr);
                  }
                  else if (op == "insert" || op == "update")
                  {

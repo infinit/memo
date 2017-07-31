@@ -12,6 +12,7 @@ def parse_args():
 
 args = parse_args()
 hexas = {}
+ports = {}
 preserve = '|'.join('(?:{})'.format(p) for p in args.preserve) if args.preserve else None
 
 def repl_hexa(match):
@@ -22,6 +23,17 @@ def repl_hexa(match):
         hexas[s] = '{:#06x}'.format(len(hexas))
     return hexas[s]
 
+def repl_port(match):
+    s = match.group(0)
+    if preserve and re.match(preserve, s):
+        return s
+    if s not in ports:
+        ports[s] = ':{}'.format(len(ports))
+    return ports[s]
+
 for l in sys.stdin:
     l = re.sub('(0x[0-9a-fA-F]+)', repl_hexa, l)
+    # Try to preserve file names.  Variable length look-behind is not
+    # supported.
+    l = re.sub('(?<!\.cc)(:\d+)', repl_port, l)
     print(l, end='')

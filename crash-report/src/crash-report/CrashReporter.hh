@@ -5,9 +5,9 @@
 
 #include <boost/filesystem.hpp>
 
-#include <crash-report/fwd.hh>
-
 #include <elle/attribute.hh>
+
+#include <crash-report/fwd.hh>
 
 namespace crash_report
 {
@@ -28,7 +28,7 @@ namespace crash_report
                   std::string version);
     ~CrashReporter();
 
-    /// Upload the existing crash reports.
+    /// Upload the existing crash reports (and possible associated payloads).
     void
     upload_existing() const;
 
@@ -36,12 +36,21 @@ namespace crash_report
     int
     crashes_pending_upload() const;
 
+    /// This function is called when a minidump was saved.  Use it to
+    /// add payload when the minidump will be uploaded.  This payload
+    /// must be a file.  Its name must be based on `base`, the
+    /// argument, which does not include the final period.  So for
+    /// instance create `base.log`, `base.env`, etc.  FWIW, the file
+    /// name of the minidump is `base.dmp`.
+    using MakePayload = std::function<auto (std::string const& base) -> void>;
+    MakePayload make_payload;
+
   private:
     void
     _upload(bfs::path const& path) const;
     ELLE_ATTRIBUTE(std::string, crash_url);
     ELLE_ATTRIBUTE(std::unique_ptr<breakpad::ExceptionHandler>, exception_handler);
-    ELLE_ATTRIBUTE(bfs::path, dumps_path);
+    ELLE_ATTRIBUTE_R(bfs::path, dumps_path);
     ELLE_ATTRIBUTE(std::string, version);
   };
 }

@@ -3,14 +3,14 @@
 
 namespace memo
 {
-  elle::Version serialization_tag::version(memo::version());
+  elle::Version const serialization_tag::version = memo::version();
 
 #define DEFINE(MemoVersion, SerializationVersion)                    \
       { elle::Version MemoVersion,                                   \
       {{ elle::type_info<elle::serialization_tag>(), elle::Version SerializationVersion }}}
 
-  elle::unordered_map<elle::Version, elle::serialization::Serializer::Versions>
-  serialization_tag::dependencies{{
+  serialization_tag::Dependencies const serialization_tag::dependencies =
+    {
       DEFINE((0, 3, 0), (0, 0, 0)),
       DEFINE((0, 4, 0), (0, 0, 0)),
       DEFINE((0, 5, 0), (0, 1, 0)),
@@ -28,14 +28,16 @@ namespace memo
       DEFINE((0, 7, 3), (0, 2, 0)),
       DEFINE((0, 8, 0), (0, 3, 0)),
       DEFINE((0, 9, 0), (0, 4, 0)),
-  }};
+      DEFINE((0, 9, 1), (0, 4, 0)),
+      DEFINE((0, 9, 2), (0, 4, 0)),
+    };
 
 #undef DEFINE
 
   elle::Version
   elle_serialization_version(elle::Version const& memo_version)
   {
-    auto versions = elle::serialization::get_serialization_versions<
+    auto const versions = elle::serialization::get_serialization_versions<
       memo::serialization_tag>(memo_version);
     return versions.at(elle::type_info<elle::serialization_tag>());
   }

@@ -121,10 +121,13 @@ namespace memo
       | Construction |
       `-------------*/
       public:
-        using OverlayBuilder
-          = std::function<std::unique_ptr<memo::overlay::Overlay> (Doughnut &, std::shared_ptr<Local>)>;
-        using ConsensusBuilder
-          = std::function<std::unique_ptr<consensus::Consensus> (Doughnut &)>;
+        using make_builder_t
+          = auto (Doughnut &, std::shared_ptr<Local>)
+          -> std::unique_ptr<memo::overlay::Overlay>;
+        using OverlayBuilder = std::function<make_builder_t>;
+        using make_consensus_t
+          = auto (Doughnut &) -> std::unique_ptr<consensus::Consensus>;
+        using ConsensusBuilder = std::function<make_consensus_t>;
 
         template <typename ... Args>
         Doughnut(Args&& ... args);

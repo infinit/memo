@@ -2,7 +2,7 @@
 
 #include <sys/stat.h> // S_IMFT...
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 
@@ -163,7 +163,7 @@ namespace memo
     static int gid_position = 0;
     static std::vector<
       std::unique_ptr<model::blocks::Block>> acl_save(gid_count);
-    static bool acl_preserver = getenv("INFINIT_PRESERVE_ACLS");
+    static bool acl_preserver = memo::getenv("PRESERVE_ACLS", false);
 
     void
     Node::rename(bfs::path const& where)
@@ -758,7 +758,7 @@ namespace memo
     Node::stat(struct stat* st)
     {
       memset(st, 0, sizeof(struct stat));
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       st->st_blksize = 16384;
       st->st_blocks = this->_header().size / 512;
 #endif
@@ -770,7 +770,7 @@ namespace memo
       st->st_ctime = h.ctime;
       st->st_nlink = h.links;
       st->st_uid   =
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
         0;
 #else
         getuid();
@@ -778,7 +778,7 @@ namespace memo
       this->_fetch();
       if (!acl_preserver)
         st->st_gid =
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
         0;
 #else
         getgid();
@@ -794,7 +794,7 @@ namespace memo
       }
       st->st_dev = 1;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
-#ifdef MEMO_MACOSX
+#ifdef ELLE_MACOS
       st->st_birthtime = h.btime;
 #endif
       ELLE_DEBUG("%s: stat mode=%x size=%s links=%s",

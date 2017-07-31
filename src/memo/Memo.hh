@@ -20,10 +20,11 @@ namespace memo
   namespace bfs = boost::filesystem;
 
   /// This object is used to manipulate resources used by Memo.
-  ///
-  ///
   class Memo
   {
+  public:
+    Memo();
+
   public:
     /// ReportAction is a signal Memo triggers when it performs an
     /// action related to the resources / objects (e.g. Users,
@@ -130,22 +131,22 @@ namespace memo
     user_get(std::string const& user, bool hub_fallback = false) const;
     std::vector<User>
     users_get() const;
-    boost::filesystem::path
+    bfs::path
     _avatars_path() const;
-    boost::filesystem::path
+    bfs::path
     _avatar_path(std::string const& name) const;
     bool
     avatar_delete(User const& user);
 
-    /*----------.
-    | Storage.  |
-    `----------*/
+    /*-------.
+    | Silo.  |
+    `-------*/
 
     using SiloConfigPtr = std::unique_ptr<silo::SiloConfig>;
     SiloConfigPtr
     silo_get(std::string const& name);
 
-    struct Pred
+    struct SiloByName
     {
       bool
       operator() (SiloConfigPtr const& lhs,
@@ -155,7 +156,7 @@ namespace memo
       }
     };
 
-    using Silos = boost::container::flat_set<SiloConfigPtr, Pred>;
+    using Silos = boost::container::flat_set<SiloConfigPtr, SiloByName>;
 
     Silos
     silos_get();
@@ -236,44 +237,44 @@ namespace memo
     credentials_gcs() const;
     std::unique_ptr<OAuthCredentials, std::default_delete<memo::Credentials>>
       credentials_gcs(std::string const& uid) const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path() const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path(std::string const& service) const;
-    boost::filesystem::path
+    bfs::path
     _credentials_path(std::string const& service, std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _network_descriptors_path() const;
-    boost::filesystem::path
+    bfs::path
     _network_descriptor_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _networks_path(bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _networks_path(User const& user, bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _network_path(std::string const& name,
                   User const& user,
                   bool create_dir = true) const;
-    boost::filesystem::path
+    bfs::path
     _passports_path() const;
-    boost::filesystem::path
+    bfs::path
     _passport_path(std::string const& network, std::string const& user) const;
-    boost::filesystem::path
+    bfs::path
     _silos_path() const;
-    boost::filesystem::path
+    bfs::path
     _silo_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _users_path() const;
-    boost::filesystem::path
+    bfs::path
     _user_path(std::string const& name) const;
-    boost::filesystem::path
+    bfs::path
     _key_value_stores_path() const;
-    boost::filesystem::path
+    bfs::path
     _key_value_store_path(std::string const& name) const;
     static
     void
-    _open_read(boost::filesystem::ifstream& f,
-               boost::filesystem::path const& path,
+    _open_read(bfs::ifstream& f,
+               bfs::path const& path,
                std::string const& name,
                std::string const& type);
     /// Open the given path, associating it with the given ofstream f.
@@ -297,8 +298,8 @@ namespace memo
     ///        was false.
     static
     bool
-    _open_write(boost::filesystem::ofstream& f,
-                boost::filesystem::path const& path,
+    _open_write(bfs::ofstream& f,
+                bfs::path const& path,
                 std::string const& name,
                 std::string const& type,
                 bool overwrite = false,
@@ -319,11 +320,11 @@ namespace memo
     save(std::ostream& output, T const& resource, bool pretty = true);
   private:
     bool
-    _delete(boost::filesystem::path const& path,
+    _delete(bfs::path const& path,
             std::string const& type,
             std::string const& name);
     bool
-    _delete_all(boost::filesystem::path const& path,
+    _delete_all(bfs::path const& path,
                 std::string const& type,
                 std::string const& name);
   public:

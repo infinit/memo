@@ -1,7 +1,6 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_CONFLICT_UBUPERSERTER_HH
-# define INFINIT_MODEL_DOUGHNUT_CONFLICT_UBUPERSERTER_HH
+#pragma once
 
-# include <memo/model/Model.hh>
+#include <memo/model/Model.hh>
 
 namespace memo
 {
@@ -53,5 +52,3 @@ namespace memo
     }
   }
 }
-
-#endif

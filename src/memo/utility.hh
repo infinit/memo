@@ -13,6 +13,7 @@
 #include <elle/reactor/http/Request.hh>
 
 #include <memo/User.hh>
+#include <memo/environ.hh>
 
 namespace memo
 {
@@ -109,7 +110,7 @@ namespace memo
   bfs::path
   home()
   {
-    auto const memo_home = elle::os::getenv("MEMO_HOME", ""s);
+    auto const memo_home = memo::getenv("HOME", ""s);
     return memo_home.empty() ? elle::system::home_directory() : memo_home;
   }
 

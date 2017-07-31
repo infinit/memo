@@ -22,7 +22,6 @@
 #include <elle/find.hh>
 #include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
-#include <elle/os/environ.hh>
 #include <elle/random.hh>
 #include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
@@ -44,12 +43,13 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/reactor/Thread.hh>
 
-#include <memo/silo/Filesystem.hh>
+#include <memo/environ.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/Passport.hh>
 #include <memo/model/doughnut/Remote.hh>
 #include <memo/model/doughnut/consensus/Paxos.hh> // FIXME
+#include <memo/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("memo.overlay.kelips");
 
@@ -245,8 +245,7 @@ namespace memo
 
       namespace packet
       {
-        static auto disable_compression
-          = elle::os::getenv("KELIPS_DISABLE_COMPRESSION", false);
+        static auto compression = memo::getenv("KELIPS_COMPRESSION", true);
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -258,7 +257,7 @@ namespace memo
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
           output.set_context(&dn);
-          if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
+          if (dn.version() >= elle::Version(0, 7, 0) && compression)
             output.set_context(CompressPeerLocations{});
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
@@ -308,7 +307,7 @@ namespace memo
               elle::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
-            if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
+            if (dn.version() >= elle::Version(0, 7, 0) && compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
             auto res = std::unique_ptr<packet::Packet>{};
@@ -809,8 +808,8 @@ namespace memo
         bool
         without_timeouts(typename Contacts::value_type const& c)
         {
-          static auto disable = elle::os::getenv("INFINIT_KELIPS_NO_SNUB", false);
-          return disable || c.second.ping_timeouts == 0;
+          static auto enable = memo::getenv("KELIPS_SNUB", true);
+          return !enable || c.second.ping_timeouts == 0;
         }
 
         /// A container of count random elements of src.
@@ -855,8 +854,8 @@ namespace memo
           _config.encrypt = false;
           _config.accept_plain = true;
         }
-        bool v4 = !elle::os::getenv("INFINIT_NO_IPV4", false);
-        bool v6 = !elle::os::getenv("INFINIT_NO_IPV6", false)
+        bool v4 = memo::getenv("IPV4", true);
+        bool v6 = memo::getenv("IPV6", true)
           && doughnut->version() >= elle::Version(0, 7, 0);
         this->_self = Address(this->doughnut()->id());
         if (!local)
@@ -1030,7 +1029,7 @@ namespace memo
               elle::err("%s is duplicate but not found in cache", id);
             remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
           }
-          if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
+          if (this->doughnut()->version() < elle::Version(0, 7, 0) || !packet::compression)
           {
             auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -1072,7 +1071,7 @@ namespace memo
         auto lock = this->_in_use.lock();
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
         auto buf = elle::Buffer(nbuf.contents()+8, nbuf.size()-8);
-        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC", false);
+        static auto async = memo::getenv("KELIPS_ASYNC", false);
         elle::reactor::run(async,
                            "process",
                            [=] { this->process(buf, source);});
@@ -1352,7 +1351,7 @@ namespace memo
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
         auto& sock = this->doughnut()->dock().utp_server().socket();
-        static auto async = elle::os::getenv("INFINIT_KELIPS_ASYNC_SEND", false);
+        static auto async = memo::getenv("KELIPS_ASYNC_SEND", false);
         if (async)
         {
           auto sbuf = std::make_shared<elle::Buffer>(std::move(b));
@@ -1383,7 +1382,7 @@ namespace memo
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
         input.set_context(this->doughnut());
-        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !packet::disable_compression)
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && packet::compression)
           input.set_context(packet::CompressPeerLocations{});
         try
         {

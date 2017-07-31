@@ -207,7 +207,7 @@ def configure(
   gen_vs = GRPCCxxGen(
     memo_vs_proto,
     protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin))
+    plugin = grpc.grpc_cpp_plugin)
   # Generate the 'private' memo vs proto file that includes NamedBlocks.
   memo_vs_named_json = drake.Node('memo_vs_named_only.json')
   with open(str(memo_vs_named_json.path())) as f:
@@ -219,7 +219,7 @@ def configure(
   gen_vs_w_named = GRPCCxxGen(
     memo_vs_with_named_proto,
     protoc = grpc.protoc,
-    plugin = drake.node(grpc.grpc_cpp_plugin))
+    plugin = grpc.grpc_cpp_plugin)
   # Sources to compile the server part.
   sources = gen_vs_w_named.targets() + drake.nodes(
     'memo_vs.cc',
@@ -242,7 +242,7 @@ def configure(
 
   grpcgen_py = GRPCPyGen(memo_vs_proto,
                          protoc = grpc.protoc,
-                         plugin = drake.node(grpc.grpc_python_plugin))
+                         plugin = grpc.grpc_python_plugin)
 
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
@@ -254,7 +254,7 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.run('apk add --update python3' \
+  docker_file.run('apk add --update python3 libgcc' \
                   '&& apk add --virtual build-deps python3-dev gcc g++' \
                   '&& pip3 install grpcio ' \
                   '&& apk del build-deps ' \

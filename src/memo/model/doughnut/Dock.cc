@@ -1,16 +1,16 @@
-#include <memory>
-
 #include <memo/model/doughnut/Dock.hh>
+
+#include <memory>
 
 #include <elle/find.hh>
 #include <elle/log.hh>
 #include <elle/multi_index_container.hh>
 #include <elle/network/Interface.hh>
-#include <elle/os.hh>
 #include <elle/range.hh>
 
 #include <elle/reactor/network/utp-server.hh>
 
+#include <memo/environ.hh>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/HandshakeFailed.hh>
 #include <memo/model/doughnut/Local.hh>
@@ -21,9 +21,8 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.Dock")
 
 namespace
 {
-  using elle::os::getenv;
-  bool const disable_key = getenv("MEMO_RPC_DISABLE_CRYPTO", false);
-  auto const ipv6_enabled = !getenv("MEMO_NO_IPV6", false);
+  bool const key_enabled = memo::getenv("RPC_CRYPTO", true);
+  auto const ipv6_enabled = memo::getenv("IPV6", true);
 
   template <typename Action>
   auto
@@ -313,7 +312,7 @@ namespace memo
                   std::make_unique<elle::protocol::ChanneledStream>(*serializer);
                 try
                 {
-                  if (!disable_key)
+                  if (key_enabled)
                     this->_key_exchange(*channels);
                   ELLE_TRACE("connected");
                   this->_socket = std::move(socket);

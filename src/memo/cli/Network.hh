@@ -24,7 +24,7 @@ namespace memo
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                                     cli::inspect,
 #endif
                                     cli::link,
@@ -168,7 +168,7 @@ namespace memo
       | Mode: inspect.  |
       `----------------*/
 
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::output = boost::optional<std::string>()),
@@ -318,7 +318,7 @@ namespace memo
       Mode<Self,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::input = boost::optional<std::string>()),
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                  decltype(cli::daemon = false),
                  decltype(cli::monitoring = true),
 #endif
@@ -346,9 +346,6 @@ namespace memo
                  decltype(cli::advertise_host = Strings{}),
                  decltype(cli::grpc = boost::optional<std::string>()),
                  decltype(cli::grpc_port_file = boost::optional<std::string>()),
-#if MEMO_ENABLE_PROMETHEUS
-                 decltype(cli::prometheus = boost::optional<std::string>()),
-#endif
                  // Options that used to be hidden.
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),
@@ -361,7 +358,7 @@ namespace memo
       void
       mode_run(std::string const& network_name,
                boost::optional<std::string> const& commands,
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
                bool daemon = false,
                bool monitoring = true,
 #endif
@@ -388,9 +385,6 @@ namespace memo
                Strings advertise_host = {},
                boost::optional<std::string> grpc = {},
                boost::optional<std::string> const& grpc_port_file = {},
-#if MEMO_ENABLE_PROMETHEUS
-               boost::optional<std::string> prometheus = {},
-#endif
                // Options that used to be hidden.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
                boost::optional<bool> paxos_rebalancing_inspect = {},

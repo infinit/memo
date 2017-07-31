@@ -141,9 +141,9 @@ namespace kademlia
 
   namespace packet
   {
-    #define REGISTER(classname, type) \
+#define REGISTER(classname, type)                         \
     static const elle::serialization::Hierarchy<Packet>:: \
-    Register<classname>   \
+    Register<classname>                                   \
     _registerPacket##classname(type)
 
     struct Packet
@@ -152,16 +152,17 @@ namespace kademlia
       Endpoint endpoint; // remote endpoint, filled by recvfrom
       Address sender;
     };
-    #define SER(a, b, e) s.serialize(BOOST_PP_STRINGIZE(e), e);
-#define PACKET(name, ...)                                             \
-      name() {}                                                           \
-      name(elle::serialization::SerializerIn& input) {serialize(input);}  \
-      void                                                                \
-      serialize(elle::serialization::Serializer& s)                       \
-      {                                                                   \
-        BOOST_PP_SEQ_FOR_EACH(SER, _,                                     \
-          BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))                          \
-      }
+#define SER(a, b, e)                            \
+    s.serialize(BOOST_PP_STRINGIZE(e), e);
+#define PACKET(name, ...)                                               \
+    name() {}                                                           \
+    name(elle::serialization::SerializerIn& input) {serialize(input);}  \
+    void                                                                \
+    serialize(elle::serialization::Serializer& s)                       \
+    {                                                                   \
+      BOOST_PP_SEQ_FOR_EACH(SER, _,                                     \
+                            BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))      \
+   }
 
     struct Ping: public Packet
     {
@@ -217,15 +218,9 @@ namespace kademlia
       std::vector<Endpoint> value;
     };
     REGISTER(Store, "store");
-    #undef REGISTER
-    #undef SER
-    #undef PACKET
-  }
-
-  template<typename E1, typename E2>
-  void endpoint_to_endpoint(E1 const& src, E2& dst)
-  {
-    dst = E2(src.address(), src.port());
+#undef REGISTER
+#undef SER
+#undef PACKET
   }
 
   Kademlia::Kademlia(Configuration const& config,
@@ -361,8 +356,8 @@ namespace kademlia
       }
       packet->endpoint = ep;
       onContactSeen(packet->sender, ep);
-      #define CASE(type) \
-        else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
+#define CASE(type)                                                      \
+      else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
       if (false) {}
       CASE(Ping)
       {
@@ -397,12 +392,12 @@ namespace kademlia
     ELLE_DUMP("%s: sending packet to %s\n%s", *this, e, b.string());
     _socket.send_to(elle::ConstWeakBuffer(b), e);
   }
+
   bool Kademlia::more(Address const& a, Address const& b)
   {
-    if (a == b)
-      return false;
-    return !less(a, b);
+    return a == b && !less(a, b);
   }
+
   bool Kademlia::less(Address const& a, Address const& b)
   {
     const Address::Value &aa = a.value();
@@ -419,6 +414,7 @@ namespace kademlia
     }
     return false;
   }
+
   Address Kademlia::dist(Address const& a, Address const& b)
   {
     auto va = a.value();
@@ -429,21 +425,16 @@ namespace kademlia
       r[i] = (va[i] ^ vb[i]) & mv[i];
     return Address(r);
   }
+
   int Kademlia::bucket_of(Address const& a)
   {
     Address d = dist(a, this->_self);
     auto dv = d.value();
     for (int p=sizeof(Address::Value)-1; p>=0; --p)
-    {
       if (dv[p])
-      {
         for (int b=7; b>=0; --b)
-        {
           if (dv[p] & (1<<b))
             return p*8 + b;
-        }
-      }
-    }
     return 0;
   }
 
@@ -1000,9 +991,10 @@ namespace kademlia
   elle::json::Object
   Kademlia::stats()
   {
-    elle::json::Object res;
-    res["type"] = this->type_name();
-    return res;
+    return
+      {
+        {"type", this->type_name()},
+      };
   }
 }
 

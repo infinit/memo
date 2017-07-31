@@ -19,6 +19,18 @@ from datetime import timedelta
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 binary = 'memo'
 
+def here():
+  '''Find the top-level call.'''
+  import inspect
+  frame = inspect.currentframe()
+  while frame.f_back:
+    frame = frame.f_back
+  finfo = inspect.getframeinfo(frame)
+  return finfo.filename + ":" + str(finfo.lineno)
+
+def log(*args):
+  print(here() + ':', *args, file=sys.stderr, flush=True)
+
 class TemporaryDirectory:
 
   def __init__(self, path = None):
@@ -132,7 +144,7 @@ class Memo(TemporaryDirectory):
     if gdb:
       args = ['/usr/bin/gdb', '--args'] + args + ['-s']
       if input is not None:
-        print('GDB input: %s' % json.dumps(input))
+        log('GDB input: %s' % json.dumps(input))
         input = None
     elif valgrind:
       args = ['/usr/bin/valgrind'] + args
@@ -165,7 +177,7 @@ class Memo(TemporaryDirectory):
       pretty = 'echo %s | %s' % (
         pipes.quote(input.strip()), pretty)
       input = input.encode('utf-8')
-    print(pretty)
+    log(pretty)
     process = subprocess.Popen(
       args,
       env = env_,
@@ -203,12 +215,13 @@ class Memo(TemporaryDirectory):
       process.kill()
       try:
         out, err = process.communicate(timeout = 15)
-      except ValueError:
+      except ValueError as e:
+        log("Got exception while trying to kill process:", e)
         # Python bug, throws ValueError. But in that case blocking read is fine
-        out = process.stdout.read()
-        err = process.stderr.read()
-      print('STDOUT: %s' % out.decode('utf-8'))
-      print('STDERR: %s' % err.decode('utf-8'))
+        # out = process.stdout.read()
+        # err = process.stderr.read()
+      log('STDOUT: %s' % out.decode('utf-8'))
+      log('STDERR: %s' % err.decode('utf-8'))
       if kill:
         return out, err
       raise
@@ -240,7 +253,7 @@ class Memo(TemporaryDirectory):
 
 def assertEq(a, b):
   if a == b:
-    print('PASS: {} == {}'.format(a, b), file=sys.stderr)
+    log('PASS: {} == {}'.format(a, b))
   else:
     def lines(s):
       s = str(s)
@@ -251,17 +264,17 @@ def assertEq(a, b):
     diff = ''.join(udiff(lines(a),
                          lines(b),
                          fromfile='a', tofile='b'))
-    raise AssertionError('%r != %r\n%s' % (a, b, diff))
+    raise AssertionError('%s: %r != %r\n%s' % (here(), a, b, diff))
 
 def assertNeq(a, b):
   if a != b:
-    print('PASS: {} != {}'.format(a, b), file=sys.stderr)
+    log('PASS: {} != {}'.format(a, b))
   else:
     raise AssertionError('%r == %r' % (a, b))
 
 def assertIn(a, b):
   if a in b:
-    print('PASS: {} in {}'.format(a, b), file=sys.stderr)
+    log('PASS: {} in {}'.format(a, b))
   else:
     raise AssertionError('%r not in %r' % (a, b))
 
@@ -492,7 +505,7 @@ class SharedLogicCLITests():
     with Beyond() as beyond, \
         Memo(beyond = beyond) as bob, Memo(beyond) as alice:
       e_name = self.random_sequence()
-      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+      bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
       bob.run(['network', 'create', 'network', '--as', 'bob',
                '--push'])
       bob.run([entity, 'create', e_name, '-N', 'network',
@@ -516,7 +529,7 @@ class SharedLogicCLITests():
       e_name2 = e_name
       while e_name2 == e_name:
         e_name2 = self.random_sequence()
-      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.io'])
+      bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
       bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
       # Local and Beyond.
       bob.run([entity, 'create', '--as', 'bob', e_name,
@@ -574,6 +587,11 @@ class KeyValueStoreInfrastructure():
       ['memo', 'kvs', 'run', self.kvname, '--as', self.uname,
        '--allow-root-creation',
        '--grpc', '127.0.0.1:0', '--grpc-port-file', port_file])
+    def comm(self):
+      self.out, self.err = self.__proc.communicate()
+    import threading
+    self.__comm = threading.Thread(target=comm, args=[self])
+    self.__comm.start()
     while not os.path.exists(port_file):
       time.sleep(0.1)
     with open(port_file, 'r') as f:
@@ -587,16 +605,22 @@ class KeyValueStoreInfrastructure():
   def __exit__(self, *args, **kwargs):
     if self.__proc:
       self.__proc.terminate()
-      out, err = self.__proc.communicate(timeout = 30)
+      self.__comm.join()
       if os.environ.get('OS') != 'windows':
         try:
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
-          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
-          print('STDERR: %s' % err.decode('utf-8'), flush=True)
+          log('STDOUT: %s' % self.out.decode('utf-8'))
+          log('STDERR: %s' % self.err.decode('utf-8'))
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
-          print('STDOUT: %s' % out.decode('utf-8'), flush=True)
-          print('STDERR: %s' % err.decode('utf-8'), flush=True)
+          log('STDOUT: %s' % out.decode('utf-8'))
+          log('STDERR: %s' % err.decode('utf-8'))
           raise
+
+  def client(self):
+    import grpc
+    import memo_kvs_pb2_grpc
+    channel = grpc.insecure_channel(self.__endpoint)
+    return memo_kvs_pb2_grpc.KeyValueStoreStub(channel)

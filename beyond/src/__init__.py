@@ -58,12 +58,13 @@ def symbols_update():
   if symbols_checkout():
     return True
   # We failed.  Maybe the repository is broken, erase it and restart.
-  try:
-    shutil.rmtree(repo_dir)
-  except Exception as e:
-    log('symbolize: symbols_update: cannot remove {}: {}',
-        repo_dir, e)
-    return False
+  if os.path.exists(repo_dir):
+    try:
+      shutil.rmtree(repo_dir)
+    except Exception as e:
+      log('symbolize: symbols_update: cannot remove {}: {}',
+          repo_dir, e)
+      return False
   p = run(['git', 'clone',
            'git@git.infinit.sh:infinit/debug-symbols.git',
            repo_dir])
@@ -108,12 +109,11 @@ def symbolize_dump(in_, out = None):
 ## -------- ##
 
 # Don't generate crash reports on our Beyond server.
-os.environ['MEMO_CRASH_REPORTER'] = '0'
-os.environ['INFINIT_CRASH_REPORTER'] = '0'
+os.environ['MEMO_CRASH_REPORT'] = '0'
 
 def find_binaries():
   for path in chain(
-      [os.environ.get('MEMO_BINARIES')],
+      [os.environ.get('BIN_DIR')],
       os.environ.get('PATH', '').split(':'),
       ['bin', '/opt/memo/bin'],
   ):
@@ -553,25 +553,31 @@ class Beyond:
   ## Crash Report ##
   ## ------------ ##
 
-  def crash_report_send(self, data, platform = 'Unknown', version = 'Unknown'):
-    variables = {
-      'platform': platform,
-      'version': version,
-    }
+  def crash_report_send(self, json):
     import tempfile
+    from base64 import b64decode
+    variables = {
+      'platform': json.get('platform', 'Unknown'),
+      'version': json.get('version', 'Unknown'),
+    }
     with tempfile.TemporaryDirectory() as temp_dir:
-      tfile = '%s/client.dmp' % temp_dir
-      with open(tfile, 'wb') as f:
-        f.write(data)
-      symbolize_dump(tfile)
-      with open(tfile, 'rb') as dump:
-        self.__emailer.send_one(
-          recipient_email = 'crash@infinit.sh',
-          recipient_name = 'Crash',
-          variables = variables,
-          files = [dump],
-          **self.template('Internal/Crash Report')
-        )
+      # A list of files (not file names), as requested by sendwithus.
+      files = []
+      for k, v in json.items():
+        if k not in ['platform', 'version']:
+          fname = '{}/client.{}'.format(temp_dir, k)
+          with open(fname, 'wb') as f:
+            f.write(b64decode(v))
+          if k in ['dump']:
+            symbolize_dump(fname)
+          # 'rb' is requested by sendwithus.
+          files.append(open(fname, 'rb'))
+      self.__emailer.send_one(
+        recipient_email = 'crash@infinit.sh',
+        recipient_name = 'Crash',
+        variables = variables,
+        files = files,
+        **self.template('Internal/Crash Report'))
 
 class User:
   fields = {

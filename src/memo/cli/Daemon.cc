@@ -369,11 +369,10 @@ namespace memo
           Lock(SystemUser const& su, elle::reactor::Lockable& l)
             : elle::reactor::Lock(l)
           {
-            elle::os::setenv("MEMO_HOME", su.home);
-            if (!elle::os::getenv("MEMO_HOME_OVERRIDE", "").empty())
-              elle::os::setenv("MEMO_HOME",
-                elle::os::getenv("MEMO_HOME_OVERRIDE", ""));
-            elle::os::unsetenv("MEMO_DATA_HOME");
+            memo::setenv("HOME", su.home);
+            if (!memo::getenv("HOME_OVERRIDE", "").empty())
+              memo::setenv("HOME", memo::getenv("HOME_OVERRIDE", ""));
+            memo::unsetenv("DATA_HOME");
             elle::setegid(su.gid);
             elle::seteuid(su.uid);
           }
@@ -385,11 +384,11 @@ namespace memo
           ~Lock()
           {
             if (prev_home.empty())
-              elle::os::unsetenv("MEMO_HOME");
+              memo::unsetenv("HOME");
             else
-              elle::os::setenv("MEMO_HOME", prev_home);
+              memo::setenv("HOME", prev_home);
             if (!prev_data_home.empty())
-              elle::os::setenv("MEMO_DATA_HOME", prev_data_home);
+              memo::setenv("DATA_HOME", prev_data_home);
             elle::seteuid(prev_euid);
             elle::setegid(prev_egid);
           }
@@ -558,13 +557,13 @@ namespace memo
 //             auto native = socket->socket()->native();
 //             uid_t uid;
 //             gid_t gid;
-// #ifdef MEMO_MACOSX
+// #ifdef ELLE_MACOS
 //             if (getpeereid(native, &uid, &gid))
 //             {
 //               ELLE_ERR("getpeerid failed: %s", strerror(errno));
 //               continue;
 //             }
-// #elif defined MEMO_LINUX
+// #elif defined ELLE_LINUX
 //             struct ucred ucred;
 //             socklen_t len = sizeof ucred;
 //             if (getsockopt(native, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)

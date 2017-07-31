@@ -1,3 +1,12 @@
+#include <cstdlib>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/range/irange.hpp>
+
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
@@ -18,21 +27,16 @@
 #include <memo/silo/Memory.hh>
 #include <memo/silo/Silo.hh>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <cstdlib>
-
 ELLE_LOG_COMPONENT("test");
 
-#if defined MEMO_WINDOWS
+#if defined ELLE_WINDOWS
 # undef stat
 # define IF_WINDOWS(Then, Else) (Then)
 #else
 # define IF_WINDOWS(Then, Else) (Else)
 #endif
 
-#if defined MEMO_MACOSX
+#if defined ELLE_MACOS
 # define IF_MACOS(Then, Else) (Then)
 #else
 # define IF_MACOS(Then, Else) (Else)
@@ -43,29 +47,34 @@ namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 namespace imd = memo::model::doughnut;
 namespace iok = memo::overlay::kelips;
+
 using memo::model::Endpoints;
 
 namespace
 {
   template <typename Fun>
-  auto insist(Fun fun, int attempts = 10)
+  auto insist(Fun fun, std::string const& ctx = "", int attempts = 10)
   {
     for (int i=0; ; ++i)
     {
       try
       {
-        ELLE_LOG("insist: attempt %s/%s", i, attempts);
+        ELLE_LOG("insist:{0? {0}:} attempt {1}/{2}", ctx, i, attempts);
         return fun();
       }
       catch (elle::Error const& e)
       {
-        ELLE_LOG("insist: caught %s", e);
+        ELLE_LOG("insist:{0? {0}:} caught {1}", ctx, e);
         if (attempts <= i)
+        {
+          ELLE_LOG("insist:{0? {0}:} too many failed attempts ({1}), aborting", ctx, i);
           throw;
+        }
       }
       catch (...)
       {
-        ELLE_ERR("insist: caught unexpected %s", elle::exception_string());
+        ELLE_ERR("insist:{0? {0}:} caught unexpected {1}",
+                 ctx, elle::exception_string());
         throw;
       }
       elle::reactor::sleep(1_sec);
@@ -96,7 +105,6 @@ e2b(Endpoints const& eps)
   return res;
 }
 
-
 class Beyond: public elle::reactor::network::HttpServer
 {
 public:
@@ -106,18 +114,14 @@ public:
                    elle::reactor::http::Method::GET,
       [&] (Headers const&, Cookies const&, Parameters const&, elle::Buffer const&)
       {
-        auto res = elle::serialization::json::serialize(_endpoints, false).string();
-        while (true)
-        {
-          auto p = res.find("null");
-          if (p == res.npos)
-            break;
-          res = res.substr(0, p) + "{}" + res.substr(p+4);
-        }
-        ELLE_LOG("endpoints: '%s'", res);
+        auto const res =
+          boost::replace_all_copy(
+            elle::serialization::json::serialize(_endpoints, false).string(),
+            "null", "{}");
+        ELLE_LOG("endpoints: %s", res);
         return res;
       });
-    elle::os::setenv("MEMO_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
+    memo::setenv("BEYOND", elle::sprintf("127.0.0.1:%s", this->port()));
   }
 
   void push(memo::model::Address id, Endpoints eps)
@@ -326,53 +330,53 @@ namespace
           std::move(ops), true);
       });
   }
-}
 
-void
-writefile(rfs::FileSystem& fs,
-          std::string const& name,
-          std::string const& content)
-{
-  auto handle = fs.path("/" + name)->create(O_RDWR, 0666 | S_IFREG);
-  handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
-                content.size(), 0);
-  handle->close();
-  handle.reset();
-}
+  void
+  writefile(rfs::FileSystem& fs,
+            std::string const& name,
+            std::string const& content)
+  {
+    auto handle = fs.path("/" + name)->create(O_RDWR, 0666 | S_IFREG);
+    handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
+                  content.size(), 0);
+    handle->close();
+    handle.reset();
+  }
 
-void
-appendfile(rfs::FileSystem& fs,
-           std::string const& name,
-           std::string const& content)
-{
-  auto handle = fs.path("/" + name)->open(O_RDWR, 0666 | S_IFREG);
-  struct stat st;
-  fs.path("/" + name)->stat(&st);
-  handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
-                content.size(), st.st_size);
-  handle->close();
-  handle.reset();
-}
+  void
+  appendfile(rfs::FileSystem& fs,
+             std::string const& name,
+             std::string const& content)
+  {
+    auto handle = fs.path("/" + name)->open(O_RDWR, 0666 | S_IFREG);
+    struct stat st;
+    fs.path("/" + name)->stat(&st);
+    handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
+                  content.size(), st.st_size);
+    handle->close();
+    handle.reset();
+  }
 
-std::string
-readfile(rfs::FileSystem& fs,
-         std::string const& name)
-{
-  auto handle = fs.path("/" + name)->open(O_RDONLY, S_IFREG);
-  std::string res(32768, 0);
-  int sz = handle->read(elle::WeakBuffer(elle::unconst(res.data()), 32768), 32768, 0);
-  res.resize(sz);
-  ELLE_TRACE("got %s bytes", sz);
-  handle->close();
-  handle.reset();
-  return res;
+  std::string
+  readfile(rfs::FileSystem& fs,
+           std::string const& name)
+  {
+    auto handle = fs.path("/" + name)->open(O_RDONLY, S_IFREG);
+    std::string res(32768, 0);
+    int sz = handle->read(elle::WeakBuffer(elle::unconst(res.data()), 32768), 32768, 0);
+    res.resize(sz);
+    ELLE_TRACE("got %s bytes", sz);
+    handle->close();
+    handle.reset();
+    return res;
+  }
 }
 
 ELLE_TEST_SCHEDULED(basic)
 {
   auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -424,7 +428,7 @@ namespace
   {
     elle::filesystem::TemporaryDirectory d;
     auto tmp = d.path();
-    elle::os::setenv("MEMO_HOME", tmp.string());
+    memo::setenv("HOME", tmp.string());
     auto const kp = elle::cryptography::rsa::keypair::generate(512);
     auto nodes = run_nodes(tmp, kp, count);
     auto fswrite = make_observer(tmp, kp, 1, replication_factor, true, false, false);
@@ -606,7 +610,7 @@ ELLE_TEST_SCHEDULED(conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -685,7 +689,7 @@ ELLE_TEST_SCHEDULED(times)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 1);
   auto fsp = make_observer(tmp, kp, 1, 1, false, false, false);
@@ -740,7 +744,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
@@ -777,7 +781,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   constexpr auto iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
@@ -803,7 +807,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
 {
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const tmp = d.path();
-  elle::os::setenv("MEMO_HOME", tmp.string());
+  memo::setenv("HOME", tmp.string());
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto const nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
   auto const fss = node_to_fs(nodes);
@@ -901,9 +905,11 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
   auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
-  auto files = std::vector<std::string>{};
-  for (int i=0; i<20; ++i)
-    files.emplace_back("file" + std::to_string(i));
+  auto const files = elle::make_vector(boost::irange(0, 20),
+                                       [](auto i)
+                                       {
+                                         return elle::print("file{}", i);
+                                       });
   for (auto const& f : files)
     writefile(*fs, f, "foo");
   for (auto const& f : files)
@@ -919,13 +925,10 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   // another, otherwise requests will fail (we set a low
   // query_get_retries)
   for (auto const& f : files)
-    BOOST_TEST(insist([&]{
-          ELLE_LOG("file %s", f);
-          return readfile(*fs, f);
-        }) == "foo");
+    BOOST_TEST(insist([&]{return readfile(*fs, f);}, "file: " + f) == "foo");
 
-  // same operation, but push the other one on beyond
-  // why does it work? node0 upon restart will find node1 from beyond
+  // Same operation, but push the other one on beyond.
+  // Why does it work? node0 upon restart will find node1 from beyond
   // and bootstrap to it. Then node1 will be able to answer the observer
   // when it will do a node lookup for node0
   beyond.pull(*nodes[0].first);
@@ -934,20 +937,18 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[1].first);
   for (auto const& f : files)
-    BOOST_CHECK_NO_THROW(insist([&] {
-          ELLE_LOG("file %s", f);
-          readfile(*fs, f);
-        }));
+    BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, f); },
+                                "file: " + f));
 }
 
 
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("MEMO_CONNECT_TIMEOUT", "2");
-  elle::os::setenv("MEMO_SOFTFAIL_TIMEOUT", "5");
+  memo::setenv("CONNECT_TIMEOUT", 2);
+  memo::setenv("SOFTFAIL_TIMEOUT", 5);
   // disable RDV so that nodes won't find each other that way
-  elle::os::setenv("MEMO_RDV", "");
+  memo::setenv("RDV", "");
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));

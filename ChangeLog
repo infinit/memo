@@ -1,7 +1,23 @@
 # Change Log
 
+## [0.9.2] 2017-10-21
 
-## [0.9.0]
+Fix serialization versioning.
+
+## [0.9.1] 2017-10-20 [YANKED]
+
+Skipped release because of unrecognized version in RPCs.
+
+### Changed
+
+- Rename `INFINIT_{FOO}` environment variables as `MEMO_{FOO}`.
+- Prefer `MEMO_{FOO}=0` to `MEMO_NO_{FOO}=1` or `MEMO_DISABLE_{FOO}=1`.
+
+### Fixed
+
+- Fix error report generation.
+
+## [0.9.0] 2017-10-19
 
 Node churn intensive testing and rebalancing robustification.
 
@@ -11,6 +27,7 @@ Node churn intensive testing and rebalancing robustification.
   nodes on exit.
 - Prometheus gauges for reachable blocks and under-replicated blocks.
 - Add centralized crash reporting.
+- Option `--log` to control the generated logs.
 
 ### Changed
 
@@ -27,13 +44,13 @@ Node churn intensive testing and rebalancing robustification.
 - When reading, be resilient to a minority of node missing a block.
 - Transmit immutable block ownership information to new node holding
   them so they can handle replication themselves.
-- Protect against concurrent updates to the same address via the GRPC
+- Protect against concurrent updates to the same address via the gRPC
   interface.
 - Various minor issues in the command-line parsing.
 
 ## [0.8.0] 2017-05-22
 
-Kouncil improvements and completion, GRPC interface for the KV store,
+Kouncil improvements and completion, gRPC interface for the KV store,
 basic prometheus monitoring.
 
 ### Added

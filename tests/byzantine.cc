@@ -16,8 +16,8 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
   {
     ELLE_LOG("connecting");
     auto s = dht.connect_tcp();
-    auto elle_version = memo::elle_serialization_version(dht.dht->version());
-    elle::protocol::Serializer ser(s, elle_version, false);
+    auto const elle_version = memo::elle_serialization_version(dht.dht->version());
+    auto&& ser = elle::protocol::Serializer(s, elle_version, false);
     auto&& channels = elle::protocol::ChanneledStream{ser};
     auto rpc = memo::RPC<void()>("doom_is_coming", channels, dht.dht->version());
     BOOST_CHECK_THROW(rpc(), memo::UnknownRPC);
@@ -28,7 +28,8 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
                    ::keys = dht.dht->keys()};
   auto peer = dht_b.dht->dock().make_peer(
     memo::model::NodeLocation(dht.dht->id(),
-                                 dht.dht->local()->server_endpoints())).lock();
+                              dht.dht->local()->server_endpoints()))
+    .lock();
   auto& r = dynamic_cast<memo::model::doughnut::Remote&>(*peer);
   ELLE_LOG("connecting");
   r.connect();
@@ -38,7 +39,7 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
 
 ELLE_TEST_SUITE()
 {
-  // It takes 10sec _with_ Valgrind on a laptop in Docker, otherwise
+  // It takes 10s _with_ Valgrind on a laptop in Docker, otherwise
   // less than a second.
   auto timeout = valgrind(5, 5);
   auto& suite = boost::unit_test::framework::master_test_suite();

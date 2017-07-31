@@ -6,7 +6,7 @@
 #include <memo/silo/Collision.hh>
 #include <memo/silo/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.Memory");
+ELLE_LOG_COMPONENT("memo.silo.Memory");
 
 namespace
 {

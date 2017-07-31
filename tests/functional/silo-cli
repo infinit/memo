@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 from utils import *
 from math import *
 
@@ -10,47 +11,38 @@ def static_vars(**kwargs):
     return func
   return decorate
 
-quals = ['kb', 'kib', 'Kib', 'KiB',
-         'mb', 'mib', 'Mib', 'MiB',
-         'gb', 'gib', 'Gib', 'GiB',
-         'tb', 'tib', 'Tib', 'TiB',
-         'b', 'B']
+B = 1
+kB = 1000 ** 1
+MB = 1000 ** 2
+GB = 1000 ** 3
+TB = 1000 ** 4
+KiB = 2 ** 10
+MiB = 2 ** 20
+GiB = 2 ** 30
+TiB = 2 ** 40
 
-kb = pow(2, 10)
-mb = pow(2, 20)
-gb = pow(2, 30)
-tb = pow(2, 40)
+units = {'kb': kB, 'kib': KiB, 'Kib': KiB, 'KiB': KiB,
+         'mb': MB, 'mib': MiB, 'Mib': MiB, 'MiB': MiB,
+         'gb': GB, 'gib': GiB, 'Gib': GiB, 'GiB': GiB,
+         'tb': TB, 'tib': TiB, 'Tib': TiB, 'TiB': TiB,
+         'b': B, 'B': B, '': B}
 
-quals_to = [1000, 1024, 1024, 1024,
-            1000000, mb, mb, mb,
-            1000000000, gb, gb, gb,
-            1000000000000, tb, tb, tb,
-            1, 1]
+def unformat(s):
+  '''Decode capacity with units into an (integral...) number of bytes
+  (e.g., `"10KiB"` => `10240`).
 
-def convert(size):
-  global quals
-  for qual in quals:
-    index = size.find(qual)
-    if index != -1:
-      return (float(size[:index]), size[index:])
-  return (float(size),'')
-
-def unformat(size):
-  global quals
-  global quals_to
-  size, qual = convert(size)
-  if qual == '':
-    return round(size)
-  return round(size * quals_to[quals.index(qual)])
+  '''
+  m = re.fullmatch(r'(.*?)([a-zA-Z]*)', s)
+  size, unit = float(m.group(1)), m.group(2)
+  return round(size * units[unit])
 
 
 @static_vars(name = -1)
 def test(memo, size, description = False):
-  global quals
   import json
-  for qual in quals:
+  for unit in units:
     test.name += 1
-    hsize = "%s%s" % (size, qual)
+    hsize = "%s%s" % (size, unit)
     args = [
       'silo', 'create', 'filesystem', str(test.name),
       '--capacity', hsize,
@@ -81,9 +73,9 @@ with Memo() as bob:
 with Beyond() as beyond, Memo(beyond = beyond) as tmp:
   bob = User(memo = tmp, name = 'bob')
   alice = User(memo = tmp, name = 'alice')
-  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
   alice.run(
-    ['user', 'signup', 'alice', '--email', 'alice@infinit.io'])
+    ['user', 'signup', 'alice', '--email', 'alice@infinit.sh'])
   bob.run(['silo', 'create', 'filesystem', '--as', 'bob', 's'])
   assertEq(len(bob.run_json(['silo', 'list', '-s'])), 1)
   bob.run(['network', 'create', '--as', 'bob', 'n', '-S', 's', '-p'])

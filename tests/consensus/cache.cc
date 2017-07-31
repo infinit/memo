@@ -8,7 +8,7 @@
 #include "DummyDoughnut.hh"
 #include "InstrumentedConsensus.hh"
 
-ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache.test");
+ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Cache.test");
 
 namespace dht = memo::model::doughnut;
 

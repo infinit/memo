@@ -2,12 +2,15 @@
 
 #include <elle/algorithm.hh>
 #include <elle/bench.hh>
-#include <elle/os/environ.hh>
 
 #include <elle/reactor/scheduler.hh>
 #include <elle/log.hh>
 
-ELLE_LOG_COMPONENT("memo.storage.GoogleAPI");
+#include <memo/environ.hh>
+
+using namespace std::literals;
+
+ELLE_LOG_COMPONENT("memo.silo.GoogleAPI");
 
 #define BENCH(name)                                                     \
   static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \
@@ -16,7 +19,7 @@ ELLE_LOG_COMPONENT("memo.storage.GoogleAPI");
 namespace
 {
   auto static const beyond
-    = elle::os::getenv("MEMO_BEYOND", "https://beyond.infinit.sh");
+    = memo::getenv("BEYOND", "https://beyond.infinit.sh"s);
 
   elle::reactor::Duration
   delay(int attempt)
@@ -104,8 +107,7 @@ namespace memo
       while (true)
       {
         auto url = elle::sprintf("%s/users/%s/credentials/google/refresh",
-                                beyond,
-                                this->_name);
+                                beyond, this->_name);
         auto r = Request{url, Method::GET, conf};
         r.query_string(query);
         r.finalize();

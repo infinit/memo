@@ -13,7 +13,7 @@ def initialize(memos):
     i.env['ELLE_LOG_TIME'] = '1'
     i.env['ELLE_LOG_LEVEL'] = ','.join(
       '%s:DEBUG' % c for c in [
-        'infinit.model*',
+        'memo.model*',
         'infinit.overlay*',
       ])
     i.env['MEMO_USER'] = i.user

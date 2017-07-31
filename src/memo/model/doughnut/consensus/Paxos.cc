@@ -167,8 +167,7 @@ namespace memo
                      std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
-          , _lenient_fetch(elle::os::getenv("INFINIT_PAXOS_LENIENT_FETCH",
-                                            lenient_fetch))
+          , _lenient_fetch(memo::getenv("PAXOS_LENIENT_FETCH", lenient_fetch))
           , _rebalance_auto_expand(rebalance_auto_expand)
           , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
@@ -830,7 +829,7 @@ namespace memo
               if (this->_rebalance_auto_expand)
               {
                 ELLE_LOG_COMPONENT(
-                  "infinit.model.doughnut.consensus.Paxos.rebalance");
+                  "memo.model.doughnut.consensus.Paxos.rebalance");
                 PaxosServer::Quorum q;
                 if (!elle::contains(this->_quorums, address))
                 {
@@ -987,7 +986,7 @@ namespace memo
         Paxos::LocalPeer::_disappeared_evict(model::Address lost_id)
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: evict node %f", this, lost_id);
           auto range = elle::equal_range(
             this->_node_blocks.get<by_node>(), lost_id);
@@ -1053,7 +1052,7 @@ namespace memo
         Paxos::LocalPeer::_rebalance()
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           while (true)
           {
             auto elt = this->_rebalancable.get();
@@ -2138,7 +2137,7 @@ namespace memo
         Paxos::_resign()
         {
           ELLE_LOG_COMPONENT(
-            "infinit.model.doughnut.consensus.Paxos.rebalance");
+            "memo.model.doughnut.consensus.Paxos.rebalance");
           elle::reactor::Backoff backoff(
             std::chrono::milliseconds(10), std::chrono::milliseconds(10000));
           auto local = this->doughnut().local();

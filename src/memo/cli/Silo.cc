@@ -4,6 +4,7 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include <elle/bytes.hh>
 #include <elle/print.hh>
 
 #include <memo/silo/Dropbox.hh>
@@ -11,7 +12,7 @@
 #include <memo/silo/GCS.hh>
 #include <memo/silo/GoogleDrive.hh>
 #include <memo/silo/S3.hh>
-#ifndef MEMO_WINDOWS
+#ifndef ELLE_WINDOWS
 # include <memo/silo/sftp.hh>
 #endif
 #include <memo/cli/Memo.hh>
@@ -23,82 +24,7 @@ namespace memo
 {
   namespace cli
   {
-    namespace
-    {
-      long double
-      convert_capacity(long double value, std::string const& quantifier)
-      {
-        if (quantifier == "b" || quantifier == "")
-          return value;
-        if (quantifier == "kb")
-          return value * 1000;
-        if (quantifier == "kib")
-          return value * 1024;
-        if (quantifier == "mb")
-          return value * 1000 * 1000;
-        if (quantifier == "mib")
-          return value * 1024 * 1024;
-        if (quantifier == "gb")
-          return value * 1000 * 1000 * 1000;
-        if (quantifier == "gib")
-          return value * 1024 * 1024 * 1024;
-        if (quantifier == "tb")
-          return value * 1000 * 1000 * 1000 * 1000;
-        if (quantifier == "tib")
-          return value * 1024 * 1024 * 1024 * 1024;
-        elle::err("invalid capacity: %s", quantifier);
-      }
-
-      int64_t
-      convert_capacity(std::string value)
-      {
-        std::string quantifier = [&] {
-          boost::algorithm::to_lower(value);
-          auto to_find = std::vector<std::string>{
-            // "b" MUST be the last element.
-            "kb", "mb", "gb", "tb", "kib", "mib", "gib", "tib", "b"
-          };
-          const char* res = nullptr;
-          for (auto const& t: to_find)
-            if (res = std::strstr(value.c_str(), t.c_str()))
-              break;
-          return res ? res : "";
-        }();
-        auto double_value =
-          std::stold(value.substr(0, value.size() - quantifier.size()));
-        return std::llround(convert_capacity(double_value, quantifier));
-      }
-
-      boost::optional<int64_t>
-      convert_capacity(boost::optional<std::string> capacity)
-      {
-        return capacity
-          ? convert_capacity(*capacity)
-          : boost::optional<int64_t>{};
-      }
-
-      std::string
-      pretty_print(int64_t bytes, int64_t zeros)
-      {
-        std::string str = std::to_string(bytes);
-        std::string integer = std::to_string(bytes / zeros);
-        return integer + "." + str.substr(integer.size(), 2);
-      }
-
-      std::string
-      pretty_print(int64_t bytes)
-      {
-        if (bytes / 1000 == 0)
-          return std::to_string(bytes) + "B";
-        if (bytes / 1000000 == 0) // Under 1 Mio and higher than 1 Kio
-          return pretty_print(bytes, 1000) + "KB";
-        if (bytes / 1000000000 == 0)
-          return pretty_print(bytes, 1000000) + "MB";
-        if (bytes / 1000000000000 == 0)
-          return pretty_print(bytes, 1000000000) + "GB";
-        return pretty_print(bytes, 1000000000000) + "TB";
-      }
-    }
+    namespace bfs = boost::filesystem;
 
     Silo::Silo(Memo& memo)
       : Object(memo)
@@ -185,19 +111,21 @@ namespace memo
       )
     {}
 
-    static
-    void
-    mode_create(Memo& cli,
-                boost::optional<std::string> output,
-                std::unique_ptr<memo::silo::SiloConfig> config)
+    namespace
     {
-      if (auto o = cli.get_output(output, false))
+      void
+      mode_create(Memo& cli,
+                  boost::optional<std::string> output,
+                  std::unique_ptr<memo::silo::SiloConfig> config)
       {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
+        if (auto o = cli.get_output(output, false))
+        {
+          elle::serialization::json::SerializerOut s(*o, false);
+          s.serialize_forward(config);
+        }
+        else
+          cli.memo().silo_save(config->name, config);
       }
-      else
-        cli.memo().silo_save(config->name, config);
     }
 
     MEMO_ENTREPRISE(
@@ -219,7 +147,7 @@ namespace memo
           name,
           account->token,
           std::move(root),
-          convert_capacity(capacity),
+          elle::convert_capacity(capacity),
           std::move(description)));
     })
 
@@ -230,14 +158,13 @@ namespace memo
                                   boost::optional<std::string> output,
                                   boost::optional<std::string> root)
     {
-      auto path = root ?
-        memo::canonical_folder(root.get()) :
-        (memo::xdg_data_home() / "blocks" / name);
-      if (boost::filesystem::exists(path))
+      auto const path = root ? memo::canonical_folder(root.get())
+        : (memo::xdg_data_home() / "blocks" / name);
+      if (bfs::exists(path))
       {
-        if (!boost::filesystem::is_directory(path))
+        if (!bfs::is_directory(path))
           elle::err("path is not directory: %s", path);
-        if (!boost::filesystem::is_empty(path))
+        if (!bfs::is_empty(path))
           std::cout << "WARNING: Path is not empty: " << path << '\n'
                     << "WARNING: You may encounter unexpected behavior.\n";
       }
@@ -247,7 +174,7 @@ namespace memo
         std::make_unique<memo::silo::FilesystemSiloConfig>(
           name,
           std::move(path.string()),
-          convert_capacity(capacity),
+          elle::convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -272,7 +199,7 @@ namespace memo
           root.value_or(elle::print("{}_blocks", name)),
           self.name,
           account->refresh_token,
-          convert_capacity(capacity),
+          elle::convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -319,7 +246,7 @@ namespace memo
           name,
           std::move(aws_credentials),
           silo_class,
-          convert_capacity(capacity),
+          elle::convert_capacity(capacity),
           std::move(description)));
     }
 
@@ -343,7 +270,7 @@ namespace memo
           std::move(root),
           account->refresh_token,
           self.name,
-          convert_capacity(capacity),
+          elle::convert_capacity(capacity),
           std::move(description)));
     })
 
@@ -376,6 +303,12 @@ namespace memo
     void
     Silo::mode_list()
     {
+      auto const capacity = [](auto const& silo)
+        {
+          return (silo->capacity
+                  ? elle::human_data_size(*silo->capacity)
+                  : "unlimited");
+        };
       auto silos = this->cli().memo().silos_get();
       if (this->cli().script())
       {
@@ -384,11 +317,10 @@ namespace memo
         {
           auto o = elle::json::Object{
             {"name", static_cast<std::string>(silo->name)},
-            {"capacity", (silo->capacity ? pretty_print(*silo->capacity)
-                          : "unlimited")},
+            {"capacity", capacity(silo)},
           };
           if (silo->description)
-            o["description"] = silo->description.get();
+            o["description"] = *silo->description;
           l.emplace_back(std::move(o));
         }
         elle::json::write(std::cout, l);
@@ -398,9 +330,7 @@ namespace memo
           elle::print(
             std::cout, "{0}{1? \"{1}\"}: {2}\n",
             silo->name, silo->description,
-            silo->capacity ?
-            pretty_print(*silo->capacity) :
-            "unlimited");
+            capacity(silo));
     }
 
     void

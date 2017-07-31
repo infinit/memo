@@ -26,7 +26,7 @@
 #include <memo/model/doughnut/User.hh>
 
 
-#ifdef MEMO_WINDOWS
+#ifdef ELLE_WINDOWS
 # undef stat
 #endif
 
@@ -600,11 +600,10 @@ namespace memo
                              std::shared_ptr<DirectoryData> self)
     {
       ELLE_ASSERT_EQ(self.get(), this);
-      using elle::os::getenv;
-      static int prefetch_threads = getenv("INFINIT_PREFETCH_THREADS", 3);
-      static int prefetch_depth = getenv("INFINIT_PREFETCH_DEPTH", 2);
-      static int prefetch_group = getenv("INFINIT_PREFETCH_GROUP", 5);
-      static int prefetch_tasks = getenv("INFINIT_PREFETCH_TASKS", 5);
+      static int prefetch_threads = memo::getenv("PREFETCH_THREADS", 3);
+      static int prefetch_depth = memo::getenv("PREFETCH_DEPTH", 2);
+      static int prefetch_group = memo::getenv("PREFETCH_GROUP", 5);
+      static int prefetch_tasks = memo::getenv("PREFETCH_TASKS", 5);
       // Disable prefetching if we have no cache
       static bool have_cache =
         model::doughnut::consensus::StackedConsensus::find<

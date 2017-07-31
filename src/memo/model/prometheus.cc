@@ -8,6 +8,8 @@
 # include <elle/os/environ.hh>
 # include <elle/printf.hh>
 
+# include <memo/environ.hh>
+
 # include <prometheus/exposer.h>
 # include <prometheus/registry.h>
 
@@ -18,7 +20,7 @@ using namespace std::literals;
 namespace
 {
   auto prometheus_endpoint
-    = elle::os::getenv("MEMO_PROMETHEUS_ENDPOINT", "127.0.0.1:8080"s);
+    = memo::getenv("PROMETHEUS_ENDPOINT", "127.0.0.1:8080"s);
 }
 
 namespace memo
@@ -29,7 +31,8 @@ namespace memo
     {
       ELLE_TRACE("setting endpoint to %s", e);
       ::prometheus_endpoint = std::move(e);
-      instance().bind(::prometheus_endpoint);
+      if (!instance()._exposer)
+        instance().bind(::prometheus_endpoint);
     }
 
     std::string const& endpoint()
@@ -56,7 +59,7 @@ namespace memo
         {
           if (this->_exposer)
           {
-            ELLE_LOG("%s: listen on %s", this, addr);
+            ELLE_LOG("%s: rebind on %s", this, addr);
             this->_exposer->rebind(addr);
           }
           else
@@ -64,12 +67,6 @@ namespace memo
             ELLE_LOG("%s: listen on %s", this, addr);
             this->_exposer = std::make_unique<::prometheus::Exposer>(addr);
           }
-        }
-        catch (elle::Error const&)
-        {
-          ELLE_WARN("%s: creation failed, metrics will not be exposed: %s",
-                    this, elle::exception_string());
-          this->_exposer.reset();
         }
         catch (std::runtime_error const&)
         {
