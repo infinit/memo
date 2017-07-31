@@ -39,8 +39,6 @@ namespace
 {
   /// How the user called us.
   auto argv_0 = std::string(BIN);
-  /// The path to `memo`.
-  auto memo_exe = argv_0;
 }
 
 namespace memo
@@ -255,7 +253,7 @@ namespace memo
     void
     Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << memo_exe << ' ' << usage << std::endl;
+      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -474,7 +472,7 @@ namespace
     auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  memo_exe, obj);
+                  argv_0, obj);
     return 2;
   }
 }
@@ -483,9 +481,6 @@ int
 main(int const argc, char const* const* const argv)
 {
   argv_0 = argv[0];
-  memo_exe = (bfs::path(argv_0).parent_path() / BIN).string();
-  if (boost::algorithm::ends_with(argv_0, ".exe"))
-    memo_exe += ".exe";
   try
   {
     auto args = std::vector<std::string>(argv + 1, argv + argc);
