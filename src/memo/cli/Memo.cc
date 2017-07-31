@@ -227,7 +227,6 @@ namespace memo
       void
       main_impl(std::vector<std::string>& args)
       {
-        args.erase(args.begin());
         auto memo = memo::Memo{};
         auto&& cli = Memo(memo);
         if (args.empty() || elle::das::cli::is_option(args[0], options))
@@ -239,6 +238,7 @@ namespace memo
       void
       main(std::vector<std::string>& args)
       {
+        ELLE_DEBUG("command line: {}", args);
         auto report_thread = make_reporter_thread();
         check_broken_locale();
         environ_check();
@@ -488,7 +488,7 @@ main(int const argc, char const* const* const argv)
     memo_exe += ".exe";
   try
   {
-    auto args = std::vector<std::string>(argv, argv + argc);
+    auto args = std::vector<std::string>(argv + 1, argv + argc);
     elle::reactor::Scheduler s;
     elle::reactor::Thread main(s, "main", [&] { memo::cli::main(args); });
     s.run();
