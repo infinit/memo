@@ -28,8 +28,13 @@ def here():
   finfo = inspect.getframeinfo(frame)
   return finfo.filename + ":" + str(finfo.lineno)
 
-def log(*args):
-  print(here() + ':', *args, file=sys.stderr, flush=True)
+def log(*args, level='info'):
+  print(here() + ':',
+        # pass "info:" so that Emacs' compilation-mode don't believe
+        # all these lines are errors.
+        level + ':' if level else '',
+        *args,
+        file=sys.stderr, flush=True)
 
 class TemporaryDirectory:
 
