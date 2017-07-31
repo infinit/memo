@@ -29,8 +29,17 @@ namespace memo
     return canonical_folder(d);
   }
 
-  std::string log_base(std::string const& base)
+  std::string log_base(std::string const& family)
   {
+    auto const now =
+      to_iso_string(boost::posix_time::second_clock::universal_time());
+    auto const base
+      = elle::print("{family}/{now}-{pid}",
+                    {
+                      {"family", family},
+                      {"now",    now},
+                      {"pid",    elle::system::getpid()},
+                    });
     auto const path = log_dir() / base;
     // log_dir is created, but base may also contain `/`.
     elle::create_parent_directories(path);
@@ -40,21 +49,12 @@ namespace memo
   namespace
   {
     std::unique_ptr<elle::log::Logger>
-    make_log(std::string const& base)
+    make_log(std::string const& family)
     {
       auto const level =
         memo::getenv("LOG_LEVEL",
                      "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
                      ",*grpc*:DEBUG,*prometheus:LOG"s);
-      auto const now =
-        to_iso_string(boost::posix_time::second_clock::universal_time());
-      auto const file =
-        log_base(elle::print("{base}-{now}-{pid}",
-                             {
-                               {"now", now},
-                               {"base", base},
-                               {"pid", elle::system::getpid()},
-                             }));
       auto const spec =
         elle::print("file://{file}"
                     "?"
@@ -62,7 +62,7 @@ namespace memo
                     "size=64MiB,rotate=15,"
                     "{level}",
                     {
-                      {"file", file},
+                      {"file", log_base(family)},
                       {"level", level},
                     });
       ELLE_DUMP("building log: {}", spec);
@@ -93,21 +93,21 @@ namespace memo
   }
 
   void
-  main_log_base(std::string const& base)
+  main_log_base(std::string const& family)
   {
-    auto const old_base = elle::base(main_log()->fstream().path());
-    auto const new_base = boost::replace_last_copy(old_base.string(), "main", base);
-    elle::create_parent_directories(new_base);
-    main_log()->base(new_base);
+    auto const old_fam = elle::base(main_log()->fstream().path());
+    auto const new_fam = boost::replace_last_copy(old_fam.string(), "main", family);
+    elle::create_parent_directories(new_fam);
+    main_log()->base(new_fam);
   }
 
   std::vector<bfs::path>
-  latest_logs(std::string const& base, int n)
+  latest_logs(std::string const& family, int n)
   {
     // The greatest NUM in logs/main.<NUM> file names.
-    auto const last = [&base]() -> boost::optional<int>
+    auto const last = [&family]() -> boost::optional<int>
       {
-        auto const nums = elle::rotate_versions(log_base(base));
+        auto const nums = elle::rotate_versions(log_base(family));
         if (nums.empty())
           return {};
         else
@@ -120,7 +120,7 @@ namespace memo
       // consecutive (i.e., don't take main.1 with main.3).
       for (auto i: boost::irange(*last, *last - n, -1))
       {
-        auto const name = elle::print("{}.{}", log_base(base), i);
+        auto const name = elle::print("{}.{}", log_base(family), i);
         if (bfs::exists(name))
           res.emplace_back(name);
         else
@@ -132,6 +132,17 @@ namespace memo
 
   namespace
   {
+    /// Prune the log_dir from p.
+    auto
+    log_suffix(bfs::path const& p)
+    {
+      ELLE_ASSERT(boost::starts_with(p, log_dir()));
+      // Unfortunately we can't erase_head_copy on path components:
+      // bfs and boost::erase_head_copy are incompatible.
+      return bfs::path{boost::erase_head_copy(p.string(),
+                                              log_dir().string().size() + 1)};
+    }
+
     /// Whether a directory entry's name is alike
     /// "~/.cache/infinit/memo/logs/foo/base.123".
     auto
@@ -145,7 +156,8 @@ namespace memo
                        boost::is_digit());
     }
 
-    /// All the log files that match a given regex.
+    /// All the log files whose path name match a given regex (not
+    /// including the log_dir).
     auto
     log_files(std::string const& re)
     {
@@ -155,7 +167,7 @@ namespace memo
         | filtered(has_version)
         | filtered([re = std::regex(re)](auto const& p)
                    {
-                     return regex_search(p.path().string(), re);
+                     return regex_search(log_suffix(p).string(), re);
                    });
     }
   }
@@ -163,16 +175,10 @@ namespace memo
   boost::container::flat_set<std::string>
   log_families(std::string const& re)
   {
-    auto const prefix = log_dir().string();
     auto res = boost::container::flat_set<std::string>{};
     for (auto const& p: log_files(re))
-    {
-      auto dir = elle::base(p.path()).string();
-      ELLE_ASSERT(boost::starts_with(dir, prefix));
-      // Also remove the directory separator.
-      boost::erase_head(dir, prefix.size() + 1);
-      res.emplace(std::move(dir));
-    }
+      // The family of a log file is just the directory name.
+      res.emplace(log_suffix(p.path()).parent_path().string());
     return res;
   }
 
@@ -192,9 +198,9 @@ namespace memo
       elle::try_remove(p);
   }
 
-  bool tar_logs(bfs::path const& tgz, std::string const& base, int n)
+  bool tar_logs(bfs::path const& tgz, std::string const& family, int n)
   {
-    auto const files = latest_logs(base, n);
+    auto const files = latest_logs(family, n);
     if (files.empty())
     {
       ELLE_LOG("there are no log files");

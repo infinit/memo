@@ -8,6 +8,7 @@
 #include <elle/algorithm.hh>
 #include <elle/log/FileLogger.hh>
 #include <elle/make-vector.hh>
+#include <elle/print.hh>
 #include <elle/reactor/network/resolve.hh>
 
 #include <memo/Network.hh> // Storages
@@ -564,7 +565,7 @@ namespace memo
           = std::unordered_map<std::string, std::vector<memo::NetworkDescriptor>>;
         auto const res =
           memo.hub_fetch<Networks>(
-            elle::sprintf("users/%s/networks", owner.name),
+            elle::print("users/%s/networks", owner.name),
             "networks for user",
             owner.name,
             owner);
@@ -735,7 +736,7 @@ namespace memo
         {
           if (node_id)
             {
-              std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+              std::stringstream ss(elle::print("\"%s\"", *node_id));
               namespace json = elle::serialization::json;
               return json::deserialize<memo::model::Address>(ss, false);
             }
@@ -869,10 +870,11 @@ namespace memo
       {
         auto& memo = cli.memo();
         auto owner = cli.as_user();
+        auto network = memo.network_get(network_name, owner);
         // Use the qualified name, in case the user is running the
         // network several times concurrently under different ids.
-        main_log_base(memo.qualified_name(network_name, owner));
-        auto network = memo.network_get(network_name, owner);
+        // So it can be `bob/infinit/company`, or `bob/bob/bobnet`.
+        main_log_base(elle::print("%s/%s", owner.name, network.name));
         if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
         {
           auto paxos = dynamic_cast<
@@ -1346,7 +1348,7 @@ namespace memo
                        auto ab = dht.make_block<memo::model::blocks::ACLBlock>();
                        auto const addr = ab->address();
                        dht.insert(std::move(ab));
-                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
+                       auto nb = dnut::NB(dht, name, elle::print("%s", addr));
                        dht.seal_and_insert(nb);
                        return addr;
                      }
@@ -1394,15 +1396,15 @@ namespace memo
       auto name = memo.qualified_name(network_name, owner);
       auto res =
         memo.hub_fetch<memo::Storages>(
-          elle::sprintf("networks/%s/stat", name),
+          elle::print("networks/%s/stat", name),
           "stat",
           "stat",
           boost::none,
           memo::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
-      elle::fprintf(std::cout, "{\"usage\": %s, \"capacity\": %s}",
-                    res.usage, res.capacity);
+      elle::print(std::cout, "{\"usage\": %s, \"capacity\": %s}",
+                  res.usage, res.capacity);
     }
 
 

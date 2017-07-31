@@ -224,8 +224,18 @@ namespace memo
     Doctor::Log::mode_list(boost::optional<std::string> const& match)
     {
       ELLE_TRACE_SCOPE("log.list");
-      elle::print(std::cout, "existing log families: {}\n",
-                  log_families(match.value_or(""s)));
+      auto& cli = this->cli();
+      auto const families = log_families(match.value_or(""s));
+      if (cli.script())
+      {
+        auto const l = elle::json::make_array(families,
+                                              [&] (auto const& f) {
+            return elle::json::Object{{"name", f}};
+          });
+        elle::json::write(std::cout, l);
+      }
+      else
+        elle::print(std::cout, "existing log families: %s\n", families);
     }
 
     void
