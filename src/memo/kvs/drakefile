@@ -41,6 +41,8 @@ def configure(
     def hash(self):
       return {}
 
+  # Copy to src since PWD is added to GOPATH and sources in a GOPATH
+  # component must start with src/.
   vs_grpc = drake.copy(gen_vs.targets(), 'src/memo/vs',
                        strip_prefix = True,
                        builder = CopyToEmptyDirectory)
@@ -48,12 +50,12 @@ def configure(
   gen_go = grpc.GRPCGoGen(service_proto,
                           grpc.grpc.protoc,
                           toolkit = go_toolkit)
-  kvs_grpc = drake.copy(gen_go.targets(), 'src/kvs/service',
+  kvs_grpc = drake.copy(gen_go.targets(), 'src/memo/kvs/service',
                         strip_prefix = True)
   gen_kvs_data = grpc.GRPCGoGen(drake.node('protobuf/memo_kvs_data.proto'),
                                 grpc.grpc.protoc,
                                 toolkit = go_toolkit)
-  kvs_data = drake.copy(gen_kvs_data.targets(), 'src/kvs/data',
+  kvs_data = drake.copy(gen_kvs_data.targets(), 'src/memo/kvs/data',
                         strip_prefix = True)
   local_config.add_include_path(drake.path_build())
 
