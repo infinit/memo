@@ -36,6 +36,7 @@ namespace crash_report
     void
     dump(CrashReporter& report, std::string const& base)
     {
+      ELLE_TRACE("saved crash-report: {}", base);
       if (report.make_payload)
         report.make_payload(base);
     }
