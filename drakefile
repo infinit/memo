@@ -351,7 +351,17 @@ def configure(
   # XXX: Go cross compiling requires go > 1.6 (tested with 1.8.3).
   # XXX: Re-enable key-value store for Windows when the build farm has been
   # XXX: updated.
-  with_kvs = not windows
+  #
+  # FIXME: on alpine the libc does not allow us to share
+  # argc/argv/envp/auxp with the go runtime.  So libkvs is broken, and
+  # memo cannot even start.
+  try:
+    with open('/etc/motd', 'r') as f:
+      alpine = 'Alpine' in f.read()
+  except:
+    alpine = False
+
+  with_kvs = not windows and not alpine
 
   if with_kvs:
     kvs = drake.include(
@@ -364,10 +374,6 @@ def configure(
   ## -------- ##
   ## Binaries ##
   ## -------- ##
-
-  def cpp_str_escape(string):
-    from json import dumps
-    return dumps(string).strip('"')
 
   cli_cxx_config = drake.cxx.Config(cxx_config)
   cli_cxx_config += elle.das.config
