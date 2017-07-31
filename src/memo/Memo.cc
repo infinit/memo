@@ -108,7 +108,7 @@ namespace memo
                     User const& user,
                     bool require_model)
   {
-    auto name = qualified_name(name_, user);
+    auto const name = qualified_name(name_, user);
     bfs::ifstream f;
     // Move linked networks found in the descriptor folder to the correct
     // place.
@@ -210,9 +210,9 @@ namespace memo
   Memo::network_unlink(std::string const& name_,
                        User const& user)
   {
-    auto name = qualified_name(name_, user);
-    auto network = this->network_get(name, user, true);
-    auto path = this->_network_path(network.name, user);
+    auto const name = qualified_name(name_, user);
+    auto const network = this->network_get(name, user, true);
+    auto const path = this->_network_path(network.name, user);
     // XXX Should check async cache to make sure that it's empty.
     bfs::remove_all(network.cache_dir(user).parent_path());
     if (bfs::exists(path))
@@ -234,8 +234,8 @@ namespace memo
                        bool unlink)
   {
     // Ensure if unqualified name is passed, we qualify with passed user.
-    auto name = qualified_name(name_, user);
-    auto network = this->network_get(name, user, false);
+    auto const name = qualified_name(name_, user);
+    auto const network = this->network_get(name, user, false);
     // Get a list of users who have linked the network.
     auto linked_users = this->network_linked_users(name);
     if (linked_users.size() && !unlink)
@@ -281,7 +281,7 @@ namespace memo
                                User const& owner,
                                bool or_network)
   {
-    auto name = qualified_name(name_, owner);
+    auto const name = qualified_name(name_, owner);
     try
     {
       bfs::ifstream f;
@@ -843,7 +843,7 @@ namespace memo
                       User const& user,
                       bool create_dir) const
   {
-    auto network_name = this->qualified_name(name, user);
+    auto const network_name = this->qualified_name(name, user);
     return this->_networks_path(user, create_dir) / network_name;
   }
 
