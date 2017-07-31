@@ -867,9 +867,11 @@ namespace memo
                   boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
-        main_log_base(network_name);
         auto& memo = cli.memo();
         auto owner = cli.as_user();
+        // Use the qualified name, in case the user is running the
+        // network several times concurrently under different ids.
+        main_log_base(memo.qualified_name(network_name, owner));
         auto network = memo.network_get(network_name, owner);
         if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
         {

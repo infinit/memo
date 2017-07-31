@@ -47,9 +47,9 @@ namespace memo
                      "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
                      ",*grpc*:DEBUG,*prometheus:LOG"s);
       auto const now =
-        to_iso_string(boost::posix_time::microsec_clock::universal_time());
+        to_iso_string(boost::posix_time::second_clock::universal_time());
       auto const file =
-        log_base(elle::print("{base}-{now}",
+        log_base(elle::print("{base}-{now}-{pid}",
                              {
                                {"now", now},
                                {"base", base},
