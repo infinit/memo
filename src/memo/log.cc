@@ -48,92 +48,8 @@ namespace memo
 
   namespace
   {
-    std::unique_ptr<elle::log::Logger>
-    make_log(std::string const& family)
-    {
-      auto const level =
-        memo::getenv("LOG_LEVEL",
-                     "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
-                     ",*grpc*:DEBUG,*prometheus:LOG"s);
-      auto const spec =
-        elle::print("file://{file}"
-                    "?"
-                    "time,microsec,"
-                    "size=64MiB,rotate=15,"
-                    "{level}",
-                    {
-                      {"file", log_base(family)},
-                      {"level", level},
-                    });
-      ELLE_DUMP("building log: {}", spec);
-      auto logger = elle::log::make_logger(spec);
-      auto const dashes = std::string(80, '-') + '\n';
-      logger->message(elle::log::Logger::Level::log,
-                      elle::log::Logger::Type::warning,
-                      _trace_component_,
-                      dashes + dashes + dashes
-                      + "starting memo " + version_describe(),
-                      __FILE__, __LINE__, "Memo::Memo");
-      return logger;
-    }
-  }
-
-  elle::log::FileLogger*&
-  main_log()
-  {
-    static auto res = static_cast<elle::log::FileLogger*>(nullptr);
-    return res;
-  }
-
-  void make_main_log()
-  {
-    auto l = make_log("main");
-    main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
-    elle::log::logger_add(std::move(l));
-  }
-
-  void
-  main_log_base(std::string const& family)
-  {
-    auto const old_fam = elle::base(main_log()->fstream().path());
-    auto const new_fam = boost::replace_last_copy(old_fam.string(), "main", family);
-    elle::create_parent_directories(new_fam);
-    main_log()->base(new_fam);
-  }
-
-  std::vector<bfs::path>
-  latest_logs(std::string const& family, int n)
-  {
-    // The greatest NUM in logs/main.<NUM> file names.
-    auto const last = [&family]() -> boost::optional<int>
-      {
-        auto const nums = elle::rotate_versions(log_base(family));
-        if (nums.empty())
-          return {};
-        else
-          return *boost::max_element(nums);
-      }();
-    auto res = std::vector<bfs::path>{};
-    if (last)
-    {
-      // Get the `n` latest logs in the log directory, if they are
-      // consecutive (i.e., don't take main.1 with main.3).
-      for (auto i: boost::irange(*last, *last - n, -1))
-      {
-        auto const name = elle::print("{}.{}", log_base(family), i);
-        if (bfs::exists(name))
-          res.emplace_back(name);
-        else
-          break;
-      }
-    }
-    return res;
-  }
-
-  namespace
-  {
     /// Prune the log_dir from p.
-    auto
+    bfs::path
     log_suffix(bfs::path const& p)
     {
       ELLE_ASSERT(boost::starts_with(p, log_dir()));
@@ -141,6 +57,14 @@ namespace memo
       // bfs and boost::erase_head_copy are incompatible.
       return bfs::path{boost::erase_head_copy(p.string(),
                                               log_dir().string().size() + 1)};
+    }
+
+    /// Get the family from a log file.
+    std::string
+    log_family(bfs::path const& p)
+    {
+      // The family of a log file is just the directory name.
+      return log_suffix(p).parent_path().string();
     }
 
     /// Whether a directory entry's name is alike
@@ -170,6 +94,95 @@ namespace memo
                      return regex_search(log_suffix(p).string(), re);
                    });
     }
+
+    std::unique_ptr<elle::log::Logger>
+    make_log(std::string const& family)
+    {
+      auto const level =
+        memo::getenv("LOG_LEVEL",
+                     "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
+                     ",*grpc*:DEBUG,*prometheus:LOG"s);
+      auto const spec =
+        elle::print("file://{base}"
+                    "?"
+                    "time,microsec,"
+                    "size=64MiB,rotate=15,"
+                    "{level}",
+                    {
+                      {"base", log_base(family)},
+                      {"level", level},
+                    });
+      ELLE_DUMP("building log: {}", spec);
+      auto res = elle::log::make_logger(spec);
+      auto const dashes = std::string(80, '-') + '\n';
+      res->message(elle::log::Logger::Level::log,
+                   elle::log::Logger::Type::warning,
+                   _trace_component_,
+                   dashes + dashes + dashes
+                   + "starting memo " + version_describe(),
+                   __FILE__, __LINE__, "Memo::Memo");
+      return res;
+    }
+  }
+
+  elle::log::FileLogger*&
+  main_log()
+  {
+    static auto res = static_cast<elle::log::FileLogger*>(nullptr);
+    return res;
+  }
+
+  void make_main_log()
+  {
+    auto l = make_log("main");
+    main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
+    elle::log::logger_add(std::move(l));
+  }
+
+  bfs::path
+  main_log_base()
+  {
+    return elle::base(main_log()->fstream().path());
+  }
+
+  void
+  main_log_family(std::string const& family)
+  {
+    // Compute the new base without calling log_base, as we don't want
+    // to change the timestamp for instance.
+    auto const fname = main_log()->fstream().path().stem();
+    auto const new_base = log_dir() / family / fname;
+    elle::create_parent_directories(new_base);
+    main_log()->base(new_base);
+  }
+
+  std::vector<bfs::path>
+  latest_logs(bfs::path const& base, int n)
+  {
+    // The greatest NUM in logs/main.<NUM> file names.
+    auto const last = [&base]() -> boost::optional<int>
+      {
+        auto const nums = elle::rotate_versions(base);
+        if (nums.empty())
+          return {};
+        else
+          return *boost::max_element(nums);
+      }();
+    auto res = std::vector<bfs::path>{};
+    if (last)
+    {
+      // Get the `n` latest logs in the log directory, if they are
+      // consecutive (i.e., don't take main.1 with main.3).
+      for (auto i: boost::irange(*last, *last - n, -1))
+      {
+        auto const name = elle::print("{}.{}", base.string(), i);
+        if (bfs::exists(name))
+          res.emplace_back(name);
+        else
+          break;
+      }
+    }
+    return res;
   }
 
   boost::container::flat_set<std::string>
@@ -177,8 +190,7 @@ namespace memo
   {
     auto res = boost::container::flat_set<std::string>{};
     for (auto const& p: log_files(re))
-      // The family of a log file is just the directory name.
-      res.emplace(log_suffix(p.path()).parent_path().string());
+      res.emplace(log_family(p));
     return res;
   }
 
@@ -198,12 +210,12 @@ namespace memo
       elle::try_remove(p);
   }
 
-  bool tar_logs(bfs::path const& tgz, std::string const& family, int n)
+  bool tar_logs(bfs::path const& tgz, bfs::path const& base, int n)
   {
-    auto const files = latest_logs(family, n);
+    auto const files = latest_logs(base, n);
     if (files.empty())
     {
-      ELLE_LOG("there are no log files");
+      ELLE_LOG("there are no {} log files", base);
       return false;
     }
     else

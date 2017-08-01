@@ -874,7 +874,7 @@ namespace memo
         // Use the qualified name, in case the user is running the
         // network several times concurrently under different ids.
         // So it can be `bob/infinit/company`, or `bob/bob/bobnet`.
-        main_log_base(elle::print("%s/%s", owner.name, network.name));
+        main_log_family(elle::print("%s/%s", owner.name, network.name));
         if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
         {
           auto paxos = dynamic_cast<

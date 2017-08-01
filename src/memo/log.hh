@@ -11,10 +11,21 @@ namespace memo
 {
   namespace bfs = boost::filesystem;
 
+  /// Our logs in memo rely on two concepts:
+  ///
+  /// - the "family" is a simple string such as "main", or
+  /// "jmq/infinit/company".
+  ///
+  /// - the "base" is almost the log files name: it only lacks the
+  /// generation (files are rotated as `{base}.0`, `{base}.1`, etc.).
+  ///
+  /// We have `{base} = {log_dir} / {family} / {now}-{pid}`,
+  /// and `{log} = {base} . {version}.
+
   /// The directory for the critical logs (`~/.cache/infinit/memo/logs`).
   bfs::path log_dir();
 
-  /// The log family name (`log_dir() / family`).
+  /// The log base name (`log_dir() / family / {now}-{pid}`).
   ///
   /// Ensures that the parent directory exists.
   std::string log_base(std::string const& family = "main");
@@ -29,19 +40,28 @@ namespace memo
   /// Reads `$MEMO_LOG_LEVEL`.
   void make_main_log();
 
-  /// Change the family of the main log.
-  void main_log_base(std::string const& family);
+  /// Change the family of the main log.  Renames the current log file.
+  void main_log_family(std::string const& family);
+
+  /// Get the base of the (current) main log.
+  ///
+  /// For instance
+  /// `/Users/bob/.cache/infinit/memo/logs/main/20170801T083249-32863`
+  /// from
+  /// `/Users/bob/.cache/infinit/memo/logs/main/20170801T083249-32863.0`
+  bfs::path main_log_base();
 
   /// The list of the @a n latest log files in a family.
   ///
-  /// @param family  the family base name.  A period will be added.
+  /// @param base  the log base name.  A period will be added.
   /// @param n     the maximum number of contiguous logs to gather.
   std::vector<bfs::path>
-  latest_logs(std::string const& family = "main", int n = 1);
+  latest_logs(bfs::path const& base, int n = 1);
 
   /// The existing log families that match a pattern.
   ///
-  /// @param pattern  a regex
+  /// @param pattern  a regex that applies only to the log suffix
+  ///                 (i.e., not the `/home/...` part).
   boost::container::flat_set<std::string>
   log_families(std::string const& pattern = {});
 
@@ -53,11 +73,11 @@ namespace memo
   /// Generate a tgz with the latest critical log files.
   ///
   /// @param tgz    where the archive will be made.
-  /// @param family the family base name.  A period will be added.
+  /// @param base   the log base name.  A period will be added.
   /// @param n      the maximum number of contiguous logs to gather.
   ///
   /// @return  whether the tarball was created (i.e., there are
   ///          logs under that base name).
   bool tar_logs(bfs::path const& tgz,
-                std::string const& family = "main", int n = 1);
+                bfs::path const& base, int n = 1);
 }
