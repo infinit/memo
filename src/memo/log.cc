@@ -98,13 +98,15 @@ namespace memo
     std::unique_ptr<elle::log::Logger>
     make_log(std::string const& family)
     {
-      auto const level =
-        memo::getenv("LOG_LEVEL",
-                     "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG"
-                     ",*grpc*:DEBUG,*prometheus:LOG"s);
+      auto const level = ("*athena*:DEBUG"
+                          ",*cli*:DEBUG"
+                          ",*model*:DEBUG"
+                          ",*grpc*:DEBUG"
+                          ",*prometheus:LOG");
       auto const spec =
         elle::print("file://{base}"
                     "?"
+                    "var=MEMO_LOG_LEVEL,"
                     "time,microsec,"
                     "size=64MiB,rotate=15,"
                     "{level}",
