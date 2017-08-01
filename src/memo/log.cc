@@ -136,9 +136,14 @@ namespace memo
 
   void make_main_log()
   {
-    auto l = make_log("main");
-    main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
-    elle::log::logger_add(std::move(l));
+    // There is (currently) no risk of concurrency.  If needed in the
+    // future, use a mutex.
+    if (!main_log())
+    {
+      auto l = make_log("main");
+      main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
+      elle::log::logger_add(std::move(l));
+    }
   }
 
   bfs::path

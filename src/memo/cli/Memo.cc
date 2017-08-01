@@ -21,24 +21,26 @@
 
 #include <memo/cli/Error.hh>
 #include <memo/cli/utility.hh>
-#include <memo/environ.hh>
 #include <memo/crash-report.hh>
+#include <memo/environ.hh>
+#include <memo/log.hh>
 #include <memo/utility.hh>
 
 ELLE_LOG_COMPONENT("cli");
 
-#ifdef INFINIT_BINARY
-# define BIN "infinit"
-#else
-# define BIN "memo"
-#endif
-
 namespace bfs = boost::filesystem;
+
+using namespace std::literals;
 
 namespace
 {
   /// How the user called us.
-  auto argv_0 = std::string(BIN);
+  auto argv_0 =
+#ifdef INFINIT_BINARY
+  "infinit"s;
+#else
+  "memo"s;
+#endif
 }
 
 namespace memo
@@ -236,7 +238,6 @@ namespace memo
       void
       main(std::vector<std::string>& args)
       {
-        ELLE_DEBUG("command line: {}", args);
         auto report_thread = make_reporter_thread();
         check_broken_locale();
         environ_check();
@@ -483,7 +484,10 @@ main(int const argc, char const* const* const argv)
   argv_0 = argv[0];
   try
   {
-    auto args = std::vector<std::string>(argv + 1, argv + argc);
+    memo::make_main_log();
+    auto args = std::vector<std::string>(argv, argv + argc);
+    ELLE_DEBUG("command line: {}", args);
+    args.erase(args.begin());
     elle::reactor::Scheduler s;
     elle::reactor::Thread main(s, "main", [&] { memo::cli::main(args); });
     s.run();
