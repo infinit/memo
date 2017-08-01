@@ -399,7 +399,7 @@ namespace memo
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
             ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
             using NodeTimeouts =
-              std::unordered_map<Address, elle::reactor::WTimer>;
+              std::unordered_map<Address, elle::reactor::AsioTimer>;
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 

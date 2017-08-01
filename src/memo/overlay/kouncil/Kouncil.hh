@@ -105,7 +105,7 @@ namespace memo
         /// A reference date.
         using Time = elle::Time;
         /// The type of our timers.
-        using Timer = elle::reactor::WTimer;
+        using Timer = elle::reactor::AsioTimer;
         /// Transportable timeout.
         using LamportAge = elle::athena::LamportAge;
 

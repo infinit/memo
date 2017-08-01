@@ -82,7 +82,7 @@ namespace memo
             if (elle::reactor::wait(this->_connected, delay))
             {
               auto const delay = rpc_timeout - (elle::Clock::now() - rpc_start);
-              auto&& timeout = elle::reactor::WTimer(
+              auto&& timeout = elle::reactor::AsioTimer(
                 elle::reactor::scheduler().io_service(), delay);
               if (this->doughnut().soft_fail_running())
                 timeout.async_wait(
