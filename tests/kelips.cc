@@ -45,7 +45,7 @@ ELLE_LOG_COMPONENT("test.kelips");
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
-namespace imd = memo::model::doughnut;
+namespace dnut = memo::model::doughnut;
 namespace iok = memo::overlay::kelips;
 
 using memo::model::Endpoints;
@@ -134,7 +134,7 @@ public:
     _endpoints["bob"].erase(elle::sprintf("%s", id));
   }
 
-  void push(memo::model::doughnut::Doughnut& d)
+  void push(dnut::Doughnut& d)
   {
     auto eps = Endpoints{
       {
@@ -145,7 +145,7 @@ public:
     push(d.id(), eps);
   }
 
-  void pull(memo::model::doughnut::Doughnut& d)
+  void pull(dnut::Doughnut& d)
   {
     pull(d.id());
   }
@@ -166,7 +166,7 @@ auto endpoints = std::vector<memo::model::Endpoints>{};
 auto net = memo::Network("bob/network", nullptr, boost::none);
 using Nodes = std::vector<
          std::pair<
-           std::shared_ptr<imd::Doughnut>,
+           std::shared_ptr<dnut::Doughnut>,
            elle::reactor::Thread::unique_ptr
            >>;
 
@@ -196,16 +196,16 @@ run_nodes(bfs::path const& where,
     std::unique_ptr<memo::silo::Silo> s;
     bfs::create_directories(where / "store");
     s.reset(new memo::silo::Filesystem(where / ("store" + std::to_string(n))));
-    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
+    auto passport = dnut::Passport(kp.K(), "testnet", kp);
     auto consensus =
-    [&] (memo::model::doughnut::Doughnut& dht)
-        -> std::unique_ptr<memo::model::doughnut::consensus::Consensus>
+    [&] (dnut::Doughnut& dht)
+        -> std::unique_ptr<dnut::consensus::Consensus>
         {
-          return std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
+          return std::make_unique<dnut::consensus::Paxos>(dht, replication_factor, paxos_lenient);
         };
     auto overlay =
-        [&] (memo::model::doughnut::Doughnut& dht,
-             std::shared_ptr<memo::model::doughnut::Local> local)
+        [&] (dnut::Doughnut& dht,
+             std::shared_ptr<dnut::Local> local)
         {
           auto res = config.make(local, &dht);
           res->discover(endpoints);
@@ -214,7 +214,7 @@ run_nodes(bfs::path const& where,
     memo::model::Address::Value v;
     memset(v, 0, sizeof(v));
     v[0] = base_id + n + 1;
-    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
+    auto dn = std::make_shared<dnut::Doughnut>(
       memo::model::Address(v),
       std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
@@ -259,31 +259,31 @@ namespace
     config.accept_plain = false;
     config.query_get_retries = 3;
     config.ping_timeout_ms = valgrind(500, 20);
-    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
+    auto passport = dnut::Passport(kp.K(), "testnet", kp);
     auto make_consensus =
-      [&] (memo::model::doughnut::Doughnut& dht)
+      [&] (dnut::Doughnut& dht)
       {
         auto res =
-          std::unique_ptr<imd::consensus::Consensus>{
-            std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient)
+          std::unique_ptr<dnut::consensus::Consensus>{
+            std::make_unique<dnut::consensus::Paxos>(dht, replication_factor, paxos_lenient)
           };
         if (async)
           res = std::make_unique<
-            memo::model::doughnut::consensus::Async>(std::move(res),
+            dnut::consensus::Async>(std::move(res),
               where / bfs::unique_path());
         if (cache)
-          res = std::make_unique<imd::consensus::Cache>(std::move(res));
+          res = std::make_unique<dnut::consensus::Cache>(std::move(res));
         return res;
       };
     auto make_overlay =
-      [&] (memo::model::doughnut::Doughnut& dht,
-           std::shared_ptr<memo::model::doughnut::Local> local)
+      [&] (dnut::Doughnut& dht,
+           std::shared_ptr<dnut::Local> local)
       {
         auto res = config.make(local, &dht);
         res->discover(endpoints);
         return res;
       };
-    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
+    auto dn = std::make_shared<dnut::Doughnut>(
       memo::model::Address::random(0), // FIXME
       std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
@@ -620,13 +620,13 @@ ELLE_TEST_SCHEDULED(conflicts)
     auto& fs1 = fs1p.first;
     auto& fs2 = fs2p.first;
     auto cache1 =
-      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
-        dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<dnut::consensus::Cache*>(
+        dynamic_cast<dnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs1->operations().get())->block_store().get())->consensus().get());
     auto cache2 =
-      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
-        dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<dnut::consensus::Cache*>(
+        dynamic_cast<dnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs2->operations().get())->block_store().get())->consensus().get());
     struct stat st;
@@ -899,8 +899,8 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
 ELLE_TEST_SCHEDULED(beyond_storage)
 {
   // test reconnection between storages
-  Beyond beyond;
-  elle::filesystem::TemporaryDirectory d;
+  auto const beyond = Beyond{};
+  auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
   auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
