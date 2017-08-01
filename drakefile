@@ -842,9 +842,7 @@ def configure(
       doctor_configuration_test = functional_test(
         'doctor/configuration',
         env = {
-          'MEMO_HOME_ROOT': str(
-            drake.path_source('tests/functional/doctor/homes')
-          )
+          'MEMO_HOME_ROOT': drake.path_source('tests/functional/doctor/homes')
         })
       doctor_configuration_test['dependencies'] += drake.nodes(
         *list(map(lambda x: "tests/functional/doctor/results/%s" % x,

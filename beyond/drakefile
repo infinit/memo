@@ -286,11 +286,13 @@ def configure(
   ## ----- ##
 
   rule_check = drake.Rule('check')
-  test_utils = drake.Node('tests/utils.py')
+  test_utils = drake.nodes('tests/utils.py',
+                           'fake/gcs.py')
+
   path = ':'.join(
-    map(lambda x: str(x),
+    map(str,
         [drake.path_build(python_prefix()),
-         test_utils.path().dirname()]))
+         test_utils[0].path().dirname()]))
   for test_name in [
       'auth',
       'demo',
@@ -328,9 +330,9 @@ def configure(
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
     test.dependencies_add(binaries)
-    test.dependencies_add([test_utils])
+    test.dependencies_add(test_utils)
     env = {
-      'PYTHONPATH': str(path),
+      'PYTHONPATH': path,
     }
     import os
     if binaries:
