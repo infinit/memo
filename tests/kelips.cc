@@ -925,7 +925,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   // another, otherwise requests will fail (we set a low
   // query_get_retries)
   for (auto const& f : files)
-    BOOST_TEST(insist([&]{return readfile(*fs, f);}, "file: " + f) == "foo");
+    BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 
   // Same operation, but push the other one on beyond.
   // Why does it work? node0 upon restart will find node1 from beyond
@@ -937,8 +937,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[1].first);
   for (auto const& f : files)
-    BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, f); },
-                                "file: " + f));
+    BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 }
 
 
