@@ -3878,7 +3878,6 @@ namespace memo
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
-        using elle::serialize_duration_ms;
         overlay::Configuration::serialize(s);
         s.serialize("k", k);
         s.serialize("max_other_contacts", max_other_contacts);
@@ -3925,7 +3924,6 @@ namespace memo
       void
       GossipConfiguration::serialize(elle::serialization::Serializer& s)
       {
-        using elle::serialize_duration_ms;
         serialize_duration_ms(s, "interval", interval);
         s.serialize("new_threshold", new_threshold);
         serialize_duration_ms(s, "old_threshold", old_threshold);

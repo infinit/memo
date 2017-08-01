@@ -605,7 +605,6 @@ namespace kademlia
 
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
-    using elle::serialize_duration_ms;
     s.serialize("port", port);
     s.serialize("wait", wait);
     s.serialize("address_size", address_size);
@@ -626,7 +625,9 @@ namespace kademlia
   void Kademlia::remove(Address address)
   {}
 
-  void Kademlia::fetch(Address address, std::unique_ptr<memo::model::blocks::Block> & b)
+  void
+  Kademlia::fetch(Address address,
+                  std::unique_ptr<memo::model::blocks::Block> & b)
   {}
 
   void Kademlia::print(std::ostream& o) const
