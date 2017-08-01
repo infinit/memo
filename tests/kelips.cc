@@ -164,85 +164,85 @@ private:
 
 auto endpoints = std::vector<memo::model::Endpoints>{};
 auto net = memo::Network("bob/network", nullptr, boost::none);
-using Nodes = std::vector<
-         std::pair<
-           std::shared_ptr<dnut::Doughnut>,
-           elle::reactor::Thread::unique_ptr
-           >>;
 
-/// \param count   number of nodes to create.
-static
-Nodes
-run_nodes(bfs::path const& where,
-          elle::cryptography::rsa::KeyPair const& kp,
-          int count = 10, int groups = 1, int replication_factor = 3,
-          bool paxos_lenient = false,
-          int beyond_port = 0, int base_id=0)
-{
-  ELLE_LOG_SCOPE("building and running %s nodes", count);
-  endpoints.clear();
-  Nodes res;
-  iok::Configuration config;
-  config.k = groups;
-  config.encrypt = true;
-  config.accept_plain = false;
-  int factor = IF_WINDOWS(5, 1);
-  config.contact_timeout_ms = factor * valgrind(2000,20);
-  config.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
-  config.ping_timeout_ms = factor * valgrind(500, 20);
-  config.query_get_retries = 2;
-  for (int n=0; n<count; ++n)
-  {
-    std::unique_ptr<memo::silo::Silo> s;
-    bfs::create_directories(where / "store");
-    s.reset(new memo::silo::Filesystem(where / ("store" + std::to_string(n))));
-    auto passport = dnut::Passport(kp.K(), "testnet", kp);
-    auto consensus =
-    [&] (dnut::Doughnut& dht)
-        -> std::unique_ptr<dnut::consensus::Consensus>
-        {
-          return std::make_unique<dnut::consensus::Paxos>(dht, replication_factor, paxos_lenient);
-        };
-    auto overlay =
-        [&] (dnut::Doughnut& dht,
-             std::shared_ptr<dnut::Local> local)
-        {
-          auto res = config.make(local, &dht);
-          res->discover(endpoints);
-          return res;
-        };
-    memo::model::Address::Value v;
-    memset(v, 0, sizeof(v));
-    v[0] = base_id + n + 1;
-    auto dn = std::make_shared<dnut::Doughnut>(
-      memo::model::Address(v),
-      std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
-      kp.public_key(),
-      passport,
-      consensus,
-      overlay,
-      boost::optional<int>(),
-      boost::optional<boost::asio::ip::address>(),
-      std::move(s));
-    elle::reactor::Thread::unique_ptr tptr;
-    if (beyond_port)
-    {
-      memo::overlay::NodeLocations locs;
-      tptr = net.make_poll_hub_thread(*dn, locs, 1);
-    }
-    res.emplace_back(dn, std::move(tptr));
-    //if (res.size() == 1)
-    endpoints.emplace_back(
-        memo::model::Endpoints{{
-            boost::asio::ip::address::from_string("127.0.0.1"),
-            dn->local()->server_endpoint().port(),
-        }});
-  }
-  return res;
-}
+using Node = std::pair<std::shared_ptr<dnut::Doughnut>,
+                       elle::reactor::Thread::unique_ptr>;
+using Nodes = std::vector<Node>;
 
 namespace
 {
+  /// \param count   number of nodes to create.
+  Nodes
+  run_nodes(bfs::path const& where,
+            elle::cryptography::rsa::KeyPair const& kp,
+            int count = 10, int groups = 1, int replication_factor = 3,
+            bool paxos_lenient = false,
+            int beyond_port = 0, int base_id=0)
+  {
+    ELLE_LOG_SCOPE("building and running %s nodes", count);
+    endpoints.clear();
+    auto config = [&]
+      {
+        auto res = iok::Configuration{};
+        res.k = groups;
+        res.encrypt = true;
+        res.accept_plain = false;
+        int factor = IF_WINDOWS(5, 1);
+        res.contact_timeout_ms = factor * valgrind(2000,20);
+        res.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
+        res.ping_timeout_ms = factor * valgrind(500, 20);
+        res.query_get_retries = 2;
+        return res;
+      }();
+    auto make_consensus = [&] (dnut::Doughnut& dht)
+      -> std::unique_ptr<dnut::consensus::Consensus>
+      {
+        return std::make_unique<dnut::consensus::Paxos>
+          (dht, replication_factor, paxos_lenient);
+      };
+    auto make_overlay = [&] (dnut::Doughnut& dht, std::shared_ptr<dnut::Local> local)
+      {
+        auto res = config.make(local, &dht);
+        res->discover(endpoints);
+        return res;
+      };
+    auto res = Nodes{};
+    for (int n=0; n<count; ++n)
+    {
+      bfs::create_directories(where / "store");
+      auto s = std::make_unique<memo::silo::Filesystem>
+        (where / ("store" + std::to_string(n)));
+      auto passport = dnut::Passport(kp.K(), "testnet", kp);
+      memo::model::Address::Value v;
+      memset(v, 0, sizeof(v));
+      v[0] = base_id + n + 1;
+      auto dn = std::make_shared<dnut::Doughnut>(
+        memo::model::Address(v),
+        std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
+        kp.public_key(),
+        passport,
+        make_consensus,
+        make_overlay,
+        boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
+        std::move(s));
+      elle::reactor::Thread::unique_ptr tptr;
+      if (beyond_port)
+      {
+        memo::overlay::NodeLocations locs;
+        tptr = net.make_poll_hub_thread(*dn, locs, 1);
+      }
+      res.emplace_back(dn, std::move(tptr));
+      //if (res.size() == 1)
+      endpoints.emplace_back(
+          memo::model::Endpoints{{
+              boost::asio::ip::address::from_string("127.0.0.1"),
+              dn->local()->server_endpoint().port(),
+          }});
+    }
+    return res;
+  }
+
   std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
   make_observer(bfs::path const& where,
                 elle::cryptography::rsa::KeyPair const& kp,
@@ -253,15 +253,18 @@ namespace
                 int beyond_port = 0)
   {
     ELLE_LOG_SCOPE("building observer");
-    iok::Configuration config;
-    config.k = groups;
-    config.encrypt = true;
-    config.accept_plain = false;
-    config.query_get_retries = 3;
-    config.ping_timeout_ms = valgrind(500, 20);
+    auto config = [&]
+      {
+        auto res = iok::Configuration{};
+        res.k = groups;
+        res.encrypt = true;
+        res.accept_plain = false;
+        res.query_get_retries = 3;
+        res.ping_timeout_ms = valgrind(500, 20);
+        return res;
+      }();
     auto passport = dnut::Passport(kp.K(), "testnet", kp);
-    auto make_consensus =
-      [&] (dnut::Doughnut& dht)
+    auto make_consensus = [&] (dnut::Doughnut& dht)
       {
         auto res =
           std::unique_ptr<dnut::consensus::Consensus>{
@@ -275,9 +278,7 @@ namespace
           res = std::make_unique<dnut::consensus::Cache>(std::move(res));
         return res;
       };
-    auto make_overlay =
-      [&] (dnut::Doughnut& dht,
-           std::shared_ptr<dnut::Local> local)
+    auto make_overlay = [&] (dnut::Doughnut& dht, std::shared_ptr<dnut::Local> local)
       {
         auto res = config.make(local, &dht);
         res->discover(endpoints);
@@ -899,7 +900,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
 ELLE_TEST_SCHEDULED(beyond_storage)
 {
   // test reconnection between storages
-  auto const beyond = Beyond{};
+  auto&& beyond = Beyond{};
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
@@ -917,20 +918,23 @@ ELLE_TEST_SCHEDULED(beyond_storage)
     ELLE_LOG("file %s", f);
     BOOST_TEST(readfile(*fs, f) == "foo");
   }
+
+  BOOST_TEST_MESSAGE("first change of node 0");
   nodes[0].first.reset();
   nodes[0].second.reset();
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[0].first);
   // If the nodes see each other they will route requests to one
   // another, otherwise requests will fail (we set a low
-  // query_get_retries)
+  // query_get_retries).
   for (auto const& f : files)
     BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 
+  BOOST_TEST_MESSAGE("second change of node 0");
   // Same operation, but push the other one on beyond.
   // Why does it work? node0 upon restart will find node1 from beyond
-  // and bootstrap to it. Then node1 will be able to answer the observer
-  // when it will do a node lookup for node0
+  // and bootstrap to it. Then node1 will be able to answer the
+  // observer when it will do a node lookup for node0.
   beyond.pull(*nodes[0].first);
   nodes[0].first.reset();
   nodes[0].second.reset();
