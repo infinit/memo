@@ -55,7 +55,7 @@ using memo::model::Endpoints;
 namespace
 {
   template <typename Fun>
-  auto insist(Fun fun, std::string const& ctx = "", int attempts = 10)
+  auto insist(Fun fun, std::string const& ctx = "", int attempts = 5)
   {
     for (int i=0; ; ++i)
     {
@@ -190,7 +190,11 @@ namespace
         res.encrypt = true;
         res.accept_plain = false;
         int factor = IF_WINDOWS(5, 1);
-        res.contact_timeout_ms = factor * valgrind(2000,20);
+        // If we are too fast (2s and even 4s was not enough to not
+        // have failures), beyond_storage's "second change of node 0"
+        // that fails quite often.  With 5s, I have 100 successful
+        // runs in a row.
+        res.contact_timeout_ms = factor * valgrind(5000, 20);
         res.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
         res.ping_timeout_ms = factor * valgrind(500, 20);
         res.query_get_retries = 2;
@@ -932,10 +936,14 @@ ELLE_TEST_SCHEDULED(beyond_storage)
     BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 
   BOOST_TEST_MESSAGE("second change of node 0");
-  // Same operation, but push the other one on beyond.
-  // Why does it work? node0 upon restart will find node1 from beyond
-  // and bootstrap to it. Then node1 will be able to answer the
-  // observer when it will do a node lookup for node0.
+  // Same operation, but push the other one on beyond.  Why does it
+  // work? node[0] upon restart will find node[1] from beyond and
+  // bootstrap to it. Then node[1] will be able to answer the observer
+  // when it will do a node lookup for node[0].
+  //
+  // Note that here we are quite sensitive to `contact_timeout`: if
+  // it's too short, we are very likely not to be able to recover
+  // before the complete exclusion of the node.
   beyond.pull(*nodes[0].first);
   nodes[0].first.reset();
   nodes[0].second.reset();
