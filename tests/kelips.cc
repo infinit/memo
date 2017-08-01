@@ -27,6 +27,8 @@
 #include <memo/silo/Memory.hh>
 #include <memo/silo/Silo.hh>
 
+#include "DHT.hh"
+
 ELLE_LOG_COMPONENT("test.kelips");
 
 #if defined ELLE_WINDOWS
@@ -177,7 +179,7 @@ namespace
             elle::cryptography::rsa::KeyPair const& kp,
             int count = 10, int groups = 1, int replication_factor = 3,
             bool paxos_lenient = false,
-            int beyond_port = 0, int base_id=0)
+            int beyond_port = 0)
   {
     ELLE_LOG_SCOPE("building and running %s nodes", count);
     endpoints.clear();
@@ -206,18 +208,15 @@ namespace
         res->discover(endpoints);
         return res;
       };
+    auto passport = dnut::Passport(kp.K(), "testnet", kp);
+    bfs::create_directories(where / "store");
     auto res = Nodes{};
     for (int n=0; n<count; ++n)
     {
-      bfs::create_directories(where / "store");
       auto s = std::make_unique<memo::silo::Filesystem>
         (where / ("store" + std::to_string(n)));
-      auto passport = dnut::Passport(kp.K(), "testnet", kp);
-      memo::model::Address::Value v;
-      memset(v, 0, sizeof(v));
-      v[0] = base_id + n + 1;
       auto dn = std::make_shared<dnut::Doughnut>(
-        memo::model::Address(v),
+        special_id(n + 1),
         std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
         kp.public_key(),
         passport,
@@ -844,7 +843,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
@@ -856,7 +855,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   beyond.pull(*nodes[1].first);
   nodes.clear();
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
-  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
   BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
@@ -867,7 +866,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   nodes.clear();
   elle::reactor::sleep(2_sec);
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
-  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
   BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
@@ -880,7 +879,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   Beyond beyond;
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
@@ -891,7 +890,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   nodes[0].first.reset();
   nodes[0].second.reset();
   BOOST_CHECK_THROW(writefile(*fs, "file", "bar"), std::exception);
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port())[0]);
   beyond.push(*nodes[0].first);
   insist([&] { writefile(*fs, "file", "bar");});
   BOOST_TEST(readfile(*fs, "file") == "bar");
@@ -899,14 +898,16 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
 
 ELLE_TEST_SCHEDULED(beyond_storage)
 {
+  auto constexpr num_files = 20;
   // test reconnection between storages
   auto&& beyond = Beyond{};
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
+  // Creating two nodes.
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
-  auto const files = elle::make_vector(boost::irange(0, 20),
+  auto const files = elle::make_vector(boost::irange(0, num_files),
                                        [](auto i)
                                        {
                                          return elle::print("file{}", i);
@@ -922,7 +923,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   BOOST_TEST_MESSAGE("first change of node 0");
   nodes[0].first.reset();
   nodes[0].second.reset();
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port())[0]);
   beyond.push(*nodes[0].first);
   // If the nodes see each other they will route requests to one
   // another, otherwise requests will fail (we set a low
@@ -938,7 +939,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   beyond.pull(*nodes[0].first);
   nodes[0].first.reset();
   nodes[0].second.reset();
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port())[0]);
   beyond.push(*nodes[1].first);
   for (auto const& f : files)
     BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
