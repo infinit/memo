@@ -16,7 +16,7 @@
 
 namespace bfs = boost::filesystem;
 
-ELLE_LOG_COMPONENT("memo.model.doughnut.bandwidth-test");
+ELLE_LOG_COMPONENT("test.bandwidth-test");
 
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {

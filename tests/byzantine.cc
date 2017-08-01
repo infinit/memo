@@ -7,7 +7,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("byzantine")
+ELLE_LOG_COMPONENT("test.byzantine")
 
 ELLE_TEST_SCHEDULED(unknown_rpc)
 {

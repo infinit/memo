@@ -27,7 +27,7 @@
 #include <memo/silo/Memory.hh>
 #include <memo/silo/Silo.hh>
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.kelips");
 
 #if defined ELLE_WINDOWS
 # undef stat
