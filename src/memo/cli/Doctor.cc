@@ -196,11 +196,11 @@ namespace memo
     Doctor::Log::Log(Memo& memo)
       : Object(memo)
       , delete_(*this,
-                "Delete logs locally",
+                "Delete {objects} locally",
                 cli::all = false,
                 cli::match = boost::optional<std::string>{})
       , list(*this,
-             "List existing log families",
+             "List existing {object} families",
              cli::match = boost::optional<std::string>{})
       , push(*this,
              "Upload logs to {hub}",
