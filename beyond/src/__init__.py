@@ -767,7 +767,7 @@ class User:
 
   def save(self):
     diff = {}
-    for type in ['dropbox', 'google', 'gcs']:
+    for type in ['dropbox', 'gcs', 'google']:
       original = getattr(self, '_User__%s_accounts_original' % type)
       accounts = getattr(self, '%s_accounts' % type)
       if accounts == {}:
@@ -783,8 +783,8 @@ class User:
         diff.setdefault('emails', {})[email] = confirmation
     self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
-    self.__google_accounts_original = dict(self.__google_accounts)
     self.__gcs_accounts_original = dict(self.__gcs_accounts)
+    self.__google_accounts_original = dict(self.__google_accounts)
     self.__emails_original = dict(self.__emails)
 
   @property

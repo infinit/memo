@@ -3,13 +3,13 @@
 import unittest
 
 from utils import *
-from fake.gcs import GCS
+from fake.gcs import FakeGCS
 
 class Test(unittest.TestCase):
 
   def test_route(self):
     with Beyond() as beyond:
-      setattr(beyond.app, '_Bottle__gcs', FakeGCS())
+      setattr(beyond.app, '_Bottle__image_bucket', FakeGCS())
       user = User()
       res = beyond.get('users/%s/avatar' % user['name'])
       assertEq(res.status_code, 303)

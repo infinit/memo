@@ -287,7 +287,7 @@ def configure(
 
   rule_check = drake.Rule('check')
   test_utils = drake.nodes('tests/utils.py',
-                           'fake/gcs.py')
+                           'tests/fake/gcs.py')
 
   path = ':'.join(
     map(str,

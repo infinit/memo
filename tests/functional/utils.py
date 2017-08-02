@@ -8,13 +8,14 @@ import sys
 import tempfile
 import time
 
+from datetime import timedelta
 from difflib import unified_diff as udiff
 
 import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
-from datetime import timedelta
+from fake.gcs import FakeGCS
 
 binary = 'memo'
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
@@ -37,6 +38,7 @@ def log(*args, level='info'):
         *args,
         file=sys.stderr, flush=True)
 
+# FIXME: Duplicate with drake.
 class TemporaryDirectory:
 
   def __init__(self, path = None):
@@ -300,23 +302,6 @@ def throws(f, contains = None):
 
 import bottle
 
-class FakeGCS:
-
-  def __init__(self):
-    self.__icons = {}
-
-  def upload(self, bucket, path, *args, **kwargs):
-    self.__icons[path] = 'url'
-
-  def delete(self, bucket, path):
-    if path in self.__icons:
-      del self.__icons[path]
-
-  def download_url(self, bucket, path, *args, **kwargs):
-    if path in self.__icons:
-      return self.__icons[path]
-    return None
-
 class Emailer:
 
   def __init__(self):
@@ -346,7 +331,7 @@ class Beyond():
     self.__beyond = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
-    self.__gcs = FakeGCS()
+    self.__image_bucket = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
     self.__bottle_args = bottle_args
@@ -372,7 +357,7 @@ class Beyond():
       setattr(self.__beyond, '_Beyond__now', self.now)
       bargs = {
         'beyond': self.__beyond,
-        'gcs': self.__gcs
+        'image_bucket': self.__image_bucket
       }
       bargs.update(self.__bottle_args)
       self.__app = infinit.beyond.bottle.Bottle(**bargs)

@@ -89,7 +89,7 @@ class Bottle(bottle.Bottle):
   def __init__(
       self,
       beyond,
-      gcs = None,
+      image_bucket = None,
       production = True,
       force_admin = False,
       ldap_server = None,
@@ -107,8 +107,8 @@ class Bottle(bottle.Bottle):
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
     self.install(CertificationPlugin())
     self.route('/')(self.root)
-    # GCS
-    self.__gcs = gcs
+    # GCS bucket for avatars
+    self.__image_bucket = image_bucket
     # OAuth
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
@@ -1187,12 +1187,12 @@ class Bottle(bottle.Bottle):
     self.__beyond.crash_report_send(json)
     return {}
 
-  ## --- ##
-  ## GCS ##
-  ## --- ##
+  ## -------------- ##
+  ## Image Bucket.  ##
+  ## -------------- ##
 
-  def __check_gcs(self):
-    if self.__gcs is None:
+  def __check_image_bucket(self):
+    if self.__image_bucket is None:
       raise Response(501, {
         'error': 'GCS/not_implemented',
         'reason': 'GCS support not enabled',
@@ -1213,7 +1213,7 @@ class Bottle(bottle.Bottle):
     raise ValueError('Image type is not recognized')
 
   def __cloud_image_upload(self, bucket, name):
-    self.__check_gcs()
+    self.__check_image_bucket()
     content_type = None
     try:
       import PIL.Image
@@ -1228,7 +1228,7 @@ class Bottle(bottle.Bottle):
     from io import BytesIO
     bs = BytesIO()
     image.save(bs, "PNG")
-    self.__gcs.upload(
+    self.__image_bucket.upload(
       bucket,
       name,
       data = bs.getvalue(),
@@ -1237,8 +1237,8 @@ class Bottle(bottle.Bottle):
     raise Response(201, {})
 
   def __cloud_image_get_url(self, bucket, name):
-    self.__check_gcs()
-    url = self.__gcs.download_url(
+    self.__check_image_bucket()
+    url = self.__image_bucket.download_url(
       bucket,
       name,
       expiration = datetime.timedelta(minutes = 3),
@@ -1249,8 +1249,8 @@ class Bottle(bottle.Bottle):
     bottle.redirect(self.__cloud_image_get_url(bucket, name))
 
   def __cloud_image_delete(self, bucket, name):
-    self.__check_gcs()
-    self.__gcs.delete(
+    self.__check_image_bucket()
+    self.__image_bucket.delete(
       bucket,
       name,
     )
