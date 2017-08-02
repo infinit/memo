@@ -116,6 +116,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem");
     ELLE_DAS_CLI_SYMBOL(name, 'n', "name of the {object} {action}", true);
     ELLE_DAS_CLI_SYMBOL(network, 'N', "network {action} {object} for");
+    ELLE_DAS_CLI_SYMBOL(number, "limit the number of {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(no_avatar, "do not {action} avatars");
     ELLE_DAS_CLI_SYMBOL(no_color, "don't use colored output");
     ELLE_DAS_CLI_SYMBOL(no_consensus, "use no consensus algorithm");

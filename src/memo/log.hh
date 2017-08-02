@@ -51,10 +51,24 @@ namespace memo
   /// `/Users/bob/.cache/infinit/memo/logs/main/20170801T083249-32863.0`
   bfs::path main_log_base();
 
-  /// The list of the @a n latest log files in a family.
+  /// The @a n latest log files matching a regex.
+  ///
+  /// @param match  the regex.
+  /// @param n      the maximum number of contiguous logs to gather.
+  ///               0 for unlimited.
+  ///
+  /// Beware that std::string is implicitely convertable into
+  /// bfs::path, so it is very dangerous to rely on overloading here.
+  /// And we avoid regex to avoid adding more #includes in this
+  /// header, but it might be a better solution anyway.
+  std::vector<bfs::path>
+  latest_logs_match(std::string const& match, int n = 1);
+
+  /// The @a n latest log files in a base.
   ///
   /// @param base  the log base name.  A period will be added.
   /// @param n     the maximum number of contiguous logs to gather.
+  ///               0 for unlimited.
   std::vector<bfs::path>
   latest_logs(bfs::path const& base, int n = 1);
 
@@ -70,6 +84,17 @@ namespace memo
   /// @param pattern  a regex
   void log_remove(std::string const& pattern = {});
 
+  /// Generate a tgz with the latest matching log files.
+  ///
+  /// @param tgz    where the archive will be made.
+  /// @param match  a regex that applies to the log suffix
+  /// @param n      the maximum number of contiguous logs to gather.
+  ///
+  /// @return  whether the tarball was created (i.e., there are
+  ///          logs under that base name).
+  int tar_logs_match(bfs::path const& tgz,
+                     std::string const& match, int n = 1);
+
   /// Generate a tgz with the latest critical log files.
   ///
   /// @param tgz    where the archive will be made.
@@ -78,6 +103,6 @@ namespace memo
   ///
   /// @return  whether the tarball was created (i.e., there are
   ///          logs under that base name).
-  bool tar_logs(bfs::path const& tgz,
-                bfs::path const& base, int n = 1);
+  int tar_logs(bfs::path const& tgz,
+               bfs::path const& base, int n = 1);
 }

@@ -8,6 +8,7 @@
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/max_element.hpp>
+#include <boost/range/algorithm/partial_sort.hpp>
 #include <boost/range/irange.hpp>
 
 #include <elle/archive/archive.hh>
@@ -95,6 +96,18 @@ namespace memo
                    });
     }
 
+    // FIXME: the rvalue implementation of elle::make_vector and these
+    // ranges don't work together.
+    template <typename Paths>
+    auto
+    to_vector(Paths const& ps)
+    {
+      auto res = std::vector<bfs::path>{};
+      for (auto const& p: ps)
+        res.emplace_back(p.path());
+      return res;
+    }
+
     std::unique_ptr<elle::log::Logger>
     make_log(std::string const& family)
     {
@@ -164,6 +177,18 @@ namespace memo
   }
 
   std::vector<bfs::path>
+  latest_logs_match(std::string const& match, int n)
+  {
+    auto paths = to_vector(log_files(match));
+    auto const begin = paths.begin();
+    auto const size = int(paths.size());
+    auto const num = n ? std::min(n, size) : size;
+    auto const last = std::next(begin, num);
+    boost::partial_sort(paths, last);
+    return {begin, last};
+  }
+
+  std::vector<bfs::path>
   latest_logs(bfs::path const& base, int n)
   {
     // The greatest NUM in logs/main.<NUM> file names.
@@ -204,32 +229,35 @@ namespace memo
   void
   log_remove(std::string const& re)
   {
-    // FIXME: the rvalue implementation of elle::make_vector and these
-    // ranges don't work together.
-    auto const paths = [&]
-      {
-        auto res = std::vector<bfs::path>{};
-        for (auto const& p: log_files(re))
-          res.emplace_back(p.path());
-        return res;
-      }();
-    for (auto const& p: paths)
+    for (auto const& p: to_vector(log_files(re)))
       elle::try_remove(p);
   }
 
-  bool tar_logs(bfs::path const& tgz, bfs::path const& base, int n)
+  namespace
   {
-    auto const files = latest_logs(base, n);
-    if (files.empty())
+    int tar_logs(bfs::path const& tgz,
+                  std::vector<bfs::path> const& files)
     {
-      ELLE_LOG("there are no {} log files", base);
-      return false;
+      if (files.empty())
+        ELLE_LOG("there are no log files");
+      else
+      {
+        ELLE_DUMP("generating {} containing {}", tgz, files);
+        archive(elle::archive::Format::tar_gzip, files, tgz);
+      }
+      return files.size();
     }
-    else
-    {
-      ELLE_DUMP("generating {} containing {}", tgz, files);
-      archive(elle::archive::Format::tar_gzip, files, tgz);
-      return true;
-    }
+  }
+
+  int tar_logs_match(bfs::path const& tgz,
+                     std::string const& match, int n)
+  {
+    return tar_logs(tgz, latest_logs_match(match, n));
+  }
+
+  int tar_logs(bfs::path const& tgz,
+               bfs::path const& base, int n)
+  {
+    return tar_logs(tgz, latest_logs(base, n));
   }
 }

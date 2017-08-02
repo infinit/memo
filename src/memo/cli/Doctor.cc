@@ -203,8 +203,9 @@ namespace memo
              "List existing {object} families",
              cli::match = boost::optional<std::string>{})
       , push(*this,
-             "Upload logs to {hub}",
-             cli::name = "main"s)
+             "Upload {objects} to {hub}",
+             cli::match = boost::optional<std::string>{},
+             cli::number = 2)
     {}
 
     void
@@ -239,19 +240,20 @@ namespace memo
     }
 
     void
-    Doctor::Log::mode_push(std::string const& name)
+    Doctor::Log::mode_push(boost::optional<std::string> const& match,
+                           int number)
     {
       ELLE_TRACE_SCOPE("log.push");
       auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
-      if (tar_logs(tgz.path(), name, 2))
+      if (auto n = tar_logs_match(tgz.path(), match.value_or(""s), number))
       {
         if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
-          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
+          elle::print(std::cout, "successfully uploaded {} logs\n", n);
         else
-          elle::print(std::cerr, "failed to upload '{}' logs\n", name);
+          elle::print(std::cerr, "failed to upload {} logs\n", n);
       }
       else
-        elle::print(std::cerr, "there are no '{}' logs\n", name);
+        elle::print(std::cerr, "there are no logs matching {}\n", match);
     }
 
 

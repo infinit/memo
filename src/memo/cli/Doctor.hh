@@ -115,11 +115,17 @@ namespace memo
 
         // log push.
         Mode<Log,
-             void (decltype(cli::name = "main"s)),
+             void (decltype(cli::match = boost::optional<std::string>{}),
+                   decltype(cli::number = 2)),
              decltype(modes::mode_push)>
         push;
+        /// Send the latest logs to infinit.
+        ///
+        /// @param match   a regex
+        /// @param number  the number of files to send, 0 for unlimited.
         void
-        mode_push(std::string const& name);
+        mode_push(boost::optional<std::string> const& match,
+                  int number);
 
         std::string const description = "Manage logs";
       } log;
