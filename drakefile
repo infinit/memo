@@ -875,16 +875,15 @@ def configure(
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
         env = {
-          'PYTHONPATH': ':'.join([
-            str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-            str(drake.path_source('tests/functional')),
-            str(drake.path_build('tests/functional/lib')),
-          ]),
-          'SOURCE_DIR': drake.path_source(),
+          'BIN_DIR': binaries_path,
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'BIN_DIR': str(binaries_path),
-          'TEST_MEMO_WITH_KVS': str(with_kvs),
+          'PYTHONPATH': ':'.join([str(n) for n in
+              [drake.path_build('beyond/lib/python%s' % elle.python3.version),
+               drake.path_source('tests/functional'),
+               drake.path_build('tests/functional/lib')]]),
+          'SOURCE_DIR': drake.path_source(),
+          'TEST_MEMO_WITH_KVS': with_kvs,
         }
         env.update(t.get('env', {}))
         if windows:
