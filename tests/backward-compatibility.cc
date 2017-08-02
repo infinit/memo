@@ -21,7 +21,7 @@
 #include <memo/filesystem/File.hh>
 #include <memo/utility.hh>
 
-ELLE_LOG_COMPONENT("backward-compatibility");
+ELLE_LOG_COMPONENT("test.backward-compatibility");
 
 namespace bfs = boost::filesystem;
 

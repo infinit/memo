@@ -1738,10 +1738,8 @@ namespace memo
           // Pick at random
           std::vector<Address> available;
           for (auto const& f: _state.contacts[_group])
-          {
             if (res.find(f.first) == res.end())
               available.push_back(f.first);
-          }
           filterAndInsert(available, n, _group, res);
         }
         int size0 = res.size();
@@ -1751,31 +1749,25 @@ namespace memo
         // insert new contacts
         std::vector<Contact*> new_contacts;
         for (int g=0; g<_config.k; ++g)
-        {
-          if (g == _group)
-            continue;
-          for (auto& f: _state.contacts[g])
-          {
-            if (f.second.gossip_count < _config.gossip.new_threshold)
-              new_contacts.push_back(&f.second);
-          }
-        }
+          if (g != _group)
+            for (auto& f: _state.contacts[g])
+              if (f.second.gossip_count < _config.gossip.new_threshold)
+                new_contacts.push_back(&f.second);
         filterAndInsert2(new_contacts, max_new, res);
         // insert old contacts
         new_contacts.clear();
         for (int g=0; g<_config.k; ++g)
-        {
-          if (g == _group)
-            continue;
-          for (auto& f: _state.contacts[g])
+          if (g != _group)
           {
-            auto last_seen = endpoints_max(f.second.endpoints);
-            if (f.second.last_gossip < last_seen
-                && now() - last_seen > timeout
-                && res.find(f.first) == res.end())
-              new_contacts.push_back(&f.second);
+            for (auto& f: _state.contacts[g])
+            {
+              auto last_seen = endpoints_max(f.second.endpoints);
+              if (f.second.last_gossip < last_seen
+                  && now() - last_seen > timeout
+                  && res.find(f.first) == res.end())
+                new_contacts.push_back(&f.second);
+            }
           }
-        }
         filterAndInsert2(new_contacts, max_old, res);
         // insert random contacts if there is room
         new_contacts.clear();
@@ -1784,15 +1776,10 @@ namespace memo
           int n = _config.gossip.contacts_other - res.size() + size0;
           // Pick at random
           for (int g=0; g<_config.k; ++g)
-          {
-            if (g == _group)
-              continue;
-            for (auto& f: _state.contacts[g])
-            {
-              if (res.find(f.first) == res.end())
-                new_contacts.push_back(&f.second);
-            }
-          }
+            if (g != _group)
+              for (auto& f: _state.contacts[g])
+                if (res.find(f.first) == res.end())
+                  new_contacts.push_back(&f.second);
           filterAndInsert2(new_contacts, n, res);
         }
         return res;
@@ -1923,9 +1910,7 @@ namespace memo
               old_files = remove_n(old_files, old_files.size() - max_old);
           }
           for (auto const& nf: old_files)
-          {
             res.insert(nf);
-          }
         }
         // Check if we have room for more files
         if (res.size() < (unsigned)_config.gossip.files)
@@ -1979,11 +1964,8 @@ namespace memo
           elle::Buffer buf = serialize(p, *this->doughnut());
           auto targets = pickOutsideTargets();
           for (auto const& a: targets)
-          {
-            auto it = _state.contacts[group_of(a)].find(a);
-            if (it != _state.contacts[group_of(a)].end())
+            if (auto it = elle::find(_state.contacts[group_of(a)], a))
               send(p, it->second);
-          }
           // Add some files, just for group targets
           p.files = pickFiles();
           buf = serialize(p, *this->doughnut());
@@ -1996,8 +1978,7 @@ namespace memo
               ELLE_DUMP("%s: info on %s files %s   %x %x", *this, p.files.size(),
                        serialize_time(p.files.begin()->second.first),
                        _self, p.files.begin()->second.second);
-            auto it = _state.contacts[group_of(a)].find(a);
-            if (it != _state.contacts[group_of(a)].end())
+            if (auto it = elle::find(_state.contacts[group_of(a)], a))
               send(p, it->second);
           }
         }
@@ -2010,48 +1991,41 @@ namespace memo
         if (addr == _self)
           return;
         int g = group_of(addr);
-        Contact* c = get_or_make(addr, observer, {endpoint},
-          observer || g == _group || signed(_state.contacts[g].size()) < _config.max_other_contacts);
-        if (!c)
-          return;
-        // reset validated endpoint
-        if (c->validated_endpoint && c->validated_endpoint->first != endpoint)
+        if (Contact* c = get_or_make(addr, observer, {endpoint},
+                                     observer
+                                     || g == _group
+                                     || signed(_state.contacts[g].size()) < _config.max_other_contacts))
         {
-          ELLE_LOG("%s: change validated endpoint %s -> %s", *this,
-                   c->validated_endpoint->first, endpoint);
+          // reset validated endpoint
+          if (c->validated_endpoint && c->validated_endpoint->first != endpoint)
+            ELLE_LOG("%s: change validated endpoint %s -> %s", *this,
+                     c->validated_endpoint->first, endpoint);
+          c->validated_endpoint = TimedEndpoint(endpoint, now());
+          // add/update to endpoint list
+          endpoints_update(c->endpoints, endpoint);
+          c->ping_timeouts = 0;
         }
-        c->validated_endpoint = TimedEndpoint(endpoint, now());
-        // add/update to endpoint list
-        endpoints_update(c->endpoints, endpoint);
-        c->ping_timeouts = 0;
       }
 
       void
       Node::onPong(packet::Pong* p)
       {
-        auto tit = _ping_time.find(p->sender);
-        if (tit == _ping_time.end())
+        if (auto tit = elle::find(_ping_time, p->sender))
         {
-          ELLE_TRACE("%s: Unexpected or late pong from %f", *this, p->sender);
-          return;
-        }
-        ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
-        Duration d = now() - tit->second;
-        _ping_time.erase(tit);
-        int g = group_of(p->sender);
-        Contacts& target = _state.contacts[g];
-        auto it = target.find(p->sender);
-        if (it == target.end())
-        {
+          ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
+          auto d = now() - tit->second;
+          _ping_time.erase(tit);
+          int g = group_of(p->sender);
+          Contacts& target = _state.contacts[g];
+          if (auto it = elle::find(target, p->sender))
+            it->second.rtt = d;
+          Endpoint endpoint = p->remote_endpoint;
+          endpoints_update(_local_endpoints, endpoint);
+          auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+          endpoints_cleanup(_local_endpoints, now() - contact_timeout);
         }
         else
-        {
-          it->second.rtt = d;
-        }
-        Endpoint endpoint = p->remote_endpoint;
-        endpoints_update(_local_endpoints, endpoint);
-        auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
-        endpoints_cleanup(_local_endpoints, now() - contact_timeout);
+          ELLE_TRACE("%s: Unexpected or late pong from %f", *this, p->sender);
       }
 
       void
@@ -2975,14 +2949,14 @@ namespace memo
             ++it;
           }
           if (it == candidates.end())
-          {
             ELLE_WARN("no target %s", proba_sum);
-            continue;
+          else
+          {
+            res.push_back(it->first);
+            double v = std::chrono::duration_cast<US>(it->second).count();
+            proba_sum -= 1.0 / pow(v, 2);
+            candidates.erase(it);
           }
-          res.push_back(it->first);
-          double v = std::chrono::duration_cast<US>(it->second).count();
-          proba_sum -= 1.0 / pow(v, 2);
-          candidates.erase(it);
         }
         return res;
       }
@@ -2993,17 +2967,13 @@ namespace memo
         std::map<Address, int> group_of;
         std::map<Address, Duration> candidates;
         for (unsigned int i=0; i<_state.contacts.size(); ++i)
-        {
-          if (i == unsigned(_group))
-            continue;
-          for (auto const& c: _state.contacts[i])
-          {
-            candidates[c.first] = c.second.rtt;
-            group_of[c.first] = i;
-          }
-        }
-        std::vector<Address> addresses = pick(candidates, _config.gossip.other_target);
-        return addresses;
+          if (i != unsigned(_group))
+            for (auto const& c: _state.contacts[i])
+            {
+              candidates[c.first] = c.second.rtt;
+              group_of[c.first] = i;
+            }
+        return pick(candidates, _config.gossip.other_target);
       }
 
       std::vector<Address>

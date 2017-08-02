@@ -23,7 +23,7 @@
 # undef stat
 #endif
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.async-conflict");
 
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;

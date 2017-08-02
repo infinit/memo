@@ -20,7 +20,7 @@
 #include <memo/overlay/kouncil/Kouncil.hh>
 #include <memo/silo/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("memo.overlay.test");
+ELLE_LOG_COMPONENT("test.overlay");
 
 #include "DHT.hh"
 
@@ -76,7 +76,7 @@ public:
   }
 
 private:
-  ELLE_LOG_COMPONENT("infinit.overlay.test.UTPInstrument");
+  ELLE_LOG_COMPONENT("test.overlay.UTPInstrument");
 
   ELLE_ATTRIBUTE(Endpoint, endpoint);
   void
@@ -142,7 +142,7 @@ public:
   }
 
 private:
-  ELLE_LOG_COMPONENT("infinit.overlay.test.TCPInstrument");
+  ELLE_LOG_COMPONENT("test.overlay.TCPInstrument");
 
   void
   _forward(elle::reactor::network::TCPSocket& in,

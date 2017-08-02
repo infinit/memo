@@ -11,7 +11,7 @@
 #include <memo/RPC.hh>
 #include <memo/utility.hh>
 
-ELLE_LOG_COMPONENT("RPC");
+ELLE_LOG_COMPONENT("test.rpc");
 
 struct Server
 {
