@@ -90,6 +90,7 @@ class Bottle(bottle.Bottle):
       self,
       beyond,
       image_bucket = None,
+      log_bucket = None,
       production = True,
       force_admin = False,
       ldap_server = None,
@@ -107,8 +108,9 @@ class Bottle(bottle.Bottle):
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
     self.install(CertificationPlugin())
     self.route('/')(self.root)
-    # GCS bucket for avatars
+    # GCS buckets.
     self.__image_bucket = image_bucket
+    self.__log_bucket = log_bucket
     # OAuth
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
