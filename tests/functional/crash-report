@@ -9,9 +9,11 @@ with TemporaryDirectory() as tmp, \
   email = 'crash@infinit.sh'
   template = 'Internal/Crash Report'
 
-  def report_emails():
+  bob.run(['user', 'create', '--name', 'bob'])
+
+  def mails():
     res = beyond.emailer.get_specifics(email, template)
-    print("emails:", res, file=sys.stderr)
+    print("mails:", res, file=sys.stderr)
     return res
 
   def dumps():
@@ -22,8 +24,11 @@ with TemporaryDirectory() as tmp, \
     try:
       bob.run(['--server', server, '--dumps', str(tmp), '--crash'],
               binary = 'tests/functional/bin/crasher')
+      assert False
     except:
       pass
+    global ndumps
+    ndumps += 1
     # Leave some time for the minidump to be written.
     from time import sleep
     sleep(2)
@@ -32,30 +37,49 @@ with TemporaryDirectory() as tmp, \
     bob.run(['--server', server, '--dumps', str(tmp)],
             binary = 'tests/functional/bin/crasher')
 
+  # Cannot use it as it will really try to contact the host, and I
+  # don't know how to fake that.
+  def doctor_upload_log():
+    # This always sends an email.
+    global nmails
+    nmails += 1
+    bob.run(['doctor', 'log', 'push', '--match', '.*',
+             '--as', 'bob'])
+
   # Nothing uploaded as there are no crashes.
-  upload()
-  assertEq(len(report_emails()), 0)
+  ndumps = 0
+  nmails = 0
+
+  assertEq(len(dumps()), ndumps)
+  assertEq(len(mails()), nmails)
+
+  # Nothing to upload.
+  upload(); ndumps = 0
+  assertEq(len(mails()), nmails)
+
+#  doctor_upload_log()
+#  assertEq(len(mails()), nmails)
 
   # Crash and then upload
   crash()
-  assertEq(len(dumps()), 1)
-  upload()
-  assertEq(len(report_emails()), 1)
-  assertEq(len(dumps()), 0)
+  assertEq(len(dumps()), ndumps)
+  upload(); nmails += ndumps; ndumps = 0
+  assertEq(len(mails()), nmails)
+  assertEq(len(dumps()), ndumps)
 
   # Crash twice, upload all
   crash()
   crash()
-  assertEq(len(dumps()), 2)
-  upload()
-  assertEq(len(report_emails()), 3)
-  assertEq(len(dumps()), 0)
+  assertEq(len(dumps()), ndumps)
+  upload(); nmails += ndumps; ndumps = 0
+  assertEq(len(mails()), nmails)
+  assertEq(len(dumps()), ndumps)
 
   # Unable to upload, then upload
   crash()
-  assertEq(len(dumps()), 1)
+  assertEq(len(dumps()), ndumps)
   upload(server = server + '/invalid/route')
-  assertEq(len(dumps()), 1)
-  upload()
-  assertEq(len(dumps()), 0)
-  assertEq(len(report_emails()), 4)
+  assertEq(len(dumps()), ndumps)
+  upload(); nmails += ndumps; ndumps = 0
+  assertEq(len(dumps()), ndumps)
+  assertEq(len(mails()), nmails)
