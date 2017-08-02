@@ -29,7 +29,7 @@ rule_tests = None
 rule_check = None
 # //install: Install binaries under <prefix>.
 rule_install = None
-# //symbols: prepare the symbol files for crash-reporter.
+# //symbols: prepare the symbol files for crash reports.
 rule_symbols = None
 
 description_regex = '^.{0,2048}$'
@@ -855,7 +855,7 @@ def configure(
                   ))))
       tests.append(doctor_configuration_test)
       if enable_crash_report:
-        tests.append(functional_test('crash-reporter'))
+        tests.append(functional_test('crash-report'))
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
