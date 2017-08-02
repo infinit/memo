@@ -201,22 +201,6 @@ private:
 
 namespace
 {
-  /// Get n-th member of a container.
-  template <typename C>
-  auto
-  get_n(C& c, int n)
-  {
-    return *std::next(c.begin(), n);
-  }
-
-  /// Get random member of a container.
-  template <typename C>
-  auto
-  get_random(C& c)
-  {
-    return get_n(c, rand() % c.size());
-  }
-
   elle::json::Object
   get_ostats(DHT& client)
   {
@@ -1051,7 +1035,7 @@ ELLE_TEST_SCHEDULED(
             else
             {
               // read
-              auto addr = get_random(addrs);
+              auto const addr = *elle::pick_one(addrs);
               ELLE_DEBUG_SCOPE("reading %f", addr);
               std::exception_ptr except;
               try
@@ -1612,7 +1596,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
-    auto a = get_random(addrs);
+    auto const a = *elle::pick_one(addrs);
     auto block = client->dht->fetch(a);
     if (i%2)
     {
@@ -1669,12 +1653,9 @@ test_churn_socket(TestConfiguration config, bool pasv)
   {
     ELLE_TRACE("shooting connections");
     // Shoot some connections.
-    for (int i = 0; i < 5; ++i)
-    {
-      auto& peers = servers[i]->dht->local()->peers();
-      for (int l = 0; l < 3; ++l)
-        close_connection(*get_random(peers));
-    }
+    for (auto const& server: servers)
+      for (auto const& p: pick_n(3, server->dht->local()->peers()))
+        close_connection(**p);
     if (pasv)
     {
       // Give it time to notice sockets went down.
@@ -1972,7 +1953,7 @@ ELLE_TEST_SUITE()
         conf, local, &dht);
     }};
 
-  auto make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
+  auto const make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
