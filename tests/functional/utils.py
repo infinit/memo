@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import pipes
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,9 @@ binary = 'memo'
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 windows = os.environ.get('OS') == 'windows' # Set in the drakefile.
 
+
+def prefix_lines(prefix, s):
+  return re.sub('^', prefix, s, flags = re.M)
 
 # FIXME: Duplicate with drake.
 class TemporaryDirectory:
@@ -206,8 +210,8 @@ class Memo(TemporaryDirectory):
         # `read` is fine.
         # out = process.stdout.read()
         # err = process.stderr.read()
-      log('STDOUT: %s' % out.decode('utf-8'))
-      log('STDERR: %s' % err.decode('utf-8'))
+      log(prefix_lines('STDOUT: ', out.decode('utf-8')))
+      log(prefix_lines('STDERR: ', err.decode('utf-8')))
       if kill:
         return out, err
       raise
@@ -532,12 +536,12 @@ class KeyValueStoreInfrastructure():
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
-          log('STDOUT: %s' % self.out.decode('utf-8'))
-          log('STDERR: %s' % self.err.decode('utf-8'))
+          log(prefix_lines('STDOUT: ', self.out.decode('utf-8')))
+          log(prefix_lines('STDERR: ', self.err.decode('utf-8')))
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
-          log('STDOUT: %s' % out.decode('utf-8'))
-          log('STDERR: %s' % err.decode('utf-8'))
+          log(prefix_lines('STDOUT: ', out.decode('utf-8')))
+          log(prefix_lines('STDERR: ', err.decode('utf-8')))
           raise
 
   def client(self):

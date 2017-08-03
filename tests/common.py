@@ -42,12 +42,21 @@ def assertEq(a, *bs):
     assertEq2(a, b)
 
 def assertNeq(a, b):
+  '''Assert that `a != b`.'''
   if a != b:
     log('PASS: {} != {}'.format(a, b))
   else:
     raise AssertionError('%r == %r' % (a, b))
 
+def assertLt(a, b):
+  '''Assert that `a < b`.'''
+  if a < b:
+    log('PASS: {} < {}'.format(a, b))
+  else:
+    raise AssertionError('!(%r < %r)' % (a, b))
+
 def assertIn(a, b):
+  '''Assert that `a in b`.'''
   if a in b:
     log('PASS: {} in {}'.format(a, b))
   else:
