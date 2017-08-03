@@ -9,7 +9,6 @@ import tempfile
 import time
 
 from datetime import timedelta
-from difflib import unified_diff as udiff
 
 import infinit.beyond
 import infinit.beyond.bottle
@@ -240,33 +239,6 @@ class Memo(TemporaryDirectory):
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
 
-def assertEq(a, b):
-  if a == b:
-    log('PASS: {} == {}'.format(a, b))
-  else:
-    def lines(s):
-      s = str(s)
-      if s[:-1] != '\n':
-        s += '\n'
-      return s.splitlines(1)
-
-    diff = ''.join(udiff(lines(a),
-                         lines(b),
-                         fromfile='a', tofile='b'))
-    raise AssertionError('%s: %r != %r\n%s' % (here(), a, b, diff))
-
-def assertNeq(a, b):
-  if a != b:
-    log('PASS: {} != {}'.format(a, b))
-  else:
-    raise AssertionError('%r == %r' % (a, b))
-
-def assertIn(a, b):
-  if a in b:
-    log('PASS: {} in {}'.format(a, b))
-  else:
-    raise AssertionError('%r not in %r' % (a, b))
-
 def throws(f, contains = None):
   try:
     f()
@@ -292,6 +264,7 @@ class Beyond():
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__image_bucket = FakeGCS()
+    self.__log_bucket = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
     self.__bottle_args = bottle_args
@@ -439,17 +412,11 @@ class SharedLogicCLITests():
   def __init__(self, entity):
     self.__entity = entity
 
-  def random_sequence(self, count = 10):
-    from random import SystemRandom
-    import string
-    return ''.join(SystemRandom().choice(
-      string.ascii_lowercase + string.digits) for _ in range(count))
-
   def run(self):
     entity = self.__entity
     # Creating and deleting entity.
     with Memo() as bob:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       bob.run(['user', 'create',  'bob'])
       bob.run(['network', 'create', 'network', '--as', 'bob'])
       bob.run([entity, 'create', e_name, '-N', 'network',
@@ -460,7 +427,7 @@ class SharedLogicCLITests():
     # Push to the hub.
     with Beyond() as beyond, \
         Memo(beyond = beyond) as bob, Memo(beyond) as alice:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
       bob.run(['network', 'create', 'network', '--as', 'bob',
                '--push'])
@@ -481,10 +448,10 @@ class SharedLogicCLITests():
 
     # Pull and delete.
     with Beyond() as beyond, Memo(beyond = beyond) as bob:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       e_name2 = e_name
       while e_name2 == e_name:
-        e_name2 = self.random_sequence()
+        e_name2 = random_sequence()
       bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
       bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
       # Local and Beyond.

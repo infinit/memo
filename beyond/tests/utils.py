@@ -212,21 +212,6 @@ def throws(function, expected = None, json = True, error = None):
     assert 'error' in response
     return response
 
-def assertEq(*args):
-  import operator
-  if not all(map(lambda x: operator.eq(x, args[0]), args[1:])):
-    raise AssertionError('all elements of [%s] are not equal' % ", ".join(map(str, args)))
-
-def assertIn(o, container):
-  if o not in container:
-    raise AssertionError('%r not in %r' % (o, container))
-
-def random_sequence(count = 10):
-  from random import SystemRandom
-  import string
-  return ''.join(SystemRandom().choice(
-    string.ascii_lowercase + string.digits) for _ in range(count))
-
 def random_email(domain = None):
   if domain is None:
     domain = 'infinit.io'

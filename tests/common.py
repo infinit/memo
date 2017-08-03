@@ -1,6 +1,8 @@
-# These bits are use in memo tests, and in beyond tests.
+# These bits are used in memo tests, and in beyond tests.
 
 import sys
+
+from difflib import unified_diff as udiff
 
 def here():
   '''The "file:line" of the top-level call.'''
@@ -20,7 +22,45 @@ def log(*args, level='info'):
         *args,
         file=sys.stderr, flush=True)
 
-  
+def assertEq2(a, b):
+  if a == b:
+    log('PASS: {} == {}'.format(a, b))
+  else:
+    def lines(s):
+      s = str(s)
+      if s[:-1] != '\n':
+        s += '\n'
+      return s.splitlines(1)
+
+    diff = ''.join(udiff(lines(a),
+                         lines(b),
+                         fromfile='a', tofile='b'))
+    raise AssertionError('%s: %r != %r\n%s' % (here(), a, b, diff))
+
+def assertEq(a, *bs):
+  for b in bs:
+    assertEq2(a, b)
+
+def assertNeq(a, b):
+  if a != b:
+    log('PASS: {} != {}'.format(a, b))
+  else:
+    raise AssertionError('%r == %r' % (a, b))
+
+def assertIn(a, b):
+  if a in b:
+    log('PASS: {} in {}'.format(a, b))
+  else:
+    raise AssertionError('%r not in %r' % (a, b))
+
+def random_sequence(count = 10):
+  from random import SystemRandom
+  import string
+  return ''.join(SystemRandom().choice(
+    string.ascii_lowercase + string.digits) for _ in range(count))
+
+
+
 class Unreachable(BaseException):
 
   def __init__(self):
