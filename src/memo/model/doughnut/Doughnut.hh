@@ -139,38 +139,29 @@ namespace memo
         using Init = decltype(
           elle::das::make_tuple(
             doughnut::id = std::declval<Address>(),
-            doughnut::keys =
-              std::declval<std::shared_ptr<elle::cryptography::rsa::KeyPair>>(),
-            doughnut::owner =
-              std::declval<std::shared_ptr<elle::cryptography::rsa::PublicKey>>(),
+            doughnut::keys = std::declval<std::shared_ptr<elle::cryptography::rsa::KeyPair>>(),
+            doughnut::owner = std::declval<std::shared_ptr<elle::cryptography::rsa::PublicKey>>(),
             doughnut::passport = std::declval<Passport>(),
             doughnut::consensus_builder = std::declval<ConsensusBuilder>(),
             doughnut::overlay_builder = std::declval<OverlayBuilder>(),
             doughnut::port = std::declval<boost::optional<int>>(),
-            doughnut::listen_address =
-              std::declval<boost::optional<boost::asio::ip::address>>(),
-            doughnut::storage =
-              std::declval<std::unique_ptr<silo::Silo>>(),
+            doughnut::listen_address = std::declval<boost::optional<boost::asio::ip::address>>(),
+            doughnut::storage = std::declval<std::unique_ptr<silo::Silo>>(),
             doughnut::name = std::declval<boost::optional<std::string>>(),
             doughnut::version = std::declval<boost::optional<elle::Version>>(),
             doughnut::admin_keys = std::declval<AdminKeys>(),
             doughnut::rdv_host = std::declval<boost::optional<std::string>>(),
-            doughnut::monitoring_socket_path =
-              std::declval<boost::optional<boost::filesystem::path>>(),
+            doughnut::monitoring_socket_path = std::declval<boost::optional<bfs::path>>(),
             doughnut::protocol = std::declval<Protocol>(),
-            doughnut::connect_timeout =
-              std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
-            doughnut::soft_fail_timeout =
-              std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
-            doughnut::soft_fail_running =
-              std::declval<elle::Defaulted<bool>>(),
-            doughnut::tcp_heartbeat =
-              std::declval<boost::optional<std::chrono::milliseconds>>(),
+            doughnut::connect_timeout = std::declval<elle::Defaulted<elle::Duration>>(),
+            doughnut::soft_fail_timeout = std::declval<elle::Defaulted<elle::Duration>>(),
+            doughnut::soft_fail_running = std::declval<elle::Defaulted<bool>>(),
+            doughnut::tcp_heartbeat = std::declval<elle::DurationOpt>(),
             doughnut::encrypt_options = EncryptOptions(),
             doughnut::resign_on_shutdown = bool()));
         Doughnut(Init init);
-        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
-        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
+        ELLE_ATTRIBUTE_R(elle::Duration, connect_timeout);
+        ELLE_ATTRIBUTE_R(elle::Duration, soft_fail_timeout);
         ELLE_ATTRIBUTE_R(bool, soft_fail_running);
 
       /*-----.
@@ -309,7 +300,7 @@ namespace memo
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat;
+        elle::DurationOpt tcp_heartbeat;
         EncryptOptions encrypt_options;
         using Model = elle::das::Model<
           Configuration,
@@ -332,7 +323,7 @@ namespace memo
           elle::Version version,
           AdminKeys admin_keys,
           std::vector<Endpoints> peers,
-          boost::optional<std::chrono::milliseconds> tcp_heartbeat = {},
+          elle::DurationOpt tcp_heartbeat = {},
           EncryptOptions encrypt_options = EncryptOptions());
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
@@ -350,8 +341,8 @@ namespace memo
           bool async = false,
           bool cache = false,
           boost::optional<int> cache_size = {},
-          boost::optional<std::chrono::seconds> cache_ttl = {},
-          boost::optional<std::chrono::seconds> cache_invalidation = {},
+          elle::DurationOpt cache_ttl = {},
+          elle::DurationOpt cache_invalidation = {},
           boost::optional<uint64_t> disk_cache_size = {},
           boost::optional<elle::Version> version = {},
           boost::optional<int> port = {},

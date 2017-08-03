@@ -11,6 +11,8 @@
 #include <memo/RPC.hh>
 #include <memo/utility.hh>
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("test.rpc");
 
 struct Server
@@ -160,15 +162,14 @@ ELLE_TEST_SCHEDULED(bidirectional)
 
 ELLE_TEST_SCHEDULED(parallel)
 {
-  auto const delay_ms = valgrind(120, 4);
-  auto const delay = std::chrono::milliseconds(delay_ms);
+  auto const delay = valgrind(120ms, 4);
   {
     memo::setenv("RPC_SERVE_THREADS", 5);
     Server s(
       [&] (memo::RPCServer& s)
       {
         s.add("ping", [&] (int a) {
-            elle::reactor::sleep(1_ms * delay_ms);
+            elle::reactor::sleep(delay);
             return a+1;
         });
       });
@@ -196,7 +197,7 @@ ELLE_TEST_SCHEDULED(parallel)
       [&] (memo::RPCServer& s)
       {
         s.add("ping", [&] (int a) {
-            elle::reactor::sleep(1_ms * delay_ms);
+            elle::reactor::sleep(delay);
             return a+1;
         });
       });

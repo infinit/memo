@@ -201,22 +201,6 @@ private:
 
 namespace
 {
-  /// Get n-th member of a container.
-  template <typename C>
-  auto
-  get_n(C& c, int n)
-  {
-    return *std::next(c.begin(), n);
-  }
-
-  /// Get random member of a container.
-  template <typename C>
-  auto
-  get_random(C& c)
-  {
-    return get_n(c, rand() % c.size());
-  }
-
   elle::json::Object
   get_ostats(DHT& client)
   {
@@ -318,7 +302,7 @@ namespace
       if (n_servers <= int(servers.size()))
         return;
       ELLE_TRACE("%s/%s", servers.size(), n_servers);
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
   }
 
@@ -364,7 +348,7 @@ namespace
       if ((hit == n_servers || (or_more && hit >n_servers))
           && ok)
         break;
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
     ELLE_DEBUG("hard_wait exiting");
   }
@@ -943,10 +927,10 @@ ELLE_TEST_SCHEDULED(
       {
         is_kelips = true;
         kelips->config().query_put_retries = 6;
-        kelips->config().query_timeout_ms = valgrind(2000, 4);
-        kelips->config().contact_timeout_ms = valgrind(100000,20);
-        kelips->config().ping_interval_ms = valgrind(500, 10);
-        kelips->config().ping_timeout_ms = valgrind(2000, 20);
+        kelips->config().query_timeout = valgrind(2s, 4);
+        kelips->config().contact_timeout = valgrind(100s,20);
+        kelips->config().ping_interval = valgrind(500ms, 10);
+        kelips->config().ping_timeout = valgrind(2s, 20);
       }
       servers.emplace_back(std::move(dht));
     }
@@ -984,10 +968,10 @@ ELLE_TEST_SCHEDULED(
       {
         kelips->config().query_put_retries = 6;
         kelips->config().query_get_retries = 20;
-        kelips->config().query_timeout_ms = valgrind(2000, 4);
-        kelips->config().contact_timeout_ms = valgrind(100000,20);
-        kelips->config().ping_interval_ms = valgrind(500, 10);
-        kelips->config().ping_timeout_ms = valgrind(2000, 20);
+        kelips->config().query_timeout = valgrind(2s, 4);
+        kelips->config().contact_timeout = valgrind(100s,20);
+        kelips->config().ping_interval = valgrind(500ms, 10);
+        kelips->config().ping_timeout = valgrind(2s, 20);
       }
       clients.emplace_back(std::move(dht));
     }
@@ -1051,7 +1035,7 @@ ELLE_TEST_SCHEDULED(
             else
             {
               // read
-              auto addr = get_random(addrs);
+              auto const addr = *elle::pick_one(addrs);
               ELLE_DEBUG_SCOPE("reading %f", addr);
               std::exception_ptr except;
               try
@@ -1148,7 +1132,7 @@ ELLE_TEST_SCHEDULED(
   // repeatedly, it did happen to fail for lack of time.
   for (auto i = 0; i < 100 && c != nservers; ++i)
   {
-    elle::reactor::sleep(100_ms);
+    elle::reactor::sleep(100ms);
     c = boost::count_if(servers, [npeers](auto&& s) {
         return peer_count(*s) == npeers;
       });
@@ -1242,7 +1226,7 @@ ELLE_TEST_SCHEDULED(
         ::keys = keys,
         ::make_overlay = config.overlay_builder,
         doughnut::consensus::rebalance_auto_expand = false,
-        doughnut::connect_timeout = std::chrono::milliseconds(valgrind(100, 10)),
+        doughnut::connect_timeout = elle::Duration{valgrind(100ms, 10)},
         doughnut::soft_fail_running = true);
       auto const loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
       auto const value = std::string("stale");
@@ -1612,7 +1596,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
-    auto a = get_random(addrs);
+    auto const a = *elle::pick_one(addrs);
     auto block = client->dht->fetch(a);
     if (i%2)
     {
@@ -1650,7 +1634,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
   if (auto kelips = get_kelips(client))
   {
     kelips->config().query_put_retries = 6;
-    kelips->config().query_timeout_ms = valgrind(1000, 4);
+    kelips->config().query_timeout = valgrind(1s, 4);
   }
   // Wait for it to discover the first server.
   discover(client, *servers[0], false);
@@ -1669,12 +1653,9 @@ test_churn_socket(TestConfiguration config, bool pasv)
   {
     ELLE_TRACE("shooting connections");
     // Shoot some connections.
-    for (int i = 0; i < 5; ++i)
-    {
-      auto& peers = servers[i]->dht->local()->peers();
-      for (int l = 0; l < 3; ++l)
-        close_connection(*get_random(peers));
-    }
+    for (auto const& server: servers)
+      for (auto const& p: pick_n(3, server->dht->local()->peers()))
+        close_connection(**p);
     if (pasv)
     {
       // Give it time to notice sockets went down.
@@ -1718,7 +1699,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   auto& servers = cluster.servers;
   /// Let's not wait eviction for too long.
   for (auto& c: cluster)
-    get_kouncil(*c)->eviction_delay(std::chrono::seconds{valgrind(1, 5) * 10});
+    get_kouncil(*c)->eviction_delay(valgrind(10s, 5));
   /// A: the main peer.
   auto& dht_a = servers[0];
   auto const id_a = ids[0];
@@ -1769,7 +1750,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     CHECK_IN(id_b, addrs);
   }
   // Let some time pass.
-  elle::reactor::sleep(2_sec);
+  elle::reactor::sleep(2s);
   // Kill server A, C remains alone, remembering about A and B.
   {
     ELLE_LOG("kill A and wait for C to notice");
@@ -1964,15 +1945,14 @@ ELLE_TEST_SUITE()
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
       conf.query_put_insert_ttl = 0;
-      conf.query_timeout_ms = valgrind(200 * windows_factor, 20);
-      conf.contact_timeout_ms = windows_factor * valgrind(500, 20);
-      conf.ping_interval_ms = windows_factor * valgrind(20, 10);
-      conf.ping_timeout_ms = windows_factor * valgrind(100, 2);
-      return std::make_unique<kelips::Node>(
-        conf, local, &dht);
+      conf.query_timeout = valgrind(200ms * windows_factor, 20);
+      conf.contact_timeout = windows_factor * valgrind(500ms, 20);
+      conf.ping_interval = windows_factor * valgrind(20ms, 10);
+      conf.ping_timeout = windows_factor * valgrind(100ms, 2);
+      return std::make_unique<kelips::Node>(conf, local, &dht);
     }};
 
-  auto make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
+  auto const make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local);
     };

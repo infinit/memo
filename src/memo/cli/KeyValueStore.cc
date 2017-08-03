@@ -352,7 +352,7 @@ namespace memo
       });
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)
-        elle::reactor::sleep(100_ms);
+        elle::reactor::sleep(100ms);
       if (peers_file)
       {
         auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -420,7 +420,7 @@ namespace memo
             "port file writer",
             [&] {
               while (kv_grpc_port == 0)
-                elle::reactor::sleep(100_ms);
+                elle::reactor::sleep(100ms);
               port_to_file(kv_grpc_port, *grpc_port_file);
             }));
         }

@@ -15,6 +15,8 @@
 
 namespace memo
 {
+  namespace bfs = boost::filesystem;
+
   namespace model
   {
     namespace doughnut
@@ -26,12 +28,11 @@ namespace memo
           : public StackedConsensus
         {
         public:
-          using clock = std::chrono::high_resolution_clock;
           Cache(std::unique_ptr<Consensus> backend,
                 boost::optional<int> cache_size = {},
-                boost::optional<std::chrono::seconds> cache_invalidation = {},
-                boost::optional<std::chrono::seconds> cache_ttl = {},
-                boost::optional<boost::filesystem::path> disk_cache_path = {},
+                elle::DurationOpt cache_invalidation = {},
+                elle::DurationOpt cache_ttl = {},
+                boost::optional<bfs::path> disk_cache_path = {},
                 boost::optional<uint64_t> disk_cache_size = {});
           ~Cache() override;
 
@@ -89,10 +90,10 @@ namespace memo
           _insert_cache(blocks::Block& b);
           std::unique_ptr<blocks::Block>
           _copy(blocks::Block& block);
-          ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
-          ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
+          ELLE_ATTRIBUTE_R(elle::Duration, cache_invalidation);
+          ELLE_ATTRIBUTE_R(elle::Duration, cache_ttl);
           ELLE_ATTRIBUTE_R(int, cache_size);
-          ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, disk_cache_path);
+          ELLE_ATTRIBUTE_R(boost::optional<bfs::path>, disk_cache_path);
           ELLE_ATTRIBUTE_R(uint64_t, disk_cache_size);
           class CachedBlock
           {
@@ -101,8 +102,8 @@ namespace memo
             Address
             address() const;
             ELLE_ATTRIBUTE_RX(std::unique_ptr<blocks::Block>, block);
-            ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
-            ELLE_ATTRIBUTE_RW(clock::time_point, last_fetched);
+            ELLE_ATTRIBUTE_RW(elle::Time, last_used);
+            ELLE_ATTRIBUTE_RW(elle::Time, last_fetched);
           };
           /// Sort mutable blocks first, ordered by last_fetched
           struct LastFetch
@@ -121,20 +122,20 @@ namespace memo
               bmi::ordered_non_unique<
                 bmi::const_mem_fun<
                   CachedBlock,
-                  clock::time_point const&, &CachedBlock::last_used> >,
+                  elle::Time const&, &CachedBlock::last_used> >,
               bmi::ordered_non_unique<
                 bmi::const_mem_fun<
                   CachedBlock,
-                  clock::time_point const&, &CachedBlock::last_fetched> >
+                  elle::Time const&, &CachedBlock::last_fetched> >
             > >;
           ELLE_ATTRIBUTE(BlockCache, cache);
           class CachedCHB
           {
           public:
-            CachedCHB(Address address, uint64_t size, clock::time_point last_used);
+            CachedCHB(Address address, uint64_t size, elle::Time last_used);
             ELLE_ATTRIBUTE_R(Address, address);
             ELLE_ATTRIBUTE_R(uint64_t, size);
-            ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
+            ELLE_ATTRIBUTE_RW(elle::Time, last_used);
           };
           using CHBDiskCache = bmi::multi_index_container<
             CachedCHB,
@@ -146,7 +147,7 @@ namespace memo
               bmi::ordered_non_unique<
                 bmi::const_mem_fun<
                   CachedCHB,
-                  clock::time_point const&, &CachedCHB::last_used> >
+                  elle::Time const&, &CachedCHB::last_used> >
           > >;
           ELLE_ATTRIBUTE(CHBDiskCache, disk_cache);
           ELLE_ATTRIBUTE(uint64_t, disk_cache_used);

@@ -81,7 +81,7 @@ namespace memo
       if (attempt > 8)
         attempt = 8;
       unsigned int factor = pow(2, attempt);
-      return boost::posix_time::milliseconds(factor * 100);
+      return factor * 100ms;
     }
 
     boost::filesystem::path

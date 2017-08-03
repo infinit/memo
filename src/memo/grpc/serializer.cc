@@ -2,6 +2,7 @@
 
 #include <google/protobuf/message.h>
 
+#include <elle/Duration.hh>
 #include <elle/meta.hh>
 #include <elle/serialization/json/Error.hh> // serialization::MissingKey.
 
@@ -554,7 +555,17 @@ namespace memo
       ELLE_DUMP("serialize_named_option %s", name);
       ELLE_ASSERT(!_field);
       //_enter(name);
-      f();
+      if (present)
+        f();
+      else
+      {
+        ELLE_ASSERT(_message_stack.size() >= 1);
+        auto* parent = _message_stack[_message_stack.size() - 1];
+        auto* ref = parent->GetReflection();
+        auto* desc = parent->GetDescriptor();
+        auto* field = desc->FindFieldByName(name);
+        ref->ClearField(parent, field);
+      }
     }
 
     void

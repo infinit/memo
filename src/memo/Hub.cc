@@ -81,7 +81,7 @@ namespace memo
     // server side.  Of course it should be asynchronous, but
     // currently it is not.  So cut it some five minutes of slack.
     auto r = http::Request(url, http::Method::PUT, "application/json",
-                           {5_min});
+                           {5min});
     elle::json::write(r, content);
     if (r.status() == http::StatusCode::OK)
     {
@@ -127,7 +127,7 @@ namespace memo
     auto const url_path = [&] {
       auto const url = report_url("log/{}/get_url", username);
       auto r = http::Request(url, http::Method::GET, "application/json",
-                             {1_min});
+                             {1min});
       r.wait();
       if (r.status() != http::StatusCode::OK)
         elle::err("failed to get upload url: %s", r.status());
@@ -146,7 +146,7 @@ namespace memo
         auto const end = end_size - 1;
 
         auto res = http::Request::Configuration{};
-        res.stall_timeout(30_sec);
+        res.stall_timeout(30s);
         res.timeout(elle::DurationOpt());
         res.header_add("Content-Length", std::to_string(end_size));
         res.header_add("Content-Range",

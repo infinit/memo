@@ -21,7 +21,6 @@ binary = 'memo'
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 windows = os.environ.get('OS') == 'windows' # Set in the drakefile.
 
-
 def prefix_lines(prefix, s):
   return re.sub('^', prefix, s, flags = re.M)
 

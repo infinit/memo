@@ -62,7 +62,7 @@ namespace memo
                  boost::optional<int> port,
                  boost::optional<boost::asio::ip::address> listen_address,
                  boost::optional<std::string> rdv_host,
-                 boost::optional<std::chrono::milliseconds> tcp_heartbeat)
+                 elle::DurationOpt tcp_heartbeat)
         : _doughnut(doughnut)
         , _tcp_heartbeat(tcp_heartbeat)
         , _local_utp_server(
@@ -94,10 +94,10 @@ namespace memo
                 // The remotes_server does not accept incoming connections,
                 // it is used to connect Remotes
                 retry_forever(
-                  10_sec, 120_sec, "Dock RDV connect",
+                  10s, 120s, "Dock RDV connect",
                   [&]
                   {
-                    this->_utp_server.rdv_connect(uid, rdv_host.get(), 120_sec);
+                    this->_utp_server.rdv_connect(uid, rdv_host.get(), 120s);
                   });
               }));
         }
@@ -298,7 +298,7 @@ namespace memo
             ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
             auto handshake =
               [&] (std::unique_ptr<std::iostream> socket,
-                   boost::optional<std::chrono::milliseconds> ping)
+                   elle::DurationOpt ping)
               {
                 ELLE_TRACE("handshake: {}", socket);
                 auto sv = elle_serialization_version(

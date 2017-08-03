@@ -14,7 +14,7 @@ namespace memo
       | Construction |
       `-------------*/
 
-      Configuration::Configuration(std::chrono::seconds eviction_delay)
+      Configuration::Configuration(elle::Duration eviction_delay)
         : Super()
         , _eviction_delay{eviction_delay}
       {

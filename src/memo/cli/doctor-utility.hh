@@ -1581,7 +1581,7 @@ namespace
       try
       {
         elle::reactor::http::Request r(memo::beyond(),
-                                 elle::reactor::http::Method::GET, {10_sec});
+                                 elle::reactor::http::Method::GET, {10s});
         elle::reactor::wait(r);
         if (r.status() != elle::reactor::http::StatusCode::OK)
           results.beyond = {elle::sprintf("%s", r.status())};
@@ -1624,7 +1624,7 @@ namespace
                     ConnectivityFunction const& function,
                     int deltaport = 0)
       {
-        static const elle::reactor::Duration timeout = 3_sec;
+        static const elle::reactor::Duration timeout = 3s;
         ELLE_TRACE("connect using %s to %s:%s", name, *server, port + deltaport);
         try
         {
