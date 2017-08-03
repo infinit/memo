@@ -453,15 +453,14 @@ namespace memo
               {
                 auto addr = f.second.second;
                 int idx;
-                auto it = index.find(addr);
-                if (it == index.end())
+                if (auto it = elle::find(index, addr))
+                  idx = it->second;
+                else
                 {
                   addresses.push_back(addr);
                   index.emplace(addr, addresses.size()-1);
                   idx = addresses.size()-1;
                 }
-                else
-                  idx = it->second;
                 cfiles.emplace(f.first,
                                std::make_pair(f.second.first, idx));
               }
@@ -891,15 +890,15 @@ namespace memo
                       ++p;
                     std::string daddr(faddr.value()+p, faddr.value()+32);
                     int idx = 0;
-                    auto it = index.find(fhome);
+                    if (auto it = elle::find(index, fhome))
                     if (it == index.end())
+                      idx = it->second;
+                    else
                     {
                       res.first.emplace_back(fhome, Endpoints());
                       index[fhome] = res.first.size()-1;
                       idx = res.first.size()-1;
                     }
-                    else
-                      idx = it->second;
                     res.second.emplace_back(daddr, idx);
                     prev = faddr;
                   }
@@ -990,10 +989,10 @@ namespace memo
           else
           {
             auto id = conn->location().id();
-            auto it = this->_peer_cache.find(id);
-            if (it == this->_peer_cache.end())
+            if (auto it = elle::find(this->_peer_cache, id))
+              remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
+            else
               elle::err("%s is duplicate but not found in cache", id);
-            remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
           }
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || !packet::compression)
           {
@@ -1075,7 +1074,7 @@ namespace memo
             scanned.emplace(peer_id);
             process_update(res);
             for (auto const& c: this->_state.contacts[_group])
-              if (!contains(scanned, c.first))
+              if (!elle::contains(scanned, c.first))
                 candidates.emplace_back(
                   c.first,
                   to_endpoints(c.second.endpoints));
@@ -1101,9 +1100,9 @@ namespace memo
       bool
       Node::_discovered(model::Address id)
       {
-        int g = group_of(id);
-        return this->_state.observers.find(id) != this->_state.observers.end()
-         || this->_state.contacts[g].find(id) != this->_state.contacts[g].end();
+        auto const g = group_of(id);
+        return elle::contains(this->_state.observers, id)
+          || elle::contains(this->_state.contacts[g], id);
       }
 
       void
@@ -1242,8 +1241,7 @@ namespace memo
         auto key = getKey(address);
         if (is_crypto
             || !_config.encrypt
-            || (!key.first && _config.accept_plain)
-          )
+            || (!key.first && _config.accept_plain))
         {
           b = packet::serialize(p, *this->doughnut());
           send_key_request = _config.encrypt && !is_crypto;
@@ -1277,7 +1275,7 @@ namespace memo
           req.observer = this->_observer;
           send(req, c, ep, addr);
         }
-        if (b.size() == 0)
+        if (b.empty())
           return;
 
         Endpoint e;
@@ -1401,11 +1399,10 @@ namespace memo
                           *this, p->sender);
                 return;
               }
-              if (key.second && (
-                     dynamic_cast<packet::Gossip*>(plain.get())
-                  || dynamic_cast<packet::GetFileReply*>(plain.get())
-                  || dynamic_cast<packet::PutFileReply*>(plain.get())
-                  ))
+              if (key.second
+                  && (dynamic_cast<packet::Gossip*>(plain.get())
+                      || dynamic_cast<packet::GetFileReply*>(plain.get())
+                      || dynamic_cast<packet::PutFileReply*>(plain.get())))
               {
                 ELLE_WARN("%s: sender %s is observer and sent a non-observer packet",
                   *this, p->sender);
@@ -1431,6 +1428,7 @@ namespace memo
             return;
           }
         } // EncryptedPayload
+
         if (auto p = dynamic_cast<packet::RequestKey*>(packet.get()))
         {
           ELLE_DEBUG("%s: processing key request from %s", *this, source);
@@ -1469,6 +1467,7 @@ namespace memo
           send(kr, source, p->sender);
           return;
         } // requestkey
+
         if (auto p = dynamic_cast<packet::KeyReply*>(packet.get()))
         {
           ELLE_DEBUG("%s: processing key reply from %s", *this, source);
@@ -1522,8 +1521,7 @@ namespace memo
             auto nsource = source;
             if (source.address().is_v6() && source.address().to_v6().is_v4_mapped())
               nsource = Endpoint{source.address().to_v6().to_v4(), source.port()};
-            auto it = _pending_bootstrap_endpoints.find(nsource);
-            if (it != _pending_bootstrap_endpoints.end())
+            if (auto it = elle::find(_pending_bootstrap_endpoints, nsource))
             {
               ELLE_DEBUG("%s: processing queued operation to %s", *this, nsource);
               _pending_bootstrap_endpoints.erase(it);
@@ -1551,6 +1549,7 @@ namespace memo
           onContactSeen(packet->sender, source, packet->observer);
           return;
         } // keyreply
+
         if (!was_crypted && !_config.accept_plain)
         {
           ELLE_WARN("%s: rejecting plain packet from %s : %s",
@@ -1561,9 +1560,9 @@ namespace memo
         onContactSeen(packet->sender, source, packet->observer);
         // TRAP: some packets inherit from each other, so most specific ones
         // must be first
-        #define CASE(type) \
-        else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
-          if (false) {}
+#define CASE(type)                                                      \
+      else if (auto p = dynamic_cast<packet::type*>(packet.get()))
+        if (false) {}
         CASE(Pong)
         {
           onPong(p);
@@ -1577,27 +1576,27 @@ namespace memo
           send(r, source, p->sender);
         }
         CASE(Gossip)
-        onGossip(p);
+          onGossip(p);
         CASE(BootstrapRequest)
-        onBootstrapRequest(p);
+          onBootstrapRequest(p);
         CASE(FileBootstrapRequest)
-        onFileBootstrapRequest(p);
+          onFileBootstrapRequest(p);
         CASE(PutFileRequest)
-        onPutFileRequest(p);
+          onPutFileRequest(p);
         CASE(PutFileReply)
-        onPutFileReply(p);
+          onPutFileReply(p);
         CASE(MultiGetFileRequest)
-        onMultiGetFileRequest(p);
+          onMultiGetFileRequest(p);
         CASE(MultiGetFileReply)
-        onMultiGetFileReply(p);
+          onMultiGetFileReply(p);
         CASE(GetFileRequest)
-        onGetFileRequest(p);
+          onGetFileRequest(p);
         CASE(GetFileReply)
-        onGetFileReply(p);
+          onGetFileReply(p);
         else
           ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
-        #undef CASE
-      };
+#undef CASE
+      }
 
       template <typename T, typename C, typename U>
       void
@@ -1690,10 +1689,10 @@ namespace memo
         auto const timeout = _config.gossip.old_threshold;
         for (auto const& f: _state.contacts[_group])
         {
-          auto last_seen = endpoints_max(f.second.endpoints);
+          auto const last_seen = endpoints_max(f.second.endpoints);
           if (f.second.last_gossip < last_seen
               && now() - last_seen > timeout
-              && res.find(f.first) == res.end())
+              && !contains(res, f.first))
             new_files.push_back(f.first);
         }
         filterAndInsert(new_files, max_old, _group, res);
@@ -1704,7 +1703,7 @@ namespace memo
           // Pick at random
           std::vector<Address> available;
           for (auto const& f: _state.contacts[_group])
-            if (res.find(f.first) == res.end())
+            if (!elle::contains(res, f.first))
               available.push_back(f.first);
           filterAndInsert(available, n, _group, res);
         }
@@ -1727,10 +1726,10 @@ namespace memo
           {
             for (auto& f: _state.contacts[g])
             {
-              auto last_seen = endpoints_max(f.second.endpoints);
+              auto const last_seen = endpoints_max(f.second.endpoints);
               if (f.second.last_gossip < last_seen
                   && now() - last_seen > timeout
-                  && res.find(f.first) == res.end())
+                  && !elle::contains(res, f.first))
                 new_contacts.push_back(&f.second);
             }
           }
@@ -1744,7 +1743,7 @@ namespace memo
           for (int g=0; g<_config.k; ++g)
             if (g != _group)
               for (auto& f: _state.contacts[g])
-                if (res.find(f.first) == res.end())
+                if (!elle::contains(res, f.first))
                   new_contacts.push_back(&f.second);
           filterAndInsert2(new_contacts, n, res);
         }
@@ -1978,13 +1977,13 @@ namespace memo
         if (auto tit = elle::find(_ping_time, p->sender))
         {
           ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
-          auto d = now() - tit->second;
+          auto const d = now() - tit->second;
           _ping_time.erase(tit);
-          int g = group_of(p->sender);
+          auto const g = group_of(p->sender);
           Contacts& target = _state.contacts[g];
           if (auto it = elle::find(target, p->sender))
             it->second.rtt = d;
-          Endpoint endpoint = p->remote_endpoint;
+          auto const endpoint = p->remote_endpoint;
           endpoints_update(_local_endpoints, endpoint);
           endpoints_cleanup(_local_endpoints, now() - _config.contact_timeout);
         }
@@ -2002,11 +2001,10 @@ namespace memo
           ELLE_DEBUG("Observer got gossip from %s", p->sender);
           auto& cs = this->_state.contacts.at(g);
           auto it = cs.find(p->sender);
-          Contact* c = nullptr;
-          if (it == cs.end())
-            c = this->get_or_make(p->sender, false, {p->endpoint}, true);
-          else
-            c = &it->second;
+          Contact* c =
+            it == cs.end()
+            ? this->get_or_make(p->sender, false, {p->endpoint}, true)
+            : &it->second;
           if (!c->discovered)
           {
             c->discovered = true;
@@ -2025,10 +2023,11 @@ namespace memo
                          *this, c.first);
               continue;
             }
-            int g = group_of(c.first);
+            auto const g = group_of(c.first);
             auto& target = _state.contacts[g];
-            auto it = target.find(c.first);
-            if (it == target.end())
+            if (auto it = elle::find(target, c.first))
+              endpoints_update(it->second.endpoints, c.second);
+            else
             {
               ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
               if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
@@ -2039,8 +2038,6 @@ namespace memo
                                      false);
               }
             }
-            else
-              endpoints_update(it->second.endpoints, c.second);
           }
         if (g == _group)
         {
@@ -2189,7 +2186,7 @@ namespace memo
       Node::addLocalResults(packet::GetFileRequest* p,
                             elle::reactor::yielder<NodeLocation> const* yield)
       {
-        static elle::Bench nlocalhit("kelips.localhit", 10s);
+        static auto nlocalhit = elle::Bench("kelips.localhit", 10s);
         int nhit = 0;
         int const fg = group_of(p->fileAddress);
         auto const iterators = [&]
@@ -2317,8 +2314,7 @@ namespace memo
         if (p->query_node)
         {
           auto& target = _state.contacts[fg];
-          auto it = target.find(p->fileAddress);
-          if (it != target.end())
+          if (auto it = elle::find(target, p->fileAddress))
             p->result.emplace_back(
               it->first,
               to_endpoints(it->second.endpoints));
@@ -2683,13 +2679,10 @@ namespace memo
           if (query_node && !ignore_local_cache)
           {
             auto& target = _state.contacts[fg];
-            auto it = target.find(file);
-            if (it != target.end())
+            if (auto it = elle::find(target, file))
             {
-              yield(
-                NodeLocation(
-                  it->first,
-                  to_endpoints(it->second.endpoints)));
+              yield(NodeLocation(it->first,
+                                 to_endpoints(it->second.endpoints)));
               return;
             }
           }
@@ -2754,13 +2747,10 @@ namespace memo
             if (query_node)
             {
               auto& target = _state.contacts[fg];
-              auto it = target.find(file);
-              if (it != target.end())
+              if (auto it = elle::find(target, file))
               {
-                yield(
-                  NodeLocation(
-                    it->first,
-                    to_endpoints(it->second.endpoints)));
+                yield(NodeLocation(it->first,
+                                   to_endpoints(it->second.endpoints)));
               }
             }
           }
@@ -3430,8 +3420,7 @@ namespace memo
         {
           Contacts* ntarget = !observer ?
             &_state.observers : &_state.contacts[group_of(address)];
-          auto it = ntarget->find(address);
-          if (it != ntarget->end())
+          if (auto it = elle::find(*ntarget, address))
           {
             if (!observer)
             {
