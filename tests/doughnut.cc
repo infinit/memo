@@ -38,7 +38,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("memo.model.doughnut.test");
+ELLE_LOG_COMPONENT("test.doughnut");
 
 using namespace std::literals;
 

@@ -3,7 +3,7 @@
 #include <elle/log.hh>
 #include <elle/test.hh>
 
-ELLE_LOG_COMPONENT("memo.tests.prometheus");
+ELLE_LOG_COMPONENT("test.prometheus");
 
 #include "DHT.hh"
 

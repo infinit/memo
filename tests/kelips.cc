@@ -27,9 +27,11 @@
 #include <memo/silo/Memory.hh>
 #include <memo/silo/Silo.hh>
 
+#include "DHT.hh"
+
 using namespace std::literals;
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.kelips");
 
 #if defined ELLE_WINDOWS
 # undef stat
@@ -47,7 +49,7 @@ ELLE_LOG_COMPONENT("test");
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
-namespace imd = memo::model::doughnut;
+namespace dnut = memo::model::doughnut;
 namespace iok = memo::overlay::kelips;
 
 using memo::model::Endpoints;
@@ -55,7 +57,7 @@ using memo::model::Endpoints;
 namespace
 {
   template <typename Fun>
-  auto insist(Fun fun, std::string const& ctx = "", int attempts = 10)
+  auto insist(Fun fun, std::string const& ctx = "", int attempts = 5)
   {
     for (int i=0; ; ++i)
     {
@@ -136,7 +138,7 @@ public:
     _endpoints["bob"].erase(elle::sprintf("%s", id));
   }
 
-  void push(memo::model::doughnut::Doughnut& d)
+  void push(dnut::Doughnut& d)
   {
     auto eps = Endpoints{
       {
@@ -147,7 +149,7 @@ public:
     push(d.id(), eps);
   }
 
-  void pull(memo::model::doughnut::Doughnut& d)
+  void pull(dnut::Doughnut& d)
   {
     pull(d.id());
   }
@@ -166,85 +168,86 @@ private:
 
 auto endpoints = std::vector<memo::model::Endpoints>{};
 auto net = memo::Network("bob/network", nullptr, boost::none);
-using Nodes = std::vector<
-         std::pair<
-           std::shared_ptr<imd::Doughnut>,
-           elle::reactor::Thread::unique_ptr
-           >>;
 
-/// \param count   number of nodes to create.
-static
-Nodes
-run_nodes(bfs::path const& where,
-          elle::cryptography::rsa::KeyPair const& kp,
-          int count = 10, int groups = 1, int replication_factor = 3,
-          bool paxos_lenient = false,
-          int beyond_port = 0, int base_id=0)
-{
-  ELLE_LOG_SCOPE("building and running %s nodes", count);
-  endpoints.clear();
-  Nodes res;
-  iok::Configuration config;
-  config.k = groups;
-  config.encrypt = true;
-  config.accept_plain = false;
-  int factor = IF_WINDOWS(5, 1);
-  config.contact_timeout = factor * valgrind(2s,20);
-  config.ping_interval = factor * valgrind(1s, 10) / count / 3;
-  config.ping_timeout = factor * valgrind(500ms, 20);
-  config.query_get_retries = 2;
-  for (int n=0; n<count; ++n)
-  {
-    std::unique_ptr<memo::silo::Silo> s;
-    bfs::create_directories(where / "store");
-    s.reset(new memo::silo::Filesystem(where / ("store" + std::to_string(n))));
-    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
-    auto consensus =
-    [&] (memo::model::doughnut::Doughnut& dht)
-        -> std::unique_ptr<memo::model::doughnut::consensus::Consensus>
-        {
-          return std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
-        };
-    auto overlay =
-        [&] (memo::model::doughnut::Doughnut& dht,
-             std::shared_ptr<memo::model::doughnut::Local> local)
-        {
-          auto res = config.make(local, &dht);
-          res->discover(endpoints);
-          return res;
-        };
-    memo::model::Address::Value v;
-    memset(v, 0, sizeof(v));
-    v[0] = base_id + n + 1;
-    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
-      memo::model::Address(v),
-      std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
-      kp.public_key(),
-      passport,
-      consensus,
-      overlay,
-      boost::optional<int>(),
-      boost::optional<boost::asio::ip::address>(),
-      std::move(s));
-    elle::reactor::Thread::unique_ptr tptr;
-    if (beyond_port)
-    {
-      memo::overlay::NodeLocations locs;
-      tptr = net.make_poll_hub_thread(*dn, locs, 1);
-    }
-    res.emplace_back(dn, std::move(tptr));
-    //if (res.size() == 1)
-    endpoints.emplace_back(
-        memo::model::Endpoints{{
-            boost::asio::ip::address::from_string("127.0.0.1"),
-            dn->local()->server_endpoint().port(),
-        }});
-  }
-  return res;
-}
+using Node = std::pair<std::shared_ptr<dnut::Doughnut>,
+                       elle::reactor::Thread::unique_ptr>;
+using Nodes = std::vector<Node>;
 
 namespace
 {
+  /// \param count   number of nodes to create.
+  Nodes
+  run_nodes(bfs::path const& where,
+            elle::cryptography::rsa::KeyPair const& kp,
+            int count = 10, int groups = 1, int replication_factor = 3,
+            bool paxos_lenient = false,
+            int beyond_port = 0)
+  {
+    ELLE_LOG_SCOPE("building and running %s nodes", count);
+    endpoints.clear();
+    auto config = [&]
+      {
+        auto res = iok::Configuration{};
+        res.k = groups;
+        res.encrypt = true;
+        res.accept_plain = false;
+        int factor = IF_WINDOWS(5, 1);
+        // If we are too fast (2s and even 4s was not enough to not
+        // have failures), beyond_storage's "second change of node 0"
+        // that fails quite often.  With 5s, I have 100 successful
+        // runs in a row.
+        res.contact_timeout = factor * valgrind(5s, 20);
+        res.ping_interval = factor * valgrind(1s, 10) / count / 3;
+        res.ping_timeout = factor * valgrind(500ms, 20);
+        res.query_get_retries = 2;
+        return res;
+      }();
+    auto make_consensus = [&] (dnut::Doughnut& dht)
+      -> std::unique_ptr<dnut::consensus::Consensus>
+      {
+        return std::make_unique<dnut::consensus::Paxos>
+          (dht, replication_factor, paxos_lenient);
+      };
+    auto make_overlay = [&] (dnut::Doughnut& dht, std::shared_ptr<dnut::Local> local)
+      {
+        auto res = config.make(local, &dht);
+        res->discover(endpoints);
+        return res;
+      };
+    auto passport = dnut::Passport(kp.K(), "testnet", kp);
+    bfs::create_directories(where / "store");
+    auto res = Nodes{};
+    for (int n=0; n<count; ++n)
+    {
+      auto s = std::make_unique<memo::silo::Filesystem>
+        (where / ("store" + std::to_string(n)));
+      auto dn = std::make_shared<dnut::Doughnut>(
+        special_id(n + 1),
+        std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
+        kp.public_key(),
+        passport,
+        make_consensus,
+        make_overlay,
+        boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
+        std::move(s));
+      elle::reactor::Thread::unique_ptr tptr;
+      if (beyond_port)
+      {
+        memo::overlay::NodeLocations locs;
+        tptr = net.make_poll_hub_thread(*dn, locs, 1);
+      }
+      res.emplace_back(dn, std::move(tptr));
+      //if (res.size() == 1)
+      endpoints.emplace_back(
+          memo::model::Endpoints{{
+              boost::asio::ip::address::from_string("127.0.0.1"),
+              dn->local()->server_endpoint().port(),
+          }});
+    }
+    return res;
+  }
+
   std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
   make_observer(bfs::path const& where,
                 elle::cryptography::rsa::KeyPair const& kp,
@@ -255,37 +258,38 @@ namespace
                 int beyond_port = 0)
   {
     ELLE_LOG_SCOPE("building observer");
-    iok::Configuration config;
-    config.k = groups;
-    config.encrypt = true;
-    config.accept_plain = false;
-    config.query_get_retries = 3;
-    config.ping_timeout = valgrind(500ms, 20);
-    auto passport = memo::model::doughnut::Passport(kp.K(), "testnet", kp);
-    auto make_consensus =
-      [&] (memo::model::doughnut::Doughnut& dht)
+    auto config = [&]
+      {
+        auto res = iok::Configuration{};
+        res.k = groups;
+        res.encrypt = true;
+        res.accept_plain = false;
+        res.query_get_retries = 3;
+        res.ping_timeout = valgrind(500ms, 20);
+        return res;
+      }();
+    auto passport = dnut::Passport(kp.K(), "testnet", kp);
+    auto make_consensus = [&] (dnut::Doughnut& dht)
       {
         auto res =
-          std::unique_ptr<imd::consensus::Consensus>{
-            std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient)
+          std::unique_ptr<dnut::consensus::Consensus>{
+            std::make_unique<dnut::consensus::Paxos>(dht, replication_factor, paxos_lenient)
           };
         if (async)
           res = std::make_unique<
-            memo::model::doughnut::consensus::Async>(std::move(res),
+            dnut::consensus::Async>(std::move(res),
               where / bfs::unique_path());
         if (cache)
-          res = std::make_unique<imd::consensus::Cache>(std::move(res));
+          res = std::make_unique<dnut::consensus::Cache>(std::move(res));
         return res;
       };
-    auto make_overlay =
-      [&] (memo::model::doughnut::Doughnut& dht,
-           std::shared_ptr<memo::model::doughnut::Local> local)
+    auto make_overlay = [&] (dnut::Doughnut& dht, std::shared_ptr<dnut::Local> local)
       {
         auto res = config.make(local, &dht);
         res->discover(endpoints);
         return res;
       };
-    auto dn = std::make_shared<memo::model::doughnut::Doughnut>(
+    auto dn = std::make_shared<dnut::Doughnut>(
       memo::model::Address::random(0), // FIXME
       std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
@@ -622,13 +626,13 @@ ELLE_TEST_SCHEDULED(conflicts)
     auto& fs1 = fs1p.first;
     auto& fs2 = fs2p.first;
     auto cache1 =
-      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
-        dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<dnut::consensus::Cache*>(
+        dynamic_cast<dnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs1->operations().get())->block_store().get())->consensus().get());
     auto cache2 =
-      dynamic_cast<memo::model::doughnut::consensus::Cache*>(
-        dynamic_cast<memo::model::doughnut::Doughnut*>(
+      dynamic_cast<dnut::consensus::Cache*>(
+        dynamic_cast<dnut::Doughnut*>(
           dynamic_cast<ifs::FileSystem*>(
            fs2->operations().get())->block_store().get())->consensus().get());
     struct stat st;
@@ -845,7 +849,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
@@ -857,7 +861,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   beyond.pull(*nodes[1].first);
   nodes.clear();
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
-  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
   BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
@@ -868,7 +872,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   nodes.clear();
   elle::reactor::sleep(2s);
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
-  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   beyond.push(*nodes[0].first);
   beyond.push(*nodes[1].first);
   BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, "file");}));
@@ -881,7 +885,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   Beyond beyond;
   auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
   beyond.push(*nodes[0].first);
@@ -892,7 +896,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   nodes[0].first.reset();
   nodes[0].second.reset();
   BOOST_CHECK_THROW(writefile(*fs, "file", "bar"), std::exception);
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port())[0]);
   beyond.push(*nodes[0].first);
   insist([&] { writefile(*fs, "file", "bar");});
   BOOST_TEST(readfile(*fs, "file") == "bar");
@@ -900,14 +904,16 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
 
 ELLE_TEST_SCHEDULED(beyond_storage)
 {
+  auto constexpr num_files = 20;
   // test reconnection between storages
-  Beyond beyond;
-  elle::filesystem::TemporaryDirectory d;
+  auto&& beyond = Beyond{};
+  auto const d = elle::filesystem::TemporaryDirectory{};
   auto const kp = elle::cryptography::rsa::keypair::generate(512);
-  auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
+  // Creating two nodes.
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port());
   auto fsp = make_observer(d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;
-  auto const files = elle::make_vector(boost::irange(0, 20),
+  auto const files = elle::make_vector(boost::irange(0, num_files),
                                        [](auto i)
                                        {
                                          return elle::print("file{}", i);
@@ -919,28 +925,34 @@ ELLE_TEST_SCHEDULED(beyond_storage)
     ELLE_LOG("file %s", f);
     BOOST_TEST(readfile(*fs, f) == "foo");
   }
+
+  BOOST_TEST_MESSAGE("first change of node 0");
   nodes[0].first.reset();
   nodes[0].second.reset();
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port())[0]);
   beyond.push(*nodes[0].first);
   // If the nodes see each other they will route requests to one
   // another, otherwise requests will fail (we set a low
-  // query_get_retries)
+  // query_get_retries).
   for (auto const& f : files)
-    BOOST_TEST(insist([&]{return readfile(*fs, f);}, "file: " + f) == "foo");
+    BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 
-  // Same operation, but push the other one on beyond.
-  // Why does it work? node0 upon restart will find node1 from beyond
-  // and bootstrap to it. Then node1 will be able to answer the observer
-  // when it will do a node lookup for node0
+  BOOST_TEST_MESSAGE("second change of node 0");
+  // Same operation, but push the other one on beyond.  Why does it
+  // work? node[0] upon restart will find node[1] from beyond and
+  // bootstrap to it. Then node[1] will be able to answer the observer
+  // when it will do a node lookup for node[0].
+  //
+  // Note that here we are quite sensitive to `contact_timeout`: if
+  // it's too short, we are very likely not to be able to recover
+  // before the complete exclusion of the node.
   beyond.pull(*nodes[0].first);
   nodes[0].first.reset();
   nodes[0].second.reset();
-  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port())[0]);
   beyond.push(*nodes[1].first);
   for (auto const& f : files)
-    BOOST_CHECK_NO_THROW(insist([&] { readfile(*fs, f); },
-                                "file: " + f));
+    BOOST_REQUIRE(insist([&]{ return readfile(*fs, f); }, "file: " + f) == "foo");
 }
 
 

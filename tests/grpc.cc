@@ -26,7 +26,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.grpc");
 
 
 inline

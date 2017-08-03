@@ -13,7 +13,7 @@
 
 using namespace std::literals;
 
-ELLE_LOG_COMPONENT("RPC");
+ELLE_LOG_COMPONENT("test.rpc");
 
 struct Server
 {
