@@ -1,6 +1,8 @@
 #include <memo/Hub.hh>
 
+#include <elle/das/serializer.hh>
 #include <elle/format/base64.hh>
+#include <elle/fstream.hh>
 #include <elle/json/json.hh>
 #include <elle/log.hh>
 #include <elle/reactor/http/Request.hh>
@@ -11,6 +13,8 @@
 #include <memo/utility.hh>
 
 ELLE_LOG_COMPONENT("memo.Hub");
+
+namespace http = elle::reactor::http;
 
 namespace memo
 {
@@ -38,6 +42,17 @@ namespace memo
       b64.flush();
       return buf.string();
     }
+
+    /// Where crash reports must be sent.  Merely prepends `{beyond}/`.
+    template <typename... Args>
+    auto
+    report_url(Args&&... args)
+    {
+      auto const host = memo::getenv("CRASH_REPORT_HOST", beyond());
+      return elle::print("%s/%s",
+                         host,
+                         elle::print(std::forward<Args>(args)...));
+    }
   }
 
   bool
@@ -60,10 +75,8 @@ namespace memo
       // the minidumps.
       content[f.first] = contents_base64(f.second);
 
-    auto const host = memo::getenv("CRASH_REPORT_HOST", beyond());
-    auto const url = elle::sprintf("%s/crash/report", host);
+    auto const url = report_url("crash/report");
     ELLE_DUMP("uploading %s to %s", fs, url);
-    namespace http = elle::reactor::http;
     // It can extremely long to checkout the debug-symbols on the
     // server side.  Of course it should be asynchronous, but
     // currently it is not.  So cut it some five minutes of slack.
@@ -80,5 +93,75 @@ namespace memo
       ELLE_ERR("failed to upload %s to %s: %s", fs, url, r.status());
       return false;
     }
+  }
+
+  namespace
+  {
+    namespace s
+    {
+      ELLE_DAS_SYMBOL(url);
+      ELLE_DAS_SYMBOL(path);
+    }
+
+    struct Body
+    {
+      std::string url;
+      std::string path;
+
+      using Model = elle::das::Model<
+        Body,
+        decltype(elle::meta::list(s::url, s::path))>;
+    };
+
+  }
+}
+
+ELLE_DAS_SERIALIZE(memo::Body);
+
+namespace memo
+{
+  bool
+  Hub::upload_log(std::string const& username, bfs::path const& log)
+  {
+    ELLE_DEBUG("get upload url");
+    auto const url_path = [&] {
+      auto const url = report_url("log/{}/get_url", username);
+      auto r = http::Request(url, http::Method::GET, "application/json",
+                             {1_min});
+      r.wait();
+      if (r.status() != http::StatusCode::OK)
+        elle::err("failed to get upload url: %s", r.status());
+      auto in = elle::serialization::json::SerializerIn(elle::json::read(r),
+                                                        false);
+      return in.deserialize<Body>();
+    }();
+    ELLE_DUMP("upload url: %s", url_path.url);
+
+    // FIXME: don't load it in RAM, work with the stream.
+    auto const payload = elle::content(bfs::ifstream{log});
+    auto const conf = [&]
+      {
+        auto const end_size = payload.size();
+        auto const position = 0;
+        auto const end = end_size - 1;
+
+        auto res = http::Request::Configuration{};
+        res.stall_timeout(30_sec);
+        res.timeout(elle::DurationOpt());
+        res.header_add("Content-Length", std::to_string(end_size));
+        res.header_add("Content-Range",
+                       elle::print("bytes %s-%s/%s", position, end, end_size));
+        return res;
+      }();
+    auto r = http::Request(url_path.url,
+                           http::Method::PUT,
+                           "application/octet-stream",
+                           conf);
+    r.write(payload.data(), payload.size());
+    r.finalize();
+    r.wait();
+    ELLE_LOG("request: %s", r);
+    ELLE_LOG("status code: %s", r.status());
+    return true;
   }
 }

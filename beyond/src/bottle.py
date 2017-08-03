@@ -236,8 +236,10 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.key_value_store_put)
     self.route('/kvs/<owner>/<name>',
                method = 'DELETE')(self.key_value_store_delete)
-    # Crash reports
+    # Reporting.
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
+    self.route('/log/<name>/get_url', method = 'GET')(self.log_get_url)
+    self.route('/log/<name>/reported', method = 'PUT')(self.log_reported)
 
   def check_admin(self):
     if self.__force_admin:
@@ -1166,9 +1168,16 @@ class Bottle(bottle.Bottle):
     kvs = self.key_value_store_from_name(owner = owner, name = name)
     self.__beyond.key_value_store_delete(owner = owner, name = name)
 
-  ## ------------ ##
-  ## Crash Report ##
-  ## ------------ ##
+  ## --------- ##
+  ## Reporting ##
+  ## --------- ##
+
+  def __check_log_bucket(self):
+    if self.__log_bucket is None:
+      raise Response(501, {
+        'error': 'GCS/not_implemented',
+        'reason': 'GCS support not enabled',
+      })
 
   def crash_report_put(self):
     '''A crash report was uploaded.  Symbolize it and mail to the
@@ -1191,6 +1200,38 @@ class Bottle(bottle.Bottle):
       })
     self.__beyond.crash_report_send(json)
     return {}
+
+  def log_get_url(self, name):
+    '''The client is about to upload logs, provide it with a temporary
+    upload URL.'''
+
+    self.__check_log_bucket()
+    import urllib.parse
+    path = urllib.parse.quote('_'.join([name, str(self.__beyond.now)]))
+    upload_url = self.__gcs.upload_url(
+      bucket = 'logs',
+      path = path,
+      expiration = datetime.timedelta(minutes = 10)
+    )
+    return {
+      'url': upload_url,
+      'path': path
+    }
+
+  def log_reported(self, name):
+    '''The client upload its logs, send a message to warn maintainers.'''
+
+    path = bottle.request.json.get('path', '<unknown>')
+    self.__beyond.emailer.send_one(
+      recipient_email = 'crash@infinit.sh',
+      recipient_name = 'Crash',
+      variables = {
+        'username': name,
+        'url': 'https://storage.googleapis.com/sh_infinit_beyond_logs/' + path,
+      }
+      **self.template('Internal/Log Report'))
+    return {}
+
 
   ## -------------- ##
   ## Image Bucket.  ##

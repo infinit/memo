@@ -290,7 +290,8 @@ class Beyond():
       setattr(self.__beyond, '_Beyond__now', self.now)
       bargs = {
         'beyond': self.__beyond,
-        'image_bucket': self.__image_bucket
+        'image_bucket': self.__image_bucket,
+        'log_bucket': self.__log_bucket,
       }
       bargs.update(self.__bottle_args)
       self.__app = infinit.beyond.bottle.Bottle(**bargs)

@@ -244,11 +244,14 @@ namespace memo
                            int number)
     {
       ELLE_TRACE_SCOPE("log.push");
+      auto& cli = this->cli();
+      auto owner = cli.as_user();
+
       auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
       if (auto n = tar_logs_match(tgz.path(), match.value_or(""s), number))
       {
-        if (memo::Hub::upload_crash({{"logs.tgz", tgz.path()}}))
-          elle::print(std::cout, "successfully uploaded {} logs\n", n);
+        if (memo::Hub::upload_log(owner.name, tgz.path()))
+          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
         else
           elle::print(std::cerr, "failed to upload {} logs\n", n);
       }

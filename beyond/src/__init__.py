@@ -160,6 +160,9 @@ templates = {
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
   },
+  'Internal/Log Report': {
+    'template': 'tem_k9SKtv3vbcqcbCphvCHbPkc6',
+  },
   'Internal/Passport Generation Error': {
     'template': 'tem_LdEi9v8WrTACa8BNUhoSte',
   },
