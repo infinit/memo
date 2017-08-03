@@ -53,19 +53,6 @@ class Bottle(bottle.Bottle):
         'display_name': info['display_name'],
       },
     },
-    'google': {
-      'form_url': 'https://accounts.google.com/o/oauth2/auth',
-      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
-      'params': {
-        'scope': 'https://www.googleapis.com/auth/drive.file',
-        'access_type': 'offline',
-      },
-      'info_url': 'https://www.googleapis.com/drive/v2/about',
-      'info': lambda info: {
-        'uid': info['user']['emailAddress'],
-        'display_name': info['name'],
-      },
-    },
     'gcs': {
       'form_url': 'https://accounts.google.com/o/oauth2/auth',
       'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
@@ -81,6 +68,19 @@ class Bottle(bottle.Bottle):
       'info_url': 'https://www.googleapis.com/oauth2/v2/userinfo',
       'info': lambda info: {
         'uid': info['email'],
+        'display_name': info['name'],
+      },
+    },
+    'google': {
+      'form_url': 'https://accounts.google.com/o/oauth2/auth',
+      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
+      'params': {
+        'scope': 'https://www.googleapis.com/auth/drive.file',
+        'access_type': 'offline',
+      },
+      'info_url': 'https://www.googleapis.com/drive/v2/about',
+      'info': lambda info: {
+        'uid': info['user']['emailAddress'],
         'display_name': info['name'],
       },
     },
@@ -1171,6 +1171,9 @@ class Bottle(bottle.Bottle):
   ## ------------ ##
 
   def crash_report_put(self):
+    '''A crash report was uploaded.  Symbolize it and mail to the
+    maintainers.'''
+
     content_type = bottle.request.headers.get('Content-Type')
     # Old crash reports only contained dump data.
     if content_type == 'application/octet-stream':
@@ -1267,7 +1270,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name in ['google', 'gcs']:
+    if name in ['gcs', 'google']:
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
@@ -1368,7 +1371,7 @@ def user_credentials_google_refresh(self, username):
     beyond = self._Bottle__beyond
     user = beyond.user_get(name = username)
     refresh_token = bottle.request.query.refresh_token
-    for kind in ['google', 'gcs']:
+    for kind in ['gcs', 'google']:
       for id, account in getattr(user, '%s_accounts' % kind).items():
         # https://developers.google.com/identity/protocols/OAuth2InstalledApp
         # The associate google account.
