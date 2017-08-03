@@ -14,17 +14,18 @@ namespace dht = memo::model::doughnut;
 
 struct Recipe
 {
-  template <typename ... Args>
-  Recipe(Args&& ... args)
-    : Recipe(std::make_unique<InstrumentedConsensus>(dht),
-             std::forward<Args>(args)...)
+  using Self = Recipe;
+
+  template <typename... Args>
+  Recipe(std::unique_ptr<InstrumentedConsensus> c, Args&& ... args)
+    : instrument(*c)
+    , cache(std::move(c), std::forward<Args>(args)...)
   {}
 
-  template <typename ... Args>
-  Recipe(std::unique_ptr<InstrumentedConsensus> c, Args&& ... args)
-    : dht()
-    , instrument(*c)
-    , cache(std::move(c), std::forward<Args>(args)...)
+  template <typename... Args>
+  Recipe(Args&& ... args)
+    : Self(std::make_unique<InstrumentedConsensus>(dht),
+           std::forward<Args>(args)...)
   {}
 
   DummyDoughnut dht;
@@ -34,7 +35,7 @@ struct Recipe
 
 ELLE_TEST_SCHEDULED(memory)
 {
-  Recipe r;
+  auto&& r = Recipe{};
   auto addr = memo::model::Address::random();
   BOOST_CHECK_THROW(r.cache.fetch(addr), memo::model::MissingBlock);
   auto okb = r.dht.make_block<memo::model::blocks::MutableBlock>(
@@ -58,10 +59,8 @@ ELLE_TEST_SCHEDULED(disk)
   std::unique_ptr<memo::model::blocks::Block> chb;
   ELLE_LOG("create and fetch CHB")
   {
-    Recipe r(boost::optional<int>(),
-             boost::optional<std::chrono::seconds>(),
-             boost::optional<std::chrono::seconds>(),
-             tmp.path());
+    auto&& r = Recipe(boost::optional<int>(), elle::DurationOpt{},
+                      elle::DurationOpt{}, tmp.path());
     chb = r.dht.make_block<memo::model::blocks::ImmutableBlock>(
       elle::Buffer("data", 4));
     r.instrument.add(*chb);
@@ -75,10 +74,8 @@ ELLE_TEST_SCHEDULED(disk)
   }
   ELLE_LOG("reload CHB from disk cache")
   {
-    Recipe r(boost::optional<int>(),
-             boost::optional<std::chrono::seconds>(),
-             boost::optional<std::chrono::seconds>(),
-             tmp.path());
+    auto&& r = Recipe(boost::optional<int>(), elle::DurationOpt(),
+                      elle::DurationOpt(), tmp.path());
     r.instrument.fetched().connect(
       [] (memo::model::Address const& addr)
       {

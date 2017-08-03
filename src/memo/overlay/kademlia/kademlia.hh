@@ -28,13 +28,13 @@ namespace kademlia
     serialize(elle::serialization::Serializer& s);
     int port;
     int wait;
-    int wait_ms;
+    elle::Duration wait_duration;
     int address_size; // in bits
     int k; // number of entries to keep/bucket, and response size
     int alpha; // number of concurrent requests to send
-    int ping_interval_ms;
-    int refresh_interval_ms;
-    int storage_lifetime_ms;
+    elle::Duration ping_interval;
+    elle::Duration refresh_interval;
+    elle::Duration storage_lifetime;
   };
 
   namespace packet

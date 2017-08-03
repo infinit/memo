@@ -33,7 +33,7 @@ namespace memo
              boost::optional<int> port = {},
              boost::optional<boost::asio::ip::address> listen_address = {},
              boost::optional<std::string> rdv_host = {},
-             boost::optional<std::chrono::milliseconds> tcp_heartbeat = {});
+             elle::DurationOpt tcp_heartbeat = {});
         Dock(Dock const&) = delete;
         Dock(Dock&&);
         ~Dock();
@@ -42,8 +42,7 @@ namespace memo
         void
         cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
-        ELLE_ATTRIBUTE_R(boost::optional<std::chrono::milliseconds>,
-                         tcp_heartbeat);
+        ELLE_ATTRIBUTE_R(elle::DurationOpt, tcp_heartbeat);
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
         ELLE_ATTRIBUTE_R(elle::reactor::network::UTPServer&, utp_server);
@@ -120,8 +119,7 @@ namespace memo
           ELLE_ATTRIBUTE_R(bool, disconnected);
           ELLE_ATTRIBUTE_RX(boost::signals2::signal<void ()>, on_connection);
           ELLE_ATTRIBUTE_RX(boost::signals2::signal<void ()>, on_disconnection);
-          ELLE_ATTRIBUTE_R(
-            std::chrono::system_clock::time_point, disconnected_since);
+          ELLE_ATTRIBUTE_R(elle::Time, disconnected_since);
           ELLE_ATTRIBUTE_R(std::exception_ptr, disconnected_exception);
           ELLE_ATTRIBUTE_RX(KeyCache, key_hash_cache);
           ELLE_ATTRIBUTE(std::function<void()>, cleanup_on_disconnect);

@@ -152,10 +152,8 @@ namespace memo
         else
         {
           this->_salt = elle::cryptography::random::generate<elle::Buffer>(24);
-          uint64_t now = (boost::posix_time::microsec_clock::universal_time()
-            - boost::posix_time::ptime(boost::posix_time::min_date_time))
-            .total_milliseconds();
-          _salt.append(&now, 8);
+          auto const now = elle::Clock::now().time_since_epoch().count();
+          _salt.append(&now, sizeof(now));
         }
         if (this->doughnut()->version() < elle::Version(0, 8, 0))
         {

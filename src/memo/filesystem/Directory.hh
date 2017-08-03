@@ -19,7 +19,6 @@ namespace memo
 
     constexpr int DIRECTORY_MASK = 0040000;
     constexpr int SYMLINK_MASK = 0120000;
-    static auto const directory_cache_time = boost::posix_time::seconds(2);
 
     class Directory
       : public rfs::Path

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <elle/das/cli.hh>
+#include <elle/Duration.hh>
 
 #include <memo/cli/Object.hh>
 #include <memo/cli/Mode.hh>
@@ -10,6 +11,7 @@
 
 namespace memo
 {
+  using namespace std::literals;
   namespace cli
   {
     class Network
@@ -67,12 +69,10 @@ namespace memo
                  // Kelips options.
                  decltype(cli::nodes = boost::optional<int>()),
                  decltype(cli::k = boost::optional<int>()),
-                 decltype(cli::kelips_contact_timeout =
-                          boost::optional<std::string>()),
+                 decltype(cli::kelips_contact_timeout = elle::Duration{}),
                  decltype(cli::encrypt = boost::optional<std::string>()),
                  decltype(cli::protocol = boost::optional<std::string>()),
-                 decltype(cli::tcp_heartbeat =
-                          boost::optional<std::chrono::milliseconds>()),
+                 decltype(cli::tcp_heartbeat = elle::DurationOpt{}),
                  decltype(cli::disable_encrypt_at_rest = false),
                  decltype(cli::disable_encrypt_rpc = false),
                  decltype(cli::disable_signature = false)),
@@ -81,35 +81,35 @@ namespace memo
       void
       mode_create(
         std::string const& network_name,
-        boost::optional<std::string> const& description = {},
-        Strings const& silo = {},
-        boost::optional<int> port = boost::none,
-        int replication_factor = 1,
-        boost::optional<std::string> const& eviction_delay = boost::none,
-        boost::optional<std::string> const& output_name = boost::none,
-        bool push_network = false,
-        bool push = false,
-        Strings const& admin_r = {},
-        Strings const& admin_rw = {},
-        Strings const& peer = {},
+        boost::optional<std::string> const& description,
+        Strings const& silo,
+        boost::optional<int> port,
+        int replication_factor,
+        boost::optional<std::string> const& eviction_delay,
+        boost::optional<std::string> const& output_name,
+        bool push_network,
+        bool push,
+        Strings const& admin_r,
+        Strings const& admin_rw,
+        Strings const& peer,
         // Consensus types.
-        bool paxos = false,
-        bool no_consensus = false,
+        bool paxos,
+        bool no_consensus,
         // Overlay types.
-        bool kelips = false,
-        bool kalimero = false,
-        bool kouncil = false,
+        bool kelips,
+        bool kalimero,
+        bool kouncil,
         // Kelips options,
-        boost::optional<int> nodes = boost::none,
-        boost::optional<int> k = boost::none,
-        boost::optional<std::string> kelips_contact_timeout = boost::none,
-        boost::optional<std::string> encrypt = boost::none,
+        boost::optional<int> nodes,
+        boost::optional<int> k,
+        elle::Duration kelips_contact_timeout,
+        boost::optional<std::string> encrypt,
         // Generic options
-        boost::optional<std::string> protocol = boost::none,
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat = boost::none,
-        bool disable_encrypt_at_rest = false,
-        bool disable_encrypt_rpc = false,
-        bool disable_signature = false);
+        boost::optional<std::string> protocol,
+        elle::DurationOpt tcp_heartbeat,
+        bool disable_encrypt_at_rest,
+        bool disable_encrypt_rpc,
+        bool disable_signature);
 
       /*---------------.
       | Mode: delete.  |

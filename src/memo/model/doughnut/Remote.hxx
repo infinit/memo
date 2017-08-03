@@ -78,19 +78,11 @@ namespace memo
           {
             // Try connecting until we reach the RPC timeout or the Remote
             // softfail.
-            elle::reactor::Duration const delay =
-              boost::posix_time::millisec(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::min(rpc_timeout_delay, soft_fail_delay)).count());
+            auto const delay = std::min(rpc_timeout_delay, soft_fail_delay);
             if (elle::reactor::wait(this->_connected, delay))
             {
-              auto const rpc_timeout_delay =
-                rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
-              elle::reactor::Duration const delay =
-                boost::posix_time::millisec(
-                  std::chrono::duration_cast<std::chrono::milliseconds>(
-                    rpc_timeout_delay).count());
-              auto&& timeout = boost::asio::deadline_timer(
+              auto const delay = rpc_timeout - (elle::Clock::now() - rpc_start);
+              auto&& timeout = elle::reactor::AsioTimer(
                 elle::reactor::scheduler().io_service(), delay);
               if (this->doughnut().soft_fail_running())
                 timeout.async_wait(

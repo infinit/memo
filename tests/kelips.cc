@@ -29,6 +29,8 @@
 
 #include "DHT.hh"
 
+using namespace std::literals;
+
 ELLE_LOG_COMPONENT("test.kelips");
 
 #if defined ELLE_WINDOWS
@@ -79,7 +81,7 @@ namespace
                  ctx, elle::exception_string());
         throw;
       }
-      elle::reactor::sleep(1_sec);
+      elle::reactor::sleep(1s);
     }
     elle::unreachable();
   }
@@ -194,9 +196,9 @@ namespace
         // have failures), beyond_storage's "second change of node 0"
         // that fails quite often.  With 5s, I have 100 successful
         // runs in a row.
-        res.contact_timeout_ms = factor * valgrind(5000, 20);
-        res.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
-        res.ping_timeout_ms = factor * valgrind(500, 20);
+        res.contact_timeout = factor * valgrind(5s, 20);
+        res.ping_interval = factor * valgrind(1s, 10) / count / 3;
+        res.ping_timeout = factor * valgrind(500ms, 20);
         res.query_get_retries = 2;
         return res;
       }();
@@ -263,7 +265,7 @@ namespace
         res.encrypt = true;
         res.accept_plain = false;
         res.query_get_retries = 3;
-        res.ping_timeout_ms = valgrind(500, 20);
+        res.ping_timeout = valgrind(500ms, 20);
         return res;
       }();
     auto passport = dnut::Passport(kp.K(), "testnet", kp);
@@ -318,7 +320,7 @@ namespace
         if (boost::any_cast<bool>(c.at("discovered")))
           break;
       }
-      elle::reactor::sleep(50_ms);
+      elle::reactor::sleep(50ms);
     }
     ELLE_LOG("Returning observer");
     return std::make_pair(std::move(fs), std::move(tptr));
@@ -502,7 +504,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     fss.push_back(make_observer(tmp, kp, 1, 3, false, false, false));
 //     if (i == 0)
 //       writefile(*fss.front(), "foo", "bar");
-//     elle::reactor::sleep(100_ms);
+//     elle::reactor::sleep(100ms);
 //   }
 //   for (int i=0; i<3; ++i)
 //   {
@@ -717,7 +719,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_TEST(now - st.st_mtime <= delta);
   BOOST_TEST(now - st.st_ctime <= delta);
 
-  elle::reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100ms);
   now = time(nullptr);
   appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
   fs->path("/dir/file")->stat(&st);
@@ -727,7 +729,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_TEST(now - st.st_mtime >= 2);
   BOOST_TEST(now - st.st_ctime >= 2);
 
-  elle::reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100ms);
   now = time(nullptr);
   writefile(*fs, "dir/file2", "foo");
   fs->path("/dir2/dir")->mkdir(0600);
@@ -868,7 +870,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   beyond.pull(*nodes[0].first);
   beyond.pull(*nodes[1].first);
   nodes.clear();
-  elle::reactor::sleep(2_sec);
+  elle::reactor::sleep(2s);
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
   nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port());
   beyond.push(*nodes[0].first);

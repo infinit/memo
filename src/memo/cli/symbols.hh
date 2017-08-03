@@ -13,7 +13,6 @@ namespace memo
   namespace cli
   {
     // Symbol, short option char [0], help string, whether positional argument [false].
-    // XXX[Storage]: Silo or Storage.
 
     ELLE_DAS_CLI_SYMBOL(account, "cloud service account name");
     ELLE_DAS_CLI_SYMBOL(add, "add users, administrators and groups to group (prefix: @<group>, ^<admin>");
@@ -87,7 +86,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(grpc, "start gRPC server on given endpoint");
     ELLE_DAS_CLI_SYMBOL(grpc_port_file, "write gRPC listening port to file");
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message");
-    ELLE_DAS_CLI_SYMBOL(hold, "keep storage online until this process terminates");
+    ELLE_DAS_CLI_SYMBOL(hold, "keep storage online until this process terminates"); // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user");
     ELLE_DAS_CLI_SYMBOL(host, "SSH host");
     ELLE_DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon");
@@ -96,7 +95,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(k, "number of groups (default: 1)");
     ELLE_DAS_CLI_SYMBOL(kalimero, "use a Kalimero overlay network. Used for local testing");
     ELLE_DAS_CLI_SYMBOL(kelips, "use a Kelips overlay network (default)");
-    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, "ping timeout before considering a peer lost (default: 2min)");
+    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, "ping timeout before considering a peer lost");
     ELLE_DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key");
     ELLE_DAS_CLI_SYMBOL(kouncil, "use a Kouncil overlay network");
     ELLE_DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name");

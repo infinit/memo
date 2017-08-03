@@ -1,7 +1,5 @@
 #pragma once
 
-using namespace boost::posix_time;
-
 #include <elle/bytes.hh>
 
 #include <elle/reactor/Barrier.hh>
@@ -58,17 +56,17 @@ namespace memo
       };
 
       std::string
-      report(elle::Buffer::Size size,
-             time_duration duration)
+      report(elle::Buffer::Size size, elle::Duration duration)
       {
-        return elle::sprintf(
-          "%sms for %s (%s/sec)",
-          duration.total_milliseconds(),
-          elle::human_data_size(size, false),
-          elle::human_data_size(1000. * size / duration.total_milliseconds(), false));
+        using Fsec = std::chrono::duration<double>;
+        auto fsec = std::chrono::duration_cast<Fsec>(duration).count();
+        return elle::print("%s for %s (%s/sec)",
+                           duration,
+                           elle::human_data_size(size, false),
+                           elle::human_data_size(size / fsec, false));
       }
 
-      time_duration
+      elle::Duration
       upload(elle::protocol::ChanneledStream& channels,
              elle::Buffer::Size packet_size,
              int64_t packets_count,
@@ -77,33 +75,34 @@ namespace memo
         ELLE_TRACE_SCOPE("upload %s %s times", packet_size, packets_count);
         std::cout << "  Upload:" << std::endl;
         // My download is the server upload.
-        memo::RPC<elle::Buffer::Size (elle::Buffer)> upload(
+        auto upload = memo::RPC<auto (elle::Buffer) -> elle::Buffer::Size>(
           "download", channels, memo::version());
 
         elle::Buffer buff(packet_size);
-        auto start = microsec_clock::universal_time();
+        auto const start = elle::Clock::now();
         for (int64_t i = 0; i < packets_count; ++i)
           ELLE_DEBUG("upload...")
           {
-            auto start_partial = microsec_clock::universal_time();
+            auto start_partial = elle::Clock::now();
             upload(buff);
             if (verbose)
             {
               std::cout
                 << "    - [" << i << "] "
                 << report(packet_size,
-                          microsec_clock::universal_time() - start_partial)
+                          elle::Clock::now() - start_partial)
                 << std::endl;
             }
           }
-        auto res = microsec_clock::universal_time() - start;
+        auto res = elle::Clock::now() - start;
         std::cout << "    "
                   << report(packet_size * packets_count, res)
                   << std::endl;
         return res;
       }
 
-      time_duration
+      // FIXME: Large code duplication with upload().
+      elle::Duration
       download(elle::protocol::ChanneledStream& channels,
                elle::Buffer::Size packet_size,
                int64_t packets_count,
@@ -112,25 +111,25 @@ namespace memo
         ELLE_TRACE_SCOPE("download %s %s times", packet_size, packets_count);
 
         // My upload is the server download.
-        memo::RPC<elle::Buffer (elle::Buffer::Size)> download(
+        auto download = memo::RPC<auto (elle::Buffer::Size) -> elle::Buffer>(
           "upload", channels, memo::version());
 
         std::cout << "  Download:" << std::endl;
-        auto start = microsec_clock::universal_time();
+        auto const start = elle::Clock::now();
         for (int64_t i = 0; i < packets_count; ++i)
         {
           ELLE_DEBUG("download...")
           {
-            auto start_partial = microsec_clock::universal_time();
+            auto start_partial = elle::Clock::now();
             download(packet_size);
             if (verbose)
               std::cout << "    - [" << i << "] "
                         << report(packet_size,
-                                  microsec_clock::universal_time() - start_partial)
+                                  elle::Clock::now() - start_partial)
                         << std::endl;
           }
         }
-        auto res = microsec_clock::universal_time() - start;
+        auto const res = elle::Clock::now() - start;
         std::cout << "    "
                   << report(packet_size * packets_count, res)
                   << std::endl;
@@ -203,7 +202,7 @@ namespace memo
         socket(std::string const& host, uint16_t port)
         {
           ELLE_TRACE("open tcp socket to %s:%s", host, port);
-          return std::make_unique<elle::reactor::network::TCPSocket>(host, port, 5_sec);
+          return std::make_unique<elle::reactor::network::TCPSocket>(host, port, 5s);
         }
       }
 

@@ -21,28 +21,27 @@ namespace memo
 
       static auto doughnut_proto =
         elle::das::named::prototype(
-                     doughnut::id,
-                     doughnut::keys,
-                     doughnut::owner,
-                     doughnut::passport,
-                     doughnut::consensus_builder,
-                     doughnut::overlay_builder,
-                     doughnut::port = boost::optional<int>(),
-                     doughnut::listen_address = boost::none,
-                     doughnut::storage = nullptr,
-                     doughnut::name = boost::optional<std::string>(),
-                     doughnut::version = boost::optional<elle::Version>(),
-                     doughnut::admin_keys = AdminKeys(),
-                     doughnut::rdv_host = boost::optional<std::string>(),
-                     doughnut::monitoring_socket_path =
-                     boost::optional<boost::filesystem::path>(),
-                     doughnut::protocol = Protocol::all,
-                     doughnut::connect_timeout = elle::defaulted(5000ms),
-                     doughnut::soft_fail_timeout = elle::defaulted(20000ms),
-                     doughnut::soft_fail_running = elle::defaulted(false),
-                     doughnut::tcp_heartbeat = boost::none,
-                     doughnut::encrypt_options = EncryptOptions(),
-                     doughnut::resign_on_shutdown = false);
+            doughnut::id,
+            doughnut::keys,
+            doughnut::owner,
+            doughnut::passport,
+            doughnut::consensus_builder,
+            doughnut::overlay_builder,
+            doughnut::port = boost::optional<int>(),
+            doughnut::listen_address = boost::none,
+            doughnut::storage = nullptr,
+            doughnut::name = boost::optional<std::string>(),
+            doughnut::version = boost::optional<elle::Version>(),
+            doughnut::admin_keys = AdminKeys(),
+            doughnut::rdv_host = boost::optional<std::string>(),
+            doughnut::monitoring_socket_path = boost::optional<bfs::path>(),
+            doughnut::protocol = Protocol::all,
+            doughnut::connect_timeout = elle::defaulted(elle::Duration{5s}),
+            doughnut::soft_fail_timeout = elle::defaulted(elle::Duration{20s}),
+            doughnut::soft_fail_running = elle::defaulted(false),
+            doughnut::tcp_heartbeat = boost::none,
+            doughnut::encrypt_options = EncryptOptions(),
+            doughnut::resign_on_shutdown = false);
 
       template <typename ... Args>
       Doughnut::Doughnut(Args&& ... args)
@@ -60,12 +59,12 @@ namespace memo
                    boost::optional<elle::Version>,
                    AdminKeys,
                    boost::optional<std::string>,
-                   boost::optional<boost::filesystem::path>,
+                   boost::optional<bfs::path>,
                    Protocol,
-                   elle::Defaulted<std::chrono::milliseconds>,
-                   elle::Defaulted<std::chrono::milliseconds>,
+                   elle::Defaulted<elle::Duration>,
+                   elle::Defaulted<elle::Duration>,
                    elle::Defaulted<bool>,
-                   boost::optional<std::chrono::milliseconds>,
+                   elle::DurationOpt,
                    EncryptOptions,
                    bool>(
                      std::forward<Args>(args)...))

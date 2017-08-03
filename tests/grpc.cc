@@ -376,6 +376,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   BOOST_CHECK_EQUAL(cplx.simple().ui64(), 42);
   BOOST_CHECK_EQUAL(cplx.simple().b(), true);
   BOOST_CHECK_EQUAL(cplx.opt_str(), "bar");
+  BOOST_TEST(!cplx.has_opt_simple());
   complex = structs::Complex {
     structs::Simple{"", 0, 0, false},
     std::string()
@@ -389,6 +390,7 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   BOOST_CHECK_EQUAL(complex.simple.ui64, 42);
   BOOST_CHECK_EQUAL(complex.simple.b, true);
   BOOST_CHECK_EQUAL(complex.opt_str.value_or("UNSET"), "bar");
+  BOOST_TEST(!complex.opt_simple);
   // check unset optional<primitive>
   complex.opt_str.reset();
   {
