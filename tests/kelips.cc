@@ -196,9 +196,9 @@ namespace
         // have failures), beyond_storage's "second change of node 0"
         // that fails quite often.  With 5s, I have 100 successful
         // runs in a row.
-        res.contact_timeout_ms = factor * valgrind(5s, 20);
-        res.ping_interval_ms = factor * valgrind(1s, 10) / count / 3;
-        res.ping_timeout_ms = factor * valgrind(500ms, 20);
+        res.contact_timeout = factor * valgrind(5s, 20);
+        res.ping_interval = factor * valgrind(1s, 10) / count / 3;
+        res.ping_timeout = factor * valgrind(500ms, 20);
         res.query_get_retries = 2;
         return res;
       }();
@@ -265,7 +265,7 @@ namespace
         res.encrypt = true;
         res.accept_plain = false;
         res.query_get_retries = 3;
-        res.ping_timeout_ms = valgrind(500ms, 20);
+        res.ping_timeout = valgrind(500ms, 20);
         return res;
       }();
     auto passport = dnut::Passport(kp.K(), "testnet", kp);
