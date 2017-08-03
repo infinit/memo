@@ -15,28 +15,12 @@ import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
-from fake.gcs import FakeGCS
+from common import *
 
 binary = 'memo'
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 windows = os.environ.get('OS') == 'windows' # Set in the drakefile.
 
-def here():
-  '''Find the top-level call.'''
-  import inspect
-  frame = inspect.currentframe()
-  while frame.f_back:
-    frame = frame.f_back
-  finfo = inspect.getframeinfo(frame)
-  return finfo.filename + ":" + str(finfo.lineno)
-
-def log(*args, level='info'):
-  print(here() + ':',
-        # pass "info:" so that Emacs' compilation-mode don't believe
-        # all these lines are errors.
-        level + ':' if level else '',
-        *args,
-        file=sys.stderr, flush=True)
 
 # FIXME: Duplicate with drake.
 class TemporaryDirectory:
@@ -61,14 +45,6 @@ class TemporaryDirectory:
   @property
   def dir(self):
     return self.__dir
-
-class Unreachable(BaseException):
-
-  def __init__(self):
-    super().__init__("Unreachable code reached")
-
-def unreachable():
-  raise Unreachable()
 
 class Memo(TemporaryDirectory):
 
@@ -302,22 +278,6 @@ def throws(f, contains = None):
 
 import bottle
 
-class Emailer:
-
-  def __init__(self):
-    self.emails = {}
-
-  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
-    self.__store(template, recipient_email, variables)
-
-  def __store(self, template, recipient_email, variables):
-    self.get_specifics(recipient_email, template).append(variables)
-
-  def get(self, email):
-    return self.emails.setdefault(email, {})
-
-  def get_specifics(self, email, template):
-    return self.get(email).setdefault(template, [])
 
 class Beyond():
 

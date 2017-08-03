@@ -813,7 +813,8 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
-      utils = drake.node('tests/functional/utils.py')
+      utils = drake.nodes('tests/functional/utils.py',
+                          'tests/common.py')
       if with_kvs:
         kvs_grpc = drake.copy(
           kvs.gen_py.targets(),
@@ -863,7 +864,7 @@ def configure(
         test.dependencies_add(beyond.package.nodes)
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(memo_cli)
-        test.dependency_add(drake.node('tests/functional/utils.py'))
+        test.dependencies_add(utils)
         if with_kvs:
           test.dependencies_add(kvs_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
@@ -880,7 +881,8 @@ def configure(
           'OS': 'windows' if windows else 'unix',
           'PYTHONPATH': ':'.join([str(n) for n in
               [drake.path_build('beyond/lib/python%s' % elle.python3.version),
-               drake.path_source('tests/functional'),
+               drake.path_source('tests/functional'), # utils.py
+               drake.path_source('tests'),            # common.py
                drake.path_build('tests/functional/lib')]]),
           'SOURCE_DIR': drake.path_source(),
           'TEST_MEMO_WITH_KVS': with_kvs,
@@ -891,7 +893,7 @@ def configure(
         runner = drake.Runner(
           exe = test,
           env = env,
-          sources = [utils],
+          sources = utils,
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure
