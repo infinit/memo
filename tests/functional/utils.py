@@ -297,12 +297,9 @@ class Beyond():
       if self.__disable_authentication:
         self.__app.authenticate = lambda x: None
       self.emailer = Emailer()
-      try:
-        bottle.run(app = self.__app,
-                   quiet = True,
-                   server = self.__server)
-      except Exception as e:
-        raise e
+      bottle.run(app = self.__app,
+                 quiet = True,
+                 server = self.__server)
 
     import threading
     from functools import partial
