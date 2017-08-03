@@ -52,7 +52,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.filesystem");
 
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;

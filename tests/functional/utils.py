@@ -16,8 +16,9 @@ import infinit.beyond.couchdb
 
 from datetime import timedelta
 
-cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 binary = 'memo'
+cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
+windows = os.environ.get('OS') == 'windows' # Set in the drakefile.
 
 def here():
   '''Find the top-level call.'''
@@ -161,8 +162,10 @@ class Memo(TemporaryDirectory):
       env_['MEMO_HOME'] = self.dir
     if self.__user is not None:
       env_['MEMO_USER'] = self.__user
-    env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
-    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
+    if windows:
+      env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
+    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME',
+              'MEMO_CACHE_HOME']:
       if k in os.environ:
         env_[k] = os.environ[k]
     if self.__beyond is not None:
@@ -222,7 +225,8 @@ class Memo(TemporaryDirectory):
         out, err = process.communicate(timeout = 15)
       except ValueError as e:
         log("Got exception while trying to kill process:", e)
-        # Python bug, throws ValueError. But in that case blocking read is fine
+        # Python bug, throws ValueError. But in that case blocking
+        # `read` is fine.
         # out = process.stdout.read()
         # err = process.stderr.read()
       log('STDOUT: %s' % out.decode('utf-8'))
@@ -611,7 +615,7 @@ class KeyValueStoreInfrastructure():
     if self.__proc:
       self.__proc.terminate()
       self.__comm.join()
-      if os.environ.get('OS') != 'windows':
+      if not windows:
         try:
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())

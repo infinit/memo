@@ -28,6 +28,8 @@ using NodeLocation = memo::model::NodeLocation;
 class Overlay
   : public memo::overlay::Overlay
 {
+  ELLE_LOG_COMPONENT("test.DHT.Overlay");
+
 public:
   using Super = memo::overlay::Overlay;
 
@@ -168,7 +170,6 @@ protected:
   {
     if (_yield)
       elle::reactor::yield();
-    ELLE_LOG_COMPONENT("tests.Overlay");
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
     return elle::reactor::generator<Overlay::WeakMember>(
@@ -258,7 +259,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 class DHT
   : public elle::Printable
 {
-  ELLE_LOG_COMPONENT("tests.DHT");
+  ELLE_LOG_COMPONENT("test.DHT");
 public:
   using make_overlay_t
     = std::function<std::unique_ptr<memo::overlay::Overlay>
@@ -576,7 +577,7 @@ special_id(int i)
 boost::signals2::scoped_connection
 monitor_eviction(DHT& dht, DHT& target)
 {
-  ELLE_LOG_COMPONENT("infinit.tests.DHT");
+  ELLE_LOG_COMPONENT("test.DHT.monitor_eviction");
   if (auto kouncil = get_kouncil(dht))
     return kouncil->on_eviction().connect([&](Address id)
     {
@@ -603,7 +604,7 @@ discover(DHT& dht,
          bool wait = false,
          bool wait_back = false)
 {
-  ELLE_LOG_COMPONENT("infinit.tests.DHT");
+  ELLE_LOG_COMPONENT("test.DHT.discover");
   auto discovered = elle::reactor::waiter(
     dht.dht->overlay()->on_discovery(),
     [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });

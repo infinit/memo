@@ -7,7 +7,7 @@
 #include <memo/model/faith/Faith.hh>
 #include <memo/silo/Memory.hh>
 
-ELLE_LOG_COMPONENT("memo.model.faith.test");
+ELLE_LOG_COMPONENT("test.faith");
 
 template <typename B>
 static

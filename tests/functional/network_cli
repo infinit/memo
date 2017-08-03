@@ -3,6 +3,12 @@
 from utils import *
 import json
 
+# If we kill too soon, the process is not launched and the kill raises an exception:
+#
+# network_cli:297: info: Got exception while trying to kill process:
+#    Invalid file object: <_io.BufferedReader name=22>
+timeout = 5 if windows else 2
+
 with_kvs = os.environ.get('TEST_MEMO_WITH_KVS', '1') == '1'
 
 # Creating and deleting networks locally.
@@ -23,7 +29,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob, \
   assertEq(len(os.listdir(bob.linked_networks_path)), 1)
   bob.run(['network', 'run', '--name', 'broken',
            '--as', 'bob', '--async', '--cache', '-s'],
-          timeout = 2, kill = True)
+          timeout = timeout, kill = True)
   # Ensure network cache directory is created
   assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   bob.run(['network', 'delete', '--name', 'broken', '--as', 'bob',
@@ -34,7 +40,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob, \
   bob.run(['network', 'create', 'broken', '--as', 'bob'])
   bob.run(['network', 'run', '--name', 'broken', '--as', 'bob',
            '--async', '--cache', '-s'],
-          timeout = 2, kill = True)
+          timeout = timeout, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   # Specified.
   bob.run(
@@ -74,7 +80,7 @@ with Memo() as tmp:
   with open('%s/bob/bob/n' % bob.memo.linked_networks_path, 'r') as f:
     linked_net = f.read()
   bob.run(['network', 'run', 'n', '-s', '--async', '--cache'],
-          timeout = 2, kill = True)
+          timeout = timeout, kill = True)
   # Ensure cache directories created.
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.memo.state_path)), 2)
   bob.run(['network', 'unlink', 'n'])
@@ -294,7 +300,7 @@ with Beyond() as beyond, Memo(beyond = beyond) as bob:
   bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
   bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'],
-          timeout = 2, kill = True)
+          timeout = timeout, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['network', 'delete', '--as', 'bob', 'n', '--unlink'])
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
@@ -319,7 +325,7 @@ def remove_network_linked_by_two_users(owner_remove = True):
     owner.run('network create n --push')
     owner.run(['network', 'run', '--name', 'n',
                '--async', '--cache', '-s'],
-              timeout = 2, kill = True)
+              timeout = timeout, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
       'state': memo.state_path,
       'user_name': owner.name,
@@ -345,7 +351,7 @@ def remove_network_linked_by_two_users(owner_remove = True):
     invitee.run('network link --name %s/n' % owner.name)
     invitee.run(['network', 'run', '--name', '%s/n' % owner.name,
                  '--async', '--cache', '-s'],
-                timeout = 2, kill = True)
+                timeout = timeout, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
       'state': memo.state_path,
       'user_name': invitee.name,
@@ -366,7 +372,7 @@ def remove_network_linked_by_two_users(owner_remove = True):
     invitee.run('network link --name %s/n' % owner.name)
     invitee.run(['network', 'run', '--name', '%s/n' % owner.name,
                  '--async', '--cache', '-s'],
-                timeout = 2, kill = True)
+                timeout = timeout, kill = True)
     assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
       'state': memo.state_path,
       'user_name': invitee.name,
@@ -398,7 +404,7 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['network', 'list', '-s', '--as', 'bob'])), 1)
   bob.run(['network', 'run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'],
-          timeout = 2, kill = True)
+          timeout = timeout, kill = True)
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['user', 'fetch', 'alice'])
   bob.run(['passport', 'create', '--as', 'bob',
@@ -407,7 +413,7 @@ with Beyond() as beyond, \
   alice.run(['network', 'create', '--as', 'alice', 'n', '-p'])
   alice.run(['network', 'run', '--name', 'n', '--as', 'alice',
              '--async', '--cache', '-s'],
-            timeout = 2, kill = True)
+            timeout = timeout, kill = True)
   assertEq(len(os.listdir('%s/cache/alice/alice/n' % alice.state_path)), 2)
   alice.run(['user', 'fetch', 'bob'])
   alice.run(['passport', 'create', '--as', 'alice',
