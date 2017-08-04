@@ -198,19 +198,19 @@ namespace memo
       , delete_(*this,
                 "Delete {objects} locally",
                 cli::all = false,
-                cli::match = boost::optional<std::string>{})
+                cli::match = elle::defaulted(std::regex{""}))
       , list(*this,
              "List existing {object} families",
-             cli::match = boost::optional<std::string>{})
+             cli::match = elle::defaulted(std::regex{""}))
       , push(*this,
              "Upload {objects} to {hub}",
-             cli::match = boost::optional<std::string>{},
+             cli::match = elle::defaulted(std::regex{""}),
              cli::number = 2)
     {}
 
     void
     Doctor::Log::mode_delete(bool all,
-                             boost::optional<std::string> const& match)
+                             elle::Defaulted<std::regex> const& match)
     {
       ELLE_TRACE_SCOPE("log.delete");
       if (match && all)
@@ -222,11 +222,11 @@ namespace memo
     }
 
     void
-    Doctor::Log::mode_list(boost::optional<std::string> const& match)
+    Doctor::Log::mode_list(elle::Defaulted<std::regex> const& match)
     {
       ELLE_TRACE_SCOPE("log.list");
       auto& cli = this->cli();
-      auto const families = log_families(match.value_or(""s));
+      auto const families = log_families(*match);
       if (cli.script())
       {
         auto const l = elle::json::make_array(families,
@@ -240,7 +240,7 @@ namespace memo
     }
 
     void
-    Doctor::Log::mode_push(boost::optional<std::string> const& match,
+    Doctor::Log::mode_push(elle::Defaulted<std::regex> const& match,
                            int number)
     {
       ELLE_TRACE_SCOPE("log.push");
@@ -248,7 +248,7 @@ namespace memo
       auto owner = cli.as_user();
 
       auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
-      if (auto n = tar_logs_match(tgz.path(), match.value_or(""s), number))
+      if (auto n = tar_logs(tgz.path(), *match, number))
       {
         if (memo::Hub::upload_log(owner.name, tgz.path()))
           elle::print(std::cout, "successfully uploaded '{}' logs\n", name);

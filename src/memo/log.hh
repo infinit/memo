@@ -1,5 +1,6 @@
 #pragma once
 
+#include <regex>
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -19,8 +20,10 @@ namespace memo
   /// - the "base" is almost the log files name: it only lacks the
   /// generation (files are rotated as `{base}.0`, `{base}.1`, etc.).
   ///
-  /// We have `{base} = {log_dir} / {family} / {now}-{pid}`,
-  /// and `{log} = {base} . {version}.
+  /// We have:
+  ///   `{base} = {log_dir} / {family} / {now}-{pid}`,
+  ///   `{log} = {base} . {version}`,
+  ///   `{suffix} = {familly} / {now}-{pid}`.
 
   /// The directory for the critical logs (`~/.cache/infinit/memo/logs`).
   bfs::path log_dir();
@@ -56,13 +59,8 @@ namespace memo
   /// @param match  the regex.
   /// @param n      the maximum number of contiguous logs to gather.
   ///               0 for unlimited.
-  ///
-  /// Beware that std::string is implicitely convertable into
-  /// bfs::path, so it is very dangerous to rely on overloading here.
-  /// And we avoid regex to avoid adding more #includes in this
-  /// header, but it might be a better solution anyway.
   std::vector<bfs::path>
-  latest_logs_match(std::string const& match, int n = 1);
+  latest_logs(std::regex const& match, int n = 1);
 
   /// The @a n latest log files in a base.
   ///
@@ -74,15 +72,15 @@ namespace memo
 
   /// The existing log families that match a pattern.
   ///
-  /// @param pattern  a regex that applies only to the log suffix
+  /// @param match  a regex that applies only to the log suffix
   ///                 (i.e., not the `/home/...` part).
   boost::container::flat_set<std::string>
-  log_families(std::string const& pattern = {});
+  log_families(std::regex const& match = {});
 
   /// Remove all the log files whose family match a pattern.
   ///
-  /// @param pattern  a regex
-  void log_remove(std::string const& pattern = {});
+  /// @param match  a regex
+  void log_remove(std::regex const& match = {});
 
   /// Generate a tgz with the latest matching log files.
   ///
@@ -92,8 +90,8 @@ namespace memo
   ///
   /// @return  whether the tarball was created (i.e., there are
   ///          logs under that base name).
-  int tar_logs_match(bfs::path const& tgz,
-                     std::string const& match, int n = 1);
+  int tar_logs(bfs::path const& tgz,
+               std::regex const& match, int n = 1);
 
   /// Generate a tgz with the latest critical log files.
   ///

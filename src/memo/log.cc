@@ -84,13 +84,13 @@ namespace memo
     /// All the log files whose path name match a given regex (not
     /// including the log_dir).
     auto
-    log_files(std::string const& re)
+    log_files(std::regex const& re)
     {
       using namespace boost::adaptors;
       return bfs::recursive_directory_iterator(log_dir())
         | filtered(is_visible_file)
         | filtered(has_version)
-        | filtered([re = std::regex(re)](auto const& p)
+        | filtered([re](auto const& p)
                    {
                      return regex_search(log_suffix(p).string(), re);
                    });
@@ -177,7 +177,7 @@ namespace memo
   }
 
   std::vector<bfs::path>
-  latest_logs_match(std::string const& match, int n)
+  latest_logs(std::regex const& match, int n)
   {
     auto paths = to_vector(log_files(match));
     auto const begin = paths.begin();
@@ -218,18 +218,18 @@ namespace memo
   }
 
   boost::container::flat_set<std::string>
-  log_families(std::string const& re)
+  log_families(std::regex const& match)
   {
     auto res = boost::container::flat_set<std::string>{};
-    for (auto const& p: log_files(re))
+    for (auto const& p: log_files(match))
       res.emplace(log_family(p));
     return res;
   }
 
   void
-  log_remove(std::string const& re)
+  log_remove(std::regex const& match)
   {
-    for (auto const& p: to_vector(log_files(re)))
+    for (auto const& p: to_vector(log_files(match)))
       elle::try_remove(p);
   }
 
@@ -249,10 +249,10 @@ namespace memo
     }
   }
 
-  int tar_logs_match(bfs::path const& tgz,
-                     std::string const& match, int n)
+  int tar_logs(bfs::path const& tgz,
+               std::regex const& match, int n)
   {
-    return tar_logs(tgz, latest_logs_match(match, n));
+    return tar_logs(tgz, latest_logs(match, n));
   }
 
   int tar_logs(bfs::path const& tgz,
