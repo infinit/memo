@@ -1208,7 +1208,7 @@ class Bottle(bottle.Bottle):
     self.__check_log_bucket()
     import urllib.parse
     path = urllib.parse.quote('_'.join([name, str(self.__beyond.now)]))
-    upload_url = self.__gcs.upload_url(
+    upload_url = self.__log_bucket.upload_url(
       bucket = 'logs',
       path = path,
       expiration = datetime.timedelta(minutes = 10)
