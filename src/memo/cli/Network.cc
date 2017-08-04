@@ -6,7 +6,9 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/log/FileLogger.hh>
 #include <elle/make-vector.hh>
+#include <elle/print.hh>
 #include <elle/reactor/network/resolve.hh>
 
 #include <memo/Network.hh> // Storages
@@ -15,6 +17,7 @@
 #include <memo/cli/xattrs.hh>
 #include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/log.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
 #include <memo/model/blocks/ACLBlock.hh>
@@ -558,7 +561,7 @@ namespace memo
           = std::unordered_map<std::string, std::vector<memo::NetworkDescriptor>>;
         auto const res =
           memo.hub_fetch<Networks>(
-            elle::sprintf("users/%s/networks", owner.name),
+            elle::print("users/%s/networks", owner.name),
             "networks for user",
             owner.name,
             owner);
@@ -729,7 +732,7 @@ namespace memo
         {
           if (node_id)
             {
-              std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+              std::stringstream ss(elle::print("\"%s\"", *node_id));
               namespace json = elle::serialization::json;
               return json::deserialize<memo::model::Address>(ss, false);
             }
@@ -772,13 +775,20 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (memo::getenv("CRASH", false))
-        *(volatile int*)nullptr = 0;
+
+#ifndef MEMO_PRODUCTION_BUILD
+      {
+        auto crash = memo::getenv("CRASH", ""s);
+        if (crash == "assert")
+          ELLE_ASSERT_EQ(42, 51);
+        else if (!crash.empty())
+          *(volatile int*)nullptr = 0;
+      }
+#endif
 
       auto& cli = this->cli();
       auto& memo = cli.memo();
       auto owner = cli.as_user();
-
       if (cli.script())
       {
         auto const l = elle::json::make_array(memo.networks_get(owner),
@@ -857,6 +867,10 @@ namespace memo
         auto& memo = cli.memo();
         auto owner = cli.as_user();
         auto network = memo.network_get(network_name, owner);
+        // Use the qualified name, in case the user is running the
+        // network several times concurrently under different ids.
+        // So it can be `bob/infinit/company`, or `bob/bob/bobnet`.
+        main_log_family(elle::print("%s/%s", owner.name, network.name));
         if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
         {
           auto paxos = dynamic_cast<
@@ -1330,7 +1344,7 @@ namespace memo
                        auto ab = dht.make_block<memo::model::blocks::ACLBlock>();
                        auto const addr = ab->address();
                        dht.insert(std::move(ab));
-                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
+                       auto nb = dnut::NB(dht, name, elle::print("%s", addr));
                        dht.seal_and_insert(nb);
                        return addr;
                      }
@@ -1378,15 +1392,15 @@ namespace memo
       auto name = memo.qualified_name(network_name, owner);
       auto res =
         memo.hub_fetch<memo::Storages>(
-          elle::sprintf("networks/%s/stat", name),
+          elle::print("networks/%s/stat", name),
           "stat",
           "stat",
           boost::none,
           memo::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
-      elle::fprintf(std::cout, "{\"usage\": %s, \"capacity\": %s}",
-                    res.usage, res.capacity);
+      elle::print(std::cout, "{\"usage\": %s, \"capacity\": %s}",
+                  res.usage, res.capacity);
     }
 
 

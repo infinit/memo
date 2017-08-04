@@ -23,6 +23,8 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import hashlib
 
+from common import *
+
 def __enter__(self):
   thread = threading.Thread(
     target = partial(bottle.run, app = self, port = 0))
@@ -43,14 +45,6 @@ def host(self):
 bottle.Bottle.__enter__ = __enter__
 bottle.Bottle.__exit__ = __exit__
 bottle.Bottle.host = host
-
-class Unreachable(BaseException):
-
-  def __init__(self):
-    super().__init__('Unreachable code reached')
-
-def unreachable():
-  raise Unreachable()
 
 class Beyond:
 
@@ -196,25 +190,6 @@ class Beyond:
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
 
-class Emailer:
-
-  def __init__(self):
-    self.emails = {}
-
-  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
-    self.__store(template, recipient_email, variables)
-
-  def __store(self, template, recipient_email, variables):
-    self.get_specifics(recipient_email, template).append(variables)
-
-  def get(self, email):
-    return self.emails.setdefault(email, {})
-
-  def get_specifics(self, email, template):
-    return self.get(email).setdefault(template, [])
-
-  def __str__(self):
-    return "Emailer: %s" % self.emails
 
 def url_parameters(url):
   params = urllib.parse.parse_qs(
@@ -236,21 +211,6 @@ def throws(function, expected = None, json = True, error = None):
     assert 'reason' in response
     assert 'error' in response
     return response
-
-def assertEq(*args):
-  import operator
-  if not all(map(lambda x: operator.eq(x, args[0]), args[1:])):
-    raise AssertionError('all elements of [%s] are not equal' % ", ".join(map(str, args)))
-
-def assertIn(o, container):
-  if o not in container:
-    raise AssertionError('%r not in %r' % (o, container))
-
-def random_sequence(count = 10):
-  from random import SystemRandom
-  import string
-  return ''.join(SystemRandom().choice(
-    string.ascii_lowercase + string.digits) for _ in range(count))
 
 def random_email(domain = None):
   if domain is None:

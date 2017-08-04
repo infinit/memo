@@ -42,10 +42,10 @@ namespace memo
 
     public:
       S3SiloConfig(std::string name,
-                      elle::service::aws::Credentials credentials,
-                      StorageClass storage_class,
-                      boost::optional<int64_t> capacity,
-                      boost::optional<std::string> description);
+                   elle::service::aws::Credentials credentials,
+                   StorageClass storage_class,
+                   boost::optional<int64_t> capacity,
+                   boost::optional<std::string> description);
       S3SiloConfig(elle::serialization::SerializerIn& input);
 
       void

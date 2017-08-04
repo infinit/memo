@@ -6,5 +6,6 @@ namespace memo
   namespace cli
   {
     template class Object<Doctor>;
+    template class Object<Doctor::Log, Doctor>;
   }
 }

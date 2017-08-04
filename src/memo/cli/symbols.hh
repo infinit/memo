@@ -105,6 +105,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(log_path, "store volume logs in given path");
     ELLE_DAS_CLI_SYMBOL(login_user, "login with selected user(s), of form 'user:password'");
     ELLE_DAS_CLI_SYMBOL(map_other_permissions, "allow chmod to set world permissions");
+    ELLE_DAS_CLI_SYMBOL(match, 'm', "regular expression specifying names of the {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none");
     ELLE_DAS_CLI_SYMBOL(monitoring, "enable monitoring");
     ELLE_DAS_CLI_SYMBOL(mount, "mount given volumes on startup, keep trying on error");
@@ -114,6 +115,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem");
     ELLE_DAS_CLI_SYMBOL(name, 'n', "name of the {object} {action}", true);
     ELLE_DAS_CLI_SYMBOL(network, 'N', "network {action} {object} for");
+    ELLE_DAS_CLI_SYMBOL(number, "limit the number of {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(no_avatar, "do not {action} avatars");
     ELLE_DAS_CLI_SYMBOL(no_color, "don't use colored output");
     ELLE_DAS_CLI_SYMBOL(no_consensus, "use no consensus algorithm");
@@ -282,6 +284,7 @@ namespace memo
       ELLE_DAS_SYMBOL(mode_list);
       ELLE_DAS_SYMBOL(mode_list_services);
       ELLE_DAS_SYMBOL(mode_list_silos);
+      ELLE_DAS_SYMBOL(mode_log);
       ELLE_DAS_SYMBOL(mode_login);
       ELLE_DAS_SYMBOL(mode_manage_volumes);
       ELLE_DAS_SYMBOL(mode_mount);

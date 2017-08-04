@@ -14,6 +14,7 @@
 #include <elle/algorithm.hh>
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
+#include <elle/filesystem/TemporaryFile.hh>
 #include <elle/filesystem/path.hh>
 #include <elle/log.hh>
 #include <elle/network/Interface.hh>
@@ -29,7 +30,9 @@
 #include <elle/reactor/TimeoutGuard.hh>
 #include <elle/reactor/http/exceptions.hh>
 
+#include <memo/Hub.hh>
 #include <memo/cli/Memo.hh>
+#include <memo/log.hh>
 #include <memo/silo/Dropbox.hh>
 #include <memo/silo/Filesystem.hh>
 #include <memo/silo/GCS.hh>
@@ -78,6 +81,7 @@ namespace memo
                      cli::server = connectivity_server,
                      cli::no_color = false,
                      cli::verbose = false)
+      , log(memo)
       , networking(*this,
                    "Perform networking speed tests between nodes",
                    elle::das::cli::Options{
@@ -185,6 +189,77 @@ namespace memo
     }
 
 
+    /*------------.
+    | Mode: log.  |
+    `------------*/
+
+    Doctor::Log::Log(Memo& memo)
+      : Object(memo)
+      , delete_(*this,
+                "Delete {objects} locally",
+                cli::all = false,
+                cli::match = boost::optional<std::string>{})
+      , list(*this,
+             "List existing {object} families",
+             cli::match = boost::optional<std::string>{})
+      , push(*this,
+             "Upload {objects} to {hub}",
+             cli::match = boost::optional<std::string>{},
+             cli::number = 2)
+    {}
+
+    void
+    Doctor::Log::mode_delete(bool all,
+                             boost::optional<std::string> const& match)
+    {
+      ELLE_TRACE_SCOPE("log.delete");
+      if (match && all)
+        elle::err<CLIError>("cannot use --name and --match simultaneously");
+      if (all)
+        log_remove();
+      else if (match)
+        log_remove(*match);
+    }
+
+    void
+    Doctor::Log::mode_list(boost::optional<std::string> const& match)
+    {
+      ELLE_TRACE_SCOPE("log.list");
+      auto& cli = this->cli();
+      auto const families = log_families(match.value_or(""s));
+      if (cli.script())
+      {
+        auto const l = elle::json::make_array(families,
+                                              [&] (auto const& f) {
+            return elle::json::Object{{"name", f}};
+          });
+        elle::json::write(std::cout, l);
+      }
+      else
+        elle::print(std::cout, "existing log families: %s\n", families);
+    }
+
+    void
+    Doctor::Log::mode_push(boost::optional<std::string> const& match,
+                           int number)
+    {
+      ELLE_TRACE_SCOPE("log.push");
+      auto& cli = this->cli();
+      auto owner = cli.as_user();
+
+      auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
+      if (auto n = tar_logs_match(tgz.path(), match.value_or(""s), number))
+      {
+        if (memo::Hub::upload_log(owner.name, tgz.path()))
+          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
+        else
+          elle::print(std::cerr, "failed to upload {} logs\n", n);
+      }
+      else
+        elle::print(std::cerr, "there are no logs matching {}\n", match);
+    }
+
+
     /*-------------------.
     | Mode: networking.  |
     `-------------------*/
@@ -209,7 +284,7 @@ namespace memo
       auto const v = cli.compatibility_version().value_or(memo::version());
       if (host)
       {
-        elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
+        elle::print(std::cout, "Client mode (version: %s):\n", v);
         memo::networking::perform(mode_name,
                                   protocol_name,
                                   packet_size,
@@ -225,7 +300,7 @@ namespace memo
       }
       else
       {
-        elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
+        elle::print(std::cout, "Server mode (version: %s):\n", v);
         auto const servers
           = memo::networking::Servers(protocol_name,
                                       port,
@@ -238,6 +313,7 @@ namespace memo
         elle::reactor::sleep();
       }
     }
+
 
     /*---------------.
     | Mode: system.  |

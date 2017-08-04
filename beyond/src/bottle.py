@@ -53,19 +53,6 @@ class Bottle(bottle.Bottle):
         'display_name': info['display_name'],
       },
     },
-    'google': {
-      'form_url': 'https://accounts.google.com/o/oauth2/auth',
-      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
-      'params': {
-        'scope': 'https://www.googleapis.com/auth/drive.file',
-        'access_type': 'offline',
-      },
-      'info_url': 'https://www.googleapis.com/drive/v2/about',
-      'info': lambda info: {
-        'uid': info['user']['emailAddress'],
-        'display_name': info['name'],
-      },
-    },
     'gcs': {
       'form_url': 'https://accounts.google.com/o/oauth2/auth',
       'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
@@ -84,12 +71,26 @@ class Bottle(bottle.Bottle):
         'display_name': info['name'],
       },
     },
+    'google': {
+      'form_url': 'https://accounts.google.com/o/oauth2/auth',
+      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
+      'params': {
+        'scope': 'https://www.googleapis.com/auth/drive.file',
+        'access_type': 'offline',
+      },
+      'info_url': 'https://www.googleapis.com/drive/v2/about',
+      'info': lambda info: {
+        'uid': info['user']['emailAddress'],
+        'display_name': info['name'],
+      },
+    },
   }
 
   def __init__(
       self,
       beyond,
-      gcs = None,
+      image_bucket = None,
+      log_bucket = None,
       production = True,
       force_admin = False,
       ldap_server = None,
@@ -107,8 +108,9 @@ class Bottle(bottle.Bottle):
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
     self.install(CertificationPlugin())
     self.route('/')(self.root)
-    # GCS
-    self.__gcs = gcs
+    # GCS buckets.
+    self.__image_bucket = image_bucket
+    self.__log_bucket = log_bucket
     # OAuth
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
@@ -234,8 +236,10 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.key_value_store_put)
     self.route('/kvs/<owner>/<name>',
                method = 'DELETE')(self.key_value_store_delete)
-    # Crash reports
+    # Reporting.
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
+    self.route('/log/<name>/get_url', method = 'GET')(self.log_get_url)
+    self.route('/log/<name>/reported', method = 'PUT')(self.log_reported)
 
   def check_admin(self):
     if self.__force_admin:
@@ -1164,11 +1168,21 @@ class Bottle(bottle.Bottle):
     kvs = self.key_value_store_from_name(owner = owner, name = name)
     self.__beyond.key_value_store_delete(owner = owner, name = name)
 
-  ## ------------ ##
-  ## Crash Report ##
-  ## ------------ ##
+  ## --------- ##
+  ## Reporting ##
+  ## --------- ##
+
+  def __check_log_bucket(self):
+    if self.__log_bucket is None:
+      raise Response(501, {
+        'error': 'GCS/not_implemented',
+        'reason': 'GCS support not enabled',
+      })
 
   def crash_report_put(self):
+    '''A crash report was uploaded.  Symbolize it and mail to the
+    maintainers.'''
+
     content_type = bottle.request.headers.get('Content-Type')
     # Old crash reports only contained dump data.
     if content_type == 'application/octet-stream':
@@ -1179,15 +1193,52 @@ class Bottle(bottle.Bottle):
         }
     elif content_type == 'application/json':
       json = bottle.request.json
+    else:
+      raise Response(404, {
+        'error': 'crash/unknown',
+        'reason': 'invalid content type: {}'.format(content_type)
+      })
     self.__beyond.crash_report_send(json)
     return {}
 
-  ## --- ##
-  ## GCS ##
-  ## --- ##
+  def log_get_url(self, name):
+    '''The client is about to upload logs, provide it with a temporary
+    upload URL.'''
 
-  def __check_gcs(self):
-    if self.__gcs is None:
+    self.__check_log_bucket()
+    import urllib.parse
+    path = urllib.parse.quote('_'.join([name, str(self.__beyond.now)]))
+    upload_url = self.__gcs.upload_url(
+      bucket = 'logs',
+      path = path,
+      expiration = datetime.timedelta(minutes = 10)
+    )
+    return {
+      'url': upload_url,
+      'path': path
+    }
+
+  def log_reported(self, name):
+    '''The client upload its logs, send a message to warn maintainers.'''
+
+    path = bottle.request.json.get('path', '<unknown>')
+    self.__beyond.emailer.send_one(
+      recipient_email = 'crash@infinit.sh',
+      recipient_name = 'Crash',
+      variables = {
+        'username': name,
+        'url': 'https://storage.googleapis.com/sh_infinit_beyond_logs/' + path,
+      }
+      **self.template('Internal/Log Report'))
+    return {}
+
+
+  ## -------------- ##
+  ## Image Bucket.  ##
+  ## -------------- ##
+
+  def __check_image_bucket(self):
+    if self.__image_bucket is None:
       raise Response(501, {
         'error': 'GCS/not_implemented',
         'reason': 'GCS support not enabled',
@@ -1208,7 +1259,7 @@ class Bottle(bottle.Bottle):
     raise ValueError('Image type is not recognized')
 
   def __cloud_image_upload(self, bucket, name):
-    self.__check_gcs()
+    self.__check_image_bucket()
     content_type = None
     try:
       import PIL.Image
@@ -1223,7 +1274,7 @@ class Bottle(bottle.Bottle):
     from io import BytesIO
     bs = BytesIO()
     image.save(bs, "PNG")
-    self.__gcs.upload(
+    self.__image_bucket.upload(
       bucket,
       name,
       data = bs.getvalue(),
@@ -1232,8 +1283,8 @@ class Bottle(bottle.Bottle):
     raise Response(201, {})
 
   def __cloud_image_get_url(self, bucket, name):
-    self.__check_gcs()
-    url = self.__gcs.download_url(
+    self.__check_image_bucket()
+    url = self.__image_bucket.download_url(
       bucket,
       name,
       expiration = datetime.timedelta(minutes = 3),
@@ -1244,8 +1295,8 @@ class Bottle(bottle.Bottle):
     bottle.redirect(self.__cloud_image_get_url(bucket, name))
 
   def __cloud_image_delete(self, bucket, name):
-    self.__check_gcs()
-    self.__gcs.delete(
+    self.__check_image_bucket()
+    self.__image_bucket.delete(
       bucket,
       name,
     )
@@ -1260,7 +1311,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name in ['google', 'gcs']:
+    if name in ['gcs', 'google']:
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
@@ -1361,7 +1412,7 @@ def user_credentials_google_refresh(self, username):
     beyond = self._Bottle__beyond
     user = beyond.user_get(name = username)
     refresh_token = bottle.request.query.refresh_token
-    for kind in ['google', 'gcs']:
+    for kind in ['gcs', 'google']:
       for id, account in getattr(user, '%s_accounts' % kind).items():
         # https://developers.google.com/identity/protocols/OAuth2InstalledApp
         # The associate google account.

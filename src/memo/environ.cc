@@ -20,6 +20,7 @@ namespace
     // git grep memo::\\w+env | sed -e 's/.*env("//;s/".*//' | sort -u
     static auto const res = Vars
     {
+
       {"ASYNC_NOPOP", ""},
       {"ASYNC_POP_DELAY", ""},
       {"ASYNC_SQUASH", ""},
@@ -27,17 +28,21 @@ namespace
       {"BACKTRACE", ""},
       {"BALANCED_TRANSFERS", ""},
       {"BEYOND", ""},
+      {"CACHE_HOME", ""},
       {"CACHE_REFRESH_BATCH_SIZE", ""},
+      {"CONFIG_HOME", ""},
       {"CONNECT_TIMEOUT", ""},
       {"CRASH", "Generate a crash"},
       {"CRASH_REPORT", "Activate crash-reporting"},
       {"CRASH_REPORT_HOST", ""},
       {"DATA_HOME", ""},
+      {"DATA_HOME", ""},
       {"FIRST_BLOCK_DATA_SIZE", ""},
       {"HOME", ""},
       {"HOME_OVERRIDE", ""},
-      {"IPV4", "Enable IPv4 (default: true)"},
-      {"IPV6", "Enable IPv6 (default: true)"},
+      {"HOME_ROOT", ""},
+      {"IPV4", "Enable IPv4 [true]"},
+      {"IPV6", "Enable IPv6 [true]"},
       {"KELIPS_ASYNC", ""},
       {"KELIPS_ASYNC_SEND", ""},
       {"KELIPS_COMPRESSION", ""},
@@ -45,6 +50,7 @@ namespace
       {"KEY_HASH", ""},
       {"KOUNCIL_WATCHER_INTERVAL", ""},
       {"KOUNCIL_WATCHER_MAX_RETRY", ""},
+      {"LOG_DIR", "Where logs are stored [~/.cache/infinit/memo/logs]"},
       {"LOG_LEVEL", ""},
       {"LOG_REACHABILITY", ""},
       {"LOOKAHEAD_BLOCKS", ""},
@@ -63,12 +69,15 @@ namespace
       {"RPC_CRYPTO", ""},
       {"RPC_DISABLE_CRYPTO", ""},
       {"RPC_SERVE_THREADS", ""},
+      {"RUNTIME_DIR", ""},
       {"SIGNAL_HANDLER", ""},
       {"SOFTFAIL_RUNNING", ""},
       {"SOFTFAIL_TIMEOUT", ""},
+      {"STATE_HOME", ""},
       {"TOKEN_ENCRYPT", ""},
       {"USER", ""},
       {"UTP", ""},
+
     };
     return res;
   }

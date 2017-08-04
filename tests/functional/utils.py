@@ -2,41 +2,29 @@ import copy
 import json
 import os
 import pipes
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
 
-from difflib import unified_diff as udiff
+from datetime import timedelta
 
 import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
-from datetime import timedelta
+from common import *
 
 binary = 'memo'
 cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
 windows = os.environ.get('OS') == 'windows' # Set in the drakefile.
 
-def here():
-  '''Find the top-level call.'''
-  import inspect
-  frame = inspect.currentframe()
-  while frame.f_back:
-    frame = frame.f_back
-  finfo = inspect.getframeinfo(frame)
-  return finfo.filename + ":" + str(finfo.lineno)
+def prefix_lines(prefix, s):
+  return re.sub('^', prefix, s, flags = re.M)
 
-def log(*args, level='info'):
-  print(here() + ':',
-        # pass "info:" so that Emacs' compilation-mode don't believe
-        # all these lines are errors.
-        level + ':' if level else '',
-        *args,
-        file=sys.stderr, flush=True)
-
+# FIXME: Duplicate with drake.
 class TemporaryDirectory:
 
   def __init__(self, path = None):
@@ -59,14 +47,6 @@ class TemporaryDirectory:
   @property
   def dir(self):
     return self.__dir
-
-class Unreachable(BaseException):
-
-  def __init__(self):
-    super().__init__("Unreachable code reached")
-
-def unreachable():
-  raise Unreachable()
 
 class Memo(TemporaryDirectory):
 
@@ -175,7 +155,7 @@ class Memo(TemporaryDirectory):
     if input is not None and not noscript:
       args.append('-s')
     pretty = '%s %s' % (
-      ' '.join('%s=%s' % (k, v) for k, v in env_.items()),
+      ' '.join('%s=%s' % (k, v) for k, v in sorted(env_.items())),
       ' '.join(pipes.quote(arg) for arg in args))
     if input is not None:
       if isinstance(input, list):
@@ -229,13 +209,15 @@ class Memo(TemporaryDirectory):
         # `read` is fine.
         # out = process.stdout.read()
         # err = process.stderr.read()
-      log('STDOUT: %s' % out.decode('utf-8'))
-      log('STDERR: %s' % err.decode('utf-8'))
+      log(prefix_lines('STDOUT: ', out.decode('utf-8')))
+      log(prefix_lines('STDERR: ', err.decode('utf-8')))
       if kill:
         return out, err
       raise
     out = out.decode('utf-8')
     err = err.decode('utf-8')
+    # log('STDOUT: %s' % out)
+    # log('STDERR: %s' % err)
     if process.returncode != return_code:
       raise Exception(
         'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
@@ -260,33 +242,6 @@ class Memo(TemporaryDirectory):
     except Exception as e:
       raise Exception('invalid JSON: %r' % out)
 
-def assertEq(a, b):
-  if a == b:
-    log('PASS: {} == {}'.format(a, b))
-  else:
-    def lines(s):
-      s = str(s)
-      if s[:-1] != '\n':
-        s += '\n'
-      return s.splitlines(1)
-
-    diff = ''.join(udiff(lines(a),
-                         lines(b),
-                         fromfile='a', tofile='b'))
-    raise AssertionError('%s: %r != %r\n%s' % (here(), a, b, diff))
-
-def assertNeq(a, b):
-  if a != b:
-    log('PASS: {} != {}'.format(a, b))
-  else:
-    raise AssertionError('%r == %r' % (a, b))
-
-def assertIn(a, b):
-  if a in b:
-    log('PASS: {} in {}'.format(a, b))
-  else:
-    raise AssertionError('%r not in %r' % (a, b))
-
 def throws(f, contains = None):
   try:
     f()
@@ -298,39 +253,6 @@ def throws(f, contains = None):
 
 import bottle
 
-class FakeGCS:
-
-  def __init__(self):
-    self.__icons = {}
-
-  def upload(self, bucket, path, *args, **kwargs):
-    self.__icons[path] = 'url'
-
-  def delete(self, bucket, path):
-    if path in self.__icons:
-      del self.__icons[path]
-
-  def download_url(self, bucket, path, *args, **kwargs):
-    if path in self.__icons:
-      return self.__icons[path]
-    return None
-
-class Emailer:
-
-  def __init__(self):
-    self.emails = {}
-
-  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
-    self.__store(template, recipient_email, variables)
-
-  def __store(self, template, recipient_email, variables):
-    self.get_specifics(recipient_email, template).append(variables)
-
-  def get(self, email):
-    return self.emails.setdefault(email, {})
-
-  def get_specifics(self, email, template):
-    return self.get(email).setdefault(template, [])
 
 class Beyond():
 
@@ -344,7 +266,8 @@ class Beyond():
     self.__beyond = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
-    self.__gcs = FakeGCS()
+    self.__image_bucket = FakeGCS()
+    self.__log_bucket = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
     self.__bottle_args = bottle_args
@@ -370,19 +293,17 @@ class Beyond():
       setattr(self.__beyond, '_Beyond__now', self.now)
       bargs = {
         'beyond': self.__beyond,
-        'gcs': self.__gcs
+        'image_bucket': self.__image_bucket,
+        'log_bucket': self.__log_bucket,
       }
       bargs.update(self.__bottle_args)
       self.__app = infinit.beyond.bottle.Bottle(**bargs)
       if self.__disable_authentication:
         self.__app.authenticate = lambda x: None
       self.emailer = Emailer()
-      try:
-        bottle.run(app = self.__app,
-                   quiet = True,
-                   server = self.__server)
-      except Exception as e:
-        raise e
+      bottle.run(app = self.__app,
+                 quiet = True,
+                 server = self.__server)
 
     import threading
     from functools import partial
@@ -492,17 +413,11 @@ class SharedLogicCLITests():
   def __init__(self, entity):
     self.__entity = entity
 
-  def random_sequence(self, count = 10):
-    from random import SystemRandom
-    import string
-    return ''.join(SystemRandom().choice(
-      string.ascii_lowercase + string.digits) for _ in range(count))
-
   def run(self):
     entity = self.__entity
     # Creating and deleting entity.
     with Memo() as bob:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       bob.run(['user', 'create',  'bob'])
       bob.run(['network', 'create', 'network', '--as', 'bob'])
       bob.run([entity, 'create', e_name, '-N', 'network',
@@ -513,7 +428,7 @@ class SharedLogicCLITests():
     # Push to the hub.
     with Beyond() as beyond, \
         Memo(beyond = beyond) as bob, Memo(beyond) as alice:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       bob.run(['user', 'signup', 'bob', '--email', 'bob@infinit.sh'])
       bob.run(['network', 'create', 'network', '--as', 'bob',
                '--push'])
@@ -534,10 +449,10 @@ class SharedLogicCLITests():
 
     # Pull and delete.
     with Beyond() as beyond, Memo(beyond = beyond) as bob:
-      e_name = self.random_sequence()
+      e_name = random_sequence()
       e_name2 = e_name
       while e_name2 == e_name:
-        e_name2 = self.random_sequence()
+        e_name2 = random_sequence()
       bob.run(['user', 'signup', 'bob', '--email', 'b@infinit.sh'])
       bob.run(['network', 'create', '--as', 'bob', 'n', '--push'])
       # Local and Beyond.
@@ -620,12 +535,12 @@ class KeyValueStoreInfrastructure():
           # SIGTERM is not caught on windows. Might be wine related.
           assertEq(0, self.__proc.wait())
         except:
-          log('STDOUT: %s' % self.out.decode('utf-8'))
-          log('STDERR: %s' % self.err.decode('utf-8'))
+          log(prefix_lines('STDOUT: ', self.out.decode('utf-8')))
+          log(prefix_lines('STDERR: ', self.err.decode('utf-8')))
           out = self.__proc.stdout.read()
           err = self.__proc.stderr.read()
-          log('STDOUT: %s' % out.decode('utf-8'))
-          log('STDERR: %s' % err.decode('utf-8'))
+          log(prefix_lines('STDOUT: ', out.decode('utf-8')))
+          log(prefix_lines('STDERR: ', err.decode('utf-8')))
           raise
 
   def client(self):

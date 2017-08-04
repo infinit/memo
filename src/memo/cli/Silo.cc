@@ -291,7 +291,7 @@ namespace memo
       {
         auto silo = elle::serialization::json::deserialize<
           std::unique_ptr<memo::silo::SiloConfig>>(*i, false);
-        if (silo->name.size() == 0)
+        if (silo->name.empty())
           elle::err("silo name is empty");
         // FIXME: no need to pass the name
         this->cli().memo().silo_save(silo->name, silo);

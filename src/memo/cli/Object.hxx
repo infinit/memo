@@ -46,14 +46,17 @@ namespace memo
         using type = bool;
         static
         bool
-        value(std::ostream& s, Object const& object)
+        value(std::ostream& s, Object const& object, std::string const& object_name)
         {
           elle::print(s, "  %-10s %s\n",
                       elle::das::cli::option_name_from_c(Symbol::name()),
                       elle::print(Symbol::attr_get(object).description,
                            {
-                             {"action", elle::print("to %s", Symbol::name())},
-                             {"hub",    beyond(true)},
+                             {"action",  elle::print("to %s", Symbol::name())},
+                             {"hub",     beyond(true)},
+                             {"object",  object_name},
+                             {"objects", plural(object_name)},
+                             {"verb",    Symbol::name()},
                            }));
           return true;
         }
@@ -73,7 +76,7 @@ namespace memo
                     "Modes:\n",
                     Symbol::name());
       Self::Modes::template map<help_modes, Self>
-        ::value(s, static_cast<Self&>(*this));
+        ::value(s, static_cast<Self&>(*this), Symbol::name());
       elle::fprintf(s,
                     "\n"
                     "Options:\n"
@@ -156,10 +159,11 @@ namespace memo
         {
           return elle::print(f,
             {
-              {"action", elle::print("to %s", verb)},
-              {"hub",    beyond(true)},
-              {"object", memo.command_line().at(0)},
-              {"verb",   verb},
+              {"action",  elle::print("to %s", verb)},        // to delete
+              {"hub",     beyond(true)},                      // the hub
+              {"object",  memo.command_line().at(0)},         // log
+              {"objects", plural(memo.command_line().at(0))}, // logs
+              {"verb",    verb},                              // delete
             });
         };
       auto const show_help = [&] (std::ostream& s)

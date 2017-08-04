@@ -119,7 +119,7 @@ namespace memo
   _xdg(std::string const& type,
        bfs::path const& def)
   {
-    auto const memo = elle::os::getenv("MEMO_" + type, ""s);
+    auto const memo = memo::getenv(type, ""s);
     auto const xdg = elle::os::getenv("XDG_" + type, ""s);
     auto const dir =
       !memo.empty() ? memo :

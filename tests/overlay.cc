@@ -1924,7 +1924,7 @@ ELLE_TEST_SCHEDULED(not_storing, (TestConfiguration, config))
 
 ELLE_TEST_SUITE()
 {
-  static int windows_factor =
+  static auto const factor =
 #ifdef ELLE_WINDOWS
     5;
 #else
@@ -1934,7 +1934,7 @@ ELLE_TEST_SUITE()
   // memo::setenv("CONNECT_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
   // memo::setenv("SOFTFAIL_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
   memo::setenv("KOUNCIL_WATCHER_INTERVAL",
-               elle::sprintf("%sms", windows_factor * valgrind(20, 50)));
+               elle::sprintf("%sms", factor * valgrind(20, 50)));
   memo::setenv("KOUNCIL_WATCHER_MAX_RETRY",
                elle::sprintf("%sms", valgrind(20, 50)));
   auto& master = boost::unit_test::framework::master_test_suite();
@@ -1945,10 +1945,10 @@ ELLE_TEST_SUITE()
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
       conf.query_put_insert_ttl = 0;
-      conf.query_timeout = valgrind(200ms * windows_factor, 20);
-      conf.contact_timeout = windows_factor * valgrind(500ms, 20);
-      conf.ping_interval = windows_factor * valgrind(20ms, 10);
-      conf.ping_timeout = windows_factor * valgrind(100ms, 2);
+      conf.query_timeout = factor * valgrind(200ms, 20);
+      conf.contact_timeout = factor * valgrind(500ms, 20);
+      conf.ping_interval = factor * valgrind(20ms, 10);
+      conf.ping_timeout = factor * valgrind(100ms, 2);
       return std::make_unique<kelips::Node>(conf, local, &dht);
     }};
 

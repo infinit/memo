@@ -52,6 +52,7 @@ with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
   client.Delete(kv.DeleteRequest(key = key))
   throws_code(lambda: client.Fetch(kv.FetchRequest(key = key)),
               grpc.StatusCode.NOT_FOUND)
+  log('done, destroying')
 
 # List.
 with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
@@ -118,6 +119,7 @@ with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
   assertEq(len(l.items), 50)
   assertEq(l.truncated, False)
   assertEq(l.prefixes, ['a/', 'b/'])
+  log('done, destroying')
 
 # Concurrent.
 with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
@@ -184,6 +186,9 @@ with Memo() as bob, KeyValueStoreInfrastructure(bob) as i:
     t.join()
   go_on = False
   rt.join()
-  print('completed %s reads' % n_read)
+  log('completed %s reads' % n_read)
   assert not reader_exception
-  assert int(client.Fetch(kv.FetchRequest(key='cu'), timeout=5).value.decode('utf-8')) < 10
+  res = client.Fetch(kv.FetchRequest(key='cu'), timeout=5)
+  log('got result')
+  assertLt(int(res.value.decode('utf-8')), 10)
+  log('done, destroying')
