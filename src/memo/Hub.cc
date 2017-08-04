@@ -29,17 +29,18 @@ namespace memo
         elle::err("unable to read crash dump: %s", path);
 
       auto buf = elle::Buffer{};
-      auto stream = elle::IOStream(buf.ostreambuf());
-      auto&& b64 = elle::format::base64::Stream{stream};
-      auto constexpr chunk_size = 16 * 1024;
-      char chunk[chunk_size + 1];
-      chunk[chunk_size] = 0;
-      while (!f.eof())
       {
-        f.read(chunk, chunk_size);
-        b64.write(chunk, chunk_size);
+        auto stream = elle::IOStream(buf.ostreambuf());
+        auto&& b64 = elle::format::base64::Stream{stream};
+        auto constexpr chunk_size = 16 * 1024;
+        char chunk[chunk_size + 1];
+        chunk[chunk_size] = 0;
+        while (!f.eof())
+        {
+          f.read(chunk, chunk_size);
+          b64.write(chunk, chunk_size);
+        }
       }
-      b64.flush();
       return buf.string();
     }
 
