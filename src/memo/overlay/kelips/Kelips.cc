@@ -2052,10 +2052,8 @@ namespace memo
               changed = true;
               _state.files.emplace(f.first,
                                    File{f.first, f.second.second, f.second.first, Time(), 0});
-              ELLE_DUMP("%s: registering %f live since %s (%s)", *this,
-                         f.first,
-                         std::chrono::duration_cast<std::chrono::seconds>(now() - f.second.first).count(),
-                         (now() - f.second.first).count());
+              ELLE_DUMP("%s: registering %f live since %s", *this,
+                         f.first, now() - f.second.first);
             }
             else
             {
