@@ -79,8 +79,8 @@ enum PacketType
 ELLE_LOG_COMPONENT("memo.silo.sftp");
 
 #define BENCH(name)                                             \
-  static auto bench = elle::Bench("bench.sftp." name, 10000s);  \
-  auto bs = elle::Bench::BenchScope(bench)
+  static auto bench = elle::Bench<>{"bench.sftp." name, 10000s};  \
+  auto bs = bench.scoped()
 
 namespace
 {

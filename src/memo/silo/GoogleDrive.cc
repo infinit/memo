@@ -22,8 +22,8 @@ using namespace std::literals;
 ELLE_LOG_COMPONENT("memo.silo.GoogleDrive");
 
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench("bench.gdrive." name, 10000s);        \
-  auto bs = elle::Bench::BenchScope(bench)
+  static auto bench = elle::Bench<>{"bench.gdrive." name, 10000s};      \
+  auto bs = bench.scoped()
 
 namespace memo
 {

@@ -20,8 +20,8 @@ ELLE_LOG_COMPONENT("memo.silo.GCS");
 using namespace std::literals;
 
 #define BENCH(name)                                     \
-  static elle::Bench bench("bench.gcs." name, 10000s);  \
-  elle::Bench::BenchScope bs(bench)
+  static auto bench = elle::Bench<>{"bench.gcs." name, 10000s};  \
+  auto bs = bench.scoped()
 
 using StatusCode = elle::reactor::http::StatusCode;
 

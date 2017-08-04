@@ -39,8 +39,8 @@
 ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Paxos");
 
 #define BENCH(name)                                      \
-  static elle::Bench bench("bench.paxos." name, 10000s); \
-  elle::Bench::BenchScope bs(bench)
+  static auto bench = elle::Bench<>{"bench.paxos." name, 10000s}; \
+  auto bs = bench.scoped()
 
 namespace memo
 {

@@ -640,8 +640,8 @@ namespace memo
         [self, files, fs = &fs, running,
          parked, nthreads, group_size, available]
         {
-          static elle::Bench bench("bench.fs.prefetch", 10000s);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench = elle::Bench<>{"bench.fs.prefetch", 10000s};
+          auto bs = bench.scoped();
           auto start_time = std::chrono::steady_clock::now();
           int nf = 0;
           bool should_exit = false;

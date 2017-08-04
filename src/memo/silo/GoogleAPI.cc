@@ -15,8 +15,8 @@ ELLE_LOG_COMPONENT("memo.silo.GoogleAPI");
 using namespace std::literals;
 
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \
-  auto bs = elle::Bench::BenchScope(bench)
+  static auto bench = elle::Bench<>{"bench.googleapi." name, 10000s};     \
+  auto bs = bench.scoped()
 
 namespace
 {

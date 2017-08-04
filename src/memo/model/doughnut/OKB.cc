@@ -203,8 +203,8 @@ namespace memo
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
-        static elle::Bench bench("bench.okb.validate", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.okb.validate", 10000s};
+        auto scope = bench.scoped();
         ELLE_DEBUG("%s: check address", *this)
         {
           auto const expected_address = this->_hash_address();
@@ -338,8 +338,8 @@ namespace memo
       {
         if (!this->_data_decrypted)
         {
-          static elle::Bench bench("bench.decrypt", 10000s);
-          elle::Bench::BenchScope scope(bench);
+          static auto bench = elle::Bench<>{"bench.decrypt", 10000s};
+          auto scope = bench.scoped();
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
           const_cast<BaseOKB<Block>*>(this)->_data_plain =
             this->_decrypt_data(this->_data);
@@ -456,8 +456,8 @@ namespace memo
       blocks::ValidationResult
       BaseOKB<Block>::_validate(Model const& model, bool writing) const
       {
-        static elle::Bench bench("bench.okb._validate", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.okb._validate", 10000s};
+        auto scope = bench.scoped();
         if (auto res =
             static_cast<OKBHeader const*>(this)->validate(this->address()))
           {}

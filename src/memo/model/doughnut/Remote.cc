@@ -18,8 +18,8 @@
 ELLE_LOG_COMPONENT("memo.model.doughnut.Remote")
 
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench{"bench.remote." name, 10000s};     \
-  elle::Bench::BenchScope bs(bench)
+  static auto bench = elle::Bench<>{"bench.remote." name, 10000s};      \
+  auto bs = bench.scoped()
 
 namespace memo
 {
@@ -249,8 +249,7 @@ namespace memo
       std::vector<elle::cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> const& ids)
       {
-        static auto bench =
-          elle::Bench{"bench.remote_key_cache_hit", 1000s};
+        static auto bench = elle::Bench<double>{"bench.remote_key_cache_hit", 1000s};
         {
           auto missing = elle::make_vector_if
             (ids,

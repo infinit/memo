@@ -261,8 +261,8 @@ namespace memo
         if (secret_buffer.empty())
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
-        static elle::Bench bench("bench.acb.decrypt_2", 10000s);
-        elle::Bench::BenchScope bs(bench);
+        static auto bench = elle::Bench<>{"bench.acb.decrypt_2", 10000s};
+        auto bs = bench.scoped();
         auto secret = [&]() {
           if (use_encrypt)
             return elle::cryptography::SecretKey(secret_buffer.string());
@@ -601,8 +601,8 @@ namespace memo
       blocks::ValidationResult
       BaseACB<Block>::_validate(Model const& model, bool writing) const
       {
-        static elle::Bench bench("bench.acb._validate", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.acb._validate", 10000s};
+        auto scope = bench.scoped();
         bool disable_signature = !this->doughnut()->encrypt_options().validate_signatures;
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate(model, writing)); else
@@ -777,8 +777,8 @@ namespace memo
       BaseACB<Block>::_seal(boost::optional<int> version,
                             boost::optional<elle::cryptography::SecretKey const&> key)
       {
-        static elle::Bench bench("bench.acb.seal", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.acb.seal", 10000s};
+        auto scope = bench.scoped();
         if (!version && this->Super::_seal_version && *this->Super::_seal_version)
         {
           version = this->Super::_seal_version;
@@ -802,8 +802,8 @@ namespace memo
 
         if (acl_changed)
         {
-          static elle::Bench bench("bench.acb.seal.aclchange", 10000s);
-          elle::Bench::BenchScope scope(bench);
+          static auto bench = elle::Bench<>{"bench.acb.seal.aclchange", 10000s};
+          auto scope = bench.scoped();
           ELLE_TRACE_SCOPE("ACL changed, seal");
           this->_acl_changed = false;
           if (this->owner_private_key())
@@ -820,8 +820,8 @@ namespace memo
             ELLE_DUMP("signature: %x", this->signature());
         if (data_changed)
         {
-          static elle::Bench bench("bench.acb.seal.datachange", 10000s);
-          elle::Bench::BenchScope scope(bench);
+          static auto bench = elle::Bench<>{"bench.acb.seal.datachange", 10000s};
+          auto scope = bench.scoped();
           ++this->_data_version;
           ELLE_TRACE_SCOPE(
             "data changed, seal version %s", this->_data_version);

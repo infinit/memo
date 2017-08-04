@@ -218,17 +218,17 @@ namespace memo
           if (decode)
             try
             {
-              static elle::Bench bench("bench.cache.preempt_decode", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.preempt_decode", 10000s};
+              auto bs = bench.scoped();
               b.data();
             }
             catch (elle::Error const& e)
             {
               ELLE_TRACE("%s: block %f is not readable: %s", this, b.address(), e);
             }
-          if (this->_disk_cache_size &&
-            dynamic_cast<blocks::ImmutableBlock*>(&b))
-          this->_disk_cache_push(b);
+          if (this->_disk_cache_size
+              && dynamic_cast<blocks::ImmutableBlock*>(&b))
+            this->_disk_cache_push(b);
           else if (dynamic_cast<blocks::MutableBlock*>(&b) && this->_cache_size)
             this->_cache.emplace(b.clone());
 
@@ -241,10 +241,10 @@ namespace memo
                             bool cache_only)
         {
           cache_hit = false;
-          static elle::Bench bench_hit("bench.cache.ram.hit", 1000s);
-          static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000s);
-          static elle::Bench bench("bench.cache._fetch", 10000s);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench_hit = elle::Bench<int>{"bench.cache.ram.hit", 1000s};
+          static auto bench_disk_hit = elle::Bench<int>{"bench.cache.disk.hit", 1000s};
+          static auto bench = elle::Bench<>{"bench.cache._fetch", 10000s};
+          auto bs = bench.scoped();
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
           {
@@ -297,8 +297,8 @@ namespace memo
             auto it = this->_pending.find(address);
             if (it != this->_pending.end())
             {
-              static elle::Bench bench("bench.cache.pending_wait", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.pending_wait", 10000s};
+              auto bs = bench.scoped();
               ELLE_TRACE("%s: fetch on %f pending", this, address);
               auto b = it->second;
               b->wait();
@@ -352,14 +352,14 @@ namespace memo
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          static elle::Bench bench("bench.cache.store", 10000s);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench = elle::Bench<>{"bench.cache.store", 10000s};
+          auto bs = bench.scoped();
           ELLE_TRACE_SCOPE("%s: store %f", this, block->address());
           auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
           std::unique_ptr<blocks::Block> cloned;
           {
-            static elle::Bench bench("bench.cache.store.clone", 10000s);
-            elle::Bench::BenchScope bs(bench);
+            static auto bench = elle::Bench<>{"bench.cache.store.clone", 10000s};
+            auto bs = bench.scoped();
             // Block was necessarily validated on its way up, or generated
             // locally.
             if (mb)
@@ -367,8 +367,8 @@ namespace memo
             cloned = block->clone();
           }
           {
-            static elle::Bench bench("bench.cache.store.store", 10000s);
-            elle::Bench::BenchScope bs(bench);
+            static auto bench = elle::Bench<>{"bench.cache.store.store", 10000s};
+            auto bs = bench.scoped();
             std::unique_ptr<ConflictResolver> r;
             auto slot = std::make_shared<std::unique_ptr<blocks::Block>*>(&cloned);
             if (resolver)
@@ -454,8 +454,8 @@ namespace memo
           while (true)
           {
             {
-              static elle::Bench bench("bench.cache.cleanup", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.cleanup", 10000s};
+              auto bs = bench.scoped();
               auto const now = consensus::now();
               ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
               ELLE_DEBUG("evict unused blocks")
