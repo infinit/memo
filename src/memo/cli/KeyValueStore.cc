@@ -92,7 +92,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto network = memo.network_get(network_name, owner);
@@ -123,7 +123,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("delete");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -144,7 +144,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -166,7 +166,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("fetch");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       using KeyValueStoresMap
         = std::unordered_map<std::string, std::vector<memo::KeyValueStore>>;
@@ -210,7 +210,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("import");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto input = this->cli().get_input(input_name);
       auto s = elle::serialization::json::SerializerIn(*input, false);
       auto kvs = memo::KeyValueStore(s);
@@ -228,7 +228,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("list");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
 
       if (cli.script())
       {
@@ -266,7 +266,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("pull");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       memo.hub_delete("kvs", name, owner, false, purge);
@@ -282,7 +282,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("push");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -322,7 +322,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);

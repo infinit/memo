@@ -96,14 +96,14 @@ namespace memo
       , _script(false)
     {
       install_signal_handlers(*this);
-      this->_memo.report_local_action().connect(
+      this->backend().report_local_action().connect(
         [this] (std::string const& action,
                 std::string const& type,
                 std::string const& name)
         {
           this->report_action(action, pretty_object(type), name, "locally");
         });
-      this->_memo.report_remote_action().connect(
+      this->backend().report_remote_action().connect(
         [this] (std::string const& action,
                 std::string const& type,
                 std::string const& name)
@@ -122,13 +122,13 @@ namespace memo
     memo::User
     Memo::default_user()
     {
-      return this->memo().user_get(this->default_user_name());
+      return this->backend().user_get(this->default_user_name());
     }
 
     memo::User
     Memo::as_user()
     {
-      return this->memo().user_get(this->_as.get());
+      return this->backend().user_get(this->_as.get());
     }
 
     namespace
@@ -229,7 +229,7 @@ namespace memo
     boost::optional<bfs::path>
     Memo::avatar_path(std::string const& name) const
     {
-      auto path = this->memo()._avatar_path(name);
+      auto path = this->backend()._avatar_path(name);
       if (exists(path))
         return path;
       else
@@ -385,7 +385,13 @@ namespace memo
     void
     Memo::print(std::ostream& o) const
     {
-      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->_memo);
+      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->backend());
+    }
+
+    memo::Memo&
+    Memo::backend() const
+    {
+      return this->_memo;
     }
   }
 }

@@ -371,7 +371,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto overlay_config = [&]{
           auto res = std::unique_ptr<memo::overlay::Configuration>{};
@@ -450,7 +450,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("delete");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
 
       auto network = memo.network_get(network_name, owner, false);
@@ -487,7 +487,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(network_name, owner);
       auto desc = memo.network_descriptor_get(network_name, owner);
@@ -507,7 +507,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
 
       auto save = [&memo] (memo::NetworkDescriptor const desc_) {
@@ -579,7 +579,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("import");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto input = this->cli().get_input(input_name);
       auto desc =
         elle::serialization::json::deserialize<memo::NetworkDescriptor>
@@ -603,7 +603,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("inspect");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner, false);
       auto s_path = network.monitoring_socket_path(owner);
@@ -696,7 +696,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("link");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
 
       {
@@ -787,7 +787,7 @@ namespace memo
 #endif
 
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       if (cli.script())
       {
@@ -864,7 +864,7 @@ namespace memo
                   boost::optional<bool> resign_on_shutdown = {},
                   Action const& action = {})
       {
-        auto& memo = cli.memo();
+        auto& memo = cli.backend();
         auto owner = cli.as_user();
         auto network = memo.network_get(network_name, owner);
         // Use the qualified name, in case the user is running the
@@ -1077,7 +1077,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("list_silos");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
 
       auto network = memo.network_get(network_name, owner, true);
@@ -1104,7 +1104,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("pull");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(network_name, owner);
       memo.hub_delete("network", name, owner, false, purge);
@@ -1119,7 +1119,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("push");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
 
       auto network = memo.network_get(network_name, owner);
@@ -1239,7 +1239,7 @@ namespace memo
          {
            auto stat_thread = elle::reactor::Thread::unique_ptr{};
            if (push)
-             stat_thread = network.make_stat_update_thread(cli.memo(), owner, dht);
+             stat_thread = network.make_stat_update_thread(cli.backend(), owner, dht);
            cli.report_action("running", "network", network.name);
            if (cli.script())
            {
@@ -1387,7 +1387,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("stat");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(network_name, owner);
       auto res =
@@ -1413,7 +1413,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("unlink");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner, true);
       if (!network.model)
@@ -1497,7 +1497,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner);
       if (description)

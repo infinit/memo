@@ -1958,7 +1958,7 @@ namespace
                            bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
-    auto& memo = cli.memo();
+    auto& memo = cli.backend();
     auto const& username = cli.as().value_or(cli.default_user_name());
 
     auto users = parse(memo.users_get());

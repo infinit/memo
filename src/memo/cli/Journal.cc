@@ -66,7 +66,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("describe");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner);
       auto dht = network.run(owner);
@@ -106,7 +106,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner);
       auto id = std::to_string(operation);
@@ -124,7 +124,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("stat");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto networks = std::vector<memo::Network>{};
       if (network_name)

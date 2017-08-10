@@ -77,7 +77,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_descriptor_get(network_name, owner, true);
       auto user = memo.user_get(user_name);
@@ -123,7 +123,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("delete");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network_name = memo.qualified_name(network_name_, owner);
       if (pull)
@@ -146,7 +146,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network_name = memo.qualified_name(network_name_, owner);
       auto out = cli.get_output(output);
@@ -167,7 +167,7 @@ namespace memo
                      boost::optional<std::string> const& name,
                      boost::optional<memo::User const&> owner = {})
       {
-        auto& memo = cli.memo();
+        auto& memo = cli.backend();
         if (name)
         {
           // Avoid calling self_user, unless really needed.  That avoids
@@ -189,7 +189,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       network_name = qualified_name(cli, network_name, owner);
       if (network_name && user_name)
@@ -258,7 +258,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("import");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto input = cli.get_input(input_name);
       auto passport = elle::serialization::json::deserialize<memo::Memo::Passport>
         (*input, false);
@@ -282,7 +282,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("list");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       network_name = qualified_name(cli, network_name);
       auto passports = memo.passports_get(network_name);
       if (cli.script())
@@ -310,7 +310,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("pull");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network_name = memo.qualified_name(network_name_, owner);
       memo.hub_delete(
@@ -329,7 +329,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("push");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network_name = memo.qualified_name(network_name_, owner);
       auto passport = memo.passport_get(network_name, user_name);

@@ -807,7 +807,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("fetch");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       acquire_network(memo, name);
     }
 
@@ -836,7 +836,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       _run(memo, cli,
            login_user,
            default_network,
@@ -882,7 +882,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("start");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       _run(memo, cli,
            login_user,
            default_network,
