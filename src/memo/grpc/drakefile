@@ -4,6 +4,7 @@ import drake.go
 import os
 
 grpc_lib = None
+protobuf_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
@@ -172,7 +173,7 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global memo_vs_proto, memo_vs_with_named_proto, grpc_lib, grpc, sources
+  global memo_vs_proto, memo_vs_with_named_proto, grpc_lib, grpc, sources, protobuf_lib
   global gen_vs, gen_vs_w_named
 
   go = drake.go.Toolkit()
