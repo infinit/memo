@@ -77,6 +77,11 @@ namespace memo
         _hash_address(elle::Buffer const& content, Address owner,
                       elle::Buffer const& salt,
                       elle::Version const& version);
+        CHB(Doughnut* d,
+            Address address,
+            elle::Buffer& data,
+            elle::Buffer& salt,
+            Address owner);
         ELLE_ATTRIBUTE(elle::Buffer, salt);
         ELLE_ATTRIBUTE_R(Address, owner); // owner ACB address or null
       };

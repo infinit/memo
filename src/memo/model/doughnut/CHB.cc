@@ -28,7 +28,19 @@ namespace memo
       {}
 
       CHB::CHB(Doughnut* d, elle::Buffer data, elle::Buffer salt, Address owner)
-        : Super(CHB::_hash_address(data, owner, salt, d->version()), data)
+        : CHB(d,
+              CHB::_hash_address(data, owner, salt, d->version()),
+              data,
+              salt,
+              std::move(owner))
+      {}
+
+      CHB::CHB(Doughnut* d,
+               Address address,
+               elle::Buffer& data,
+               elle::Buffer& salt,
+               Address owner)
+        : Super(std::move(address), std::move(data))
         , _salt(std::move(salt))
         , _owner(owner)
       {
