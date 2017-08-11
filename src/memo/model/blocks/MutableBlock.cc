@@ -9,7 +9,7 @@ namespace memo
       char const* MutableBlock::type = "mutable";
 
       MutableBlock::MutableBlock(Address address, elle::Buffer data)
-        : Super(address, data)
+        : Super(address, std::move(data))
         , _data_changed(true)
       {}
 
