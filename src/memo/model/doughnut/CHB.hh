@@ -83,7 +83,6 @@ namespace memo
             elle::Buffer& salt,
             Address owner);
         ELLE_ATTRIBUTE(elle::Buffer, salt);
-        ELLE_ATTRIBUTE_R(Address, owner); // owner ACB address or null
       };
     }
   }

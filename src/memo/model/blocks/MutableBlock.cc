@@ -8,8 +8,10 @@ namespace memo
     {
       char const* MutableBlock::type = "mutable";
 
-      MutableBlock::MutableBlock(Address address, elle::Buffer data)
-        : Super(address, std::move(data))
+      MutableBlock::MutableBlock(Address address,
+                                 elle::Buffer data,
+                                 Address owner)
+        : Super(address, std::move(data), std::move(owner))
         , _data_changed(true)
       {}
 

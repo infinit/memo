@@ -16,8 +16,8 @@ namespace memo
       | Construction |
       `-------------*/
 
-      ACLBlock::ACLBlock(Address address, elle::Buffer data)
-        : Super(address, std::move(data))
+      ACLBlock::ACLBlock(Address address, elle::Buffer data, Address owner)
+        : Super(address, std::move(data), std::move(owner))
       {}
 
       ACLBlock::ACLBlock(ACLBlock const& other)

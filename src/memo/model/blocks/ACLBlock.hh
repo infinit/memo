@@ -29,7 +29,9 @@ namespace memo
       public:
         ACLBlock(ACLBlock const& other);
       protected:
-        ACLBlock(Address address, elle::Buffer data = {});
+        ACLBlock(Address address,
+                 elle::Buffer data = {},
+                 Address owner = Address::null);
         friend class memo::model::Model;
 
       /*-------.
