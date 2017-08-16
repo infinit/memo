@@ -152,10 +152,8 @@ namespace memo
         else
         {
           this->_salt = elle::cryptography::random::generate<elle::Buffer>(24);
-          uint64_t now = (boost::posix_time::microsec_clock::universal_time()
-            - boost::posix_time::ptime(boost::posix_time::min_date_time))
-            .total_milliseconds();
-          _salt.append(&now, 8);
+          auto const now = elle::Clock::now().time_since_epoch().count();
+          _salt.append(&now, sizeof(now));
         }
         if (this->doughnut()->version() < elle::Version(0, 8, 0))
         {
@@ -205,8 +203,8 @@ namespace memo
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
-        static elle::Bench bench("bench.okb.validate", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.okb.validate", 10000s};
+        auto scope = bench.scoped();
         ELLE_DEBUG("%s: check address", *this)
         {
           auto const expected_address = this->_hash_address();
@@ -340,8 +338,8 @@ namespace memo
       {
         if (!this->_data_decrypted)
         {
-          static elle::Bench bench("bench.decrypt", 10000s);
-          elle::Bench::BenchScope scope(bench);
+          static auto bench = elle::Bench<>{"bench.decrypt", 10000s};
+          auto scope = bench.scoped();
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
           const_cast<BaseOKB<Block>*>(this)->_data_plain =
             this->_decrypt_data(this->_data);
@@ -458,8 +456,8 @@ namespace memo
       blocks::ValidationResult
       BaseOKB<Block>::_validate(Model const& model, bool writing) const
       {
-        static elle::Bench bench("bench.okb._validate", 10000s);
-        elle::Bench::BenchScope scope(bench);
+        static auto bench = elle::Bench<>{"bench.okb._validate", 10000s};
+        auto scope = bench.scoped();
         if (auto res =
             static_cast<OKBHeader const*>(this)->validate(this->address()))
           {}

@@ -38,7 +38,9 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("memo.model.doughnut.test");
+ELLE_LOG_COMPONENT("test.doughnut");
+
+using namespace std::literals;
 
 namespace blocks = memo::model::blocks;
 namespace dht = memo::model::doughnut;
@@ -918,7 +920,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     auto b =  dhts.dht_a->make_block<blocks::ACLBlock>();
     b->data(elle::Buffer("foo"));
     b->seal();
-    elle::reactor::sleep(100_ms);
+    elle::reactor::sleep(100ms);
     auto addr = b->address();
     auto cb = cycle(*dhts.dht_a, std::move(b));
     dhts.dht_a->insert(std::move(cb));
@@ -1169,7 +1171,7 @@ public:
 };
 
 static constexpr
-auto default_node_timeout = std::chrono::seconds(1);
+auto default_node_timeout = 1s;
 
 class InstrumentedPaxos
   : public dht::consensus::Paxos
@@ -1259,10 +1261,10 @@ namespace rebalancing
   {
     DHT dht_a(id = special_id(1),
               dht::consensus::rebalance_auto_expand = true,
-              dht::consensus::node_timeout = std::chrono::seconds(0));
+              dht::consensus::node_timeout = 0s);
     DHT dht_b(id = special_id(2),
               dht::consensus::rebalance_auto_expand = true,
-              dht::consensus::node_timeout = std::chrono::seconds(0));
+              dht::consensus::node_timeout = 0s);
     DHT dht_c(id = special_id(3),
               dht::consensus::rebalance_auto_expand = false);
     dht_a.overlay->connect(*dht_b.overlay);

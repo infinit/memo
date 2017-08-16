@@ -11,7 +11,10 @@
 #include <memo/RPC.hh>
 #include <memo/utility.hh>
 
-ELLE_LOG_COMPONENT("RPC");
+using namespace std::literals;
+using Clock = std::chrono::system_clock;
+
+ELLE_LOG_COMPONENT("test.rpc");
 
 struct Server
 {
@@ -160,15 +163,14 @@ ELLE_TEST_SCHEDULED(bidirectional)
 
 ELLE_TEST_SCHEDULED(parallel)
 {
-  auto const delay_ms = valgrind(120, 4);
-  auto const delay = std::chrono::milliseconds(delay_ms);
+  auto const delay = valgrind(120ms, 4);
   {
     memo::setenv("RPC_SERVE_THREADS", 5);
     Server s(
       [&] (memo::RPCServer& s)
       {
         s.add("ping", [&] (int a) {
-            elle::reactor::sleep(1_ms * delay_ms);
+            elle::reactor::sleep(delay);
             return a+1;
         });
       });
@@ -176,7 +178,7 @@ ELLE_TEST_SCHEDULED(parallel)
     elle::protocol::Serializer serializer(stream, memo::version(), false);
     auto&& channels = elle::protocol::ChanneledStream{serializer};
     memo::RPC<int (int)> ping("ping", channels, memo::version());
-    auto start = std::chrono::system_clock::now();
+    auto start = Clock::now();
     elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
     {
       for (int i=0; i<10; ++i)
@@ -185,7 +187,7 @@ ELLE_TEST_SCHEDULED(parallel)
         });
       elle::reactor::wait(s);
     };
-    auto duration = std::chrono::system_clock::now() - start;
+    auto duration = Clock::now() - start;
     BOOST_TEST_MESSAGE("delay: " << delay << ", duration: " << duration);
     BOOST_TEST(delay * 2 <= duration);
     BOOST_TEST(duration <= delay * 3);
@@ -196,7 +198,7 @@ ELLE_TEST_SCHEDULED(parallel)
       [&] (memo::RPCServer& s)
       {
         s.add("ping", [&] (int a) {
-            elle::reactor::sleep(1_ms * delay_ms);
+            elle::reactor::sleep(delay);
             return a+1;
         });
       });
@@ -204,7 +206,7 @@ ELLE_TEST_SCHEDULED(parallel)
     elle::protocol::Serializer serializer(stream, memo::version(), false);
     auto&& channels = elle::protocol::ChanneledStream{serializer};
     memo::RPC<int (int)> ping("ping", channels, memo::version());
-    auto start = std::chrono::system_clock::now();
+    auto start = Clock::now();
     elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
     {
       for (int i=0; i<10; ++i)
@@ -213,7 +215,7 @@ ELLE_TEST_SCHEDULED(parallel)
         });
       elle::reactor::wait(s);
     };
-    auto duration = std::chrono::system_clock::now() - start;
+    auto duration = Clock::now() - start;
     BOOST_TEST(delay * 1 <= duration);
     BOOST_TEST(duration <= delay * 2);
   }

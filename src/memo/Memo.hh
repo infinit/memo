@@ -68,8 +68,8 @@ namespace memo
     /// The networks associated with a user (or by default, by the
     /// default memo user).
     ///
-    /// @param self The user.  @param linked_only Filter non-linked
-    /// networks.
+    /// @param self         The user.
+    /// @param linked_only  Filter non-linked networks.
     ///
     /// @return The list of networks.
     std::vector<Network>

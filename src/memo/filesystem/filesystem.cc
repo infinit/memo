@@ -47,7 +47,7 @@
 #include <memo/filesystem/Unknown.hh>
 
 #ifdef ELLE_LINUX
-  #include <attr/xattr.h>
+# include <attr/xattr.h>
 #endif
 
 ELLE_LOG_COMPONENT("memo.filesystem");
@@ -545,7 +545,7 @@ namespace memo
               return this->_root_address;
             }
           }
-          elle::reactor::sleep(1_sec);
+          elle::reactor::sleep(1s);
         }
       }
     }
@@ -707,7 +707,7 @@ namespace memo
       case EntryType::file:
         {
           static auto bench =
-            elle::Bench("bench.filesystem.filecache.hit", 1000s);
+            elle::Bench<int>{"bench.filesystem.filecache.hit", 1000s};
           ELLE_DEBUG("fetching %f from file cache", address);
           auto fit = _file_cache.find(address);
           boost::optional<int> version;
@@ -795,7 +795,7 @@ namespace memo
     {
       ELLE_DEBUG_SCOPE("%s: get directory at %f", this, address);
       static auto bench =
-         elle::Bench("bench.filesystem.dircache.hit", 1000s);
+         elle::Bench<int>{"bench.filesystem.dircache.hit", 1000s};
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())

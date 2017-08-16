@@ -17,16 +17,24 @@ host_os = os.environ.get('OS', '')
 tmp_dir = os.environ.get('TMPDIR', '/tmp')
 
 def log(fmt, *args):
-  print('beyond:', fmt.format(*args), file=sys.stderr)
+  try:
+    print('beyond:', fmt.format(*args), file=sys.stderr, flush=True)
+  except:
+    print('beyond: log: unexpected error:', sys.exc_info()[0],
+          file=sys.stderr, flush=True)
 
 def run(*args, **kwargs):
-  kwargs.setdefault('stdout', subprocess.PIPE)
-  kwargs.setdefault('stderr', subprocess.PIPE)
-  kwargs['universal_newlines'] = True
-  log('run: {}'.format(' '.join(*args)))
-  res = subprocess.run(*args, **kwargs)
-  log('ran: {}'.format(res))
-  return res
+  try:
+    kwargs.setdefault('stdout', subprocess.PIPE)
+    kwargs.setdefault('stderr', subprocess.PIPE)
+    kwargs['universal_newlines'] = True
+    log('run: {}', ' '.join(*args))
+    res = subprocess.run(*args, **kwargs)
+    log('ran: {}', res)
+    return res
+  except:
+    log('run: unexpected error: {}', sys.exc_info()[0])
+    raise
 
 ## ------------ ##
 ## Crash report ##
@@ -40,7 +48,7 @@ symbols_dir = repo_dir + '/symbols'
 
 def symbols_checkout():
   '''Fetch the debug-symbols git repository and checkout origin/master.
-  Return whether success.'''
+  Return whether successful.'''
   # The repo is there.  Update it.
   p = run(['git', '-C', repo_dir, 'fetch'])
   if p.returncode:
@@ -53,12 +61,14 @@ def symbols_checkout():
   return True
 
 def symbols_update():
-  '''Create or update the symbols/ directory.'''
-  # Try to update the checkout.
-  if symbols_checkout():
-    return True
+  '''Create or update the symbols/ directory.
+  Return whether successful.'''
   # We failed.  Maybe the repository is broken, erase it and restart.
   if os.path.exists(repo_dir):
+    # Try to update the checkout.
+    if symbols_checkout():
+      return True
+    log("symbolize: update failed, try from scratch")
     try:
       shutil.rmtree(repo_dir)
     except Exception as e:
@@ -66,19 +76,19 @@ def symbols_update():
           repo_dir, e)
       return False
   p = run(['git', 'clone',
+           '--quiet',  # The progress meter breaks Python's printing.
+           '--branch', 'master',
            'git@git.infinit.sh:infinit/debug-symbols.git',
            repo_dir])
   if p.returncode:
     log('symbolize: symbols_update: cannot clone git repo: {}', p.stderr)
     return False
-  # The repo is there.  It should be on origin/master, but let's play
-  # it extra safe.
-  return symbols_checkout()
+  log('symbolize: clone worked, trying checkouting origin/master')
 
 def symbolize_dump(in_, out = None):
   '''Read this minidump file and save its content,
   symbolized if possible.  It is safe to use in_ == out.'''
-  if not out:
+  if out is None:
     out = in_
   try:
     has_symbols = symbols_update()
@@ -149,6 +159,9 @@ templates = {
   },
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+  },
+  'Internal/Log Report': {
+    'template': 'tem_k9SKtv3vbcqcbCphvCHbPkc6',
   },
   'Internal/Passport Generation Error': {
     'template': 'tem_LdEi9v8WrTACa8BNUhoSte',
@@ -568,7 +581,7 @@ class Beyond:
           fname = '{}/client.{}'.format(temp_dir, k)
           with open(fname, 'wb') as f:
             f.write(b64decode(v))
-          if k in ['dump']:
+          if k in ['dmp', 'dump']:
             symbolize_dump(fname)
           # 'rb' is requested by sendwithus.
           files.append(open(fname, 'rb'))
@@ -757,7 +770,7 @@ class User:
 
   def save(self):
     diff = {}
-    for type in ['dropbox', 'google', 'gcs']:
+    for type in ['dropbox', 'gcs', 'google']:
       original = getattr(self, '_User__%s_accounts_original' % type)
       accounts = getattr(self, '%s_accounts' % type)
       if accounts == {}:
@@ -773,8 +786,8 @@ class User:
         diff.setdefault('emails', {})[email] = confirmation
     self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
-    self.__google_accounts_original = dict(self.__google_accounts)
     self.__gcs_accounts_original = dict(self.__gcs_accounts)
+    self.__google_accounts_original = dict(self.__google_accounts)
     self.__emails_original = dict(self.__emails)
 
   @property

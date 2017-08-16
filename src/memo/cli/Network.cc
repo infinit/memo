@@ -6,7 +6,9 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
+#include <elle/log/FileLogger.hh>
 #include <elle/make-vector.hh>
+#include <elle/print.hh>
 #include <elle/reactor/network/resolve.hh>
 
 #include <memo/Network.hh> // Storages
@@ -15,6 +17,7 @@
 #include <memo/cli/xattrs.hh>
 #include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/log.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
 #include <memo/model/blocks/ACLBlock.hh>
@@ -69,7 +72,7 @@ namespace memo
                // Kelips options,
                cli::nodes = boost::none,
                cli::k = boost::none,
-               cli::kelips_contact_timeout = boost::none,
+               cli::kelips_contact_timeout = elle::Duration{2min},
                cli::encrypt = boost::none,
                // Generic options
                cli::protocol = boost::none,
@@ -210,7 +213,7 @@ namespace memo
       auto
       make_kelips_config(boost::optional<int> nodes,
                          boost::optional<int> k,
-                         boost::optional<std::string> const& timeout,
+                         elle::Duration& timeout,
                          boost::optional<std::string> const& encrypt,
                          boost::optional<std::string> const& protocol)
       {
@@ -230,10 +233,7 @@ namespace memo
           else
             return 1;
         }();
-        if (timeout)
-          res->contact_timeout_ms =
-            std::chrono::duration_from_string<std::chrono::milliseconds>(
-              *timeout).count();
+        res->contact_timeout = timeout;
         // encrypt support.
         {
           auto enc = encrypt.value_or("yes");
@@ -361,10 +361,10 @@ namespace memo
       // Kelips options,
       boost::optional<int> nodes,
       boost::optional<int> k,
-      boost::optional<std::string> kelips_contact_timeout,
+      elle::Duration kelips_contact_timeout,
       boost::optional<std::string> encrypt,
       boost::optional<std::string> protocol,
-      boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+      elle::DurationOpt tcp_heartbeat,
       bool disable_encrypt_at_rest,
       bool disable_encrypt_rpc,
       bool disable_signature)
@@ -532,15 +532,14 @@ namespace memo
                 // XXX[Silo]: dnut::Configuration::storage ?
                 std::move(d->storage),
                 u.keypair(),
-                std::make_shared<elle::cryptography::rsa::PublicKey>(
-                  desc.owner),
+                std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
                 d->passport,
                 u.name,
                 d->port,
                 desc.version,
                 desc.admin_keys,
                 desc.peers,
-                desc.tcp_heartbeat,
+                elle::DurationOpt{desc.tcp_heartbeat},
                 desc.encrypt_options),
               desc.description);
             // Update linked network for user.
@@ -562,7 +561,7 @@ namespace memo
           = std::unordered_map<std::string, std::vector<memo::NetworkDescriptor>>;
         auto const res =
           memo.hub_fetch<Networks>(
-            elle::sprintf("users/%s/networks", owner.name),
+            elle::print("users/%s/networks", owner.name),
             "networks for user",
             owner.name,
             owner);
@@ -733,7 +732,7 @@ namespace memo
         {
           if (node_id)
             {
-              std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+              std::stringstream ss(elle::print("\"%s\"", *node_id));
               namespace json = elle::serialization::json;
               return json::deserialize<memo::model::Address>(ss, false);
             }
@@ -776,13 +775,20 @@ namespace memo
     Network::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      if (memo::getenv("CRASH", false))
-        *(volatile int*)nullptr = 0;
+
+#ifndef MEMO_PRODUCTION_BUILD
+      {
+        auto crash = memo::getenv("CRASH", ""s);
+        if (crash == "assert")
+          ELLE_ASSERT_EQ(42, 51);
+        else if (!crash.empty())
+          *(volatile int*)nullptr = 0;
+      }
+#endif
 
       auto& cli = this->cli();
       auto& memo = cli.memo();
       auto owner = cli.as_user();
-
       if (cli.script())
       {
         auto const l = elle::json::make_array(memo.networks_get(owner),
@@ -861,6 +867,10 @@ namespace memo
         auto& memo = cli.memo();
         auto owner = cli.as_user();
         auto network = memo.network_get(network_name, owner);
+        // Use the qualified name, in case the user is running the
+        // network several times concurrently under different ids.
+        // So it can be `bob/infinit/company`, or `bob/bob/bobnet`.
+        main_log_family(elle::print("%s/%s", owner.name, network.name));
         if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
         {
           auto paxos = dynamic_cast<
@@ -902,7 +912,7 @@ namespace memo
           if (grpc_port_file)
           {
             while (grpc_port == -1)
-              elle::reactor::sleep(50_ms);
+              elle::reactor::sleep(50ms);
             port_to_file(grpc_port, *grpc_port_file);
           }
         }
@@ -1334,7 +1344,7 @@ namespace memo
                        auto ab = dht.make_block<memo::model::blocks::ACLBlock>();
                        auto const addr = ab->address();
                        dht.insert(std::move(ab));
-                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
+                       auto nb = dnut::NB(dht, name, elle::print("%s", addr));
                        dht.seal_and_insert(nb);
                        return addr;
                      }
@@ -1382,15 +1392,15 @@ namespace memo
       auto name = memo.qualified_name(network_name, owner);
       auto res =
         memo.hub_fetch<memo::Storages>(
-          elle::sprintf("networks/%s/stat", name),
+          elle::print("networks/%s/stat", name),
           "stat",
           "stat",
           boost::none,
           memo::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
-      elle::fprintf(std::cout, "{\"usage\": %s, \"capacity\": %s}",
-                    res.usage, res.capacity);
+      elle::print(std::cout, "{\"usage\": %s, \"capacity\": %s}",
+                  res.usage, res.capacity);
     }
 
 

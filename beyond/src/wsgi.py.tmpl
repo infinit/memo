@@ -15,15 +15,17 @@ def getopt(name, fallback = None):
     return eval(opt.decode())
   return fallback
 
-gcs_login = getopt('gcs-login')
-gcs_key = getopt('gcs-key')
-if gcs_login is not None and gcs_key is not None:
-  gcs = infinit.beyond.gcs.GCS(
-    login = gcs_login,
-    key = gcs_key.encode('UTF-8'),
-    bucket_ns = 'sh_infinit_beyond')
-else:
-  gcs = None
+def make_bucket(name):
+  # Image bucket (for avatars, etc.)
+  login = getopt('{}-bucket-login'.format(name))
+  key = getopt('{}-bucket-key'.format(name))
+  if login is not None and key is not None:
+    return infinit.beyond.gcs.GCS(
+      login = login,
+      key = key.encode('UTF-8'),
+      bucket_ns = 'sh_infinit_beyond')
+  else:
+    return None
 
 beyond = infinit.beyond.Beyond(
   datastore = datastore,
@@ -41,6 +43,11 @@ beyond = infinit.beyond.Beyond(
 application = infinit.beyond.bottle.Bottle(
   admin_users = getopt('admin-users', []),
   beyond = beyond,
-  gcs = gcs,
+  image_bucket = make_bucket('image'),
+  log_bucket = make_bucket('log'),
   ldap_server = getopt('ldap-server'),
 )
+
+# Local Variables:
+# mode: python
+# End:

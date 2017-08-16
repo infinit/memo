@@ -16,7 +16,7 @@
 
 namespace bfs = boost::filesystem;
 
-ELLE_LOG_COMPONENT("memo.model.doughnut.bandwidth-test");
+ELLE_LOG_COMPONENT("test.bandwidth-test");
 
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
@@ -40,7 +40,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   auto resident = boost::optional<double>{};
   for (int i = 0; i < max; ++i)
   {
-    ELLE_LOG_SCOPE("%4s / %s\n", i, max);
+    ELLE_LOG_SCOPE("%s / %s", i, max);
     auto file = root->child(elle::sprintf("%04s", i));
     auto handle = file->create(O_RDWR, 0666 | S_IFREG);
     auto contents = elle::Buffer(100 * 1024);

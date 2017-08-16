@@ -3,32 +3,6 @@
 
 #include <elle/factory.hh>
 
-namespace elle
-{
-  namespace serialization
-  {
-    template <>
-    struct Serialize<elle::reactor::Duration>
-    {
-      using Type = double;
-
-      static
-      double
-      convert(elle::reactor::Duration const& d)
-      {
-        return (double)d.total_microseconds() / 1000000.0;
-      }
-
-      static
-      elle::reactor::Duration
-      convert(double val)
-      {
-        return boost::posix_time::microseconds(val * 1000000.0);
-      }
-    };
-  }
-}
-
 namespace memo
 {
   namespace silo
@@ -36,12 +10,11 @@ namespace memo
     Latency::Latency(std::unique_ptr<Silo> backend,
                      elle::reactor::DurationOpt latency_get,
                      elle::reactor::DurationOpt latency_set,
-                     elle::reactor::DurationOpt latency_erase
-                     )
-    : _backend(std::move(backend))
-    , _latency_get(latency_get)
-    , _latency_set(latency_set)
-    , _latency_erase(latency_erase)
+                     elle::reactor::DurationOpt latency_erase)
+      : _backend(std::move(backend))
+      , _latency_get(latency_get)
+      , _latency_set(latency_set)
+      , _latency_erase(latency_erase)
     {}
 
     elle::Buffer
@@ -78,23 +51,24 @@ namespace memo
       return _backend->list();
     }
 
-    static std::unique_ptr<memo::silo::Silo>
+    static std::unique_ptr<Silo>
     make(std::vector<std::string> const& args)
     {
-      std::unique_ptr<Silo> backend = instantiate(args[0], args[1]);
-      elle::reactor::Duration latency_get, latency_set, latency_erase;
-      if (args.size() > 2)
-        latency_get = boost::posix_time::milliseconds(std::stoi(args[2]));
-      if (args.size() > 3)
-        latency_set = boost::posix_time::milliseconds(std::stoi(args[3]));
-      if (args.size() > 4)
-        latency_erase = boost::posix_time::milliseconds(std::stoi(args[4]));
+      // backend_name, backend_args, latency_get, latency_set, latency_erase;
+      auto backend = instantiate(args[0], args[1]);
+      auto get = [&](unsigned num) -> elle::Duration
+        {
+          if (num < args.size())
+            return std::chrono::milliseconds(std::stoi(args[num]));
+          else
+            return {};
+        };
       return std::make_unique<Latency>(std::move(backend),
-        latency_get, latency_set, latency_erase);
+                                       get(2), get(3), get(4));
     }
 
-    struct LatencySiloConfig:
-    public SiloConfig
+    struct LatencySiloConfig
+      : public SiloConfig
     {
     public:
       elle::reactor::DurationOpt latency_get;

@@ -30,9 +30,6 @@ namespace memo
   {
     namespace kouncil
     {
-      using Clock = std::chrono::high_resolution_clock;
-      using Time = std::chrono::time_point<Clock>;
-
       /// BMI helpers
       namespace bmi = boost::multi_index;
       namespace _details
@@ -104,11 +101,11 @@ namespace memo
         using Remote = memo::model::doughnut::Remote;
 
         /// A clock.
-        using Clock = std::chrono::high_resolution_clock;
+        using Clock = elle::Clock;
         /// A reference date.
-        using Time = std::chrono::time_point<Clock>;
+        using Time = elle::Time;
         /// The type of our timers.
-        using Timer = boost::asio::basic_waitable_timer<Clock>;
+        using Timer = elle::reactor::AsioTimer;
         /// Transportable timeout.
         using LamportAge = elle::athena::LamportAge;
 
@@ -123,7 +120,7 @@ namespace memo
         /// @arg eviction_delay   A time out, in seconds. Default: 20mn.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                boost::optional<std::chrono::seconds> eviction_delay = {});
+                elle::DurationOpt eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -304,7 +301,7 @@ namespace memo
         StaleEndpoint&
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>, tasks);
-        ELLE_ATTRIBUTE_RW(std::chrono::seconds, eviction_delay);
+        ELLE_ATTRIBUTE_RW(elle::Duration, eviction_delay);
 
       /*-------.
       | Lookup |

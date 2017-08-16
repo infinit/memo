@@ -107,8 +107,8 @@ namespace
   }
 #endif
 
-  std::chrono::milliseconds
-  _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+  elle::Duration
+  _connect_timeout_val(elle::Defaulted<elle::Duration> arg)
   {
     static auto const env = memo::getenv("CONNECT_TIMEOUT", ""s);
     if (arg || env.empty())
@@ -117,8 +117,8 @@ namespace
       return elle::chrono::duration_parse<std::milli>(env);
   }
 
-  std::chrono::milliseconds
-  _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+  elle::Duration
+  _soft_fail_timeout_val(elle::Defaulted<elle::Duration> arg)
   {
     static auto const env = memo::getenv("SOFTFAIL_TIMEOUT", ""s);
     if (arg || env.empty())
@@ -202,7 +202,7 @@ namespace memo
               ELLE_TRACE("%s: failed to store %s: %s", d, what, e);
               if (d.terminating().opened())
                 break;
-              elle::reactor::wait(d.terminating(), 1_sec);
+              elle::reactor::wait(d.terminating(), 1s);
             }
           }
       }
@@ -241,13 +241,10 @@ namespace memo
         , _admin_keys(std::move(init.admin_keys))
         , _encrypt_options(std::move(init.encrypt_options))
         , _consensus(init.consensus_builder(*this))
-        , _local(
-          init.storage
-          ? this->_consensus->make_local(
-            init.port,
-            init.listen_address,
-            std::move(init.storage))
-          : nullptr)
+        , _local(init.storage
+                 ? this->_consensus->make_local(init.port, init.listen_address,
+                                                std::move(init.storage))
+                 : nullptr)
         , _dock(*this,
                 init.protocol,
                 init.port,
@@ -368,7 +365,7 @@ namespace memo
         }
         if (this->_user_init)
         {
-          if (!elle::reactor::wait(*this->_user_init, 5_sec))
+          if (!elle::reactor::wait(*this->_user_init, 5s))
             this->_user_init->terminate_now();
           this->_user_init.reset();
         }
@@ -708,20 +705,20 @@ namespace memo
       {}
 
       Configuration::Configuration(
-        Address id_,
-        std::unique_ptr<consensus::Configuration> consensus_,
-        std::unique_ptr<overlay::Configuration> overlay_,
-        std::unique_ptr<silo::SiloConfig> storage,
-        elle::cryptography::rsa::KeyPair keys_,
-        std::shared_ptr<elle::cryptography::rsa::PublicKey> owner_,
-        Passport passport_,
-        boost::optional<std::string> name_,
-        boost::optional<int> port_,
-        elle::Version version,
-        AdminKeys admin_keys,
-        std::vector<Endpoints> peers,
-        boost::optional<std::chrono::milliseconds> tcp_heartbeat_,
-        EncryptOptions encrypt_options)
+            Address id_,
+            std::unique_ptr<consensus::Configuration> consensus_,
+            std::unique_ptr<overlay::Configuration> overlay_,
+            std::unique_ptr<silo::SiloConfig> storage,
+            elle::cryptography::rsa::KeyPair keys_,
+            std::shared_ptr<elle::cryptography::rsa::PublicKey> owner_,
+            Passport passport_,
+            boost::optional<std::string> name_,
+            boost::optional<int> port_,
+            elle::Version version,
+            AdminKeys admin_keys,
+            std::vector<Endpoints> peers,
+            elle::DurationOpt tcp_heartbeat_,
+            EncryptOptions encrypt_options)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -818,8 +815,8 @@ namespace memo
         bool async,
         bool cache,
         boost::optional<int> cache_size,
-        boost::optional<std::chrono::seconds> cache_ttl,
-        boost::optional<std::chrono::seconds> cache_invalidation,
+        elle::DurationOpt cache_ttl,
+        elle::DurationOpt cache_invalidation,
         boost::optional<uint64_t> disk_cache_size,
         boost::optional<elle::Version> version,
         boost::optional<int> port_,

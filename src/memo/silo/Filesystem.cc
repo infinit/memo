@@ -56,8 +56,8 @@ namespace memo
         ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
         throw MissingKey(key);
       }
-      static elle::Bench bench("bench.fsstorage.get", 10000s);
-      elle::Bench::BenchScope bs(bench);
+      static auto bench = elle::Bench<>{"bench.fsstorage.get", 10000s};
+      auto bs = bench.scoped();
       elle::Buffer res;
       auto&& output = elle::IOStream(res.ostreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
@@ -72,8 +72,8 @@ namespace memo
                      bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
-      static elle::Bench bench("bench.fsstorage.set", 10000s);
-      elle::Bench::BenchScope bs(bench);
+      static auto bench = elle::Bench<>{"bench.fsstorage.set", 10000s};
+      auto bs = bench.scoped();
       auto const path = this->_path(key);
       bool const exists = bfs::exists(path);
       int const size = exists ? bfs::file_size(path) : 0;
@@ -102,8 +102,8 @@ namespace memo
     Filesystem::_erase(Key key)
     {
       ELLE_TRACE("erase %x", key);
-      static elle::Bench bench("bench.fsstorage.erase", 10000s);
-      elle::Bench::BenchScope bs(bench);
+      static auto bench = elle::Bench<>{"bench.fsstorage.erase", 10000s};
+      auto bs = bench.scoped();
       auto const path = this->_path(key);
       if (!exists(path))
         throw MissingKey(key);
@@ -119,8 +119,8 @@ namespace memo
     std::vector<Key>
     Filesystem::_list()
     {
-      static elle::Bench bench("bench.fsstorage.list", 10000s);
-      elle::Bench::BenchScope bs(bench);
+      static auto bench = elle::Bench<>{"bench.fsstorage.list", 10000s};
+      auto bs = bench.scoped();
       auto res = std::vector<Key>{};
       for (auto const& p: bfs::recursive_directory_iterator(this->root()))
         if (is_block(p))

@@ -23,11 +23,13 @@
 # undef stat
 #endif
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.async-conflict");
 
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
+
+using namespace std::literals;
 
 std::unique_ptr<elle::reactor::filesystem::FileSystem>
 make(bfs::path where,
@@ -485,7 +487,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
       are_7 = true;
       break;
     }
-    elle::reactor::sleep(100_ms);
+    elle::reactor::sleep(100ms);
   }
   BOOST_CHECK(are_7);
 

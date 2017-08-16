@@ -260,8 +260,8 @@ namespace memo
                          Address owner, elle::Buffer const& salt,
                          elle::Version const& version)
       {
-        static elle::Bench bench("bench.chb.hash", 10000s);
-        elle::Bench::BenchScope bs(bench);
+        static auto bench = elle::Bench<>{"bench.chb.hash", 10000s};
+        auto bs = bench.scoped();
         elle::Buffer saltowner(salt);
         if (version < elle::Version(0, 4, 0))
           owner = Address::null;

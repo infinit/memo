@@ -12,9 +12,11 @@ using namespace std::literals;
 
 ELLE_LOG_COMPONENT("memo.silo.GoogleAPI");
 
+using namespace std::literals;
+
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench("bench.googleapi." name, 10000s);     \
-  auto bs = elle::Bench::BenchScope(bench)
+  static auto bench = elle::Bench<>{"bench.googleapi." name, 10000s};     \
+  auto bs = bench.scoped()
 
 namespace
 {
@@ -24,15 +26,12 @@ namespace
   elle::reactor::Duration
   delay(int attempt)
   {
-    auto factor = pow(2, std::min(8, attempt));
-    return boost::posix_time::milliseconds(factor * 100);
+    return std::min(25000ms, int(pow(2, attempt)) * 100ms);
   }
 }
 
 namespace memo
 {
-  using namespace std::literals;
-
   namespace silo
   {
     GoogleAPI::GoogleAPI(std::string name,
@@ -76,19 +75,22 @@ namespace memo
 
         if (elle::contains(expected_codes, r.status()))
           return r;
-        else if (r.status() == StatusCode::Forbidden
-                 || r.status() == StatusCode::Unauthorized)
-          const_cast<GoogleAPI*>(this)->_refresh();
+        else
+        {
+          if (r.status() == StatusCode::Forbidden
+              || r.status() == StatusCode::Unauthorized)
+            elle::unconst(this)->_refresh();
 
-        ELLE_WARN("Unexpected google HTTP response on %s %s payload %s: %s, attempt %s",
-                  method,
-                  url,
-                  payload.size(),
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        ++attempt;
-        elle::reactor::sleep(delay(attempt));
+          ELLE_WARN("Unexpected google HTTP response on %s %s payload %s: %s, attempt %s",
+                    method,
+                    url,
+                    payload.size(),
+                    r.status(),
+                    attempt + 1);
+          ELLE_DUMP("body: %s", r.response());
+          ++attempt;
+          elle::reactor::sleep(delay(attempt));
+        }
       }
     }
 
@@ -118,12 +120,14 @@ namespace memo
           // FIXME: Update the conf file. Credentials or storage or both ?
           break;
         }
-
-        ELLE_WARN("Unexpected google HTTP status (refresh): %s, attempt %s",
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        elle::reactor::sleep(delay(attempt++));
+        else
+        {
+          ELLE_WARN("Unexpected google HTTP status (refresh): %s, attempt %s",
+                    r.status(),
+                    attempt + 1);
+          ELLE_DUMP("body: %s", r.response());
+          elle::reactor::sleep(delay(attempt++));
+        }
       }
     }
   }

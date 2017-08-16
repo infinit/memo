@@ -239,7 +239,7 @@ namespace memo
                   elle::err("unexpected HTTP error %s fetching user identity",
                             r.status());
                 }
-                elle::reactor::sleep(10_sec);
+                elle::reactor::sleep(10s);
               }
             });
           for (; timeout > 0; timeout--)
@@ -247,7 +247,7 @@ namespace memo
             elle::fprintf(std::cout, "User identity on %s for %s seconds",
                           memo::beyond(true), timeout);
             std::cout.flush();
-            elle::reactor::sleep(1_sec);
+            elle::reactor::sleep(1s);
             std::cout << '\r' << std::string(80, ' ') << '\r';
             if (done)
             {

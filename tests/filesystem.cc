@@ -52,7 +52,7 @@
 
 #include "DHT.hh"
 
-ELLE_LOG_COMPONENT("test");
+ELLE_LOG_COMPONENT("test.filesystem");
 
 namespace ifs = memo::filesystem;
 namespace rfs = elle::reactor::filesystem;
@@ -304,7 +304,7 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   auto handle = root->child("file")->open(O_RDWR, 0);
   BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
                     16384);
-  elle::reactor::sleep(200_ms);
+  elle::reactor::sleep(200ms);
   o->fail_addresses().clear();
   BOOST_CHECK_EQUAL(
     handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 + 8192),

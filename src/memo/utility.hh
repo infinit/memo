@@ -119,7 +119,7 @@ namespace memo
   _xdg(std::string const& type,
        bfs::path const& def)
   {
-    auto const memo = elle::os::getenv("MEMO_" + type, ""s);
+    auto const memo = memo::getenv(type, ""s);
     auto const xdg = elle::os::getenv("XDG_" + type, ""s);
     auto const dir =
       !memo.empty() ? memo :
@@ -235,6 +235,26 @@ namespace memo
 
     ELLE_ATTRIBUTE_R(std::string, error);
     ELLE_ATTRIBUTE_R(boost::optional<std::string>, name);
+  };
+
+  /// Backward compatibility: serialization of some duration variables
+  /// `foo` as `foo_ms`, number of ms.
+  template <typename Serializer, typename Duration>
+  void
+  serialize_duration_ms(Serializer& s, std::string const& name, Duration& d)
+  {
+    using milliseconds = std::chrono::milliseconds;
+    if (s.out())
+    {
+      int ms = std::chrono::duration_cast<milliseconds>(d).count();
+      s.serialize(name + "_ms", ms);
+    }
+    else
+    {
+      int ms;
+      s.serialize(name + "_ms", ms);
+      d = milliseconds(ms);
+    }
   };
 }
 

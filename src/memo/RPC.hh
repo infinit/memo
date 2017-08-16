@@ -406,9 +406,9 @@ namespace memo
         ELLE_DEBUG_SCOPE("decipher RPC");
         try
         {
-          static auto bench = elle::Bench("bench.rpcserve.decipher",
-                                          10000s);
-          auto bs = elle::Bench::BenchScope(bench);
+          static auto bench = elle::Bench<>{"bench.rpcserve.decipher",
+                                            10000s};
+          auto bs = bench.scoped();
           if (request.size() > 262144)
           {
             auto& key = this->_key.get();
@@ -468,8 +468,8 @@ namespace memo
       if (had_key)
       {
         static auto bench =
-          elle::Bench("bench.rpcserve.encipher", 10000s);
-        auto bs = elle::Bench::BenchScope(bench);
+          elle::Bench<>{"bench.rpcserve.encipher", 10000s};
+        auto bs = bench.scoped();
         if (response.size() >= 262144)
         {
           auto& key = this->_key.get();
@@ -714,8 +714,8 @@ namespace memo
         if (self.key())
         {
           static auto bench =
-            elle::Bench("bench.rpcclient.encipher", 10000s);
-          auto bs = elle::Bench::BenchScope(bench);
+            elle::Bench<>{"bench.rpcclient.encipher", 10000s};
+          auto bs = bench.scoped();
           // FIXME: scheduler::run?
           ELLE_DEBUG("encipher request")
             if (call.size() > 262144)
@@ -740,8 +740,8 @@ namespace memo
         if (self.key())
         {
           static auto bench
-            = elle::Bench("bench.rpcclient.decipher", 10000s);
-          auto bs = elle::Bench::BenchScope(bench);
+            = elle::Bench<>{"bench.rpcclient.decipher", 10000s};
+          auto bs = bench.scoped();
           if (response.size() > 262144)
           {
             elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {

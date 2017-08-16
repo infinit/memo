@@ -24,8 +24,10 @@ namespace memo
         = decltype(elle::meta::list(cli::all,
                                     cli::configuration,
                                     cli::connectivity,
+                                    cli::log,
                                     cli::networking,
                                     cli::system));
+      using Objects = decltype(elle::meta::list(cli::log));
 
       /*------------.
       | Mode: all.  |
@@ -79,6 +81,56 @@ namespace memo
                         bool no_color,
                         bool verbose);
 
+      /*------------.
+      | Mode: log.  |
+      `------------*/
+      class Log
+        : public Object<Log, Doctor>
+      {
+      public:
+        using Super = Object<Log, Doctor>;
+        using Modes = decltype(elle::meta::list(
+                                 cli::delete_,
+                                 cli::list,
+                                 cli::push));
+        Log(Memo& memo);
+
+        // log delete.
+        Mode<Log,
+             void (decltype(cli::all = false),
+                   decltype(cli::match = boost::optional<std::string>{})),
+             decltype(modes::mode_delete)>
+        delete_;
+        void
+        mode_delete(bool all,
+                    boost::optional<std::string> const& match);
+
+        // log list.
+        Mode<Log,
+             void (decltype(cli::match = boost::optional<std::string>{})),
+             decltype(modes::mode_list)>
+        list;
+        void
+        mode_list(boost::optional<std::string> const& match);
+
+        // log push.
+        Mode<Log,
+             void (decltype(cli::match = boost::optional<std::string>{}),
+                   decltype(cli::number = 2)),
+             decltype(modes::mode_push)>
+        push;
+        /// Send the latest logs to infinit.
+        ///
+        /// @param match   a regex
+        /// @param number  the number of files to send, 0 for unlimited.
+        void
+        mode_push(boost::optional<std::string> const& match,
+                  int number);
+
+        std::string const description = "Manage logs";
+      } log;
+
+
       /*-------------------.
       | Mode: networking.  |
       `-------------------*/
@@ -111,6 +163,7 @@ namespace memo
                       boost::optional<std::string> const& xored = std::string{"both"},
                       bool no_color = false,
                       bool verbose = false);
+
 
       /*---------------.
       | Mode: system.  |

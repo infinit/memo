@@ -13,7 +13,6 @@ namespace memo
   namespace cli
   {
     // Symbol, short option char [0], help string, whether positional argument [false].
-    // XXX[Storage]: Silo or Storage.
 
     ELLE_DAS_CLI_SYMBOL(account, "cloud service account name");
     ELLE_DAS_CLI_SYMBOL(add, "add users, administrators and groups to group (prefix: @<group>, ^<admin>");
@@ -87,7 +86,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(grpc, "start gRPC server on given endpoint");
     ELLE_DAS_CLI_SYMBOL(grpc_port_file, "write gRPC listening port to file");
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message");
-    ELLE_DAS_CLI_SYMBOL(hold, "keep storage online until this process terminates");
+    ELLE_DAS_CLI_SYMBOL(hold, "keep storage online until this process terminates"); // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user");
     ELLE_DAS_CLI_SYMBOL(host, "SSH host");
     ELLE_DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon");
@@ -96,7 +95,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(k, "number of groups (default: 1)");
     ELLE_DAS_CLI_SYMBOL(kalimero, "use a Kalimero overlay network. Used for local testing");
     ELLE_DAS_CLI_SYMBOL(kelips, "use a Kelips overlay network (default)");
-    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, "ping timeout before considering a peer lost (default: 2min)");
+    ELLE_DAS_CLI_SYMBOL(kelips_contact_timeout, "ping timeout before considering a peer lost");
     ELLE_DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key");
     ELLE_DAS_CLI_SYMBOL(kouncil, "use a Kouncil overlay network");
     ELLE_DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name");
@@ -106,6 +105,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(log_path, "store volume logs in given path");
     ELLE_DAS_CLI_SYMBOL(login_user, "login with selected user(s), of form 'user:password'");
     ELLE_DAS_CLI_SYMBOL(map_other_permissions, "allow chmod to set world permissions");
+    ELLE_DAS_CLI_SYMBOL(match, 'm', "regular expression specifying names of the {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none");
     ELLE_DAS_CLI_SYMBOL(monitoring, "enable monitoring");
     ELLE_DAS_CLI_SYMBOL(mount, "mount given volumes on startup, keep trying on error");
@@ -115,6 +115,7 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem");
     ELLE_DAS_CLI_SYMBOL(name, 'n', "name of the {object} {action}", true);
     ELLE_DAS_CLI_SYMBOL(network, 'N', "network {action} {object} for");
+    ELLE_DAS_CLI_SYMBOL(number, "limit the number of {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(no_avatar, "do not {action} avatars");
     ELLE_DAS_CLI_SYMBOL(no_color, "don't use colored output");
     ELLE_DAS_CLI_SYMBOL(no_consensus, "use no consensus algorithm");
@@ -283,6 +284,7 @@ namespace memo
       ELLE_DAS_SYMBOL(mode_list);
       ELLE_DAS_SYMBOL(mode_list_services);
       ELLE_DAS_SYMBOL(mode_list_silos);
+      ELLE_DAS_SYMBOL(mode_log);
       ELLE_DAS_SYMBOL(mode_login);
       ELLE_DAS_SYMBOL(mode_manage_volumes);
       ELLE_DAS_SYMBOL(mode_mount);

@@ -22,8 +22,8 @@ using namespace std::literals;
 ELLE_LOG_COMPONENT("memo.silo.GoogleDrive");
 
 #define BENCH(name)                                                     \
-  static auto bench = elle::Bench("bench.gdrive." name, 10000s);        \
-  auto bs = elle::Bench::BenchScope(bench)
+  static auto bench = elle::Bench<>{"bench.gdrive." name, 10000s};      \
+  auto bs = bench.scoped()
 
 namespace memo
 {
@@ -81,7 +81,7 @@ namespace memo
       if (attempt > 8)
         attempt = 8;
       unsigned int factor = pow(2, attempt);
-      return boost::posix_time::milliseconds(factor * 100);
+      return factor * 100ms;
     }
 
     boost::filesystem::path

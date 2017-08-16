@@ -53,6 +53,15 @@ namespace memo
             res.emplace_back(model::Address::null, model::Endpoints({obj}));
       return res;
     }
+
+    elle::DurationOpt
+    from_seconds(boost::optional<int> seconds)
+    {
+      if (seconds)
+        return std::chrono::seconds(*seconds);
+      else
+        return {};
+    }
   }
 
   Network::Network(std::string name,
@@ -151,7 +160,7 @@ namespace memo
         this->notify_storage(memo, self, model.id());
       };
     model.local()->storage()->register_notifier(notify);
-    return elle::reactor::every(60_min, "periodic storage stat updater", notify);
+    return elle::reactor::every(60min, "periodic storage stat updater", notify);
   }
 
   elle::reactor::Thread::unique_ptr
@@ -159,7 +168,7 @@ namespace memo
                                    memo::overlay::NodeLocations const& locs_,
                                    int interval)
   {
-    auto poll = [&, locs_, interval = boost::posix_time::seconds(interval)]
+    auto poll = [&, locs_, interval = std::chrono::seconds(interval)]
       {
         auto locs = locs_;
         while (true)
@@ -231,12 +240,8 @@ namespace memo
       async_writes,
       cache,
       cache_size,
-      cache_ttl
-      ? std::chrono::seconds(cache_ttl.get())
-      : boost::optional<std::chrono::seconds>(),
-      cache_invalidation
-      ? std::chrono::seconds(cache_invalidation.get())
-      : boost::optional<std::chrono::seconds>(),
+      from_seconds(cache_ttl),
+      from_seconds(cache_invalidation),
       disk_cache_size,
       std::move(version),
       std::move(port),
@@ -365,7 +370,7 @@ namespace memo
     model::doughnut::AdminKeys admin_keys,
     std::vector<model::Endpoints> peers,
     boost::optional<std::string> description,
-    boost::optional<std::chrono::milliseconds> tcp_heartbeat,
+    elle::DurationOpt tcp_heartbeat,
     model::doughnut::EncryptOptions encrypt_options)
     : descriptor::TemplatedBaseDescriptor<NetworkDescriptor>(
       std::move(name), std::move(description))
@@ -387,8 +392,7 @@ namespace memo
               ("overlay"))
     , owner(s.deserialize<elle::cryptography::rsa::PublicKey>("owner"))
     , version()
-    , tcp_heartbeat(s.deserialize<boost::optional<std::chrono::milliseconds>>(
-                      "tcp-heartbeat"))
+    , tcp_heartbeat(s.deserialize<elle::DurationOpt>("tcp-heartbeat"))
   {
     try
     {

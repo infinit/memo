@@ -21,26 +21,26 @@
 
 #include <memo/cli/Error.hh>
 #include <memo/cli/utility.hh>
-#include <memo/environ.hh>
 #include <memo/crash-report.hh>
+#include <memo/environ.hh>
+#include <memo/log.hh>
 #include <memo/utility.hh>
 
 ELLE_LOG_COMPONENT("cli");
 
-#ifdef INFINIT_BINARY
-# define BIN "infinit"
-#else
-# define BIN "memo"
-#endif
-
 namespace bfs = boost::filesystem;
+
+using namespace std::literals;
 
 namespace
 {
   /// How the user called us.
-  auto argv_0 = std::string(BIN);
-  /// The path to `memo`.
-  auto memo_exe = argv_0;
+  auto argv_0 =
+#ifdef INFINIT_BINARY
+  "infinit"s;
+#else
+  "memo"s;
+#endif
 }
 
 namespace memo
@@ -227,7 +227,6 @@ namespace memo
       void
       main_impl(std::vector<std::string>& args)
       {
-        args.erase(args.begin());
         auto memo = memo::Memo{};
         auto&& cli = Memo(memo);
         if (args.empty() || elle::das::cli::is_option(args[0], options))
@@ -255,7 +254,7 @@ namespace memo
     void
     Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << memo_exe << ' ' << usage << std::endl;
+      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -474,7 +473,7 @@ namespace
     auto const obj = object ? " " + *object : "";
     elle::fprintf(std::cerr,
                   "Try '%s%s --help' for more information.\n",
-                  memo_exe, obj);
+                  argv_0, obj);
     return 2;
   }
 }
@@ -483,12 +482,12 @@ int
 main(int const argc, char const* const* const argv)
 {
   argv_0 = argv[0];
-  memo_exe = (bfs::path(argv_0).parent_path() / BIN).string();
-  if (boost::algorithm::ends_with(argv_0, ".exe"))
-    memo_exe += ".exe";
   try
   {
+    memo::make_main_log();
     auto args = std::vector<std::string>(argv, argv + argc);
+    ELLE_DEBUG("command line: {}", args);
+    args.erase(args.begin());
     elle::reactor::Scheduler s;
     elle::reactor::Thread main(s, "main", [&] { memo::cli::main(args); });
     s.run();

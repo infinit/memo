@@ -6,8 +6,9 @@
 #include <elle/bytes.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
-#include <elle/log/FileLogger.hh>
 
+#include <memo/environ.hh>
+#include <memo/log.hh>
 #include <memo/utility.hh>
 #include <memo/silo/Filesystem.hh>
 
@@ -41,16 +42,7 @@ namespace memo
 
   Memo::Memo()
   {
-    auto const log_dir = canonical_folder(xdg_cache_home() / "logs");
-    create_directories(log_dir);
-    auto const spec =
-      elle::print("file://{}?"
-                  "time,microsec,"
-                  "append,size=64MiB,rotate=15,"
-                  "*athena*:DEBUG,*cli*:DEBUG,*model*:DEBUG,*grpc*:DEBUG,*prometheus:LOG",
-                  (log_dir / "main").string());
-    ELLE_DUMP("building critical log: {}", spec);
-    elle::log::logger_add(elle::log::make_logger(spec));
+    make_main_log();
   }
 
   bool
@@ -116,7 +108,7 @@ namespace memo
                     User const& user,
                     bool require_model)
   {
-    auto name = qualified_name(name_, user);
+    auto const name = qualified_name(name_, user);
     bfs::ifstream f;
     // Move linked networks found in the descriptor folder to the correct
     // place.
@@ -218,9 +210,9 @@ namespace memo
   Memo::network_unlink(std::string const& name_,
                        User const& user)
   {
-    auto name = qualified_name(name_, user);
-    auto network = this->network_get(name, user, true);
-    auto path = this->_network_path(network.name, user);
+    auto const name = qualified_name(name_, user);
+    auto const network = this->network_get(name, user, true);
+    auto const path = this->_network_path(network.name, user);
     // XXX Should check async cache to make sure that it's empty.
     bfs::remove_all(network.cache_dir(user).parent_path());
     if (bfs::exists(path))
@@ -242,8 +234,8 @@ namespace memo
                        bool unlink)
   {
     // Ensure if unqualified name is passed, we qualify with passed user.
-    auto name = qualified_name(name_, user);
-    auto network = this->network_get(name, user, false);
+    auto const name = qualified_name(name_, user);
+    auto const network = this->network_get(name, user, false);
     // Get a list of users who have linked the network.
     auto linked_users = this->network_linked_users(name);
     if (linked_users.size() && !unlink)
@@ -289,7 +281,7 @@ namespace memo
                                User const& owner,
                                bool or_network)
   {
-    auto name = qualified_name(name_, owner);
+    auto const name = qualified_name(name_, owner);
     try
     {
       bfs::ifstream f;
@@ -851,7 +843,7 @@ namespace memo
                       User const& user,
                       bool create_dir) const
   {
-    auto network_name = this->qualified_name(name, user);
+    auto const network_name = this->qualified_name(name, user);
     return this->_networks_path(user, create_dir) / network_name;
   }
 

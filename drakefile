@@ -18,6 +18,7 @@ from itertools import chain
 git = None
 
 elle = None
+# The installed executables: bin/memo.
 installed_binaries = []
 
 # //build: Build libraries and binaries.
@@ -28,7 +29,7 @@ rule_tests = None
 rule_check = None
 # //install: Install binaries under <prefix>.
 rule_install = None
-# //symbols: prepare the symbol files for crash-reporter.
+# //symbols: prepare the symbol files for crash reports.
 rule_symbols = None
 
 description_regex = '^.{0,2048}$'
@@ -186,6 +187,8 @@ def configure(
     drake.node('src/memo/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   memo_sources = drake.nodes(
+    'src/memo/Hub.cc',
+    'src/memo/Hub.hh',
     'src/memo/KeyValueStore.cc',
     'src/memo/KeyValueStore.hh',
     'src/memo/LoginCredentials.cc',
@@ -207,6 +210,8 @@ def configure(
     'src/memo/crash-report.hh',
     'src/memo/environ.cc',
     'src/memo/environ.hh',
+    'src/memo/log.cc',
+    'src/memo/log.hh',
     'src/memo/serialization.cc',
     'src/memo/serialization.hh',
     'src/memo/utility.hh',
@@ -346,7 +351,17 @@ def configure(
   # XXX: Go cross compiling requires go > 1.6 (tested with 1.8.3).
   # XXX: Re-enable key-value store for Windows when the build farm has been
   # XXX: updated.
-  with_kvs = not windows
+  #
+  # FIXME: on alpine the libc does not allow us to share
+  # argc/argv/envp/auxp with the go runtime.  So libkvs is broken, and
+  # memo cannot even start.
+  try:
+    with open('/etc/motd', 'r') as f:
+      alpine = 'Alpine' in f.read()
+  except:
+    alpine = False
+
+  with_kvs = not windows and not alpine
 
   if with_kvs:
     kvs = drake.include(
@@ -359,10 +374,6 @@ def configure(
   ## -------- ##
   ## Binaries ##
   ## -------- ##
-
-  def cpp_str_escape(string):
-    from json import dumps
-    return dumps(string).strip('"')
 
   cli_cxx_config = drake.cxx.Config(cxx_config)
   cli_cxx_config += elle.das.config
@@ -802,7 +813,8 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
-      utils = drake.node('tests/functional/utils.py')
+      utils = drake.nodes('tests/functional/utils.py',
+                          'tests/common.py')
       if with_kvs:
         kvs_grpc = drake.copy(
           kvs.gen_py.targets(),
@@ -831,9 +843,7 @@ def configure(
       doctor_configuration_test = functional_test(
         'doctor/configuration',
         env = {
-          'MEMO_HOME_ROOT': str(
-            drake.path_source('tests/functional/doctor/homes')
-          )
+          'MEMO_HOME_ROOT': drake.path_source('tests/functional/doctor/homes')
         })
       doctor_configuration_test['dependencies'] += drake.nodes(
         *list(map(lambda x: "tests/functional/doctor/results/%s" % x,
@@ -843,8 +853,8 @@ def configure(
                     ).path().dirname())
                   ))))
       tests.append(doctor_configuration_test)
-      if False and enable_crash_report: # FIXME: reenable
-        tests.append(functional_test('crash-reporter'))
+      if enable_crash_report:
+        tests.append(functional_test('crash-report'))
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
@@ -854,7 +864,7 @@ def configure(
         test.dependencies_add(beyond.package.nodes)
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(memo_cli)
-        test.dependency_add(drake.node('tests/functional/utils.py'))
+        test.dependencies_add(utils)
         if with_kvs:
           test.dependencies_add(kvs_grpc)
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
@@ -866,16 +876,16 @@ def configure(
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
         env = {
-          'PYTHONPATH': ':'.join([
-            str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-            str(drake.path_source('tests/functional')),
-            str(drake.path_build('tests/functional/lib')),
-          ]),
-          'SOURCE_DIR': drake.path_source(),
+          'BIN_DIR': binaries_path,
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
-          'BIN_DIR': str(binaries_path),
-          'TEST_MEMO_WITH_KVS': str(with_kvs),
+          'PYTHONPATH': ':'.join([str(n) for n in
+              [drake.path_build('beyond/lib/python%s' % elle.python3.version),
+               drake.path_source('tests/functional'), # utils.py
+               drake.path_source('tests'),            # common.py
+               drake.path_build('tests/functional/lib')]]),
+          'SOURCE_DIR': drake.path_source(),
+          'TEST_MEMO_WITH_KVS': with_kvs,
         }
         env.update(t.get('env', {}))
         if windows:
@@ -883,7 +893,7 @@ def configure(
         runner = drake.Runner(
           exe = test,
           env = env,
-          sources = [utils],
+          sources = utils,
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure

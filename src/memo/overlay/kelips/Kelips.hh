@@ -37,9 +37,8 @@ namespace memo
       using Endpoints = model::Endpoints;
       using NodeLocation = model::NodeLocation;
       using Address = memo::model::Address;
-      using Time = std::chrono::time_point<std::chrono::system_clock>;
-      using Duration = Time::duration;
-      //using Duration = std::chrono::duration<long, std::ratio<1, 1000000>>;
+      using Time = elle::Time;
+      using Duration = elle::Duration;
 
       using TimedEndpoint = std::pair<Endpoint, Time>;
       struct Contact
@@ -105,11 +104,11 @@ namespace memo
         void
         serialize(elle::serialization::Serializer& s);
 
-        int interval_ms;
+        elle::Duration interval;
         /// entry considered new if gossip_count < threshold
         int new_threshold;
         /// entry considered old if last_gossip below that duration
-        int old_threshold_ms;
+        elle::Duration old_threshold;
         ///how many files per packet
         int files;
         /// how many nodes in other groups per packet
@@ -136,31 +135,31 @@ namespace memo
         void
         serialize(elle::serialization::Serializer& s) override;
         /// number of groups
-        int k;
+        int k = 1;
         /// max number of contacts on each other group
-        int max_other_contacts;
+        int max_other_contacts = 6;
         /// query retry
-        int query_get_retries;
+        int query_get_retries = 30;
         /// query retry
-        int query_put_retries;
+        int query_put_retries = 12;
         /// query timeout
-        int query_timeout_ms;
+        elle::Duration query_timeout = 1s;
         /// query initial ttl
-        int query_get_ttl;
+        int query_get_ttl = 10;
         /// query initial ttl
-        int query_put_ttl;
+        int query_put_ttl = 10;
         /// query initial ttl
-        int query_put_insert_ttl;
+        int query_put_insert_ttl = 3;
         /// entry lifetime before supression
-        int contact_timeout_ms;
+        elle::Duration contact_timeout = 12s;
         /// entry lifetime before supression
-        int file_timeout_ms;
-        int ping_interval_ms;
-        int ping_timeout_ms;
+        elle::Duration file_timeout = 1200s;
+        elle::Duration ping_interval = 1s;
+        elle::Duration ping_timeout = 1s;
         /// wait for 'wait' nodes before starting
-        int wait;
-        bool encrypt;
-        bool accept_plain;
+        int wait = 0;
+        bool encrypt = false;
+        bool accept_plain = true;
         GossipConfiguration gossip;
         std::unique_ptr<memo::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> server,

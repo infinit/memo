@@ -7,6 +7,11 @@ import re
 home = os.path.abspath(os.environ['MEMO_HOME_ROOT'])
 leftovers = os.path.join(home, 'leftovers')
 
+# We will set MEMO_HOME to our source tree, yet we don't want it to be
+# polluted with logs.
+cache_dir = TemporaryDirectory("memo-cache-home")
+os.environ['MEMO_CACHE_HOME'] = cache_dir.dir
+
 def read_result(name, formatting = {}):
   with open(os.path.join(os.path.dirname(home), 'results', '%s.script' % name), 'r') as f:
     script = f.read() % formatting

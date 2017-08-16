@@ -521,8 +521,8 @@ namespace memo
     void
     File::stat(struct stat* st)
     {
-      static elle::Bench bench("bench.file.stat", 10000s);
-      elle::Bench::BenchScope bs(bench);
+      static auto bench = elle::Bench<>{"bench.file.stat", 10000s};
+      auto bs = bench.scoped();
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));
       st->st_mode = S_IFREG;

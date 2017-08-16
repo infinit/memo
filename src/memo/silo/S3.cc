@@ -17,10 +17,10 @@ ELLE_LOG_COMPONENT("memo.silo.S3");
 
 using namespace std::literals;
 
-#define BENCH(name)                             \
-  static auto bench =                           \
-    elle::Bench("bench.s3store." name, 10000s); \
-  elle::Bench::BenchScope bs(bench)
+#define BENCH(name)                                     \
+  static auto bench =                                   \
+    elle::Bench<>{"bench.s3store." name, 10000s};       \
+  auto bs = bench.scoped()
 
 namespace memo
 {

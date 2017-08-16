@@ -4,6 +4,8 @@
 
 namespace memo
 {
+  using namespace std::literals;
+
   namespace overlay
   {
     namespace kouncil
@@ -26,7 +28,7 @@ namespace memo
       `-------------*/
       public:
         /// Construct a configuration.
-        Configuration(std::chrono::seconds eviction_delay = std::chrono::seconds{12000});
+        Configuration(elle::Duration eviction_delay = 12000s);
       private:
         /// Check construction postconditions.
         void
@@ -65,7 +67,7 @@ namespace memo
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
 
-        ELLE_ATTRIBUTE_RW(boost::optional<std::chrono::seconds>, eviction_delay)
+        ELLE_ATTRIBUTE_RW(elle::Duration, eviction_delay)
       };
     }
   }

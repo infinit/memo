@@ -32,7 +32,7 @@ namespace memo
 
         static constexpr auto default_node_timeout =
           std::chrono::duration_cast<std::chrono::system_clock::duration>(
-            std::chrono::minutes(10));
+            10min);
 
         template <typename ... Args>
         Paxos::Paxos(Args&& ... args)

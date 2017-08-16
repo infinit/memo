@@ -7,6 +7,7 @@
 
 #include <elle/bench.hh>
 #include <elle/bytes.hh>
+#include <elle/find.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
@@ -20,19 +21,15 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Cache");
 
 namespace memo
 {
-  namespace bfs = boost::filesystem;
-
   namespace model
   {
     namespace doughnut
     {
       namespace consensus
       {
-        static
-        Cache::clock::time_point
-        now()
+        auto now()
         {
-          return Cache::clock::now();
+          return elle::Clock::now();
         }
 
         class CacheConflictResolver: public ConflictResolver
@@ -94,21 +91,16 @@ namespace memo
 
         Cache::Cache(std::unique_ptr<Consensus> backend,
                      boost::optional<int> cache_size,
-                     boost::optional<std::chrono::seconds> cache_invalidation,
-                     boost::optional<std::chrono::seconds> cache_ttl,
-                     boost::optional<boost::filesystem::path> disk_cache_path,
+                     elle::DurationOpt cache_invalidation,
+                     elle::DurationOpt cache_ttl,
+                     boost::optional<bfs::path> disk_cache_path,
                      boost::optional<uint64_t> disk_cache_size)
           : StackedConsensus(std::move(backend))
-          , _cache_invalidation(
-            cache_invalidation ?
-            cache_invalidation.get() : 15s)
-          , _cache_ttl(
-            cache_ttl ?
-            cache_ttl.get() : std::chrono::seconds(60 * 5))
-          , _cache_size(cache_size ? cache_size.get() : 64_MiB)
+          , _cache_invalidation(cache_invalidation.value_or(15s))
+          , _cache_ttl(cache_ttl.value_or(5min))
+          , _cache_size(cache_size.value_or(64_MiB))
           , _disk_cache_path(disk_cache_path)
-          , _disk_cache_size(
-            disk_cache_size ? disk_cache_size.get() : 512_MiB)
+          , _disk_cache_size(disk_cache_size.value_or(512_MiB))
           , _disk_cache_used(0)
           , _cleanup_thread(
             new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
@@ -117,12 +109,12 @@ namespace memo
           ELLE_TRACE_SCOPE(
             "%s: create with size %s, TTL %ss and invalidation %ss",
             *this, this->_cache_size,
-            this->_cache_ttl.count(), this->_cache_invalidation.count());
+            this->_cache_ttl.count(), this->_cache_invalidation);
           if (!this->_disk_cache_path)
             this->_disk_cache_size = 0;
           if (this->_disk_cache_size)
           {
-            boost::filesystem::create_directories(*this->_disk_cache_path);
+            bfs::create_directories(*this->_disk_cache_path);
             this->_load_disk_cache();
           }
         }
@@ -154,23 +146,19 @@ namespace memo
           ELLE_TRACE_SCOPE("%s: remove %f", this, address);
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
-          else
+          else if (auto it = elle::find(this->_disk_cache, address))
           {
-            auto it = this->_disk_cache.find(address);
-            if (it != this->_disk_cache.end())
-            {
-              ELLE_DEBUG("drop block from disk cache");
-              this->_disk_cache_used -= it->size();
-              boost::system::error_code erc;
-              auto path = *this->_disk_cache_path / elle::sprintf("%x", it->address());
-              boost::filesystem::remove(path, erc);
-              if (erc)
-                ELLE_WARN("Error pruning %s from cache: %s", path, erc);
-              this->_disk_cache.erase(it);
-            }
-            else
-              ELLE_DEBUG("block was not in cache");
+            ELLE_DEBUG("drop block from disk cache");
+            this->_disk_cache_used -= it->size();
+            boost::system::error_code erc;
+            auto path = *this->_disk_cache_path / elle::sprintf("%x", it->address());
+            bfs::remove(path, erc);
+            if (erc)
+              ELLE_WARN("Error pruning %s from cache: %s", path, erc);
+            this->_disk_cache.erase(it);
           }
+          else
+            ELLE_DEBUG("block was not in cache");
           this->_backend->remove(address, std::move(rs));
         }
 
@@ -230,17 +218,17 @@ namespace memo
           if (decode)
             try
             {
-              static elle::Bench bench("bench.cache.preempt_decode", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.preempt_decode", 10000s};
+              auto bs = bench.scoped();
               b.data();
             }
             catch (elle::Error const& e)
             {
               ELLE_TRACE("%s: block %f is not readable: %s", this, b.address(), e);
             }
-          if (this->_disk_cache_size &&
-            dynamic_cast<blocks::ImmutableBlock*>(&b))
-          this->_disk_cache_push(b);
+          if (this->_disk_cache_size
+              && dynamic_cast<blocks::ImmutableBlock*>(&b))
+            this->_disk_cache_push(b);
           else if (dynamic_cast<blocks::MutableBlock*>(&b) && this->_cache_size)
             this->_cache.emplace(b.clone());
 
@@ -253,10 +241,10 @@ namespace memo
                             bool cache_only)
         {
           cache_hit = false;
-          static elle::Bench bench_hit("bench.cache.ram.hit", 1000s);
-          static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000s);
-          static elle::Bench bench("bench.cache._fetch", 10000s);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench_hit = elle::Bench<int>{"bench.cache.ram.hit", 1000s};
+          static auto bench_disk_hit = elle::Bench<int>{"bench.cache.disk.hit", 1000s};
+          static auto bench = elle::Bench<>{"bench.cache._fetch", 10000s};
+          auto bs = bench.scoped();
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
           {
@@ -291,7 +279,7 @@ namespace memo
               ELLE_DEBUG("disk cache hit on %f", address);
               bench_disk_hit.add(1);
               auto path = *this->_disk_cache_path / elle::sprintf("%x", address);
-              boost::filesystem::ifstream is(path, std::ios::binary);
+              bfs::ifstream is(path, std::ios::binary);
               elle::serialization::binary::SerializerIn sin(is);
               sin.set_context<Doughnut*>(&this->doughnut());
               auto block = sin.deserialize<std::unique_ptr<blocks::Block>>();
@@ -309,8 +297,8 @@ namespace memo
             auto it = this->_pending.find(address);
             if (it != this->_pending.end())
             {
-              static elle::Bench bench("bench.cache.pending_wait", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.pending_wait", 10000s};
+              auto bs = bench.scoped();
               ELLE_TRACE("%s: fetch on %f pending", this, address);
               auto b = it->second;
               b->wait();
@@ -364,14 +352,14 @@ namespace memo
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          static elle::Bench bench("bench.cache.store", 10000s);
-          elle::Bench::BenchScope bs(bench);
+          static auto bench = elle::Bench<>{"bench.cache.store", 10000s};
+          auto bs = bench.scoped();
           ELLE_TRACE_SCOPE("%s: store %f", this, block->address());
           auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
           std::unique_ptr<blocks::Block> cloned;
           {
-            static elle::Bench bench("bench.cache.store.clone", 10000s);
-            elle::Bench::BenchScope bs(bench);
+            static auto bench = elle::Bench<>{"bench.cache.store.clone", 10000s};
+            auto bs = bench.scoped();
             // Block was necessarily validated on its way up, or generated
             // locally.
             if (mb)
@@ -379,8 +367,8 @@ namespace memo
             cloned = block->clone();
           }
           {
-            static elle::Bench bench("bench.cache.store.store", 10000s);
-            elle::Bench::BenchScope bs(bench);
+            static auto bench = elle::Bench<>{"bench.cache.store.store", 10000s};
+            auto bs = bench.scoped();
             std::unique_ptr<ConflictResolver> r;
             auto slot = std::make_shared<std::unique_ptr<blocks::Block>*>(&cloned);
             if (resolver)
@@ -392,13 +380,9 @@ namespace memo
             *slot = nullptr;
           }
           if (mb)
-          {
             this->insert(std::move(cloned));
-          }
           else
-          {
             this->_disk_cache_push(*cloned);
-          }
         }
 
         void
@@ -409,12 +393,12 @@ namespace memo
           auto path = *this->_disk_cache_path
             / elle::sprintf("%x", block.address());
           {
-            boost::filesystem::ofstream ofs(path, std::ios::binary);
+            bfs::ofstream ofs(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(ofs);
             sout.set_context<Doughnut*>(&this->doughnut());
             sout.serialize_forward(&block);
           }
-          auto sz = boost::filesystem::file_size(path);
+          auto sz = bfs::file_size(path);
           this->_disk_cache.emplace(CachedCHB{block.address(), sz, now()});
           this->_disk_cache_used += sz;
           ELLE_DEBUG("add %f to disk cache (%s bytes)", block.address(), sz);
@@ -427,7 +411,7 @@ namespace memo
             ELLE_DEBUG("Pruning %s of size %s from cache", path, it->size());
             boost::system::error_code erc;
             this->_disk_cache_used -= it->size();
-            boost::filesystem::remove(path, erc);
+            bfs::remove(path, erc);
             if (erc)
               ELLE_WARN("Error pruning %s from cache: %s", path, erc);
             order.erase(it);
@@ -447,9 +431,9 @@ namespace memo
           int count = 0;
           for (auto const& p: bfs::directory_iterator(*this->_disk_cache_path))
           {
-            auto sz = boost::filesystem::file_size(p);
+            auto sz = bfs::file_size(p);
             auto addr = Address::from_string(p.path().filename().string());
-            this->_disk_cache.insert(CachedCHB{addr, sz, clock::time_point()});
+            this->_disk_cache.insert(CachedCHB{addr, sz, elle::Time()});
             this->_disk_cache_used += sz;
             ++count;
           }
@@ -470,8 +454,8 @@ namespace memo
           while (true)
           {
             {
-              static elle::Bench bench("bench.cache.cleanup", 10000s);
-              elle::Bench::BenchScope bs(bench);
+              static auto bench = elle::Bench<>{"bench.cache.cleanup", 10000s};
+              auto bs = bench.scoped();
               auto const now = consensus::now();
               ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
               ELLE_DEBUG("evict unused blocks")
@@ -548,15 +532,16 @@ namespace memo
                   }
                 }
               }
+            // FIXME: WHAT???
             elle::reactor::sleep(
-              boost::posix_time::seconds(
+              std::chrono::seconds(
                 this->_cache_invalidation.count()) / 10);
           }
         }
 
         Cache::CachedCHB::CachedCHB(Address address,
                                     uint64_t size,
-                                    clock::time_point last_used)
+                                    elle::Time last_used)
           : _address(address)
           , _size(size)
           , _last_used(last_used)
