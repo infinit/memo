@@ -455,6 +455,19 @@ namespace memo
             });
         }
 
+        bool
+        Paxos::RemotePeer::reconcile(Address address)
+        {
+          return translate_exceptions("reconcile",
+            [&]
+            {
+              using Reconcile = auto (Address) -> bool;
+              auto reconcile = this->make_rpc<Reconcile>("reconcile");
+              reconcile.set_context<Doughnut*>(&this->_doughnut);
+              return reconcile(address);
+            });
+        }
+
         void
         Paxos::RemotePeer::store(blocks::Block const& block, StoreMode mode)
         {
@@ -1079,6 +1092,11 @@ namespace memo
           return res;
         }
 
+        bool
+        Paxos::LocalPeer::reconcile(Address address)
+        {
+        }
+
         Paxos::PaxosClient::Proposal
         Paxos::LocalPeer::accept(PaxosServer::Quorum const& peers,
                                  Address address,
@@ -1274,6 +1292,13 @@ namespace memo
             {
               return this->get(q, a, v);
             });
+            rpcs.add(
+              "reconcile",
+              [this, &rpcs] (Address a)
+              {
+                this->_require_auth(rpcs, true);
+                return this->reconcile(std::move(a));
+              });
         }
 
         std::unique_ptr<blocks::Block>

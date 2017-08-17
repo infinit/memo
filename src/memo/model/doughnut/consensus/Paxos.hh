@@ -168,6 +168,9 @@ namespace memo
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) = 0;
+            virtual
+            bool
+            reconcile(Address address) = 0;
           };
 
         /*------------------.
@@ -204,6 +207,8 @@ namespace memo
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            bool
+            reconcile(Address address) override;
             void
             store(blocks::Block const& block, StoreMode mode) override;
           };
@@ -273,6 +278,8 @@ namespace memo
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            bool
+            reconcile(Address address) override;
             void
             store(blocks::Block const& block, StoreMode mode) override;
             void
