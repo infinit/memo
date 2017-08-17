@@ -288,7 +288,16 @@ namespace memo
             return translate_exceptions("get",
               [&]
               {
-                return member->get(q, this->_address, this->_local_version);
+                this->_missing = false;
+                try
+                {
+                  return member->get(q, this->_address, this->_local_version);
+                }
+                catch (MissingBlock const&)
+                {
+                  this->_missing = true;
+                  throw;
+                }
               });
           }
 
@@ -296,6 +305,7 @@ namespace memo
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
           ELLE_ATTRIBUTE(bool, insert);
+          ELLE_ATTRIBUTE_R(boost::optional<bool>, missing);
         };
 
         static
