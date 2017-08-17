@@ -1779,7 +1779,28 @@ namespace memo
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
                   this->doughnut().id(), std::move(peers));
-                auto state = client.state();
+                auto state = [&]
+                  {
+                    try
+                    {
+                      return client.state();
+                    }
+                    catch (MissingBlock const&)
+                    {
+                      auto const not_missing = [] (auto const& peer)
+                      {
+                        return !static_cast<PaxosPeer&>(*peer).missing().get();
+                      };
+                      elle::reactor::for_each_parallel(
+                        client.peers() | filtered(not_missing),
+                        [&] (auto const& peer)
+                        {
+                          ELLE_TRACE("reconcile %f on %f", address, peer)
+                            static_cast<PaxosPeer&>(*peer)._lock_member()->reconcile(address);
+                        });
+                      throw;
+                    }
+                  }();
                 if (state.value)
                   if (*state.value)
                   {
