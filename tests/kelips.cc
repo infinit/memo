@@ -200,6 +200,7 @@ namespace
         res.ping_interval = factor * valgrind(1s, 10) / count / 3;
         res.ping_timeout = factor * valgrind(500ms, 20);
         res.query_get_retries = 2;
+        res.query_timeout = factor * valgrind(1s, 5);
         return res;
       }();
     auto make_consensus = [&] (dnut::Doughnut& dht)
@@ -266,6 +267,7 @@ namespace
         res.accept_plain = false;
         res.query_get_retries = 3;
         res.ping_timeout = valgrind(500ms, 20);
+        res.query_timeout = valgrind(1s, 5);
         return res;
       }();
     auto passport = dnut::Passport(kp.K(), "testnet", kp);
