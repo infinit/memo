@@ -528,6 +528,8 @@ namespace memo
                           ELLE_ASSERT(quorum != this->_quorums.end());
                           if (quorum->replication_factor() >= this->_factor)
                             this->_addresses.erase(address);
+                          else
+                            ELLE_DEBUG("%f is under-replicated", address);
                         }
                       }
                       catch (MissingBlock const&)
