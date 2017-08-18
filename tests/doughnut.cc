@@ -2236,6 +2236,46 @@ ELLE_TEST_SCHEDULED(disabled_crypto)
   BOOST_CHECK_EQUAL(bic->data(), "canard");
 }
 
+ELLE_TEST_SCHEDULED(tombstones)
+{
+  auto dht_a = make_dht(0);
+  auto dht_b = make_dht(1);
+  memo::silo::Memory::Blocks storage_c;
+  auto make_dht_c = [&]
+    {
+      return std::make_unique<DHT>(
+        id = special_id(12),
+        dht::consensus_builder = instrument(3),
+        storage = std::make_unique<Memory>(storage_c));
+    };
+  auto dht_c = make_dht_c();
+  dht_b->overlay->connect(*dht_a->overlay);
+  dht_c->overlay->connect(*dht_a->overlay);
+  dht_c->overlay->connect(*dht_b->overlay);
+  auto block = [&]
+    {
+      ELLE_LOG_SCOPE("write block");
+      auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+        std::string("tombstones"));
+      dht_a->dht->seal_and_insert(*b);
+      return b;
+    }();
+  ELLE_LOG("shutdown dht C")
+    dht_c.reset();
+  ELLE_LOG("remove block")
+    dht_a->dht->remove(block->address());
+  ELLE_LOG("start dht C")
+  {
+    dht_c = make_dht_c();
+    dht_c->overlay->connect(*dht_a->overlay);
+    dht_c->overlay->connect(*dht_b->overlay);
+  }
+  ELLE_LOG("fetch block")
+    BOOST_CHECK_THROW(dht_c->dht->fetch(block->address()),
+                      memo::model::MissingBlock);
+  BOOST_TEST(storage_c.size() == 0);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -2354,4 +2394,5 @@ ELLE_TEST_SUITE()
         0, valgrind(5));
     }
   }
+  paxos->add(BOOST_TEST_CASE(tombstones), 0, valgrind(3));
 }

@@ -1095,6 +1095,34 @@ namespace memo
         bool
         Paxos::LocalPeer::reconcile(Address address)
         {
+          ELLE_TRACE_SCOPE("%s: reconcile %f", this, address);
+          if (address.mutable_block())
+          {
+            auto& decision = this->_load_paxos(address);
+            auto& dht = this->paxos().doughnut();
+            auto peers = lookup_nodes(dht,
+                                      decision.paxos.current_quorum(),
+                                      address);
+            Paxos::PaxosClient client(address, std::move(peers));
+            try
+            {
+              client.state();
+            }
+            catch (MissingBlock const&)
+            {
+              ELLE_LOG("%s: reconciliation remove trailing block %f", \
+                       this, address);
+              this->_remove(address);
+              return true;
+            }
+            return false;
+          }
+          else
+          {
+            ELLE_WARN("%s: reconcile called on immutable block %f",
+                      this, address);
+            return false;
+          }
         }
 
         Paxos::PaxosClient::Proposal
