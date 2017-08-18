@@ -9,6 +9,8 @@
 #include <memo/model/blocks/GroupBlock.hh>
 #include <memo/utility.hh>
 
+#include <elle/reactor/cxa_get_globals.hh>
+
 ELLE_LOG_COMPONENT("memo.model.Model");
 
 namespace memo
