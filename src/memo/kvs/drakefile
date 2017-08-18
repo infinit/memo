@@ -82,7 +82,7 @@ def configure(
        'google.golang.org/genproto/googleapis/rpc/status.a',
        'google.golang.org/grpc/codes.a',
        'google.golang.org/grpc/credentials.a',
-       'google.golang.org/grpc/grpclb/grpc_lb_v1.a',
+       'google.golang.org/grpc/grpclb/messages_only/grpc_lb_v1.a',
        'google.golang.org/grpc/grpclog.a',
        'google.golang.org/grpc/internal.a',
        'google.golang.org/grpc/keepalive.a',
