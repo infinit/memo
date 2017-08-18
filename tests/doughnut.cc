@@ -1101,7 +1101,7 @@ public:
     Super::store(block, mode);
   }
 
-  boost::optional<Paxos::PaxosClient::Accepted>
+  Paxos::PaxosServer::Response
   propose(PaxosServer::Quorum const& peers,
           Address address,
           PaxosClient::Proposal const& p,
@@ -1491,15 +1491,17 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_new_block, (bool, immutable))
   {
-    auto dht_a = DHT(dht::consensus_builder = instrument(2));
+    auto dht_a = DHT(id = special_id(10),
+                     dht::consensus_builder = instrument(2));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(dht::consensus_builder = instrument(2));
+    auto dht_b = DHT(id = special_id(11),
+                     dht::consensus_builder = instrument(2));
     auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     local_b.store_barrier().close();
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    auto client = DHT(storage = nullptr);
+    auto client = DHT(id = special_id(11), storage = nullptr);
     client.overlay->connect(*dht_a.overlay);
     auto b = make_block(client, immutable, "expand_new_block");
     ELLE_LOG("write block to one DHT")
@@ -1519,10 +1521,12 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_newcomer, (bool, immutable))
   {
-    auto dht_a = DHT(dht::consensus_builder = instrument(3));
+    auto dht_a = DHT(id = special_id(10),
+                     dht::consensus_builder = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    auto dht_b = DHT(dht::consensus_builder = instrument(3));
+    auto dht_b = DHT(id = special_id(11),
+                     dht::consensus_builder = instrument(3));
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = make_block(dht_a, immutable, "expand_newcomer");
     ELLE_LOG("write block to first DHT")
@@ -2076,6 +2080,38 @@ namespace rebalancing
       elle::reactor::wait(scope);
     };
   }
+
+  ELLE_TEST_SCHEDULED(peeking_node)
+  {
+    auto dht_a = make_dht(0, true);
+    auto& local_a = dynamic_cast<Local&>(*dht_a->dht->local());
+    auto dht_b = make_dht(1);
+    dht_b->overlay->connect(*dht_a->overlay);
+    auto block = [&]
+      {
+        ELLE_LOG_SCOPE("write block");
+        auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+          std::string("peeking_node"));
+        dht_a->dht->seal_and_insert(*b);
+        return b;
+      }();
+    // wait for initial rebalancing to fail
+    elle::reactor::wait(dht_a->overlay->looked_up(), block->address());
+    auto waiter = elle::reactor::waiter(local_a.rebalanced(), block->address());
+    ELLE_LOG("peek DHT 0x0c")
+    {
+      auto dht_c = make_dht(2);
+      dht_a->overlay->connect(*dht_c->overlay);
+      dht_b->overlay->connect(*dht_c->overlay);
+    }
+    // local_a.evict()();
+    auto dht_d = make_dht(3);
+    auto& local_d = dynamic_cast<Local&>(*dht_a->dht->local());
+    dht_a->overlay->connect(*dht_d->overlay);
+    dht_b->overlay->connect(*dht_d->overlay);
+    elle::reactor::wait(waiter);
+    BOOST_CHECK_NO_THROW(local_d.storage()->get(block->address()));
+  }
 }
 
 ELLE_TEST_SCHEDULED(CHB_unavailable)
@@ -2342,6 +2378,8 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(resign_insist), 0, valgrind(5));
       auto update_while_evicting = &rebalancing::update_while_evicting;
       rebalancing->add(BOOST_TEST_CASE(update_while_evicting), 0, valgrind(3));
+      auto peeking_node = &rebalancing::peeking_node;
+      rebalancing->add(BOOST_TEST_CASE(peeking_node), 0, valgrind(3));
     }
     {
       auto evict_chain = BOOST_TEST_SUITE("evict_chain");
