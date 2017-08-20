@@ -64,9 +64,6 @@ x86_64-centos6-gcc4:
     - smv $PROJECT-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh yum
     - ssh buildslave@packages.infinit.sh 'make yum'
     - (cd "$SOURCE_DIR" && time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME --cache-id $CI_RUNNER_ID --verbose")
-    - scl enable devtoolset-4 rh-python34 "python3 ./drake --beyond=false -j 1 //bench"
-    - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 $SOURCE_DIR/note-bench-stats ./bench"
-    - git -C "$SOURCE_DIR" push --force git@git.infinit.sh:${CI_PROJECT_NAME} refs/notes/bench
   tags:
     - x86_64
     - centos6

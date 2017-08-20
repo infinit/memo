@@ -1,28 +1,8 @@
 sources = drake.nodes(
-  'Directory.cc',
-  'Directory.hh',
   'Error.cc',
   'Error.hh',
-  'File.cc',
-  'File.hh',
-  'FileHeader.hh',
-  'FileHandle.cc',
-  'FileHandle.hh',
-  'Node.cc',
-  'Node.hh',
-  'Symlink.cc',
-  'Symlink.hh',
-  'Unknown.cc',
-  'Unknown.hh',
-  'Unreachable.cc',
-  'Unreachable.hh',
-  'filesystem.cc',
-  'filesystem.hh',
-  'filesystem.hxx',
   'fwd.hh',
   'umbrella.hh',
-  'xattribute.cc',
-  'xattribute.hh',
 )
 
 # Local Variables:

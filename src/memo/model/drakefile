@@ -79,6 +79,7 @@ sources = drake.nodes(
   'paranoid/Paranoid.hh',
   'prometheus.cc',
   'prometheus.hh',
+  'umbrella.hh',
 )
 
 # Local Variables:

@@ -370,6 +370,7 @@ def configure(
       go_config = go_config,
       grpc = grpc,
     )
+    lib_kvs = drake.copy(kvs.library, libdir, strip_prefix = True)
 
   ## -------- ##
   ## Binaries ##
@@ -961,18 +962,13 @@ def configure(
     # test_name               , deps     , args = ['name-extension', tests-args...]
     # tests-args offer a means to run a binaries with different cli options,
     # and generate separated outputs.
-    ('async-conflict'         , []       , None),
-    # ('backward-compatibility' , []       , None),
-    ('bandwidth'              , []       , None),
     ('byzantine'              , []       , None),
     ('consensus/async'        , tests_consensus_lib       , None),
     ('consensus/cache'        , tests_consensus_lib       , None),
     ('consensus/paxos'        , tests_consensus_lib       , None),
     ('doughnut'               , []       , None),
     ('faith'                  , []       , None),
-    ('filesystem'             , binaries , None),
     ('grpc'                   , []       , None),
-    ('kelips'                 , []       , None),
     ('overlay'                , []       , ['kelips', '-t', 'kelips/*']),
     ('overlay'                , []       , ['kouncil', '-t', 'kouncil/*']),
     ('rpc'                    , []       , None),
@@ -1043,63 +1039,10 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 
-  ## ----- ##
-  ## Bench ##
-  ## ----- ##
-
-  rule_bench = drake.Rule('bench')
-  cxx_config_bench = drake.cxx.Config(cxx_config)
-  cxx_config_bench += elle.das.config
-  cxx_config_bench.lib_path_runtime('../lib')
-  cxx_config_bench.add_local_include_path('tests')
-  cxx_config_bench += grpc.grpc.cxx_config
-  bench_nodes = drake.nodes(
-    'tests/DHT.hh',
-  )
-  bench_names = [
-    'write_500',
-  ]
-  cxx_config_bench += elle.boost.config_system(link = False)
-  cxx_config_bench.library_add(
-    drake.copy(elle.boost.system_dynamic, libdir, True))
-  cxx_config_bench += elle.boost.config_filesystem(link = False)
-  cxx_config_bench.library_add(
-    drake.copy(elle.boost.filesystem_dynamic, libdir, True))
-  cxx_config_bench += elle.boost.config_program_options(
-    link = False)
-  cxx_config_bench.library_add(
-    drake.copy(elle.boost.program_options_dynamic, libdir, True))
-  cxx_config_bench.library_add(
-    drake.copy(elle.boost.regex_dynamic, libdir, True))
-  bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib ]
-  if windows:
-    cxx_config_bench.lib('shlwapi')
-    cxx_config_bench.lib('ws2_32')
-    cxx_config_bench.lib('gdi32')
-    cxx_config_bench.lib('mswsock')
-    cxx_config_bench.lib('dbghelp')
-    cxx_config_bench.lib('iphlpapi')
-    cxx_config_bench.lib('crypt32')
-    cxx_config_bench.use_whole_archive()
-    cxx_config_bench.define('ELLE_SERIALIZATION_USE_DLL')
-    cxx_config_bench.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
-    memo_lib_bench = drake.copy(memo_lib, 'bench', strip_prefix = True)
-    dokan_lib_bench = drake.copy(dokan_lib, 'bench', strip_prefix = True)
-    bench_extra_libs += [dokan_lib_bench]
-  else:
-    memo_lib_bench = memo_lib
-  for n in bench_names:
-    bench = drake.cxx.Executable(
-      'bench/%s' % n,
-      [
-        drake.node('bench/%s.cc' % n),
-        memo_lib_bench,
-      ] + bench_nodes + bench_extra_libs,
-      cxx_toolkit,
-      cxx_config_bench)
-    runner = drake.Runner(exe = bench, runs = 10)
-    runner.reporting = drake.Runner.Reporting.on_failure
-    rule_bench << runner.status
+    ## ------- ##
+    ## Bench.  ##
+    ## ------- ##
+    rule_bench = drake.Rule('bench')
 
 # Local Variables:
 # mode: python

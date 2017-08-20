@@ -7,7 +7,6 @@
 
 #include <boost/optional.hpp>
 
-#include <memo/filesystem/filesystem.hh>
 #include <memo/grpc/memo_vs.grpc.pb.h>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/blocks/MutableBlock.hh>
@@ -198,15 +197,9 @@ public:
     template<typename... Args>
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
-      , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
-             std::make_unique<memo::filesystem::FileSystem>(
-               name, this->dht.dht, memo::filesystem::allow_root_creation = true,
-               std::forward<Args>(args)...),
-             true))
     {}
 
     DHT dht;
-    std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
   };
 
   template<typename... Args>

@@ -44,7 +44,6 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(create_home, "create user home directory of the form home/<user>");
     ELLE_DAS_CLI_SYMBOL(create_root, 'R', "create root directory");
     ELLE_DAS_CLI_SYMBOL(daemon, 'd', "run as a background daemon");
-    ELLE_DAS_CLI_SYMBOL(default_network, "default network for volume creation");
     ELLE_DAS_CLI_SYMBOL(default_permissions, 'd', "default permissions (optional: r,rw)");
     ELLE_DAS_CLI_SYMBOL(deny_storage, "deny user ability to contribute storage to the network");
     ELLE_DAS_CLI_SYMBOL(deny_write, "deny user write access to the network");
@@ -72,11 +71,9 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay (default: 10min)");
     ELLE_DAS_CLI_SYMBOL(fallback_xattrs, "use fallback special file if extended attributes are not supported");
     ELLE_DAS_CLI_SYMBOL(fetch, 'f', "fetch {object} from {hub}");
-    ELLE_DAS_CLI_SYMBOL(fetch_drive, "update local drive descriptor from {hub}");
     ELLE_DAS_CLI_SYMBOL(fetch_endpoints, "fetch endpoints from {hub}");
     ELLE_DAS_CLI_SYMBOL(fetch_endpoints_interval, "period for repolling endpoints from the Hub in seconds");
     ELLE_DAS_CLI_SYMBOL(filter, 'f', "raw LDAP query to use (default: objectClass=posixGroup)");
-    ELLE_DAS_CLI_SYMBOL(finder_sidebar, "show volume in Finder sidebar");
     ELLE_DAS_CLI_SYMBOL(force, 'f', "do not ask for user confirmation");
     ELLE_DAS_CLI_SYMBOL(full, "include private key (do not use unless you understand the implications");
     ELLE_DAS_CLI_SYMBOL(fullname, "user full name");
@@ -89,7 +86,6 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(hold, "keep storage online until this process terminates"); // XXX[Storage]: Silo or Storage.
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user");
     ELLE_DAS_CLI_SYMBOL(host, "SSH host");
-    ELLE_DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon");
     ELLE_DAS_CLI_SYMBOL(ignore_non_linked, "do not consider problematic non-linked networks");
     ELLE_DAS_CLI_SYMBOL(input, 'i', "file to read {object} from");
     ELLE_DAS_CLI_SYMBOL(k, "number of groups (default: 1)");
@@ -108,10 +104,6 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(match, 'm', "regular expression specifying names of the {objects} {action}");
     ELLE_DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none");
     ELLE_DAS_CLI_SYMBOL(monitoring, "enable monitoring");
-    ELLE_DAS_CLI_SYMBOL(mount, "mount given volumes on startup, keep trying on error");
-    ELLE_DAS_CLI_SYMBOL(mount_icon, "path to an icon for mounted volume");
-    ELLE_DAS_CLI_SYMBOL(mount_name, "name of mounted volume");
-    ELLE_DAS_CLI_SYMBOL(mount_root, "default root path for all mounts");
     ELLE_DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem");
     ELLE_DAS_CLI_SYMBOL(name, 'n', "name of the {object} {action}", true);
     ELLE_DAS_CLI_SYMBOL(network, 'N', "network {action} {object} for");
@@ -150,14 +142,11 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(pull, "pull {object} from {hub}");
     ELLE_DAS_CLI_SYMBOL(purge, "purge objects owned by the {object}");
     ELLE_DAS_CLI_SYMBOL(push, 'p', "push {object} to {hub}");
-    ELLE_DAS_CLI_SYMBOL(push_drive, "push drive to {hub}");
     ELLE_DAS_CLI_SYMBOL(push_endpoints, "push endpoints to {hub}");
-    ELLE_DAS_CLI_SYMBOL(push_invitations, "update remote drive descriptor and send invitations to {hub}");
     ELLE_DAS_CLI_SYMBOL(push_key_value_store, "push the key-value store to {hub}");
     ELLE_DAS_CLI_SYMBOL(push_network, "push the network to {hub}");
     ELLE_DAS_CLI_SYMBOL(push_passport, "push passport to {hub}");
     ELLE_DAS_CLI_SYMBOL(push_user, "push user to {hub}");
-    ELLE_DAS_CLI_SYMBOL(push_volume, "push the volume to {hub}");
     ELLE_DAS_CLI_SYMBOL(readonly, "mount as readonly");
     ELLE_DAS_CLI_SYMBOL(receive, "receive an object from another device using {hub}");
     ELLE_DAS_CLI_SYMBOL(recursive, 'R', "{verb} {object} recursively");
@@ -171,7 +160,6 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)");
     ELLE_DAS_CLI_SYMBOL(resign_on_shutdown, "rebalance blocks out when shutting down");
     ELLE_DAS_CLI_SYMBOL(restart, "restart {object}");
-    ELLE_DAS_CLI_SYMBOL(root_permissions, "volume root permissions to give (optional: r, w, rw)");
     ELLE_DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output");
     ELLE_DAS_CLI_SYMBOL(searchbase, 'b', "search starting point (without domain)"); // FIXME: why not search_base?
     ELLE_DAS_CLI_SYMBOL(server, "connectivity server address (default = 192.241.139.66)");
@@ -191,7 +179,6 @@ namespace memo
     ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1)");
     ELLE_DAS_CLI_SYMBOL(value, 'v', "value {action}");
     ELLE_DAS_CLI_SYMBOL(verbose, 'v', "use verbose output");
-    ELLE_DAS_CLI_SYMBOL(volume, 'V', "associated volume name");
     ELLE_DAS_CLI_SYMBOL(xored, 'X', "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both");
     ELLE_DAS_CLI_SYMBOL(xored_utp_port, 'x', "port to perform xored utp tests on");
 
@@ -208,8 +195,6 @@ namespace memo
     ELLE_DAS_SYMBOL(device);
     ELLE_DAS_SYMBOL(disable_storage);
     ELLE_DAS_SYMBOL(doctor);
-    ELLE_DAS_SYMBOL(drive);
-    ELLE_DAS_SYMBOL(drive_invite);
     ELLE_DAS_SYMBOL(dropbox);
     ELLE_DAS_SYMBOL(enable_storage);
     ELLE_DAS_SYMBOL(filesystem);
@@ -264,7 +249,6 @@ namespace memo
       ELLE_DAS_SYMBOL(mode_describe);
       ELLE_DAS_SYMBOL(mode_deserialize);
       ELLE_DAS_SYMBOL(mode_disable_storage);
-      ELLE_DAS_SYMBOL(mode_drive_invite);
       ELLE_DAS_SYMBOL(mode_dropbox);
       ELLE_DAS_SYMBOL(mode_enable_storage);
       ELLE_DAS_SYMBOL(mode_export);

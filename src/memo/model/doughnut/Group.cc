@@ -8,7 +8,7 @@
 #include <elle/cryptography/rsa/KeyPair.hh>
 #include <elle/cryptography/rsa/PublicKey.hh>
 
-#include <memo/filesystem/umbrella.hh>
+#include <memo/model/umbrella.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/blocks/GroupBlock.hh>
 #include <memo/model/doughnut/ACB.hh>
