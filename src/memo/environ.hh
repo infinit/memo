@@ -12,7 +12,7 @@ namespace memo
   ///
   /// Memoed, actually runs only once.
   void
-  environ_check(std::string prefix);
+  environ_check(std::string const& prefix);
 
   /// Whether this is a known variable suffix (e.g., "HOME", not "MEMO_HOME").
   bool

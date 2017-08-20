@@ -180,7 +180,7 @@ namespace memo
     void
     Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: Memo " << usage << std::endl;
+      s << "Usage: memo " << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.

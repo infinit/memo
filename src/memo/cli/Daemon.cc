@@ -119,7 +119,7 @@ namespace memo
           if (getuid() == 0)
             return root_path();
           else
-            return memo::xdg_runtime_dir() / "daemon.pid";
+            return xdg::get().runtime_dir() / "daemon.pid";
         }
 
         static
@@ -684,9 +684,10 @@ namespace memo
         return {name.substr(p+1), memo.user_get(name.substr(0, p))};
       }
 
-      void link_network(memo::Memo& memo,
-                        std::string const& name,
-                        elle::json::Object const& options = elle::json::Object{})
+      void
+      link_network(memo::Memo& memo,
+                   std::string const& name,
+                   elle::json::Object const& options = {})
       {
         auto cname = split(memo, name);
         auto desc = memo.network_descriptor_get(cname.first, cname.second, false);
@@ -698,8 +699,8 @@ namespace memo
           if (u.public_key == desc.owner && u.private_key)
           {
             passport.emplace(u.public_key, desc.name,
-              elle::cryptography::rsa::KeyPair(u.public_key,
-                                                  u.private_key.get()));
+                             elle::cryptography::rsa::KeyPair(u.public_key,
+                                                              u.private_key.get()));
             user.emplace(u);
             break;
           }
@@ -718,11 +719,12 @@ namespace memo
             {
               try
               {
-                passport.emplace(memo.hub_fetch<memo::Passport>(elle::sprintf(
-                  "networks/%s/passports/%s", name, u.name),
-                    "passport for",
-                    name,
-                    u));
+                passport.emplace(memo.hub_fetch<memo::Passport>(
+                                   elle::sprintf(
+                                     "networks/%s/passports/%s", name, u.name),
+                                   "passport for",
+                                   name,
+                                   u));
                 user.emplace(u);
                 break;
               }
@@ -741,7 +743,7 @@ namespace memo
           {
             auto siloname = boost::replace_all_copy(name + "_silo", "/", "_");
             ELLE_LOG("Creating local silo %s", siloname);
-            auto path = memo::xdg_data_home() / "blocks" / siloname;
+            auto path = xdg::get().data_dir() / "blocks" / siloname;
             return
               std::make_unique<memo::silo::FilesystemSiloConfig>(
                 siloname, path.string(), boost::none, boost::none);

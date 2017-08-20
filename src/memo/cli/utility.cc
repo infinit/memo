@@ -197,7 +197,7 @@ namespace memo
     bfs::path
     daemon_sock_path()
     {
-      return memo::xdg_runtime_dir() / "daemon.sock";
+      return xdg::get().runtime_dir() / "daemon.sock";
     }
 
 #ifndef ELLE_WINDOWS

@@ -59,6 +59,9 @@ namespace
   void
   _main(std::vector<std::string>& args)
   {
+    auto const url = elle::sprintf(
+      "%s/crash/report",
+      elle::os::getenv("MEMO_CRASH_REPORT_HOST", memo::beyond()));
     auto report_thread = memo::make_reporter_thread();
     memo::cli::check_broken_locale();
     memo::environ_check("MEMO");

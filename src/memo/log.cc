@@ -21,10 +21,11 @@ ELLE_LOG_COMPONENT("memo.log");
 
 namespace memo
 {
-  bfs::path log_dir()
+  bfs::path
+  log_dir()
   {
     auto const d = memo::getenv("LOG_DIR",
-                                (xdg_cache_home() / "logs").string());
+                                (xdg::get().cache_dir() / "logs").string());
     return canonical_folder(d);
   }
 

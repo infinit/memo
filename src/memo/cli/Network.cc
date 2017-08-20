@@ -606,7 +606,7 @@ namespace memo
       auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner, false);
-      auto s_path = network.monitoring_socket_path(owner);
+      auto s_path = memo._network_monitoring_socket_path(network.name, owner);
       if (!bfs::exists(s_path))
         elle::err("network not running or monitoring disabled");
       elle::reactor::network::UnixDomainSocket socket(s_path);
@@ -893,7 +893,9 @@ namespace memo
         auto dht = network.run(
           owner,
           false,
-          cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+          cache,
+          cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+          // memo._network_cache_dir(network_name, owner),
           async, cache_disk_size, cli.compatibility_version(), port,
           listen_address, resign_on_shutdown
 #ifndef ELLE_WINDOWS

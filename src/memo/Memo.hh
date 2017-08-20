@@ -5,6 +5,7 @@
 #include <boost/signals2.hpp>
 
 #include <elle/flat-set.hh>
+#include <elle/system/XDG.hh>
 
 #include <memo/KeyValueStore.hh>
 #include <memo/LoginCredentials.hh>
@@ -33,6 +34,7 @@ namespace memo
       boost::signals2::signal<auto (std::string const& action,
                                     std::string const& type,
                                     std::string const& name) -> void>;
+
   public:
     /// Whether the resource name contains a `/`.
     static bool
@@ -256,6 +258,12 @@ namespace memo
                   User const& user,
                   bool create_dir = true) const;
     bfs::path
+    _network_cache_dir(std::string const& name,
+                       User const& user) const;
+    bfs::path
+    _network_monitoring_socket_path(std::string const& name,
+                                    User const& user) const;
+    bfs::path
     _passports_path() const;
     bfs::path
     _passport_path(std::string const& network, std::string const& user) const;
@@ -318,7 +326,7 @@ namespace memo
     static
     void
     save(std::ostream& output, T const& resource, bool pretty = true);
-  private:
+  protected:
     bool
     _delete(bfs::path const& path,
             std::string const& type,
@@ -549,7 +557,8 @@ namespace memo
 
   namespace deprecated
   {
-    bfs::path storages_path();
+    bfs::path
+    storages_path();
   }
 }
 

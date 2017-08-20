@@ -158,8 +158,9 @@ namespace memo
                                   boost::optional<std::string> output,
                                   boost::optional<std::string> root)
     {
-      auto const path = root ? memo::canonical_folder(root.get())
-        : (memo::xdg_data_home() / "blocks" / name);
+      auto const path = root
+        ? memo::canonical_folder(root.get())
+        : xdg::get().data_dir() / "blocks" / name;
       if (bfs::exists(path))
       {
         if (!bfs::is_directory(path))

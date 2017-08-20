@@ -183,56 +183,56 @@ func (server *kvServer) Delete(ctx context.Context, req *service.DeleteRequest) 
 }
 
 func (server *kvServer) List(ctx context.Context, req *service.ListRequest) (*service.ListResponse, error) {
-        grpclog.Printf("list\n")
-        block, err := server.rootBlock()
-        if err != nil {
-                return nil, err
-        }
-        km, err := getMap(block)
-        if err != nil {
-                return nil, err
-        }
-        keys := []string{}
-        for k := range km.GetMap() {
-                keys = append(keys, k)
-        }
-        sort.Strings(keys)
-        items := []*service.ListItem{}
-        prefixes := []string{}
-        truncated := false
-        markerFound := false
-        for i, k := range keys {
-                if !strings.HasPrefix(k, req.GetPrefix()) {
-                        continue
-                }
-                if req.GetMarker() != "" && !markerFound {
-                        markerFound = strings.HasSuffix(k, req.GetMarker())
-                        continue
-                }
-                if req.GetDelimiter() != "" {
-                        startAt := len(req.GetPrefix())
-                        delimPos := strings.Index(k[startAt:], req.GetDelimiter())
-                        if delimPos > 0 {
-                                prefix := k[startAt : len(req.GetPrefix())+delimPos+1]
-                                newPrefix := true
-                                for _, p := range prefixes {
-                                        if p == prefix {
-                                                newPrefix = false
-                                                break
-                                        }
-                                }
-                                if newPrefix == true {
-                                        prefixes = append(prefixes, prefix)
-                                }
-                        }
-                }
-                items = append(items, &service.ListItem{Key: k})
-                if req.GetMaxKeys() > 0 && uint64(len(items)) == req.GetMaxKeys() {
-                        truncated = i != len(keys)-1 && strings.HasPrefix(keys[i+1], req.GetPrefix())
-                        break
-                }
-        }
-        return &service.ListResponse{Items: items, Prefixes: prefixes, Truncated: truncated}, nil
+	grpclog.Printf("list\n")
+	block, err := server.rootBlock()
+	if err != nil {
+		return nil, err
+	}
+	km, err := getMap(block)
+	if err != nil {
+		return nil, err
+	}
+	keys := []string{}
+	for k := range km.GetMap() {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	items := []*service.ListItem{}
+	prefixes := []string{}
+	truncated := false
+	markerFound := false
+	for i, k := range keys {
+		if !strings.HasPrefix(k, req.GetPrefix()) {
+			continue
+		}
+		if req.GetMarker() != "" && !markerFound {
+			markerFound = k == req.GetMarker()
+			continue
+		}
+		if req.GetDelimiter() != "" {
+			startAt := len(req.GetPrefix())
+			delimPos := strings.Index(k[startAt:], req.GetDelimiter())
+			if delimPos > 0 {
+				prefix := k[startAt : len(req.GetPrefix())+delimPos+1]
+				newPrefix := true
+				for _, p := range prefixes {
+					if p == prefix {
+						newPrefix = false
+						break
+					}
+				}
+				if newPrefix == true {
+					prefixes = append(prefixes, prefix)
+				}
+			}
+		}
+		items = append(items, &service.ListItem{Key: k})
+		if req.GetMaxKeys() > 0 && uint64(len(items)) == req.GetMaxKeys() {
+			truncated = i != len(keys)-1 && strings.HasPrefix(keys[i+1], req.GetPrefix())
+			break
+		}
+	}
+	return &service.ListResponse{Items: items, Prefixes: prefixes, Truncated: truncated}, nil
 }
 
 func (server *kvServer) rootBlock() (*vs.Block, error) {

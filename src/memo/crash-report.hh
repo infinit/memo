@@ -4,6 +4,8 @@
 
 #include <elle/reactor/Thread.hh>
 
+#include <boost/filesystem/path.hpp>
+
 namespace memo
 {
   /// Thread to send the crash reports (some might be pending from

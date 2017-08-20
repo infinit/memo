@@ -97,9 +97,9 @@ namespace
   }
 
   bool
-  environ_check_(std::string prefix)
+  environ_check_(std::string const& prefix_)
   {
-    prefix += "_";
+    auto prefix = prefix_ + "_";
     // Number of unknown var names.
     auto unknown = 0;
     auto const env = elle::os::environ();
@@ -139,7 +139,8 @@ namespace
           unknown += !known_name(*v);
       }
     if (unknown)
-      ELLE_WARN("known %s_* environment variables: %s", elle::keys(vars()));
+      ELLE_WARN("known %s_* environment variables: %s",
+                prefix,  elle::keys(vars()));
     return true;
   }
 }
@@ -147,16 +148,16 @@ namespace
 namespace memo
 {
   void
-  environ_check()
+  environ_check(std::string const& prefix)
   {
     ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
-    static auto _ = environ_check_();
+    static auto _ = environ_check_(prefix);
   }
 
   bool
   environ_valid_name(std::string const& v)
   {
-    environ_check();
+    environ_check("MEMO");
     return known_name(v);
   }
 }

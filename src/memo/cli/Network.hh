@@ -394,7 +394,6 @@ namespace memo
       /*-------------.
       | Mode: stat.  |
       `-------------*/
-
       MODE(stat,
            decltype(cli::name)::Formal<std::string const&>);
       void
@@ -404,9 +403,8 @@ namespace memo
       /*---------------.
       | Mode: unlink.  |
       `---------------*/
-
       MODE(unlink,
-          decltype(cli::name)::Formal<std::string const&>);
+           decltype(cli::name)::Formal<std::string const&>);
       void
       mode_unlink(std::string const& network_name);
 
