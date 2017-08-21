@@ -67,7 +67,7 @@ namespace memo
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
 
-        ELLE_ATTRIBUTE_RW(elle::Duration, eviction_delay)
+        ELLE_ATTRIBUTE_RW(elle::DurationOpt, eviction_delay)
       };
     }
   }
