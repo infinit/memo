@@ -417,10 +417,11 @@ namespace memo
       }
 
       std::unique_ptr<blocks::MutableBlock>
-      Doughnut::_make_mutable_block() const
+      Doughnut::_make_mutable_block(Address owner) const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return std::make_unique<OKB>(elle::unconst(this));
+        return std::make_unique<OKB>(elle::unconst(this), elle::Buffer(),
+                                     boost::none, owner);
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
