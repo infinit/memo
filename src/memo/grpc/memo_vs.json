@@ -489,7 +489,15 @@
           "index": 6
         },
         {
-          "name": "owner_rsa",
+          "name": "owner_key",
+          "type": "bytes",
+          "documentation": {
+            "abstract": ""
+          },
+          "index": 24
+        },
+        {
+          "name": "owner_key_rsa",
           "type": "bytes",
           "documentation": {
             "abstract": ""
