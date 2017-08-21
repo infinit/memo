@@ -20,62 +20,65 @@ namespace memo
 {
   namespace grpc
   {
-    namespace
-    {
-      bool _serving = true;
-      int _tasks = 0;
-      std::mutex _stop_mutex;
-      std::condition_variable _stop_cond;
-    }
-
     bool
-    Task::proceed() const
+    Server::Task::proceed() const
     {
       return this->_proceed;
     }
 
-    Task::Task()
+    Server::Task::Task(Server& server)
+      : _server(server)
     {
-      std::unique_lock<std::mutex> lock(_stop_mutex);
-      if (!_serving)
+      std::unique_lock<std::mutex> lock(this->_server._stop_mutex);
+      if (!this->_server._serving)
         this->_proceed = false;
       else
       {
         this->_proceed = true;
-        ++_tasks;
+        ++this->_server._tasks;
       }
     }
 
-    Task::~Task()
+    Server::Task::~Task()
     {
       if (this->_proceed)
       {
-        std::unique_lock<std::mutex> lock(_stop_mutex);
-        if (!--_tasks)
-          _stop_cond.notify_all();
+        std::unique_lock<std::mutex> lock(this->_server._stop_mutex);
+        if (!--this->_server._tasks)
+          this->_server._stop_cond.notify_all();
       }
     }
 
-    void
-    serve_grpc(memo::model::Model& dht,
-               std::string const& ep,
-               int* effective_port)
+    Server::Task
+    Server::task()
     {
-      _serving = true;
-      auto ds = doughnut_service(dht);
+      return Task(*this);
+    }
+
+    Server::Server()
+      : _serving(false)
+      , _tasks(0)
+    {}
+
+    void
+    Server::operator ()(::grpc::Service* service,
+                        std::string const& ep,
+                        int* effective_port)
+    {
+      this->_serving = true;
       ::grpc::ServerBuilder builder;
       builder.AddListeningPort(ep, ::grpc::InsecureServerCredentials(),
         effective_port);
-      builder.RegisterService(ds.get());
+      builder.RegisterService(service);
       auto server = builder.BuildAndStart();
        ELLE_TRACE("serving grpc on %s (effective %s)", ep,
-         effective_port ? *effective_port : 0);
+                  effective_port ? *effective_port : 0);
       elle::SafeFinally shutdown([&] {
-          _serving = false;
+          this->_serving = false;
           elle::reactor::background([&] {
-              std::unique_lock<std::mutex> lock(_stop_mutex);
-              while (_tasks)
-                _stop_cond.wait(lock);
+              std::unique_lock<std::mutex> lock(this->_stop_mutex);
+              while (this->_tasks)
+                this->_stop_cond.wait(lock);
           });
       });
       elle::reactor::sleep();

@@ -296,14 +296,17 @@ def configure(
   memo_sources += grpc.sources
   cxx_config += grpc.grpc.cxx_config
   extra_libs = []
-  if grpc.grpc_lib:
+  if grpc.memo_vs_grpc_lib:
     grpc_lib = drake.copy(grpc.grpc_lib, libdir, strip_prefix = True,
                           builder = PatchAndInstall)
+    memo_vs_grpc_lib = drake.copy(grpc.memo_vs_grpc_lib, libdir, strip_prefix = True,
+                                  builder = PatchAndInstall)
     protobuf_lib = drake.copy(grpc.protobuf_lib, libdir, strip_prefix = True,
                               builder = PatchAndInstall)
-    extra_libs += [grpc_lib, protobuf_lib]
+    grpc_libs = [grpc_lib, protobuf_lib, memo_vs_grpc_lib]
+    extra_libs += grpc_libs
   else:
-    memo_sources += grpc.grpc.sources
+    memo_sources += grpc.grpc.memo_vs_grpc_sources
 
   ## ------------ ##
   ## Prometheus.  ##
@@ -527,7 +530,7 @@ def configure(
         cxx_toolkit,
         cli_instantiate_config))
 
-  cli_deps = [lib]
+  cli_deps = [lib] + extra_libs
   if not windows:
     # Do not relink with the static libs again under windows
     # they are allready whole_archive-d into `lib`.
@@ -952,8 +955,6 @@ def configure(
   cxx_config_tests += grpc.grpc.cxx_config
   if enable_crash_report:
     cxx_config_tests.add_local_include_path('crash-report/src') # functional/bin/crasher
-  if grpc.grpc_lib:
-    cxx_config_tests.library_add(grpc_lib)
   tests_libdir = windows and 'tests' or 'lib'
 
   cxx_config_tests.library_add(
@@ -1037,6 +1038,7 @@ def configure(
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()
+      that_test_libs += grpc_libs
       if cxx_toolkit.os is drake.os.linux:
         that_test_libs += grpc.gen_vs_w_named.targets() + [grpc.grpc.protobuf_lib]
     test = drake.cxx.Executable(

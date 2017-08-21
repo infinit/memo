@@ -4,9 +4,11 @@ import drake.go
 import os
 
 grpc_lib = None
+memo_vs_grpc_lib = None
 protobuf_lib = None
 grpc = None
 sources = None
+memo_vs_grpc_sources = None
 cxx_config_grpc = None
 # Used by the website.
 memo_vs_proto = None
@@ -175,6 +177,7 @@ def configure(
 ):
   global memo_vs_proto, memo_vs_with_named_proto, grpc_lib, grpc, sources, protobuf_lib
   global gen_vs, gen_vs_w_named
+  global memo_vs_grpc_lib, memo_vs_grpc_sources
 
   go = drake.go.Toolkit()
   grpc = drake.include(
@@ -222,8 +225,8 @@ def configure(
     protoc = grpc.protoc,
     plugin = grpc.grpc_cpp_plugin)
   # Sources to compile the server part.
-  sources = gen_vs_w_named.targets() + drake.nodes(
-    'memo_vs.cc',
+  sources = drake.nodes(
+    'grpc.hh',
     'grpc.cc',
     'serializer.cc',
     'serializer.hh'
@@ -233,6 +236,12 @@ def configure(
     grpc.protobuf_lib, '.', strip_prefix = True)
   grpc_lib = drake.cxx.DynLib(
     'grpc', [protobuf_lib] + grpc.sources,
+    cxx_toolkit, grpc.cxx_config_lib)
+  memo_vs_grpc_sources = sources + gen_vs_w_named.targets() +           \
+                         drake.nodes('memo_vs.hh', 'memo_vs.cc')
+  memo_vs_grpc_lib = drake.cxx.DynLib(
+    'memo_grpc',
+    [grpc_lib, protobuf_lib] + memo_vs_grpc_sources,
     cxx_toolkit, grpc.cxx_config_lib)
 
   ## -------------------- ##

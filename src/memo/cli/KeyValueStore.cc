@@ -5,6 +5,7 @@
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/grpc/memo_vs.hh>
 #include <memo/kvs/lib/libkvs.h>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/Local.hh>
@@ -347,9 +348,9 @@ namespace memo
       auto dht_grpc_thread = std::make_unique<elle::reactor::Thread>
         ("DHT gRPC",
         [dht = dht.get(), &dht_grpc_port] {
-          memo::grpc::serve_grpc(
-            *dht, "127.0.0.1:0", &dht_grpc_port);
-      });
+          memo::grpc::serve_memo_vs(*dht,
+            "127.0.0.1:0", &dht_grpc_port);
+        });
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)
         elle::reactor::sleep(100ms);

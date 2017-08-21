@@ -17,6 +17,7 @@
 #include <memo/cli/xattrs.hh>
 #include <memo/environ.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/grpc/memo_vs.hh>
 #include <memo/log.hh>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/MonitoringServer.hh>
@@ -907,10 +908,13 @@ namespace memo
         int grpc_port = -1;
         if (grpc)
         {
-          grpc_thread.reset(new elle::reactor::Thread("grpc",
-            [dht=dht.get(), grpc, &grpc_port] {
-              memo::grpc::serve_grpc(*dht, *grpc, &grpc_port);
-          }));
+          grpc_thread.reset(
+            new elle::reactor::Thread(
+              "memo_vs_grpc_server",
+              [dht=dht.get(), grpc, &grpc_port]
+              {
+                memo::grpc::serve_memo_vs(*dht, *grpc, &grpc_port);
+              }));
           if (grpc_port_file)
           {
             while (grpc_port == -1)
