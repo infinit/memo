@@ -348,33 +348,29 @@ namespace memo
                                    PaxosClient::Proposal const& p,
                                    bool insert)
         {
-          return translate_exceptions("propose",
-            [&]
-            {
-              if (this->doughnut().version() >= elle::Version(0, 9, 0))
-              {
-                using Propose =
-                  auto (PaxosServer::Quorum,
-                        Address,
-                        PaxosClient::Proposal const&,
-                        bool)
-                  -> boost::optional<PaxosClient::Accepted>;
-                auto propose = this->make_rpc<Propose>("propose");
-                propose.set_context<Doughnut*>(&this->_doughnut);
-                return propose(peers, address, p, insert);
-              }
-              else
-              {
-                using Propose =
-                  auto (PaxosServer::Quorum,
-                        Address,
-                        PaxosClient::Proposal const&)
-                  -> boost::optional<PaxosClient::Accepted>;
-                auto propose = this->make_rpc<Propose>("propose");
-                propose.set_context<Doughnut*>(&this->_doughnut);
-                return propose(peers, address, p);
-              }
-          });
+          if (this->doughnut().version() >= elle::Version(0, 9, 0))
+          {
+            using Propose =
+              auto (PaxosServer::Quorum,
+                    Address,
+                    PaxosClient::Proposal const&,
+                    bool)
+              -> boost::optional<PaxosClient::Accepted>;
+            auto propose = this->make_rpc<Propose>("propose");
+            propose.set_context<Doughnut*>(&this->_doughnut);
+            return propose(peers, address, p, insert);
+          }
+          else
+          {
+            using Propose =
+              auto (PaxosServer::Quorum,
+                    Address,
+                    PaxosClient::Proposal const&)
+              -> boost::optional<PaxosClient::Accepted>;
+            auto propose = this->make_rpc<Propose>("propose");
+            propose.set_context<Doughnut*>(&this->_doughnut);
+            return propose(peers, address, p);
+          }
         }
 
         Paxos::PaxosClient::Proposal
@@ -383,40 +379,36 @@ namespace memo
                                   Paxos::PaxosClient::Proposal const& p,
                                   Value const& value)
         {
-          return translate_exceptions("accept",
-            [&]
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+          {
+            if (!value.is<std::shared_ptr<blocks::Block>>())
             {
-              if (this->doughnut().version() < elle::Version(0, 5, 0))
-              {
-                if (!value.is<std::shared_ptr<blocks::Block>>())
-                {
-                  ELLE_TRACE("unmanageable accept on non-block value");
-                  throw elle::reactor::network::Error("Peer unavailable");
-                }
-                using Accept =
-                  auto (PaxosServer::Quorum peers,
-                        Address,
-                        Paxos::PaxosClient::Proposal const&,
-                        std::shared_ptr<blocks::Block>)
-                  -> Paxos::PaxosClient::Proposal;
-                auto accept = this->make_rpc<Accept>("accept");
-                accept.set_context<Doughnut*>(&this->_doughnut);
-                return accept(peers, address, p,
-                              value.get<std::shared_ptr<blocks::Block>>());
-              }
-              else
-              {
-                using Accept =
-                  auto (PaxosServer::Quorum peers,
-                        Address,
-                        Paxos::PaxosClient::Proposal const&,
-                        Value const&)
-                  -> Paxos::PaxosClient::Proposal;
-                auto accept = this->make_rpc<Accept>("accept");
-                accept.set_context<Doughnut*>(&this->_doughnut);
-                return accept(peers, address, p, value);
-              }
-            });
+              ELLE_TRACE("unmanageable accept on non-block value");
+              throw elle::reactor::network::Error("Peer unavailable");
+            }
+            using Accept =
+              auto (PaxosServer::Quorum peers,
+                    Address,
+                    Paxos::PaxosClient::Proposal const&,
+                    std::shared_ptr<blocks::Block>)
+              -> Paxos::PaxosClient::Proposal;
+            auto accept = this->make_rpc<Accept>("accept");
+            accept.set_context<Doughnut*>(&this->_doughnut);
+            return accept(peers, address, p,
+                          value.get<std::shared_ptr<blocks::Block>>());
+          }
+          else
+          {
+            using Accept =
+              auto (PaxosServer::Quorum peers,
+                    Address,
+                    Paxos::PaxosClient::Proposal const&,
+                    Value const&)
+              -> Paxos::PaxosClient::Proposal;
+            auto accept = this->make_rpc<Accept>("accept");
+            accept.set_context<Doughnut*>(&this->_doughnut);
+            return accept(peers, address, p, value);
+          }
         }
 
         void
@@ -424,18 +416,14 @@ namespace memo
                                    Address address,
                                    PaxosClient::Proposal const& p)
         {
-          return translate_exceptions("confirm",
-            [&]
-            {
-              using Confirm =
-                auto (PaxosServer::Quorum,
-                      Address,
-                      PaxosClient::Proposal const&)
-                -> void;
-              auto confirm = this->make_rpc<Confirm>("confirm");
-              confirm.set_context<Doughnut*>(&this->_doughnut);
-              return confirm(peers, address, p);
-            });
+          using Confirm =
+            auto (PaxosServer::Quorum,
+                  Address,
+                  PaxosClient::Proposal const&)
+            -> void;
+          auto confirm = this->make_rpc<Confirm>("confirm");
+          confirm.set_context<Doughnut*>(&this->_doughnut);
+          return confirm(peers, address, p);
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -443,16 +431,12 @@ namespace memo
                                Address address,
                                boost::optional<int> local_version)
         {
-          return translate_exceptions("get",
-            [&]
-            {
-              using Get =
-                auto (PaxosServer::Quorum, Address, boost::optional<int>)
-                -> boost::optional<PaxosClient::Accepted>;
-              auto get = this->make_rpc<Get>("get");
-              get.set_context<Doughnut*>(&this->_doughnut);
-              return get(peers, address, local_version);
-            });
+          using Get =
+            auto (PaxosServer::Quorum, Address, boost::optional<int>)
+            -> boost::optional<PaxosClient::Accepted>;
+          auto get = this->make_rpc<Get>("get");
+          get.set_context<Doughnut*>(&this->_doughnut);
+          return get(peers, address, local_version);
         }
 
         bool
@@ -896,7 +880,8 @@ namespace memo
                     }
                     try
                     {
-                      peer->confirm(current, b.address(), PaxosClient::Proposal());
+                      peer->confirm(current, b.address(),
+                                    PaxosClient::Proposal());
                     }
                     catch (elle::athena::paxos::Unavailable const& e)
                     {
