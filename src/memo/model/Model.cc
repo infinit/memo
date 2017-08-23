@@ -54,7 +54,7 @@ namespace memo
                conflict_resolver = nullptr)
       , insert_immutable_block([this] (elle::Buffer data, Address owner)
         {
-          ELLE_TRACE_SCOPE("%s: insert_immutable_block owner=%f", this, owner);
+          ELLE_TRACE_SCOPE("%s: insert immutable block with owner %f", this, owner);
           auto block = this->_make_immutable_block(std::move(data), owner);
           auto addr = block->address();
           this->_insert(std::move(block), nullptr);
@@ -64,7 +64,7 @@ namespace memo
         owner = Address::null)
       , insert_mutable_block([this] (elle::Buffer data, Address owner)
         {
-          ELLE_TRACE_SCOPE("%s: insert_mutable_block owner=%f", this, owner);
+          ELLE_TRACE_SCOPE("%s: insert mutable block with owner %f", this, owner);
           auto block = this->_make_mutable_block(owner);
           block->data(std::move(data));
           auto addr = block->address();
