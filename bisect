@@ -1,44 +1,46 @@
 #!/usr/bin/env python3
 
-import argparse
-import multiprocessing
-import os.path
-import sh
-import sys
-
-def parse_args():
-    p = argparse.ArgumentParser(description='Track errors.')
-    p.add_argument('-b', '--build', default='linux64',
-                   help='build type.')
-    p.add_argument('-j', '--jobs', type=int,
-                   default=multiprocessing.cpu_count(),
-                   help='number of parallel jobs')
-    p.add_argument('args', nargs='*',
-                   help='arguments to pass to drake')
-    p.add_argument('-v', '--verbose', action='store_true',
-                   help='whether to show the logs')
-    return p.parse_args()
-
-args = parse_args()
-out = sys.stderr if args.verbose else None
-SELF = os.path.realpath(sys.argv[0])
-ROOT = os.path.dirname(SELF)
-BUILD = '{root}/_build/{build}'.format(root=ROOT,
-                                       build=args.build)
 
 def report(msg):
   print(msg, file = sys.stderr)
 
-git = sh.git.bake(_cwd = ROOT)
 try:
+  import argparse
+  import multiprocessing
+  import os.path
+  import sh
+  import sys
+
+
+  def parse_args():
+      p = argparse.ArgumentParser(description='Track errors.')
+      p.add_argument('-b', '--build', default='linux64',
+                     help='build type.')
+      p.add_argument('-j', '--jobs', type=int,
+                     default=multiprocessing.cpu_count(),
+                     help='number of parallel jobs')
+      p.add_argument('args', nargs='*',
+                     help='arguments to pass to drake')
+      p.add_argument('-v', '--verbose', action='store_true',
+                     help='whether to show the logs')
+      return p.parse_args()
+
+  args = parse_args()
+  out = sys.stderr if args.verbose else None
+  SELF = os.path.realpath(sys.argv[0])
+  ROOT = os.path.dirname(SELF)
+  BUILD = '{root}/_build/{build}'.format(root=ROOT,
+                                         build=args.build)
+
+  git = sh.git.bake(_cwd = ROOT)
   git('submodule', 'update', '--init', '--force', '--recursive',
       _out = out, _err = out)
+  drake = sh.Command('python3').bake('%s/drake' % BUILD, _cwd = BUILD)
 except Exception as e:
   print(e, file = sys.stderr)
-  report('unable to update submodules, skipping commit')
+  report('setup error, skipping commit')
   exit(125)
 
-drake = sh.Command('python3').bake('%s/drake' % BUILD, _cwd = BUILD)
 try:
   drake('-j', args.jobs, *args.args,
         _out = out, _err = out)
