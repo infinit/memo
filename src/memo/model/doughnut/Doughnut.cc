@@ -148,7 +148,7 @@ namespace
     ::Register<memo::model::doughnut::Configuration>("doughnut");
 }
 
-ELLE_TYPE_INFO_ABBR("dht", "infinit::model::doughnut");
+ELLE_TYPE_INFO_ABBR("dht", "memo::model::doughnut");
 
 namespace memo
 {
