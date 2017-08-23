@@ -81,9 +81,9 @@ public:
       ::keys_a = elle::cryptography::rsa::keypair::generate(key_size()),
       ::keys_b = elle::cryptography::rsa::keypair::generate(key_size()),
       ::keys_c = elle::cryptography::rsa::keypair::generate(key_size()),
-      id_a = memo::model::Address::random(0), // FIXME
-      id_b = memo::model::Address::random(0), // FIXME
-      id_c = memo::model::Address::random(0), // FIXME
+      id_a = special_id(10),
+      id_b = special_id(11),
+      id_c = special_id(12),
       storage_a = nullptr,
       storage_b = nullptr,
       storage_c = nullptr,
