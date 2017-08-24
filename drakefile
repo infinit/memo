@@ -975,7 +975,6 @@ def configure(
     ('kelips'                 , []       , None),
     ('overlay'                , []       , ['kelips', '-t', 'kelips/*']),
     ('overlay'                , []       , ['kouncil', '-t', 'kouncil/*']),
-    ('overlay'                , []       , ['kouncil-0-7', '-t', 'kouncil_0_7/*']),
     ('rpc'                    , []       , None),
     ('storage'                , [aws_lib], None),
   ]
