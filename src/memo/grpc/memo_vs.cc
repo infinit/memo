@@ -352,6 +352,10 @@ namespace memo
         (dht.make_mutable_block, dht, "/memo.vs.ValueStore/MakeMutableBlock");
       ptr->AddMethod<::memo::vs::MakeImmutableBlockRequest, ::memo::vs::Block, true>
         (dht.make_immutable_block, dht,"/memo.vs.ValueStore/MakeImmutableBlock");
+      ptr->AddMethod<::memo::vs::InsertImmutableBlockRequest, ::memo::vs::InsertImmutableBlockResponse, true>
+        (dht.insert_immutable_block, dht,"/memo.vs.ValueStore/InsertImmutableBlock");
+      ptr->AddMethod<::memo::vs::InsertMutableBlockRequest, ::memo::vs::InsertMutableBlockResponse, true>
+        (dht.insert_mutable_block, dht,"/memo.vs.ValueStore/InsertMutableBlock");
       ptr->AddMethod<::memo::vs::DeleteRequest, ::memo::vs::DeleteResponse>
         (dht.remove, dht, "/memo.vs.ValueStore/Delete");
       ptr->AddMethod<::memo::vs::MakeNamedBlockRequest, ::memo::vs::Block, true>

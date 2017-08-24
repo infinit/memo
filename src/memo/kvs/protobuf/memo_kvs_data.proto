@@ -8,7 +8,6 @@ message ValueStore {
 
 message ValueDescriptor {
   ValueStore current = 1;
-  repeated ValueStore edits = 2;
 }
 
 message KeyMap {

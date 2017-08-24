@@ -962,7 +962,7 @@ def configure(
     # tests-args offer a means to run a binaries with different cli options,
     # and generate separated outputs.
     ('async-conflict'         , []       , None),
-    ('backward-compatibility' , []       , None),
+    # ('backward-compatibility' , []       , None),
     ('bandwidth'              , []       , None),
     ('byzantine'              , []       , None),
     ('consensus/async'        , tests_consensus_lib       , None),

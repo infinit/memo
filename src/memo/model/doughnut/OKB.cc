@@ -246,27 +246,37 @@ namespace memo
       `-------------*/
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(Doughnut* owner,
+      BaseOKB<Block>::BaseOKB(Doughnut* dht,
                               elle::Buffer data,
-                              boost::optional<elle::Buffer> salt)
-        : BaseOKB(owner, std::move(data), std::move(salt), owner->keys())
+                              boost::optional<elle::Buffer> salt,
+                              Address owner)
+        : BaseOKB(dht,
+                  std::move(data),
+                  std::move(salt),
+                  dht->keys(),
+                  std::move(owner))
       {}
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(Doughnut* owner,
-                              elle::Buffer data,
-                              boost::optional<elle::Buffer> salt,
-                              elle::cryptography::rsa::KeyPair const& owner_keys)
-        : BaseOKB(OKBHeader(owner, owner_keys, std::move(salt)),
-                  std::move(data), owner_keys.private_key())
+      BaseOKB<Block>::BaseOKB(
+        Doughnut* dht,
+        elle::Buffer data,
+        boost::optional<elle::Buffer> salt,
+        elle::cryptography::rsa::KeyPair const& owner_keys,
+        Address owner)
+        : BaseOKB(OKBHeader(dht, owner_keys, std::move(salt)),
+                  std::move(data),
+                  owner_keys.private_key(),
+                  std::move(owner))
       {}
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(
         OKBHeader header,
         elle::Buffer data,
-        std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key)
-        : Super(header._hash_address())
+        std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key,
+        Address owner)
+        : Super(header._hash_address(), {}, std::move(owner))
         , OKBHeader(std::move(header))
         , _version(-1)
         , _signature()
