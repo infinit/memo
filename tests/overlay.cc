@@ -1692,6 +1692,36 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv, (TestConfiguration, config))
   test_churn_socket(config, true);
 }
 
+ELLE_TEST_SCHEDULED(cache, (TestConfiguration, config))
+{
+  elle::os::setenv("MEMO_PAXOS_CACHE_SIZE", "10");
+  auto cluster = Cluster{config, 3};
+  cluster.discover();
+  auto& servers = cluster.servers;
+  std::vector<memo::model::Address> addresses;
+  for (int i=0; i<30; ++i)
+  {
+    auto block = servers[0]->dht->make_block<MutableBlock>(std::string("block"));
+    servers[0]->dht->seal_and_insert(*block);
+    addresses.push_back(block->address());
+  }
+  elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& scope)
+  {
+    for (int s=0; s<3; ++s)
+      scope.run_background(elle::sprintf("w %s", s), [&,s]
+        {
+          for (int i=0; i<1000; ++i)
+          {
+            auto block = servers[s]->dht->fetch(addresses[(i+s*13)%30]);
+            dynamic_cast<memo::model::blocks::MutableBlock*>(block.get())
+              ->data(elle::sprintf("block %s", i));
+            servers[s]->dht->update(std::move(block), tcr());
+          }
+        });
+    scope.wait();
+  };
+}
+
 ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
 {
   auto cluster = Cluster{config, 3};
@@ -2007,7 +2037,8 @@ ELLE_TEST_SUITE()
   TEST_NAMED(Overlay, storm_paxos, storm, 60, true, 5, 5, 100);         \
   TEST_NAMED(Overlay, storm,       storm, 60, false, 5, 5, 200);        \
   TEST_NAMED(Overlay, churn, churn, 600, false, true, true);            \
-  TEST_NAMED(Overlay, churn_socket, churn_socket, 600);
+  TEST_NAMED(Overlay, churn_socket, churn_socket, 600);                 \
+  TEST_NAMED(Overlay, cache, cache, 600);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);

@@ -57,6 +57,7 @@ namespace
       {"LOOKAHEAD_THREADS", ""},
       {"MAX_EMBED_SIZE", ""},
       {"MAX_SQUASH_SIZE", ""},
+      {"PAXOS_CACHE_SIZE", ""},
       {"PAXOS_LENIENT_FETCH", ""},
       {"PREEMPT_DECODE", ""},
       {"PREFETCH_DEPTH", ""},
