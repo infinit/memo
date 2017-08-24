@@ -1958,8 +1958,6 @@ ELLE_TEST_SUITE()
     };
   auto const kouncil_config
     = TestConfiguration{make_kouncil, memo::version()};
-  auto const kouncil_0_7_config
-    = TestConfiguration{make_kouncil, elle::Version(0, 7, 0)};
 
 
 #define TEST(Suite, Overlay, Name, Timeout, Function, ...)              \
@@ -2013,7 +2011,6 @@ ELLE_TEST_SUITE()
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
-  OVERLAY(kouncil_0_7);
 #undef OVERLAY
 
   TEST_NAMED(kouncil, eviction, eviction, 600);
