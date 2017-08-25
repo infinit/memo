@@ -162,6 +162,9 @@ namespace memo
                 Address address,
                 boost::optional<int> local_version) = 0;
             virtual
+            bool
+            reconcile(Address address) = 0;
+            virtual
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
@@ -202,6 +205,8 @@ namespace memo
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            bool
+            reconcile(Address address) override;
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
@@ -277,6 +282,8 @@ namespace memo
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
+            bool
+            reconcile(Address address) override;
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,

@@ -59,6 +59,12 @@ namespace memo
           throw elle::athena::paxos::Unavailable();
         }
 
+        bool
+        reconcile(Address) override
+        {
+          throw elle::reactor::network::Error("Peer unavailable");
+        }
+
         consensus::Paxos::PaxosClient::Proposal
         accept(consensus::Paxos::PaxosServer::Quorum const& peers,
                Address address,

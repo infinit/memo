@@ -537,10 +537,6 @@ class KeyValueStoreInfrastructure():
         except:
           log(prefix_lines('STDOUT: ', self.out.decode('utf-8')))
           log(prefix_lines('STDERR: ', self.err.decode('utf-8')))
-          out = self.__proc.stdout.read()
-          err = self.__proc.stderr.read()
-          log(prefix_lines('STDOUT: ', out.decode('utf-8')))
-          log(prefix_lines('STDERR: ', err.decode('utf-8')))
           raise
 
   def client(self):
