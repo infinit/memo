@@ -8,8 +8,10 @@ namespace memo
     {
       char const* ImmutableBlock::type = "immutable";
 
-      ImmutableBlock::ImmutableBlock(Address address, elle::Buffer data)
-        : Super(address, data)
+      ImmutableBlock::ImmutableBlock(Address address,
+                                     elle::Buffer data,
+                                     Address owner)
+        : Super(address, std::move(data), std::move(owner))
       {}
 
       ImmutableBlock::ImmutableBlock(ImmutableBlock const& other)

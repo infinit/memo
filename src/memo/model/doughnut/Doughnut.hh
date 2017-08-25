@@ -216,7 +216,7 @@ namespace memo
 
       protected:
         std::unique_ptr<blocks::MutableBlock>
-        _make_mutable_block() const override;
+        _make_mutable_block(Address owner) const override;
 
         std::unique_ptr<blocks::ImmutableBlock>
         _make_immutable_block(elle::Buffer content,

@@ -28,24 +28,33 @@ namespace memo
       {}
 
       CHB::CHB(Doughnut* d, elle::Buffer data, elle::Buffer salt, Address owner)
-        : Super(CHB::_hash_address(data, owner, salt, d->version()), data)
+        : CHB(d,
+              CHB::_hash_address(data, owner, salt, d->version()),
+              data,
+              salt,
+              std::move(owner))
+      {}
+
+      CHB::CHB(Doughnut* d,
+               Address address,
+               elle::Buffer& data,
+               elle::Buffer& salt,
+               Address owner)
+        : Super(std::move(address),
+                std::move(data),
+                d->version() >= elle::Version(0, 4, 0) ?
+                  std::move(owner) : Address::null)
         , _salt(std::move(salt))
-        , _owner(owner)
-      {
-        if (d->version() < elle::Version(0, 4, 0))
-          this->_owner = Address::null;
-      }
+      {}
 
       CHB::CHB(CHB const& other)
         : Super(other)
         , _salt(other._salt)
-        , _owner(other._owner)
       {}
 
       CHB::CHB(CHB&& other)
        : Super(std::move(other))
        , _salt(std::move(other._salt))
-       , _owner(std::move(other._owner))
       {}
 
       /*---------.
@@ -71,7 +80,7 @@ namespace memo
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address =
-          CHB::_hash_address(this->data(), this->_owner,
+          CHB::_hash_address(this->data(), this->owner(),
                              this->_salt, model.version());
         if (!equal_unflagged(this->address(), expected_address))
         {
@@ -97,8 +106,6 @@ namespace memo
         : Super(input, version)
       {
         input.serialize("salt", _salt);
-        if (version >= elle::Version(0, 4, 0))
-          input.serialize("owner", _owner);
       }
 
       void
@@ -107,8 +114,6 @@ namespace memo
       {
         Super::serialize(s, version);
         s.serialize("salt", _salt);
-        if (version >= elle::Version(0, 4, 0))
-          s.serialize("owner", _owner);
       }
 
       /*--------.
@@ -125,9 +130,9 @@ namespace memo
       blocks::RemoveSignature
       CHB::_sign_remove(Model& model) const
       {
-        ELLE_TRACE("%s: sign_remove, owner=%x", *this, this->_owner);
-        if (this->_owner)
-          return CHB::sign_remove(model, this->address(), this->_owner);
+        ELLE_TRACE("%s: sign_remove, owner=%x", *this, this->owner());
+        if (this->owner())
+          return CHB::sign_remove(model, this->address(), this->owner());
         else
           return blocks::RemoveSignature();
       }
@@ -200,7 +205,7 @@ namespace memo
       {
         auto& dht = dynamic_cast<Doughnut&>(model);
         ELLE_TRACE("%s: validate_remove", *this);
-        if (!this->_owner)
+        if (!this->owner())
           return blocks::ValidationResult::success();
         if (!sig.signature_key || !sig.signature)
           return blocks::ValidationResult::failure("Missing field in signature");
@@ -210,17 +215,17 @@ namespace memo
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
         // now verify that this key has access to owner
-        auto block = model.fetch(this->_owner);
+        auto block = model.fetch(this->owner());
         if (!block)
         {
           ELLE_WARN("CHB owner %x not found, cannot validate remove request",
-            this->_owner);
+            this->owner());
           return blocks::ValidationResult::success();
         }
         auto* acb = dynamic_cast<ACB*>(block.get());
         if (!acb)
         {
-          ELLE_WARN("CHB owner %x is not an ACB", this->_owner);
+          ELLE_WARN("CHB owner %x is not an ACB", this->owner() );
           return blocks::ValidationResult::success();
         }
         if (acb->get_world_permissions().second)

@@ -8,8 +8,8 @@ namespace memo
     {
       char const* GroupBlock::type = "group";
 
-      GroupBlock::GroupBlock(Address a, elle::Buffer data)
-        : Super(a, data)
+      GroupBlock::GroupBlock(Address a, elle::Buffer data, Address owner)
+        : Super(a, std::move(data), std::move(owner))
       {}
 
       GroupBlock::GroupBlock(elle::serialization::Serializer& input,

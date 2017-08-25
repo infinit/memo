@@ -79,11 +79,11 @@ func (server *kvServer) put(key string, value []byte, update bool, atomic bool) 
         if value == nil {
                 return grpc.Errorf(codes.InvalidArgument, "value is nil")
         }
-        db, err := server.vStore.MakeImmutableBlock(context.Background(), &vs.MakeImmutableBlockRequest{Data: value})
+        addr, err := server.vStore.InsertImmutableBlock(context.Background(), &vs.InsertImmutableBlockRequest{Data: value, Owner: server.rootAddress})
         if err != nil {
                 return grpc.Errorf(codes.Internal, "unable to make immutable block: %v", err)
         }
-        store := data.ValueStore{Address: db.Address}
+        store := data.ValueStore{Address: addr.Address}
         var opType operationType
         if update == true {
                 opType = UPDATE
@@ -92,28 +92,16 @@ func (server *kvServer) put(key string, value []byte, update bool, atomic bool) 
         } else {
                 opType = UPSERT
         }
-        op := operation{opType: opType, key: key, store: store, commit: false}
+        op := operation{opType: opType, key: key, store: store}
         if err = server.store(op); err != nil {
                 if _, ok := err.(AlreadyExistsError); ok {
+                        server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: addr.Address})
                         return grpc.Errorf(codes.AlreadyExists, err.Error())
                 } else if _, ok := err.(DoesNotExistError); ok {
+                        server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: addr.Address})
                         return grpc.Errorf(codes.NotFound, err.Error())
                 }
-                return grpc.Errorf(codes.Internal, "unable to store edit: %v", err)
-        }
-        if _, err := server.vStore.Insert(context.Background(), &vs.InsertRequest{Block: db}); err != nil {
-                server.store(operation{opType: CLEANUP_EDIT, key: key, store: store})
-                return grpc.Errorf(codes.Internal, "unable to store data block: %v", err)
-        }
-        op.commit = true
-        if err = server.store(op); err != nil {
-                server.store(operation{opType: CLEANUP_EDIT, key: key, store: store})
-                if _, ok := err.(AlreadyExistsError); ok {
-                        return grpc.Errorf(codes.AlreadyExists, err.Error())
-                } else if _, ok := err.(DoesNotExistError); ok {
-                        return grpc.Errorf(codes.NotFound, err.Error())
-                }
-                return grpc.Errorf(codes.Internal, "unable to store commit: %v", err)
+                return grpc.Errorf(codes.Internal, "unable to store value: %v", err)
         }
         return nil
 }
@@ -278,14 +266,12 @@ const (
         UPDATE
         UPSERT
         DELETE
-        CLEANUP_EDIT
 )
 
 type operation struct {
         opType operationType
         key    string
         store  data.ValueStore
-        commit bool
 }
 
 func (server *kvServer) store(op operation) error {
@@ -317,36 +303,13 @@ func (server *kvServer) store(op operation) error {
                         } else if op.opType == UPDATE {
                                 return DoesNotExistError{op.key}
                         }
-                        if op.commit == true {
-                                if desc, ok := km.GetMap()[op.key]; ok {
-                                        if desc.GetCurrent().GetAddress() != nil {
-                                                server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: desc.GetCurrent().GetAddress()})
-                                        }
-                                        desc.Current = &op.store
-                                        editIndex := -1
-                                        for i, e := range desc.GetEdits() {
-                                                if addressEqual(e.GetAddress(), op.store.GetAddress()) {
-                                                        editIndex = i
-                                                        break
-                                                }
-                                        }
-                                        if editIndex != -1 {
-                                                desc.Edits = append(desc.Edits[:editIndex], desc.Edits[editIndex+1:]...)
-                                        }
-                                } else {
-                                        return grpc.Errorf(codes.Internal, "no edit for commit: %s", op.key)
+                        if desc, ok := km.GetMap()[op.key]; ok {
+                                if desc.GetCurrent().GetAddress() != nil {
+                                        server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: desc.GetCurrent().GetAddress()})
                                 }
+                                desc.Current = &op.store
                         } else {
-                                if desc, ok := km.GetMap()[op.key]; ok {
-                                        if desc.GetEdits() == nil {
-                                                desc.Edits = []*data.ValueStore{&op.store}
-                                        } else {
-                                                desc.Edits = append(desc.Edits, &op.store)
-                                        }
-                                } else {
-                                        desc := data.ValueDescriptor{Edits: []*data.ValueStore{&op.store}}
-                                        km.Map[op.key] = &desc
-                                }
+                                km.Map[op.key] = &data.ValueDescriptor{Current: &op.store}
                         }
                 case DELETE:
                         if desc, ok := km.GetMap()[op.key]; ok {
@@ -354,27 +317,12 @@ func (server *kvServer) store(op operation) error {
                                 if store != nil && store.GetAddress() != nil {
                                         server.vStore.Delete(context.Background(), &vs.DeleteRequest{Address: store.GetAddress()})
                                         desc.Current.Address = nil
-                                        if len(desc.GetEdits()) == 0 {
-                                                delete(km.Map, op.key)
-                                        }
+                                        delete(km.GetMap(), op.key)
                                 } else {
                                         return DoesNotExistError{op.key}
                                 }
                         } else {
                                 return DoesNotExistError{op.key}
-                        }
-                case CLEANUP_EDIT:
-                        if desc, ok := km.GetMap()[op.key]; ok {
-                                editIndex := -1
-                                for i, e := range desc.GetEdits() {
-                                        if addressEqual(e.GetAddress(), op.store.GetAddress()) {
-                                                editIndex = i
-                                                break
-                                        }
-                                }
-                                if editIndex != -1 {
-                                        desc.Edits = append(desc.Edits[:editIndex], desc.Edits[editIndex+1:]...)
-                                }
                         }
                 }
                 payload, err := proto.Marshal(km)

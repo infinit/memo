@@ -371,8 +371,8 @@ namespace memo
         void
         Consensus::print(std::ostream& output) const
         {
-          elle::fprintf(output,
-                        "%f(%x)", elle::type_info(*this), (void*)(this));
+          elle::print(output,
+                      "%f(%f)", elle::type_info(*this), this->doughnut().id());
         }
 
         /*-----------------.
