@@ -314,7 +314,7 @@ namespace memo
             struct DecisionEntry
             {
               Address address;
-              int64_t use;
+              elle::Time use;
               std::shared_ptr<Decision> decision;
             };
             using Addresses = bmi::multi_index_container<
@@ -328,11 +328,10 @@ namespace memo
                 bmi::ordered_unique<
                   bmi::member<
                     DecisionEntry,
-                    int64_t,
+                    elle::Time,
                     &DecisionEntry::use>>
               >>;
             ELLE_ATTRIBUTE(Addresses, addresses);
-            ELLE_ATTRIBUTE(int64_t, next_use);
             ELLE_ATTRIBUTE(int, max_addresses_size);
           private:
             void

@@ -848,7 +848,7 @@ namespace memo
           {
             this->_addresses.modify(decision, [&](DecisionEntry& de)
               {
-                de.use = ++this->_next_use;
+                de.use = elle::Clock::now();
               });
             return BlockOrPaxos(decision->decision.get());
           }
@@ -917,7 +917,7 @@ namespace memo
             {
               this->_addresses.modify(decision, [&](DecisionEntry& de)
               {
-                de.use = ++this->_next_use;
+                de.use = elle::Clock::now();
               });
               return decision->decision;
             }
@@ -971,7 +971,7 @@ namespace memo
           }
           auto ir = this->_addresses.insert(DecisionEntry{
               address,
-              ++this->_next_use,
+              elle::Clock::now(),
               std::make_shared<Decision>(std::move(decision))
           });
           ELLE_ASSERT(ir.second);
