@@ -2312,6 +2312,30 @@ ELLE_TEST_SCHEDULED(tombstones)
   BOOST_TEST(storage_c.size() == 0);
 }
 
+ELLE_TEST_SCHEDULED(unload)
+{
+  auto const max = 8;
+  elle::os::setenv("MEMO_PAXOS_CACHE_SIZE", std::to_string(max));
+  auto dht = make_dht(0);
+  std::unordered_set<memo::model::Address> addresses;
+  auto paxos = std::dynamic_pointer_cast<dht::consensus::Paxos::LocalPeer>(
+    dht->dht->local());
+  BOOST_REQUIRE(paxos);
+  BOOST_TEST(paxos->max_addresses_size() == max);
+  for (int i = 0; i < 16; ++i)
+  {
+    auto b = dht->dht->make_block<blocks::MutableBlock>(
+      std::string("unload"));
+    dht->dht->seal_and_insert(*b);
+    addresses.emplace(b->address());
+  }
+  for (auto const& a: addresses)
+  {
+    BOOST_TEST(paxos->addresses().size() <= max);
+    dht->dht->fetch(a);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -2433,4 +2457,5 @@ ELLE_TEST_SUITE()
     }
   }
   paxos->add(BOOST_TEST_CASE(tombstones), 0, valgrind(3));
+  paxos->add(BOOST_TEST_CASE(unload), 0, valgrind(3));
 }

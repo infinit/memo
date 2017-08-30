@@ -331,8 +331,8 @@ namespace memo
                     elle::Time,
                     &DecisionEntry::use>>
               >>;
-            ELLE_ATTRIBUTE(Addresses, addresses);
-            ELLE_ATTRIBUTE(int, max_addresses_size);
+            ELLE_ATTRIBUTE_R(Addresses, addresses);
+            ELLE_ATTRIBUTE_R(int, max_addresses_size);
           private:
             void
             _remove(Address address);
