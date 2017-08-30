@@ -26,7 +26,9 @@ namespace memo
         GroupBlock(GroupBlock const& other) = default;
 
       protected:
-        GroupBlock(Address, elle::Buffer data = {});
+        GroupBlock(Address address,
+                   elle::Buffer data = {},
+                   Address owner = Address::null);
         friend class memo::model::Model;
 
       public:

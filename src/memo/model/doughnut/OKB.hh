@@ -87,13 +87,15 @@ namespace memo
       | Construction |
       `-------------*/
       public:
-        BaseOKB(Doughnut* owner,
+        BaseOKB(Doughnut* dht,
                 elle::Buffer data = {},
-                boost::optional<elle::Buffer> salt = {});
-        BaseOKB(Doughnut* owner,
+                boost::optional<elle::Buffer> salt = {},
+                Address owner = Address::null);
+        BaseOKB(Doughnut* dht,
                 elle::Buffer data,
                 boost::optional<elle::Buffer> salt,
-                elle::cryptography::rsa::KeyPair const& owner_keys);
+                elle::cryptography::rsa::KeyPair const& owner_keys,
+                Address owner = Address::null);
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE_R(int, version, virtual, override);
       protected:
@@ -103,7 +105,8 @@ namespace memo
       private:
         BaseOKB(OKBHeader header,
                 elle::Buffer data,
-                std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key);
+                std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key,
+                Address owner = Address::null);
 
       /*--------.
       | Content |

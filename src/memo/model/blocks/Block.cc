@@ -31,9 +31,10 @@ namespace memo
       | Construction |
       `-------------*/
 
-      Block::Block(Address address, elle::Buffer data)
+      Block::Block(Address address, elle::Buffer data, Address owner)
         : _address(std::move(address))
         , _data(std::move(data))
+        , _owner(std::move(owner))
         , _validated(false)
       {}
 
@@ -166,6 +167,7 @@ namespace memo
       {
         s.serialize("address", this->_address);
         s.serialize("data", this->_data);
+        s.serialize("owner", this->_owner);
       }
 
       void

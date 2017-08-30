@@ -114,7 +114,9 @@ namespace memo
       | Construction |
       `-------------*/
       public:
-        Block(Address address, elle::Buffer data = {});
+        Block(Address address,
+              elle::Buffer data = {},
+              Address owner = Address::null);
         Block(Block const& other) = default;
         Block(Block&& other) = default;
         friend class memo::model::Model;
@@ -138,6 +140,7 @@ namespace memo
         take_data();
         ELLE_ATTRIBUTE_R(Address, address, protected);
         ELLE_ATTRIBUTE_R(elle::Buffer, data, protected, virtual);
+        ELLE_ATTRIBUTE_R(Address, owner);
 
       /*-----------.
       | Validation |

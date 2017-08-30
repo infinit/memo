@@ -706,6 +706,27 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       BOOST_CHECK_EQUAL(abs.block().address(), chb.address());
       BOOST_CHECK_EQUAL(abs.block().data(), "bok");
     }
+    //insert
+    {
+      grpc::ClientContext context;
+      ::memo::vs::InsertImmutableBlockRequest req;
+      ::memo::vs::InsertImmutableBlockResponse repl;
+      req.set_data("bok bok");
+      req.set_owner(std::string(
+        (const char*)memo::model::Address::random().value(), 32));
+      stub->InsertImmutableBlock(&context, req, &repl);
+      ::memo::vs::FetchRequest addr;
+      ::memo::vs::FetchResponse abs;
+      addr.set_address(repl.address());
+      {
+        grpc::ClientContext context;
+        stub->Fetch(&context, addr, &abs);
+      }
+      BOOST_CHECK(abs.has_block());
+      BOOST_CHECK_EQUAL(abs.block().address(), repl.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "bok bok");
+      BOOST_CHECK_EQUAL(abs.block().owner(), req.owner());
+    }
 
     // basic OKB
     ::memo::vs::Block okb;
@@ -788,6 +809,28 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
         BOOST_CHECK(tabs.has_block());
         BOOST_CHECK_EQUAL(tabs.block().data_plain(), "merow");
       }
+    }
+    //insert
+    {
+      grpc::ClientContext context;
+      ::memo::vs::InsertMutableBlockRequest req;
+      ::memo::vs::InsertMutableBlockResponse repl;
+      req.set_data("bok bok");
+      req.set_owner(std::string(
+        (const char*)memo::model::Address::random().value(), 32));
+      stub->InsertMutableBlock(&context, req, &repl);
+      ::memo::vs::FetchRequest addr;
+      ::memo::vs::FetchResponse abs;
+      addr.set_address(repl.address());
+      addr.set_decrypt_data(true);
+      {
+        grpc::ClientContext context;
+        stub->Fetch(&context, addr, &abs);
+      }
+      BOOST_CHECK(abs.has_block());
+      BOOST_CHECK_EQUAL(abs.block().address(), repl.address());
+      BOOST_CHECK_EQUAL(abs.block().data_plain(), "bok bok");
+      BOOST_CHECK_EQUAL(abs.block().owner(), req.owner());
     }
 
     // ACB

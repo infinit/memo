@@ -157,7 +157,7 @@ namespace memo
 
       /// Construct a mutable block.
       elle::das::named::Function<
-        std::unique_ptr<blocks::MutableBlock>()>
+        std::unique_ptr<blocks::MutableBlock>(decltype(owner = Address::null))>
       make_mutable_block;
 
       /// Construct a named block.
@@ -213,6 +213,26 @@ namespace memo
             std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
       insert;
 
+      /// Insert an immutable block from data.
+      ///
+      /// @param data  Payload of the block.
+      /// @param owner Optional owning mutable block to restrict deletion.
+      elle::das::named::Function<
+        Address(
+          decltype(data)::Formal<elle::Buffer>,
+          decltype(owner = Address::null))>
+      insert_immutable_block;
+
+      /// Insert a mutable block from data.
+      ///
+      /// @param data  Payload of the block.
+      /// @param owner Optional owning mutable block to restrict deletion.
+      elle::das::named::Function<
+        Address(
+          decltype(data)::Formal<elle::Buffer>,
+          decltype(owner = Address::null))>
+      insert_mutable_block;
+
       void
       seal_and_insert(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
@@ -250,7 +270,7 @@ namespace memo
       _construct_block(Args&& ... args);
       virtual
       std::unique_ptr<blocks::MutableBlock>
-      _make_mutable_block() const;
+      _make_mutable_block(Address owner = Address::null) const;
       virtual
       std::unique_ptr<blocks::ImmutableBlock>
       _make_immutable_block(elle::Buffer content,
