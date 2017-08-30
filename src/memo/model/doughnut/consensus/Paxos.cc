@@ -1302,11 +1302,11 @@ namespace memo
           ELLE_TRACE_SCOPE("%s: reconcile %f", this, address);
           if (address.mutable_block())
           {
-            auto& decision = this->_load_paxos(address);
+            auto decision = this->_load_paxos(address);
             auto& dht = this->paxos().doughnut();
             auto peers = Details::lookup_nodes(
               dht,
-              decision.paxos.current_quorum(),
+              decision->paxos.current_quorum(),
               address);
             Paxos::PaxosClient client(address, std::move(peers));
             try
