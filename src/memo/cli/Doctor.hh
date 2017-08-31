@@ -117,16 +117,19 @@ namespace memo
 
         // log push.
         Mode<Log,
-             void (decltype(cli::match = elle::defaulted(std::regex{""})),
+             void (decltype(cli::network = boost::optional<std::string>{}),
+                   decltype(cli::match = elle::defaulted(std::regex{""})),
                    decltype(cli::number = 2)),
              decltype(modes::mode_push)>
         push;
         /// Send the latest logs to infinit.
         ///
+        /// @param network a family name
         /// @param match   a regex
         /// @param number  the number of files to send, 0 for unlimited.
         void
-        mode_push(elle::Defaulted<std::regex> const& match,
+        mode_push(boost::optional<std::string> const& network,
+                  elle::Defaulted<std::regex> const& match,
                   int number);
 
         std::string const description = "Manage logs";

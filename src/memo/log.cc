@@ -217,6 +217,12 @@ namespace memo
     return res;
   }
 
+  std::vector<bfs::path>
+  latest_logs_family(std::string const& family, int n)
+  {
+    return  latest_logs(std::regex{"^" + family + "/"}, n);
+  }
+
   boost::container::flat_set<std::string>
   log_families(std::regex const& match)
   {
@@ -233,31 +239,17 @@ namespace memo
       elle::try_remove(p);
   }
 
-  namespace
+  int
+  tar_logs(bfs::path const& tgz,
+           std::vector<bfs::path> const& files)
   {
-    int tar_logs(bfs::path const& tgz,
-                  std::vector<bfs::path> const& files)
-    {
-      if (files.empty())
-        ELLE_LOG("there are no log files");
-      else
+    if (files.empty())
+      ELLE_LOG("there are no log files");
+    else
       {
         ELLE_DUMP("generating {} containing {}", tgz, files);
         archive(elle::archive::Format::tar_gzip, files, tgz);
       }
-      return files.size();
-    }
-  }
-
-  int tar_logs(bfs::path const& tgz,
-               std::regex const& match, int n)
-  {
-    return tar_logs(tgz, latest_logs(match, n));
-  }
-
-  int tar_logs(bfs::path const& tgz,
-               bfs::path const& base, int n)
-  {
-    return tar_logs(tgz, latest_logs(base, n));
+    return files.size();
   }
 }

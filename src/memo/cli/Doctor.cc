@@ -204,6 +204,7 @@ namespace memo
              cli::match = elle::defaulted(std::regex{""}))
       , push(*this,
              "Upload {objects} to {hub}",
+             cli::network = boost::optional<std::string>{},
              cli::match = elle::defaulted(std::regex{""}),
              cli::number = 2)
     {}
@@ -213,8 +214,8 @@ namespace memo
                              elle::Defaulted<std::regex> const& match)
     {
       ELLE_TRACE_SCOPE("log.delete");
-      if (match && all)
-        elle::err<CLIError>("cannot use --name and --match simultaneously");
+      if (all && match)
+        elle::err<CLIError>("cannot use --all and --match simultaneously");
       if (all)
         log_remove();
       else if (match)
@@ -240,15 +241,25 @@ namespace memo
     }
 
     void
-    Doctor::Log::mode_push(elle::Defaulted<std::regex> const& match,
+    Doctor::Log::mode_push(boost::optional<std::string> const& network,
+                           elle::Defaulted<std::regex> const& match,
                            int number)
     {
       ELLE_TRACE_SCOPE("log.push");
+      if (network && match)
+        elle::err<CLIError>("cannot use --network and --match simultaneously");
       auto& cli = this->cli();
       auto owner = cli.as_user();
-
+      auto const files = [&]
+        {
+          if (network)
+            return latest_logs_family(elle::print("%s/%s", owner.name, *network),
+                                      number);
+          else
+            return latest_logs(*match, number);
+        }();
       auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
-      if (auto n = tar_logs(tgz.path(), *match, number))
+      if (auto n = tar_logs(tgz.path(), files))
       {
         if (memo::Hub::upload_log(owner.name, tgz.path()))
           elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
@@ -256,7 +267,7 @@ namespace memo
           elle::print(std::cerr, "failed to upload {} logs\n", n);
       }
       else
-        elle::print(std::cerr, "there are no logs matching {}\n", match);
+        elle::print(std::cerr, "there are no matching logs\n");
     }
 
 
