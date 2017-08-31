@@ -88,7 +88,9 @@ namespace memo
   /// Remove all the log files whose family (partially) matches a pattern.
   ///
   /// @param match  a regex, which matches anything by default.
-  void log_remove(std::regex const& match = std::regex{""});
+  /// @param n      the number of the most recent files _not_ to remove.
+  void log_remove(std::regex const& match = std::regex{""},
+                  int n = 0);
 
   /// Generate a tgz with the latest matching log files.
   ///

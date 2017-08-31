@@ -153,6 +153,8 @@ namespace memo
     // future, use a mutex.
     if (!main_log())
     {
+      // Keep at most 15 main logs.
+      log_remove(std::regex{"^main/"}, 15);
       auto l = make_log("main");
       main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
       elle::log::logger_add(std::move(l));
@@ -168,6 +170,9 @@ namespace memo
   void
   main_log_family(std::string const& family)
   {
+    // Keep at most 15 logs in this family.
+    log_remove(std::regex{"^" + family + "/"}, 15);
+
     // Compute the new base without calling log_base, as we don't want
     // to change the timestamp for instance.
     auto const fname = main_log()->fstream().path().stem();
@@ -220,7 +225,7 @@ namespace memo
   std::vector<bfs::path>
   latest_logs_family(std::string const& family, int n)
   {
-    return  latest_logs(std::regex{"^" + family + "/"}, n);
+    return latest_logs(std::regex{"^" + family + "/"}, n);
   }
 
   boost::container::flat_set<std::string>
@@ -233,10 +238,15 @@ namespace memo
   }
 
   void
-  log_remove(std::regex const& match)
+  log_remove(std::regex const& match, int n)
   {
-    for (auto const& p: to_vector(log_files(match)))
-      elle::try_remove(p);
+    using namespace boost::adaptors;
+    // All the logs, sorted by increasing creation date.
+    auto const logs = latest_logs(match, 0);
+    auto const size = int(logs.size());
+    if (n < size)
+      for (auto const& p: logs | sliced(0, size - n))
+        elle::try_remove(p);
   }
 
   int
