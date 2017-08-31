@@ -42,6 +42,26 @@
         }
       },
       {
+        "name": "InsertImmutableBlock",
+        "arguments": ["InsertImmutableBlockRequest"],
+        "returns": "InsertImmutableBlockResponse",
+        "documentation": {
+          "abstract": "Construct and insert a new ImmutableBlock from payload and owner",
+          "description": "This function avoids one round-trip compared to using MakeImmutableBlock followed by Insert",
+          "related": ["ImmutableBlock"]
+        }
+      },
+      {
+        "name": "InsertMutableBlock",
+        "arguments": ["InsertMutableBlockRequest"],
+        "returns": "InsertMutableBlockResponse",
+        "documentation": {
+          "abstract": "Construct and insert a new MutableBlock from payload and owner",
+          "description": "This function avoids one round-trip compared to using MakeMutableBlock followed by Insert",
+          "related": ["MutableBlock"]
+        }
+      },
+      {
         "name": "Update",
         "arguments": ["UpdateRequest"],
         "returns": "UpdateResponse",
@@ -68,7 +88,17 @@
       "documentation": {
         "abstract": "Create a request for a MutableBlock",
         "related": ["MutableBlock", "MakeMutableBlock", "InsertRequest"]
-      }
+      },
+      "attributes": [
+        {
+        "name": "owner",
+        "type": "bytes",
+        "documentation": {
+            "abstract": "The owner of the MutableBlock"
+          },
+        "index": 1
+        }
+      ]
     },
     {
       "name": "MakeImmutableBlockRequest",
@@ -93,6 +123,94 @@
             "description": "This address is used to find the ACB in charge of the Block, to sign the Block and control remove permissions. Until ACB are introduced to this API, leave this field empty to base the signature on the key-value store keys"
           },
           "index": 2
+        }
+      ]
+    },
+        {
+      "name": "InsertMutableBlockRequest",
+      "documentation": {
+        "abstract": "Create a request for an MutableBlock insertion",
+        "related": ["InsertMutableBlock", "InsertRequest"]
+      },
+      "attributes": [
+        {
+          "name": "data",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The initial payload of the MutableBlock"
+          },
+          "index": 1
+        },
+        {
+          "name": "owner",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the owner block",
+            "description": "This address is used to find the ACB in charge of the Block, to sign the Block and control remove permissions. Until ACB are introduced to this API, leave this field empty to base the signature on the key-value store keys"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "InsertMutableBlockResponse",
+      "documentation": {
+        "abstract": "the response to a InsertMutableBlock request",
+        "description": "contains the address of the newly created block"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the newly created block",
+            "description": ""
+          },
+          "index": 1
+        }
+      ]
+    },
+    {
+      "name": "InsertImmutableBlockRequest",
+      "documentation": {
+        "abstract": "Create a request for an ImmutableBlock insertion",
+        "related": ["InsertImmutableBlock", "InsertRequest"]
+      },
+      "attributes": [
+        {
+          "name": "data",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The payload of the ImmutableBlock"
+          },
+          "index": 1
+        },
+        {
+          "name": "owner",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the owner block",
+            "description": "This address is used to find the ACB in charge of the Block, to sign the Block and control remove permissions. Until ACB are introduced to this API, leave this field empty to base the signature on the key-value store keys"
+          },
+          "index": 2
+        }
+      ]
+    },
+    {
+      "name": "InsertImmutableBlockResponse",
+      "documentation": {
+        "abstract": "the response to a InsertImmutableBlock request",
+        "description": "contains the address of the newly created block"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "bytes",
+          "documentation": {
+            "abstract": "The address of the newly created block",
+            "description": ""
+          },
+          "index": 1
         }
       ]
     },
@@ -371,7 +489,15 @@
           "index": 6
         },
         {
-          "name": "owner_rsa",
+          "name": "owner_key",
+          "type": "bytes",
+          "documentation": {
+            "abstract": ""
+          },
+          "index": 24
+        },
+        {
+          "name": "owner_key_rsa",
           "type": "bytes",
           "documentation": {
             "abstract": ""

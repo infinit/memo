@@ -106,10 +106,10 @@ def configure(
   libdir = 'bin' if windows else 'lib'
 
   def import_lib(lib):
-    if windows:
-      return lib.lib_static
-    else:
-      return drake.copy(lib.lib_dynamic, libdir, strip_prefix = True)
+    #if windows:
+    #  return lib.lib_static
+    #else:
+    return drake.copy(lib.lib_dynamic, libdir, strip_prefix = True)
 
   athena_lib       = import_lib(elle.athena)
   aws_lib          = import_lib(elle.aws)
@@ -157,13 +157,11 @@ def configure(
   cxx_config_memo = drake.cxx.Config(cxx_config)
 
   cxx_config_memo += elle.boost.config_system(link = False)
-  if not windows:
-    cxx_config_memo.library_add(
-      drake.copy(elle.boost.system_dynamic, libdir, True))
+  cxx_config_memo.library_add(
+    drake.copy(elle.boost.system_dynamic, libdir, True))
   cxx_config_memo += elle.boost.config_filesystem(link = False)
-  if not windows:
-    cxx_config_memo.library_add(
-      drake.copy(elle.boost.filesystem_dynamic, libdir, True))
+  cxx_config_memo.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, libdir, True))
   cxx_config_memo += elle.das.config
 
   class CxxVersionGenerator(VersionGenerator):
@@ -318,14 +316,16 @@ def configure(
     cxx_config_memo.lib('dbghelp')
     cxx_config_memo.lib('iphlpapi')
     cxx_config_memo.lib('crypt32')
-    cxx_config_memo.library_add(elle.boost.regex_static)
     libtype = drake.cxx.DynLib
     extra_libs += [drake.copy(dokan_lib, libdir, strip_prefix = True)]
     cxx_config_memo.use_whole_archive()
   else:
+    libtype = drake.cxx.DynLib
+  if elle.boost.prefer_shared:
     cxx_config_memo.library_add(
       drake.copy(elle.boost.regex_dynamic, libdir, True))
-    libtype = drake.cxx.DynLib
+  else:
+    cxx_config_memo.library_add(elle.boost.regex_static)
   memo_lib  = libtype(
     libdir + '/memo',
     (memo_sources
@@ -385,19 +385,18 @@ def configure(
       cli_cxx_config.add_system_include_path(p)
 
   cli_cxx_config.lib_path_runtime('../lib')
-  if not windows:
-    cli_cxx_config.library_add(
-      drake.copy(elle.boost.program_options_dynamic, libdir, True))
-    cli_cxx_config.library_add(
-      drake.copy(elle.boost.filesystem_dynamic, libdir, True))
-    cli_cxx_config.library_add(
-      drake.copy(elle.boost.regex_dynamic, libdir, True))
-    cli_cxx_config.library_add(
-      drake.copy(elle.boost.system_dynamic, libdir, True))
-    if cxx_toolkit.os is drake.os.macos:
-      cli_cxx_config.framework_add('CoreServices')
-      cli_cxx_config.ldflag('-headerpad_max_install_names')
-  else:
+  cli_cxx_config.library_add(
+    drake.copy(elle.boost.program_options_dynamic, libdir, True))
+  cli_cxx_config.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, libdir, True))
+  cli_cxx_config.library_add(
+    drake.copy(elle.boost.regex_dynamic, libdir, True))
+  cli_cxx_config.library_add(
+    drake.copy(elle.boost.system_dynamic, libdir, True))
+  if cxx_toolkit.os is drake.os.macos:
+    cli_cxx_config.framework_add('CoreServices')
+    cli_cxx_config.ldflag('-headerpad_max_install_names')
+  if cxx_toolkit.os is drake.os.windows:
     cli_cxx_config.lib('shlwapi')
     cli_cxx_config.lib('ws2_32')
     cli_cxx_config.lib('gdi32')
@@ -408,8 +407,6 @@ def configure(
     cli_cxx_config.lib('winmm')
     cli_cxx_config.library_add(
       drake.copy(dokan_lib, libdir, True))
-    cli_cxx_config.library_add(elle.boost.program_options_static)
-    cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
   if with_kvs:
     cli_cxx_config.library_add(drake.copy(kvs.library, libdir, True))
   if entreprise_edition:
@@ -501,18 +498,15 @@ def configure(
         cxx_toolkit,
         memo_cli_instantiate_config))
   memo_cli_deps = [memo_lib]
-  if not windows:
-    # Do not relink with the static libs again under windows
-    # they are allready whole_archive-d into memo_lib
-    memo_cli_deps += [
-      aws_lib,
-      cryptography_lib,
-      elle_lib,
-      protocol_lib,
-      reactor_lib,
-    ]
-    if enable_prometheus:
-      memo_cli_deps.append(prometheus_lib)
+  memo_cli_deps += [
+    aws_lib,
+    cryptography_lib,
+    elle_lib,
+    protocol_lib,
+    reactor_lib,
+  ]
+  if enable_prometheus:
+    memo_cli_deps.append(prometheus_lib)
   if enable_crash_report:
     memo_cli_deps.append(crash_report_lib)
 
@@ -918,27 +912,28 @@ def configure(
     cxx_config_tests.add_local_include_path('crash-report/src') # functional/bin/crasher
   if grpc.grpc_lib:
     cxx_config_tests.library_add(grpc_lib)
-  if not windows:
+  if True:
+    tests_libdir = windows and 'tests' or 'lib'
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.test_dynamic, libdir, True))
+      drake.copy(elle.boost.test_dynamic, tests_libdir, True))
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.timer_dynamic, libdir, True))
+      drake.copy(elle.boost.timer_dynamic, tests_libdir, True))
     cxx_config_tests += elle.boost.config_system(link = False)
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.system_dynamic, libdir, True))
+      drake.copy(elle.boost.system_dynamic, tests_libdir, True))
     cxx_config_tests += elle.boost.config_filesystem(link = False)
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.filesystem_dynamic, libdir, True))
+      drake.copy(elle.boost.filesystem_dynamic, tests_libdir, True))
     cxx_config_tests += elle.boost.config_program_options(
       link = False)
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.program_options_dynamic, libdir, True))
+      drake.copy(elle.boost.program_options_dynamic, tests_libdir, True))
     cxx_config_tests.library_add(
-      drake.copy(elle.boost.regex_dynamic, libdir, True))
+      drake.copy(elle.boost.regex_dynamic, tests_libdir, True))
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     memo_lib_tests = memo_lib
     memo_lib_tests_consensus = memo_lib
-  else:
+  if windows:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
     cxx_config_tests.lib('gdi32')
@@ -946,17 +941,9 @@ def configure(
     cxx_config_tests.lib('dbghelp')
     cxx_config_tests.lib('iphlpapi')
     cxx_config_tests.lib('crypt32')
-    cxx_config_tests.library_add(elle.boost.filesystem_static)
-    cxx_config_tests.library_add(elle.boost.program_options_static)
-    cxx_config_tests.library_add(elle.boost.system_static)
-    cxx_config_tests.library_add(elle.boost.regex_static)
-    cxx_config_tests.use_whole_archive()
-    cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
 
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
-    cxx_config_tests.library_add(elle.boost.test_static)
-    cxx_config_tests.library_add(elle.boost.timer_static)
     memo_lib_tests = drake.copy(memo_lib, 'tests',
                                    strip_prefix = True)
     memo_lib_tests_consensus = drake.copy(memo_lib, 'tests/consensus',
@@ -964,6 +951,9 @@ def configure(
     dokan_lib_tests = drake.copy(dokan_lib, 'tests', strip_prefix = True)
     dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
+    tests_consensus_lib = [drake.copy(elle.boost.test_dynamic, 'tests/consensus', True)]
+  else:
+    tests_consensus_lib = []
   tests_proto = grpc.GRPCCxxGen(drake.node('tests/grpc.proto'),
                                 grpc.grpc.protoc,
                                 grpc.grpc.grpc_cpp_plugin)
@@ -972,12 +962,12 @@ def configure(
     # tests-args offer a means to run a binaries with different cli options,
     # and generate separated outputs.
     ('async-conflict'         , []       , None),
-    ('backward-compatibility' , []       , None),
+    # ('backward-compatibility' , []       , None),
     ('bandwidth'              , []       , None),
     ('byzantine'              , []       , None),
-    ('consensus/async'        , []       , None),
-    ('consensus/cache'        , []       , None),
-    ('consensus/paxos'        , []       , None),
+    ('consensus/async'        , tests_consensus_lib       , None),
+    ('consensus/cache'        , tests_consensus_lib       , None),
+    ('consensus/paxos'        , tests_consensus_lib       , None),
     ('doughnut'               , []       , None),
     ('faith'                  , []       , None),
     ('filesystem'             , binaries , None),
@@ -995,10 +985,7 @@ def configure(
     )
   # The tests that do not use Boost.Test.
   non_boost_tests = ['backward-compatibility']
-  if not windows:
-    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
-  else:
-    tests_extra_libs = []
+  tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   if enable_prometheus:
     tests_extra_libs.append(prometheus_lib)
 

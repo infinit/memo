@@ -15,8 +15,9 @@ namespace memo
       /*-------------.
       | Construction |
       `-------------*/
-      ACLBlock::ACLBlock(Address address, elle::Buffer data)
-        : Super(address, data)
+
+      ACLBlock::ACLBlock(Address address, elle::Buffer data, Address owner)
+        : Super(address, std::move(data), std::move(owner))
       {}
 
       ACLBlock::ACLBlock(ACLBlock const& other)
@@ -26,6 +27,7 @@ namespace memo
       /*-------.
       | Clone  |
       `-------*/
+
       std::unique_ptr<Block>
       ACLBlock::clone() const
       {

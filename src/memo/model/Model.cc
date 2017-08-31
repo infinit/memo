@@ -9,6 +9,8 @@
 #include <memo/model/blocks/GroupBlock.hh>
 #include <memo/utility.hh>
 
+#include <elle/reactor/cxa_get_globals.hh>
+
 ELLE_LOG_COMPONENT("memo.model.Model");
 
 namespace memo
@@ -28,7 +30,8 @@ namespace memo
         data,
         owner = Address::null)
       , make_mutable_block(
-        elle::das::bind_method(*this, &Model::_make_mutable_block))
+        elle::das::bind_method(*this, &Model::_make_mutable_block),
+        owner = Address::null)
       , make_named_block(
         elle::das::bind_method(*this, &Model::_make_named_block),
         key)
@@ -49,6 +52,28 @@ namespace memo
                },
                block,
                conflict_resolver = nullptr)
+      , insert_immutable_block([this] (elle::Buffer data, Address owner)
+        {
+          ELLE_TRACE_SCOPE("%s: insert immutable block with owner %f", this, owner);
+          auto block = this->_make_immutable_block(std::move(data), owner);
+          auto addr = block->address();
+          this->_insert(std::move(block), nullptr);
+          return addr;
+        },
+        data,
+        owner = Address::null)
+      , insert_mutable_block([this] (elle::Buffer data, Address owner)
+        {
+          ELLE_TRACE_SCOPE("%s: insert mutable block with owner %f", this, owner);
+          auto block = this->_make_mutable_block(owner);
+          block->data(std::move(data));
+          auto addr = block->address();
+          block->seal();
+          this->_insert(std::move(block), nullptr);
+          return addr;
+        },
+        data,
+        owner = Address::null)
       , update([this] (std::unique_ptr<blocks::Block> block,
                        std::unique_ptr<ConflictResolver> resolver,
                        bool decypher)
@@ -107,11 +132,11 @@ namespace memo
     }
 
     std::unique_ptr<blocks::MutableBlock>
-    Model::_make_mutable_block() const
+    Model::_make_mutable_block(Address owner) const
     {
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::MutableBlock>(
-        Address::random(flags::mutable_block));
+        Address::random(flags::mutable_block), elle::Buffer(), owner);
     }
 
     template <>

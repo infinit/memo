@@ -199,7 +199,7 @@ namespace memo
         : Super(input, version)
         , _doughnut(dht(input))
         , _owner(std::make_shared(
-                   input.deserialize<elle::cryptography::rsa::PublicKey>("owner")))
+                   input.deserialize<elle::cryptography::rsa::PublicKey>("owner_key")))
         , _name(input.deserialize<std::string>("name"))
         , _signature(input.deserialize<elle::Buffer>("signature"))
       {}
@@ -215,7 +215,7 @@ namespace memo
       void
       NB::_serialize(elle::serialization::Serializer& s)
       {
-        s.serialize("owner", *this->_owner);
+        s.serialize("owner_key", *this->_owner);
         s.serialize("name", this->_name);
         s.serialize("signature", this->_signature);
       }

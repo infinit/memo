@@ -27,7 +27,9 @@ namespace memo
         ImmutableBlock(ImmutableBlock&&) = default;
 
       protected:
-        ImmutableBlock(Address address, elle::Buffer data = {});
+        ImmutableBlock(Address address,
+                       elle::Buffer data = {},
+                       Address owner = Address::null);
         ImmutableBlock(ImmutableBlock const& other);
         friend class memo::model::Model;
 

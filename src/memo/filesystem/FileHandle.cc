@@ -80,9 +80,8 @@ namespace memo
       }
       catch (elle::Error const& e)
       {
-       ELLE_ERR("fatal error: exception escaping ~FileHandle: %s\n%s",
-                elle::exception_string(), e.backtrace());
-       throw;
+       ELLE_ABORT("fatal error: exception escaping ~FileHandle: %s\n%s",
+                  elle::exception_string(), e.backtrace());
       }
     }
 

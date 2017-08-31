@@ -190,6 +190,7 @@ def configure(
     module_name = 'Crypto')
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
+    version = '4.1.1',
     module_name = 'PIL',
     dependencies = ['Pillow-3.0.0.egg-info'])
   def install_nodes(where, how, python_version = python.version):

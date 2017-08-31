@@ -26,7 +26,9 @@ namespace memo
       `-------------*/
         MutableBlock(MutableBlock const& other) = default;
       protected:
-        MutableBlock(Address address, elle::Buffer data = {});
+        MutableBlock(Address address,
+                     elle::Buffer data = {},
+                     Address owner = Address::null);
         friend class memo::model::Model;
         bool _data_changed;
 

@@ -50,13 +50,19 @@ namespace memo
           elle::unreachable();
         }
 
-        boost::optional<consensus::Paxos::PaxosClient::Accepted>
+        consensus::Paxos::PaxosServer::Response
         propose(consensus::Paxos::PaxosServer::Quorum const&,
                 Address,
                 consensus::Paxos::PaxosClient::Proposal const&,
                 bool) override
         {
           throw elle::athena::paxos::Unavailable();
+        }
+
+        bool
+        reconcile(Address) override
+        {
+          throw elle::reactor::network::Error("Peer unavailable");
         }
 
         consensus::Paxos::PaxosClient::Proposal
@@ -78,6 +84,14 @@ namespace memo
         get(consensus::Paxos::PaxosServer::Quorum const& peers,
             Address address,
             boost::optional<int> local_version) override
+        {
+          throw elle::athena::paxos::Unavailable();
+        }
+
+        void
+        propagate(consensus::Paxos::PaxosServer::Quorum,
+                  std::shared_ptr<blocks::Block>,
+                  consensus::Paxos::PaxosClient::Proposal) override
         {
           throw elle::athena::paxos::Unavailable();
         }
