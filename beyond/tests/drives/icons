@@ -24,8 +24,8 @@ class Test(unittest.TestCase):
       drive = Drive(volume = volume,
                     description = "Hyperdrive!")
       drive.put(beyond)
-      assertEq(getattr(beyond.app, '_Bottle__image_bucket'), None)
-      setattr(beyond.app, '_Bottle__image_bucket', FakeGCS())
+      assertEq(getattr(beyond.app, '_Bottle__gcs'), None)
+      setattr(beyond.app, '_Bottle__gcs', FakeGCS())
       file = path.join(path.dirname(path.abspath(__file__)), 'icon.png')
       with PIL.Image.open(file, mode = 'r') as icon:
         from io import BytesIO
