@@ -151,10 +151,10 @@ class Bottle(bottle.Bottle):
                method = 'POST')(self.user_send_confirmation_email)
 
     # Avatar
-    self.route('/users/<name>/avatar', method = 'GET') \
-      (self.user_avatar_get)
-    self.route('/users/<name>/avatar', method = 'PUT') \
-      (self.user_avatar_put)
+    self.route('/users/<name>/avatar',
+               method = 'GET')(self.user_avatar_get)
+    self.route('/users/<name>/avatar',
+               method = 'PUT')(self.user_avatar_put)
     self.route('/users/<name>/avatar',
                method = 'DELETE')(self.user_avatar_delete)
     self.route('/users/<name>/networks',
