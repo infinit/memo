@@ -402,7 +402,7 @@ namespace memo
       }
 
       void
-      Group::description(boost::optional<std::string> const& description)
+      Group::description(boost::optional<std::string> description)
       {
         memo::filesystem::umbrella(
           [&]
@@ -411,7 +411,8 @@ namespace memo
             this->_dht.seal_and_update(
               this->block(),
               std::make_unique<GroupConflictResolver>(
-                GroupConflictResolver::Action::set_description, description));
+                GroupConflictResolver::Action::set_description,
+                std::move(description)));
           });
       }
 
