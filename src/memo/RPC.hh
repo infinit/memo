@@ -496,7 +496,7 @@ namespace memo
     void
     set_context(T value)
     {
-      this->_context.set(value);
+      this->_context.set<T>(value);
     }
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
@@ -549,14 +549,14 @@ namespace memo
     ///
     /// @tparam T The type of the value to add.
     /// @param value The value to add.
-    template <typename T>
+    template <typename T, typename A>
     void
-    set_context(T value)
+    set_context(A&& value)
     {
       ELLE_LOG_COMPONENT("memo.RPC");
       ELLE_DUMP("%s: set context for %s: %s",
                 *this, elle::type_info<T>(), value);
-      this->_context.set(value);
+      this->_context.set<T>(std::forward<A>(value));
     }
 
     elle::serialization::Context _context;
