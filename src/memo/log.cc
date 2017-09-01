@@ -4,8 +4,6 @@
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/range/algorithm/partial_sort.hpp>
@@ -32,8 +30,9 @@ namespace memo
 
   std::string log_base(std::string const& family)
   {
-    auto const now =
-      to_iso_string(boost::posix_time::second_clock::universal_time());
+    using namespace date;
+    using namespace std::chrono;
+    auto const now = format("%FT%T", floor<seconds>(system_clock::now()));
     auto const base
       = elle::print("{family}/{now}-{pid}",
                     {
