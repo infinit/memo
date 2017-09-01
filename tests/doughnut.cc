@@ -2336,13 +2336,13 @@ ELLE_TEST_SCHEDULED(unload)
   }
   elle::reactor::for_each_parallel(
     {dht_a.get(), dht_b.get(), dht_c.get()},
-    [&] (auto const& dht)
+    [&, max] (auto const& dht)
     {
       auto paxos = std::dynamic_pointer_cast<dht::consensus::Paxos::LocalPeer>(
         dht->dht->local());
       elle::reactor::for_each_parallel(
         addresses,
-        [&] (auto const& a)
+        [&, max] (auto const& a)
         {
           BOOST_TEST(paxos->addresses().size() <= max);
           dht->dht->fetch(a);
