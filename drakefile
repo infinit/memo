@@ -22,7 +22,9 @@ elle = None
 
 cxx_config = None
 cli_cxx_config = None
+cxx_config_tests = None
 cxx_toolkit = None
+grpc = None
 
 lib = None
 cli_lib = None
@@ -97,7 +99,6 @@ def configure(
     prefix = drake.path_build(prefix, absolute = True)
 
   cxx_config = drake.cxx.Config(cxx_config)
-  set_cxx_config(cxx_config)
   cxx_config.warnings.parentheses = False
   cxx_config.warnings.sign_compare = drake.cxx.Config.Warnings.Error;
   if production_build:
@@ -178,6 +179,7 @@ def configure(
   ## grpc.  ##
   ## ------ ##
 
+  global grpc
   grpc = drake.include(
     'src/memo/grpc',
     cxx_toolkit = cxx_toolkit,
@@ -598,6 +600,7 @@ def configure(
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
   rule_build << binaries
 
+  set_cxx_config(cxx_config)
   ## -------- ##
   ## Licenses ##
   ## -------- ##
@@ -932,6 +935,7 @@ def configure(
   ## Tests ##
   ## ----- ##
 
+  global  cxx_config_tests
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.das.config
   cxx_config_tests.add_local_include_path('elle/tests')
