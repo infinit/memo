@@ -252,11 +252,11 @@ namespace memo
       }
 
       void
-      GB::description(boost::optional<std::string> const& description)
+      GB::description(boost::optional<std::string> description)
       {
         if (this->doughnut()->version() < group_description_version)
           elle::err("description is only supported in version 0.8.0 or later");
-        this->_description = description;
+        this->_description = std::move(description);
         this->_acl_changed = true;
       }
 

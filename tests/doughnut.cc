@@ -2150,7 +2150,7 @@ static void no_cheating(dht::Doughnut* d, std::unique_ptr<blocks::Block>& b)
   }
   elle::IOStream is(buf.istreambuf());
   elle::serialization::Context ctx;
-  ctx.set(d);
+  ctx.set<dht::Doughnut*>(d);
   auto res =
     elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
       is, true, ctx);

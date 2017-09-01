@@ -149,7 +149,7 @@ namespace memo
                 elle::unconst(&remote->credentials())}
         , _remote(remote)
       {
-        this->set_context(remote);
+        this->template set_context<Remote*>(remote);
       }
 
       template <typename F>

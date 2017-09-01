@@ -89,8 +89,7 @@ class Bottle(bottle.Bottle):
   def __init__(
       self,
       beyond,
-      image_bucket = None,
-      log_bucket = None,
+      gcs = None,
       production = True,
       force_admin = False,
       ldap_server = None,
@@ -108,9 +107,8 @@ class Bottle(bottle.Bottle):
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
     self.install(CertificationPlugin())
     self.route('/')(self.root)
-    # GCS buckets.
-    self.__image_bucket = image_bucket
-    self.__log_bucket = log_bucket
+    # Beyond's GCS access.
+    self.__gcs = gcs
     # OAuth
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
@@ -151,10 +149,10 @@ class Bottle(bottle.Bottle):
                method = 'POST')(self.user_send_confirmation_email)
 
     # Avatar
-    self.route('/users/<name>/avatar', method = 'GET') \
-      (self.user_avatar_get)
-    self.route('/users/<name>/avatar', method = 'PUT') \
-      (self.user_avatar_put)
+    self.route('/users/<name>/avatar',
+               method = 'GET')(self.user_avatar_get)
+    self.route('/users/<name>/avatar',
+               method = 'PUT')(self.user_avatar_put)
     self.route('/users/<name>/avatar',
                method = 'DELETE')(self.user_avatar_delete)
     self.route('/users/<name>/networks',
@@ -1172,8 +1170,8 @@ class Bottle(bottle.Bottle):
   ## Reporting ##
   ## --------- ##
 
-  def __check_log_bucket(self):
-    if self.__log_bucket is None:
+  def __check_gcs(self):
+    if self.__gcs is None:
       raise Response(501, {
         'error': 'GCS/not_implemented',
         'reason': 'GCS support not enabled',
@@ -1205,11 +1203,11 @@ class Bottle(bottle.Bottle):
     '''The client is about to upload logs, provide it with a temporary
     upload URL.'''
 
-    self.__check_log_bucket()
+    self.__check_gcs()
     import urllib.parse
     path = urllib.parse.quote('_'.join([name, str(self.__beyond.now)]))
-    upload_url = self.__log_bucket.upload_url(
-      bucket = 'logs',
+    upload_url = self.__gcs.upload_url(
+      bucket = 'memo_logs',
       path = path,
       expiration = datetime.timedelta(minutes = 10)
     )
@@ -1233,16 +1231,9 @@ class Bottle(bottle.Bottle):
     return {}
 
 
-  ## -------------- ##
-  ## Image Bucket.  ##
-  ## -------------- ##
-
-  def __check_image_bucket(self):
-    if self.__image_bucket is None:
-      raise Response(501, {
-        'error': 'GCS/not_implemented',
-        'reason': 'GCS support not enabled',
-      })
+  ## -------- ##
+  ## Images.  ##
+  ## -------- ##
 
   @staticmethod
   def content_type(image):
@@ -1259,7 +1250,7 @@ class Bottle(bottle.Bottle):
     raise ValueError('Image type is not recognized')
 
   def __cloud_image_upload(self, bucket, name):
-    self.__check_image_bucket()
+    self.__check_gcs()
     content_type = None
     try:
       import PIL.Image
@@ -1274,7 +1265,7 @@ class Bottle(bottle.Bottle):
     from io import BytesIO
     bs = BytesIO()
     image.save(bs, "PNG")
-    self.__image_bucket.upload(
+    self.__gcs.upload(
       bucket,
       name,
       data = bs.getvalue(),
@@ -1283,8 +1274,8 @@ class Bottle(bottle.Bottle):
     raise Response(201, {})
 
   def __cloud_image_get_url(self, bucket, name):
-    self.__check_image_bucket()
-    url = self.__image_bucket.download_url(
+    self.__check_gcs()
+    url = self.__gcs.download_url(
       bucket,
       name,
       expiration = datetime.timedelta(minutes = 3),
@@ -1295,8 +1286,8 @@ class Bottle(bottle.Bottle):
     bottle.redirect(self.__cloud_image_get_url(bucket, name))
 
   def __cloud_image_delete(self, bucket, name):
-    self.__check_image_bucket()
-    self.__image_bucket.delete(
+    self.__check_gcs()
+    self.__gcs.delete(
       bucket,
       name,
     )

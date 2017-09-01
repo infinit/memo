@@ -1,5 +1,7 @@
 #pragma once
 
+#include <regex>
+
 #include <elle/das/cli.hh>
 
 #include <memo/cli/Object.hh>
@@ -98,33 +100,38 @@ namespace memo
         // log delete.
         Mode<Log,
              void (decltype(cli::all = false),
-                   decltype(cli::match = boost::optional<std::string>{})),
+                   decltype(cli::match = elle::defaulted(std::regex{""})),
+                   decltype(cli::number = 0)),
              decltype(modes::mode_delete)>
         delete_;
         void
         mode_delete(bool all,
-                    boost::optional<std::string> const& match);
+                    elle::Defaulted<std::regex> const& match,
+                    int number);
 
         // log list.
         Mode<Log,
-             void (decltype(cli::match = boost::optional<std::string>{})),
+             void (decltype(cli::match = elle::defaulted(std::regex{""}))),
              decltype(modes::mode_list)>
         list;
         void
-        mode_list(boost::optional<std::string> const& match);
+        mode_list(elle::Defaulted<std::regex> const& match);
 
         // log push.
         Mode<Log,
-             void (decltype(cli::match = boost::optional<std::string>{}),
+             void (decltype(cli::network = boost::optional<std::string>{}),
+                   decltype(cli::match = elle::defaulted(std::regex{""})),
                    decltype(cli::number = 2)),
              decltype(modes::mode_push)>
         push;
         /// Send the latest logs to infinit.
         ///
+        /// @param network a family name
         /// @param match   a regex
         /// @param number  the number of files to send, 0 for unlimited.
         void
-        mode_push(boost::optional<std::string> const& match,
+        mode_push(boost::optional<std::string> const& network,
+                  elle::Defaulted<std::regex> const& match,
                   int number);
 
         std::string const description = "Manage logs";

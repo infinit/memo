@@ -491,7 +491,7 @@ protected:
     }
     elle::IOStream is(buf.istreambuf());
     elle::serialization::Context ctx;
-    ctx.set(&doughnut());
+    ctx.set<dht::Doughnut*>(&doughnut());
     res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
       is, true, ctx);
     return res;
@@ -517,7 +517,7 @@ protected:
       }
       elle::IOStream is(buf.istreambuf());
       elle::serialization::Context ctx;
-      ctx.set(&doughnut());
+      ctx.set<dht::Doughnut*>(&doughnut());
       auto res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
         is, true, ctx);
       rs.block = std::move(res);

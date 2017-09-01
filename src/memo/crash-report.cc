@@ -40,7 +40,7 @@ namespace memo
     res->make_payload = [](auto const& base)
       {
         auto const tgz = elle::print("{}.log.tgz", base);
-        if (tar_logs(tgz, main_log_base(), 2))
+        if (tar_logs(tgz, latest_logs(main_log_base(), 2)))
           ELLE_DEBUG("bundling {} with the report", tgz);
         else
           ELLE_DEBUG("no logs to bundle with the report");
