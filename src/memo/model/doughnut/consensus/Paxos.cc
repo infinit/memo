@@ -1283,7 +1283,15 @@ namespace memo
             {
               ELLE_LOG("%s: reconciliation remove trailing block %f", \
                        this, address);
-              this->_remove(address);
+              try
+              {
+                this->_remove(address);
+              }
+              catch (MissingBlock const&)
+              {
+                ELLE_TRACE("%s: block %f disappeared while reconciling",
+                           this, address);
+              }
               return true;
             }
             return false;
