@@ -100,12 +100,14 @@ namespace memo
         // log delete.
         Mode<Log,
              void (decltype(cli::all = false),
-                   decltype(cli::match = elle::defaulted(std::regex{""}))),
+                   decltype(cli::match = elle::defaulted(std::regex{""})),
+                   decltype(cli::number = 0)),
              decltype(modes::mode_delete)>
         delete_;
         void
         mode_delete(bool all,
-                    elle::Defaulted<std::regex> const& match);
+                    elle::Defaulted<std::regex> const& match,
+                    int number);
 
         // log list.
         Mode<Log,

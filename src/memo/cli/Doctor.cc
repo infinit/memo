@@ -85,14 +85,8 @@ namespace memo
       , networking(*this,
                    "Perform networking speed tests between nodes",
                    elle::das::cli::Options{
-                     {
-                       "host", elle::das::cli::Option{
-                         '\0', "The host to connect to", false}
-                     },
-                     {
-                       "port", elle::das::cli::Option{
-                         '\0', "The host's port to connect to", false}
-                     }
+                     {"host", {"The host to connect to"}},
+                     {"port", {"The host's port to connect to"}}
                    },
                    cli::mode = boost::none,
                    cli::protocol = boost::none,
@@ -197,13 +191,20 @@ namespace memo
       : Object(memo)
       , delete_(*this,
                 "Delete {objects} locally",
+                elle::das::cli::Options{
+                  {"number", {"number of logs to preserve"}},
+                },
                 cli::all = false,
-                cli::match = elle::defaulted(std::regex{""}))
+                cli::match = elle::defaulted(std::regex{""}),
+                cli::number = 0)
       , list(*this,
              "List existing {object} families",
              cli::match = elle::defaulted(std::regex{""}))
       , push(*this,
              "Upload {objects} to {hub}",
+             elle::das::cli::Options{
+               {"number", {"max number of logs to push"}},
+             },
              cli::network = boost::optional<std::string>{},
              cli::match = elle::defaulted(std::regex{""}),
              cli::number = 2)
@@ -211,15 +212,18 @@ namespace memo
 
     void
     Doctor::Log::mode_delete(bool all,
-                             elle::Defaulted<std::regex> const& match)
+                             elle::Defaulted<std::regex> const& match,
+                             int number)
     {
       ELLE_TRACE_SCOPE("log.delete");
       if (all && match)
         elle::err<CLIError>("cannot use --all and --match simultaneously");
       if (all)
-        log_remove();
+        log_remove(std::regex{""}, number);
       else if (match)
-        log_remove(*match);
+        log_remove(*match, number);
+      else
+        elle::err<CLIError>("specify --all or --match");
     }
 
     void
