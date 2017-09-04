@@ -979,7 +979,7 @@ namespace memo
           auto it = this->_addresses.get<1>().begin();
           for (int i = 0;
                i < signed(this->_addresses.size()) - this->_max_addresses_size;
-               ++i, ++it)
+               ++i)
             // Don't unload blocks if they are in use, as they could be reloaded
             // into _addresses in the meantime and be duplicated, entailing a
             // local split brain.
@@ -988,7 +988,7 @@ namespace memo
               ELLE_DEBUG(
                 "dropping cache entry for %f with use index %s at state %s",
                 it->address, it->use, it->decision->paxos);
-              this->_addresses.get<1>().erase(it);
+              it = this->_addresses.get<1>().erase(it);
             }
           return res;
         }
