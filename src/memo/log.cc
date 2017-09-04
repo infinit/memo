@@ -30,30 +30,7 @@ namespace memo
 
   std::string log_base(std::string const& family)
   {
-    auto const now = []
-      {
-        using namespace date;
-        using namespace std::chrono;
-        // This gives universal time
-        //
-        // format("%FT%T", floor<seconds>(system_clock::now()));
-        //
-        // We need to use the tz library, or work by hand.
-        auto const now = system_clock::now();
-        auto const t = system_clock::to_time_t(now);
-        auto const tm = std::localtime(&t);
-        auto&& os = std::ostringstream{};
-        // GCC 4.9 does not support put_time.
-        // os << std::put_time(tm, "%F %T");
-        {
-          // strlen("2017-07-31T05:24:53") = 20;
-          auto buf = std::array<char, 24>{};
-          // Mingw does not support "%F %T".
-          std::strftime(buf.data(), buf.size(), "%Y-%m-%dT%H:%M:%S", tm);
-          os << buf.data();
-        }
-        return os.str();
-      }();
+    auto const now = elle::to_iso8601_local(std::chrono::system_clock::now());
     auto const base
       = elle::print("{family}/{now}-{pid}",
                     {
