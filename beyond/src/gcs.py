@@ -38,7 +38,7 @@ class GCS:
                 public = False):
     headers = {
       'Authorization' : 'Bearer ' + self.__credentials(),
-      'Content-Length': content_length,
+      'Content-Length': str(content_length),
     }
     if content_type is not None:
       headers['Content-Type'] = content_type
