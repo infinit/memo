@@ -976,14 +976,20 @@ namespace memo
           });
           ELLE_ASSERT(ir.second);
           auto res = ir.first->decision;
-          while (static_cast<int>(this->_addresses.size())
-            > this->_max_addresses_size)
-          {
-            auto it = this->_addresses.get<1>().begin();
-            ELLE_DEBUG("dropping cache entry for %f with use index %s at state %s",
-              it->address, it->use, it->decision->paxos);
-            this->_addresses.get<1>().erase(it);
-          }
+          auto it = this->_addresses.get<1>().begin();
+          for (int i = 0;
+               i < signed(this->_addresses.size()) - this->_max_addresses_size;
+               ++i, ++it)
+            // Don't unload blocks if they are in use, as they could be reloaded
+            // into _addresses in the meantime and be duplicated, entailing a
+            // local split brain.
+            if (it->decision.use_count() == 1)
+            {
+              ELLE_DEBUG(
+                "dropping cache entry for %f with use index %s at state %s",
+                it->address, it->use, it->decision->paxos);
+              this->_addresses.get<1>().erase(it);
+            }
           return res;
         }
 
