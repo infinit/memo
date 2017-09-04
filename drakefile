@@ -180,10 +180,19 @@ def configure(
   ## ------ ##
 
   global grpc
+  grpc_cxx_config = drake.cxx.Config(cxx_config)
+  grpc_cxx_config += elle.boost.config_system(link = False)
+  grpc_cxx_config.library_add(copy_library(elle.boost.system_dynamic))
   grpc = drake.include(
     'src/memo/grpc',
+    libs = [elle_lib, protocol_lib, reactor_lib, cryptography_lib],
+    libdir = drake.Path('../../..') / libdir,
     cxx_toolkit = cxx_toolkit,
-    cxx_config = cxx_config)
+    cxx_config = grpc_cxx_config)
+
+  grpc_lib = copy_library(grpc.lib, builder = PatchAndInstall)
+  protobuf_lib = copy_library(grpc.protobuf_lib, builder = PatchAndInstall)
+  grpc_libs = [grpc_lib, protobuf_lib]
 
   ## -------------- ##
   ## Crash report.  ##
@@ -294,17 +303,9 @@ def configure(
   outguess_configure = drake.node('src/memo/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/memo/model/steg/outguess-0.2/Makefile')
 
-  memo_sources += grpc.sources
+  # XXX: Use libraries.
   cxx_config += grpc.grpc.cxx_config
   extra_libs = []
-  if grpc.memo_vs_grpc_lib:
-    grpc_lib = copy_library(grpc.lib, builder = PatchAndInstall)
-    memo_vs_grpc_lib = copy_library(grpc.memo_vs_lib, builder = PatchAndInstall)
-    protobuf_lib = copy_library(grpc.protobuf_lib, builder = PatchAndInstall)
-    grpc_libs = [grpc_lib, protobuf_lib, memo_vs_grpc_lib]
-    extra_libs += grpc_libs
-  else:
-    memo_sources += grpc.memo_vs_sources
 
   ## ------------ ##
   ## Prometheus.  ##
@@ -392,6 +393,18 @@ def configure(
       grpc = grpc,
     )
     lib_kvs = copy_library(kvs.library)
+
+  ## ------ ##
+  ## gRPC.  ##
+  ## ------ ##
+  memo_vs_grpc_lib = drake.cxx.DynLib(
+    libdir + '/memo_grpc',
+    grpc.memo_vs_sources + grpc_libs + [lib] + [
+      elle_lib, reactor_lib, cryptography_lib,
+    ],
+    cxx_toolkit,
+    cxx_config)
+  grpc_libs += [memo_vs_grpc_lib]
 
   ## -------- ##
   ## Binaries ##
@@ -520,19 +533,18 @@ def configure(
         cxx_toolkit,
         cli_instantiate_config))
 
-  cli_deps = [lib] + extra_libs
-  if not windows:
-    # Do not relink with the static libs again under windows
-    # they are allready whole_archive-d into `lib`.
-    cli_deps += [
-      aws_lib,
-      cryptography_lib,
-      elle_lib,
-      protocol_lib,
-      reactor_lib,
-    ]
-    if enable_prometheus:
-      cli_deps.append(prometheus_lib)
+  cli_deps = [lib] + extra_libs + grpc_libs
+  # Do not relink with the static libs again under windows
+  # they are allready whole_archive-d into `lib`.
+  cli_deps += [
+    aws_lib,
+    cryptography_lib,
+    elle_lib,
+    protocol_lib,
+    reactor_lib,
+  ]
+  if enable_prometheus:
+    cli_deps.append(prometheus_lib)
   if enable_crash_report:
     cli_deps.append(crash_report_lib)
 
@@ -965,6 +977,8 @@ def configure(
   cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
   lib_tests = lib
   libs_tests_consensus = [lib]
+  grpc_lib_tests = grpc_libs
+
   if windows:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
@@ -980,24 +994,26 @@ def configure(
     libs_tests_consensus += [copy_test_library(lib, tests_libdir + '/consensus')]
     dokan_lib_tests = copy_test_library(dokan_lib)
     dokan_lib_tests_consensus = copy_test_library(dokan_lib, tests_libdir + '/consensus')
+    grpc_lib_tests = list(map(copy_test_library, grpc_lib_tests))
+
   tests_proto = drake.gRPC.CxxGen(drake.node('tests/grpc.proto'),
                                   grpc.grpc.protoc,
                                   grpc.grpc.grpc_cpp_plugin)
   tests_names = [
-    # test_name               , deps     , args = ['name-extension', tests-args...]
+    # test_name               , deps                 , args = ['name-extension', tests-args...]
     # tests-args offer a means to run a binaries with different cli options,
     # and generate separated outputs.
-    ('byzantine'              , []       , None),
-    ('consensus/async'        , libs_tests_consensus       , None),
-    ('consensus/cache'        , libs_tests_consensus       , None),
-    ('consensus/paxos'        , libs_tests_consensus       , None),
-    ('doughnut'               , []       , None),
-    ('faith'                  , []       , None),
-    ('grpc'                   , []       , None),
-    ('overlay'                , []       , ['kelips', '-t', 'kelips/*']),
-    ('overlay'                , []       , ['kouncil', '-t', 'kouncil/*']),
-    ('rpc'                    , []       , None),
-    ('storage'                , [aws_lib], None),
+    ('byzantine'              , []                   , None),
+    ('consensus/async'        , libs_tests_consensus , None),
+    ('consensus/cache'        , libs_tests_consensus , None),
+    ('consensus/paxos'        , libs_tests_consensus , None),
+    ('doughnut'               , []                   , None),
+    ('faith'                  , []                   , None),
+    ('grpc'                   , grpc_lib_tests       , None),
+    ('overlay'                , []                   , ['kelips', '-t', 'kelips/*']),
+    ('overlay'                , []                   , ['kouncil', '-t', 'kouncil/*']),
+    ('rpc'                    , []                   , None),
+    ('storage'                , [aws_lib]            , None),
   ]
   if enable_prometheus:
     tests_names.append(
@@ -1022,17 +1038,16 @@ def configure(
         that_test_libs += [dokan_lib_tests]
     if test_name == 'grpc':
       that_test_libs += tests_proto.targets()
-      that_test_libs += grpc_libs
-      if cxx_toolkit.os is drake.os.linux:
-        that_test_libs += grpc.gen_vs_w_named.targets() + [grpc.grpc.protobuf_lib]
+      if windows:
+        # Why ?
+        that_test_libs += grpc.gen_vs_w_named.targets()
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-      ] + that_test_libs + [lib_tests],
+      ] + that_test_libs + [lib_tests] + deps,
       cxx_toolkit,
       cxx_config_tests_no_boost_test if test_name in non_boost_tests else cxx_config_tests)
-    test.dependencies_add(deps)
     rule_tests << test
     env = {
       'BUILD_DIR': drake.path_build(),

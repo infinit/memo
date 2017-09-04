@@ -22,6 +22,8 @@ gen_vs_w_named = None
 def configure(
     cxx_toolkit,
     cxx_config,
+    libs = [],
+    libdir = None,
     git = None,
 ):
   global memo_vs_proto, memo_vs_with_named_proto, lib, grpc, sources, protobuf_lib
@@ -84,17 +86,14 @@ def configure(
   protobuf_lib = drake.copy(
     grpc.protobuf_lib, '.', strip_prefix = True)
 
-  global lib
   lib = drake.cxx.DynLib(
-    'grpc', [protobuf_lib] + grpc.sources,
-    cxx_toolkit, grpc.cxx_config_lib)
+    libdir / 'grpc',
+    [protobuf_lib] + grpc.sources + sources + libs,
+    cxx_toolkit,
+    grpc.cxx_config_lib)
 
-  memo_vs_sources = sources + gen_vs_w_named.targets() +           \
-                         drake.nodes('memo_vs.hh', 'memo_vs.cc')
-  memo_vs_lib = drake.cxx.DynLib(
-    'memo_grpc',
-    [lib, protobuf_lib] + memo_vs_sources,
-    cxx_toolkit, grpc.cxx_config_lib)
+  memo_vs_sources = gen_vs_w_named.targets() + \
+                    drake.nodes('memo_vs.hh', 'memo_vs.cc')
 
   ## -------------------- ##
   ## Docker python client ##
