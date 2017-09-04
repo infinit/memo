@@ -1006,12 +1006,10 @@ ELLE_TEST_SCHEDULED(
               {
                 c->dht->remove(addr);
               }
-              catch (memo::model::MissingBlock const& mb)
-              {
-              }
-              catch (elle::athena::paxos::TooFewPeers const& tfp)
-              {
-              }
+              catch (memo::model::MissingBlock const&)
+              {}
+              catch (elle::athena::paxos::TooFewPeers const&)
+              {}
               ELLE_DEBUG("deleted %f", addr);
             }
             else if (r < 50 || addrs.empty())
@@ -1019,14 +1017,16 @@ ELLE_TEST_SCHEDULED(
               // create
               ELLE_DEBUG("creating");
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
+              ELLE_DEBUG("block created");
               auto a = block->address();
+              ELLE_DEBUG("block address: {}", a);
               try
               {
                 c->dht->insert(std::move(block), tcr());
               }
               catch (elle::Error const& e)
               {
-                ELLE_ERR("insertiong of %s failed with %s", a, e);
+                ELLE_ERR("insertion of %s failed with %s", a, e);
                 throw;
               }
               ELLE_DEBUG("created %f", a);
@@ -1060,11 +1060,11 @@ ELLE_TEST_SCHEDULED(
                   ELLE_DEBUG("updated %f", addr);
                 }
               }
-              catch (memo::model::MissingBlock const& mb)
+              catch (memo::model::MissingBlock const&)
               {
                 except = std::current_exception();
               }
-              catch (elle::athena::paxos::TooFewPeers const& tfp)
+              catch (elle::athena::paxos::TooFewPeers const&)
               {
                 except = std::current_exception();
               }
