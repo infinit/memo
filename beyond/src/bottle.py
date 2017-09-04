@@ -1200,12 +1200,14 @@ class Bottle(bottle.Bottle):
     return {}
 
   def log_get_url(self, name):
-    '''The client is about to upload logs, provide it with a temporary
-    upload URL.'''
+    '''The client is about to upload logs for user `name`, provide it with
+    a temporary upload URL.
+
+    '''
 
     self.__check_gcs()
-    import urllib.parse
-    path = urllib.parse.quote('_'.join([name, str(self.__beyond.now)]))
+    # The name under which we upload.
+    path = '_'.join([name, str(self.__beyond.now)])
     upload_url = self.__gcs.upload_url(
       bucket = 'memo_logs',
       path = path,

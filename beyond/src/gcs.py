@@ -47,6 +47,7 @@ class GCS:
     return headers
 
   def __url(self, bucket, path = ''):
+    '''`path` should be url-encoded.'''
     return \
       'https://%s.%s/%s' % (self.__bucket(bucket), GCS.host, path)
 
@@ -66,6 +67,7 @@ class GCS:
                  content_length = None,
                  headers = {},
   ):
+    '''`path` will be url-encoded, don't do it.'''
     expiration = datetime.datetime.now() + expiration
     expiration = int(time.mktime(expiration.timetuple()))
     path = urllib.parse.quote(path)
@@ -111,6 +113,7 @@ class GCS:
                  content_type = None,
                  content_length = None,
                  public = False):
+    '''`path` will be url-encoded, don't do it.'''
     headers = {}
     if public:
       headers = {
@@ -124,6 +127,7 @@ class GCS:
   def download_url(self, bucket, path, expiration,
                    content_type = None,
                    content_length = None):
+    '''`path` will be url-encoded, don't do it.'''
     return self.__sign_url(bucket, path, expiration, 'GET',
                            content_type = content_type,
                            content_length = content_length)
@@ -151,6 +155,7 @@ class GCS:
     )
 
   def download_url(self, bucket, path, expiration):
+    '''`path` will be url-encoded, don't do it.'''
     return self.__sign_url(bucket, path, expiration, 'GET')
 
   def bucket_list(self, bucket, prefix = None):

@@ -266,7 +266,7 @@ namespace memo
       if (auto n = tar_logs(tgz.path(), files))
       {
         if (memo::Hub::upload_log(owner.name, tgz.path()))
-          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
+          elle::print(std::cout, "successfully uploaded {} logs\n", n);
         else
           elle::print(std::cerr, "failed to upload {} logs\n", n);
       }
