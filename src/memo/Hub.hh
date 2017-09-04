@@ -20,8 +20,10 @@ namespace memo
     static bool upload_crash(Files const& fs);
 
     /// Upload this file to the hub's log report route.
+    /// @param user  the user name
+    /// @param log   the path to the tar.gz of logs
     /// @return Whether we sent successfully.
-    static bool upload_log(std::string const& username,
+    static bool upload_log(std::string const& user,
                            bfs::path const& log);
   };
 }

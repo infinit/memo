@@ -1,5 +1,6 @@
 #include <memo/Hub.hh>
 
+#include <elle/das/printer.hh>
 #include <elle/das/serializer.hh>
 #include <elle/format/base64.hh>
 #include <elle/fstream.hh>
@@ -104,40 +105,58 @@ namespace memo
       ELLE_DAS_SYMBOL(path);
     }
 
-    struct Body
+    /// We will ask Beyond for an URL to upload a file.  This is the
+    /// format of its reply.
+    struct UrlPath
     {
+      using Self = UrlPath;
       std::string url;
       std::string path;
 
       using Model = elle::das::Model<
-        Body,
+        Self,
         decltype(elle::meta::list(s::url, s::path))>;
+
+      // To please the log system.
+      friend
+      std::ostream& operator<<(std::ostream& o, Self const& s)
+      {
+        return elle::das::operator <<(o, s);
+      }
     };
   }
 }
 
-ELLE_DAS_SERIALIZE(memo::Body);
+ELLE_DAS_SERIALIZE(memo::UrlPath);
 
 namespace memo
 {
-  bool
-  Hub::upload_log(std::string const& username, bfs::path const& log)
+  /// Get the URL to use for the upload.  Ask to beyond.  We use
+  /// "<user>/<timestamp>.tgz".
+  UrlPath
+  _log_get_url(std::string const& user)
   {
-    ELLE_DEBUG("get upload url");
-    // The URL to use for the upload, asked to beyond.
-    auto const url_path = [&] {
-      auto const url = report_url("log/{}/get_url", username);
-      auto r = http::Request(url, http::Method::GET, "application/json",
-                             {1min});
-      r.wait();
-      if (r.status() != http::StatusCode::OK)
-        elle::err("failed to get upload url: %s", r.status());
-      auto in = elle::serialization::json::SerializerIn(elle::json::read(r),
-                                                        false);
-      return in.deserialize<Body>();
-    }();
-    ELLE_DUMP("upload url: %s", url_path.url);
+    ELLE_DEBUG("get upload url for {}", user);
+    auto const timestamp = elle::to_iso8601(std::chrono::system_clock::now());
+    auto const url = report_url("log/{}/{}.tgz/get_url",
+                                user, timestamp);
+    auto r = http::Request(url, http::Method::GET, "application/json",
+                           {1min});
+    r.wait();
+    if (r.status() != http::StatusCode::OK)
+      elle::err("failed to get upload url: %s", r.status());
+    auto in = elle::serialization::json::SerializerIn(elle::json::read(r),
+                                                      false);
+    auto res = in.deserialize<UrlPath>();
+    ELLE_DUMP("upload url: %s", res);
+    return res;
+  }
 
+  /// Upload the logs.
+  bool
+  _log_upload(bfs::path const& log, UrlPath const& url_path)
+  {
+    ELLE_DEBUG("upload log {} to {}", log, url_path);
     // FIXME: don't load it in RAM, work with the stream.
     auto const payload = elle::content(bfs::ifstream{log});
     auto const conf = [&]
@@ -156,7 +175,10 @@ namespace memo
       }();
     auto r = http::Request(url_path.url,
                            http::Method::PUT,
-                           "application/octet-stream",
+                           // Must be exactly the same content-type as
+                           // submitted to the upload-URL generation
+                           // (see bottle.py/log_get_url).
+                           "application/gzip",
                            conf);
     r.write(payload.data(), payload.size());
     r.finalize();
@@ -165,5 +187,45 @@ namespace memo
     ELLE_DUMP("status code: %s", r.status());
     ELLE_DUMP("response: %s", r.response());
     return r.status() == http::StatusCode::OK;
+  }
+
+  /// Notify that we uploaded the logs.
+  bool
+  _log_uploaded(std::string const& user, UrlPath const& url_path)
+  {
+    ELLE_DEBUG("notify that {} sent logs to {}", user, url_path);
+    auto content = elle::json::Object
+      {
+        {"path", url_path.path},
+        {"url",  url_path.url},
+      };
+    auto const url = report_url("log/{}/uploaded", user);
+    auto r = http::Request(url, http::Method::PUT, "application/json",
+                           {5min});
+    elle::json::write(r, content);
+    if (r.status() == http::StatusCode::OK)
+    {
+      ELLE_DUMP("notification successfull");
+      return true;
+    }
+    else
+    {
+      ELLE_ERR("notification failed");
+      return false;
+    }
+  }
+
+  bool
+  Hub::upload_log(std::string const& user, bfs::path const& log)
+  {
+    ELLE_DEBUG_SCOPE("upload user {} logs {}", user, log);
+    auto const url_path = _log_get_url(user);
+    if (_log_upload(log, url_path))
+      return _log_uploaded(user, url_path);
+    else
+    {
+      ELLE_ERR("failed to upload the logs");
+      return false;
+    }
   }
 }

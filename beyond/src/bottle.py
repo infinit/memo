@@ -236,8 +236,8 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.key_value_store_delete)
     # Reporting.
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
-    self.route('/log/<name>/get_url', method = 'GET')(self.log_get_url)
-    self.route('/log/<name>/reported', method = 'PUT')(self.log_reported)
+    self.route('/log/<name>/<file>/get_url', method = 'GET')(self.log_get_url)
+    self.route('/log/<name>/uploaded', method = 'PUT')(self.log_uploaded)
 
   def check_admin(self):
     if self.__force_admin:
@@ -1199,27 +1199,31 @@ class Bottle(bottle.Bottle):
     self.__beyond.crash_report_send(json)
     return {}
 
-  def log_get_url(self, name):
-    '''The client is about to upload logs for user `name`, provide it with
-    a temporary upload URL.
+  def log_get_url(self, name, file):
+    '''The client is about to upload a gziped tarball `file` for user
+    `name`, provide it with a temporary upload URL.
 
     '''
 
     self.__check_gcs()
-    # The name under which we upload.
-    path = '_'.join([name, str(self.__beyond.now)])
+    # Where the log file will be stored in the log bucket.
+    path = '{}/{}'.format(name, file)
     upload_url = self.__gcs.upload_url(
       bucket = 'memo_logs',
       path = path,
-      expiration = datetime.timedelta(minutes = 10)
+      expiration = datetime.timedelta(minutes = 10),
+      # Must be the same in the (C++) code that uses this upload URL.
+      content_type = 'application/gzip',
     )
     return {
       'url': upload_url,
       'path': path
     }
 
-  def log_reported(self, name):
-    '''The client upload its logs, send a message to warn maintainers.'''
+  def log_uploaded(self, name):
+    '''User `name` uploaded her logs, send a message to warn maintainers.
+
+    '''
 
     path = bottle.request.json.get('path', '<unknown>')
     self.__beyond.emailer.send_one(
@@ -1228,8 +1232,8 @@ class Bottle(bottle.Bottle):
       variables = {
         'username': name,
         'url': 'https://storage.googleapis.com/sh_infinit_beyond_logs/' + path,
-      }
-      **self.template('Internal/Log Report'))
+      },
+      **self.__beyond.template('Internal/Log Report'))
     return {}
 
 
