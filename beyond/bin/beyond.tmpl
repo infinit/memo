@@ -30,7 +30,7 @@ def parse_options():
   # Parse options
   parser = argparse.ArgumentParser(add_help = False,
                                    description = 'To infinity!')
-  add = lambda *a, **kw: parser.add_argument(*a, **kw)
+  add = parser.add_argument
   add('-h', '--help',
       action = 'help',
       default = argparse.SUPPRESS,
@@ -84,12 +84,12 @@ def parse_options():
   add('--gcs-login',
       metavar = 'LOGIN',
       type = str,
-      help = 'Google Cloud Storage login for avatar storage',
+      help = 'Google Cloud Storage login for beyond storage',
       default = ${repr(gcs_login)})
   add('--gcs-key',
       metavar = 'KEY',
       type = str,
-      help = 'Google Cloud Storage key for avatar storage',
+      help = 'Google Cloud Storage key for beyond storage',
       default = ${repr(gcs_key)})
 
   ## --------- ##
