@@ -1231,7 +1231,7 @@ class Bottle(bottle.Bottle):
       recipient_name = 'Crash',
       variables = {
         'username': name,
-        'url': 'https://storage.googleapis.com/sh_infinit_beyond_logs/' + path,
+        'url': 'https://storage.cloud.google.com/sh_infinit_beyond_memo_logs/' + path,
       },
       **self.__beyond.template('Internal/Log Report'))
     return {}
