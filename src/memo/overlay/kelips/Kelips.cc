@@ -3452,8 +3452,12 @@ namespace memo
             p.sender = this->id();
             p.observer = false;
             p.contacts[nl.id()] = inserted.first->second.endpoints;
+            std::vector<Address> targets;
             for (auto& obs: this->_state.observers)
-              this->send(p, obs.second);
+              targets.push_back(obs.first);
+            for (auto& tgt: targets)
+              if (auto it = elle::find(this->_state.observers, tgt))
+                this->send(p, it->second);
           }
         }
         return &inserted.first->second;
