@@ -266,8 +266,7 @@ class Beyond():
     self.__beyond = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
-    self.__image_bucket = FakeGCS()
-    self.__log_bucket = FakeGCS()
+    self.__gcs = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
     self.__bottle_args = bottle_args
@@ -293,8 +292,7 @@ class Beyond():
       setattr(self.__beyond, '_Beyond__now', self.now)
       bargs = {
         'beyond': self.__beyond,
-        'image_bucket': self.__image_bucket,
-        'log_bucket': self.__log_bucket,
+        'gcs': self.__gcs,
       }
       bargs.update(self.__bottle_args)
       self.__app = infinit.beyond.bottle.Bottle(**bargs)

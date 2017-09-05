@@ -85,14 +85,8 @@ namespace memo
       , networking(*this,
                    "Perform networking speed tests between nodes",
                    elle::das::cli::Options{
-                     {
-                       "host", elle::das::cli::Option{
-                         '\0', "The host to connect to", false}
-                     },
-                     {
-                       "port", elle::das::cli::Option{
-                         '\0', "The host's port to connect to", false}
-                     }
+                     {"host", {"The host to connect to"}},
+                     {"port", {"The host's port to connect to"}}
                    },
                    cli::mode = boost::none,
                    cli::protocol = boost::none,
@@ -197,36 +191,47 @@ namespace memo
       : Object(memo)
       , delete_(*this,
                 "Delete {objects} locally",
+                elle::das::cli::Options{
+                  {"number", {"number of logs to preserve"}},
+                },
                 cli::all = false,
-                cli::match = boost::optional<std::string>{})
+                cli::match = elle::defaulted(std::regex{""}),
+                cli::number = 0)
       , list(*this,
              "List existing {object} families",
-             cli::match = boost::optional<std::string>{})
+             cli::match = elle::defaulted(std::regex{""}))
       , push(*this,
              "Upload {objects} to {hub}",
-             cli::match = boost::optional<std::string>{},
+             elle::das::cli::Options{
+               {"number", {"max number of logs to push"}},
+             },
+             cli::network = boost::optional<std::string>{},
+             cli::match = elle::defaulted(std::regex{""}),
              cli::number = 2)
     {}
 
     void
     Doctor::Log::mode_delete(bool all,
-                             boost::optional<std::string> const& match)
+                             elle::Defaulted<std::regex> const& match,
+                             int number)
     {
       ELLE_TRACE_SCOPE("log.delete");
-      if (match && all)
-        elle::err<CLIError>("cannot use --name and --match simultaneously");
+      if (all && match)
+        elle::err<CLIError>("cannot use --all and --match simultaneously");
       if (all)
-        log_remove();
+        log_remove(std::regex{""}, number);
       else if (match)
-        log_remove(*match);
+        log_remove(*match, number);
+      else
+        elle::err<CLIError>("specify --all or --match");
     }
 
     void
-    Doctor::Log::mode_list(boost::optional<std::string> const& match)
+    Doctor::Log::mode_list(elle::Defaulted<std::regex> const& match)
     {
       ELLE_TRACE_SCOPE("log.list");
       auto& cli = this->cli();
-      auto const families = log_families(match.value_or(""s));
+      auto const families = log_families(*match);
       if (cli.script())
       {
         auto const l = elle::json::make_array(families,
@@ -240,23 +245,33 @@ namespace memo
     }
 
     void
-    Doctor::Log::mode_push(boost::optional<std::string> const& match,
+    Doctor::Log::mode_push(boost::optional<std::string> const& network,
+                           elle::Defaulted<std::regex> const& match,
                            int number)
     {
       ELLE_TRACE_SCOPE("log.push");
+      if (network && match)
+        elle::err<CLIError>("cannot use --network and --match simultaneously");
       auto& cli = this->cli();
       auto owner = cli.as_user();
-
+      auto const files = [&]
+        {
+          if (network)
+            return latest_logs_family(elle::print("%s/%s", owner.name, *network),
+                                      number);
+          else
+            return latest_logs(*match, number);
+        }();
       auto tgz = elle::filesystem::TemporaryFile{"log.tgz"};
-      if (auto n = tar_logs_match(tgz.path(), match.value_or(""s), number))
+      if (auto n = tar_logs(tgz.path(), files))
       {
         if (memo::Hub::upload_log(owner.name, tgz.path()))
-          elle::print(std::cout, "successfully uploaded '{}' logs\n", name);
+          elle::print(std::cout, "successfully uploaded {} logs\n", n);
         else
           elle::print(std::cerr, "failed to upload {} logs\n", n);
       }
       else
-        elle::print(std::cerr, "there are no logs matching {}\n", match);
+        elle::print(std::cerr, "there are no matching logs\n");
     }
 
 

@@ -29,17 +29,18 @@ namespace memo
         elle::err("unable to read crash dump: %s", path);
 
       auto buf = elle::Buffer{};
-      auto stream = elle::IOStream(buf.ostreambuf());
-      auto&& b64 = elle::format::base64::Stream{stream};
-      auto constexpr chunk_size = 16 * 1024;
-      char chunk[chunk_size + 1];
-      chunk[chunk_size] = 0;
-      while (!f.eof())
       {
-        f.read(chunk, chunk_size);
-        b64.write(chunk, chunk_size);
+        auto stream = elle::IOStream(buf.ostreambuf());
+        auto&& b64 = elle::format::base64::Stream{stream};
+        auto constexpr chunk_size = 16 * 1024;
+        char chunk[chunk_size + 1];
+        chunk[chunk_size] = 0;
+        while (!f.eof())
+        {
+          f.read(chunk, chunk_size);
+          b64.write(chunk, chunk_size);
+        }
       }
-      b64.flush();
       return buf.string();
     }
 
@@ -112,7 +113,6 @@ namespace memo
         Body,
         decltype(elle::meta::list(s::url, s::path))>;
     };
-
   }
 }
 
@@ -124,6 +124,7 @@ namespace memo
   Hub::upload_log(std::string const& username, bfs::path const& log)
   {
     ELLE_DEBUG("get upload url");
+    // The URL to use for the upload, asked to beyond.
     auto const url_path = [&] {
       auto const url = report_url("log/{}/get_url", username);
       auto r = http::Request(url, http::Method::GET, "application/json",
@@ -159,9 +160,10 @@ namespace memo
                            conf);
     r.write(payload.data(), payload.size());
     r.finalize();
+    ELLE_DUMP("request: %s", r);
     r.wait();
-    ELLE_LOG("request: %s", r);
-    ELLE_LOG("status code: %s", r.status());
-    return true;
+    ELLE_DUMP("status code: %s", r.status());
+    ELLE_DUMP("response: %s", r.response());
+    return r.status() == http::StatusCode::OK;
   }
 }

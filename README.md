@@ -10,9 +10,9 @@ The memo project combines a value store (where you manipulate blocks and address
 
 The key-value store uses the value store to provide a higher-level interface like common key-value stores (etcd, ZooKeeper, etc.), where arbitrary data can be stored under an arbitrary name.
 
-The value store is the lowest brick of the architecture, providing the fundamental object named `blocks`, declined in a few flavors. Those blocks are cryptographically protected, their addresses are chosen randomly to guarantee a homogeneous distribution and prevent XXX(squating) and all operations are atomic, but the caller is responsible for keeping addresses.
+The value store is the lowest brick of the architecture, providing the fundamental object named `blocks`, declined in a few flavors. Those blocks are cryptographically protected, their addresses are chosen randomly to guarantee a homogeneous distribution, optimize data placement, fault tolerance and more. All operations are atomic. The main drawback being the responsability of keeping blocks addresses is transfered to the caller.
 
-For more details you can consult [XXX: When shoould I use the value store against the key-value store]().
+For more details you can consult [When shoould I use the value store against the key-value store](https://memo.infinit.sh/documentation/overview#value-store).
 
 ## How to get memo
 
@@ -22,7 +22,7 @@ To download the source code and build memo by yourself, get it from GitHub.
 git clone https://github.com/infinit/memo --recursive # Clone memo and its submodules.
 ```
 
-> *Note:* If you cloned it using the GitHub "clone" button, do not forget to run `git submodules update --init --recursive`!
+> *Note:* If you cloned it using the GitHub "clone" button, do not forget to run `git submodule update --init --recursive`!
 
 ## How to build memo
 

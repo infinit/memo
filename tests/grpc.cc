@@ -507,9 +507,7 @@ ELLE_TEST_SCHEDULED(protogen)
   Protogen p;
   p.protogen<structs::Complex>();
   for (auto const& m: p.messages)
-  {
-    std::cout << m.second << std::endl;
-  }
+    BOOST_TEST_MESSAGE(m.second);
 }
 
 ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
@@ -521,7 +519,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     return std::make_unique<memo::overlay::kouncil::Kouncil>(&dht, local);
   };
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  std::vector<std::unique_ptr<DHT>> servers;
+  auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<3; ++i)
     servers.push_back(std::make_unique<DHT>(
       ::keys = keys,

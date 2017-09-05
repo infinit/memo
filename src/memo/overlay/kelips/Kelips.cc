@@ -915,7 +915,7 @@ namespace memo
                 {
                   this->_local_endpoints.emplace_back(Endpoint(
                     boost::asio::ip::address::from_string(addr),
-                    this->_port), now());
+                    this->_port), now() + 100000h);
                   ELLE_DEBUG("add local endpoint %s:%s", addr, this->_port);
                 }
               };
@@ -2460,7 +2460,7 @@ namespace memo
             { // Nope, insert here
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
-              ELLE_DEBUG("%s: inserting in insert_result", *this);
+              ELLE_DEBUG("%s: inserting in insert_result %s", *this, _local_endpoints);
               p->insert_result.emplace_back(
                 this->_self, to_endpoints(_local_endpoints));
               _promised_files.push_back(p->fileAddress);

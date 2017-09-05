@@ -4,8 +4,6 @@
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/range/algorithm/partial_sort.hpp>
@@ -32,8 +30,30 @@ namespace memo
 
   std::string log_base(std::string const& family)
   {
-    auto const now =
-      to_iso_string(boost::posix_time::second_clock::universal_time());
+    auto const now = []
+      {
+        using namespace date;
+        using namespace std::chrono;
+        // This gives universal time
+        //
+        // format("%FT%T", floor<seconds>(system_clock::now()));
+        //
+        // We need to use the tz library, or work by hand.
+        auto const now = system_clock::now();
+        auto const t = system_clock::to_time_t(now);
+        auto const tm = std::localtime(&t);
+        auto&& os = std::ostringstream{};
+        // GCC 4.9 does not support put_time.
+        // os << std::put_time(tm, "%F %T");
+        {
+          // strlen("2017-07-31T05:24:53") = 20;
+          auto buf = std::array<char, 24>{};
+          // Mingw does not support "%F %T".
+          std::strftime(buf.data(), buf.size(), "%Y-%m-%dT%H:%M:%S", tm);
+          os << buf.data();
+        }
+        return os.str();
+      }();
     auto const base
       = elle::print("{family}/{now}-{pid}",
                     {
@@ -84,13 +104,13 @@ namespace memo
     /// All the log files whose path name match a given regex (not
     /// including the log_dir).
     auto
-    log_files(std::string const& re)
+    log_files(std::regex const& re)
     {
       using namespace boost::adaptors;
       return bfs::recursive_directory_iterator(log_dir())
         | filtered(is_visible_file)
         | filtered(has_version)
-        | filtered([re = std::regex(re)](auto const& p)
+        | filtered([re](auto const& p)
                    {
                      return regex_search(log_suffix(p).string(), re);
                    });
@@ -153,6 +173,8 @@ namespace memo
     // future, use a mutex.
     if (!main_log())
     {
+      // Keep at most 15 main logs.
+      log_remove(std::regex{"^main/"}, 15);
       auto l = make_log("main");
       main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
       elle::log::logger_add(std::move(l));
@@ -168,6 +190,9 @@ namespace memo
   void
   main_log_family(std::string const& family)
   {
+    // Keep at most 15 logs in this family.
+    log_remove(std::regex{"^" + family + "/"}, 15);
+
     // Compute the new base without calling log_base, as we don't want
     // to change the timestamp for instance.
     auto const fname = main_log()->fstream().path().stem();
@@ -177,7 +202,7 @@ namespace memo
   }
 
   std::vector<bfs::path>
-  latest_logs_match(std::string const& match, int n)
+  latest_logs(std::regex const& match, int n)
   {
     auto paths = to_vector(log_files(match));
     auto const begin = paths.begin();
@@ -217,47 +242,44 @@ namespace memo
     return res;
   }
 
+  std::vector<bfs::path>
+  latest_logs_family(std::string const& family, int n)
+  {
+    return latest_logs(std::regex{"^" + family + "/"}, n);
+  }
+
   boost::container::flat_set<std::string>
-  log_families(std::string const& re)
+  log_families(std::regex const& match)
   {
     auto res = boost::container::flat_set<std::string>{};
-    for (auto const& p: log_files(re))
+    for (auto const& p: log_files(match))
       res.emplace(log_family(p));
     return res;
   }
 
   void
-  log_remove(std::string const& re)
+  log_remove(std::regex const& match, int n)
   {
-    for (auto const& p: to_vector(log_files(re)))
-      elle::try_remove(p);
+    using namespace boost::adaptors;
+    // All the logs, sorted by increasing creation date.
+    auto const logs = latest_logs(match, 0);
+    auto const size = int(logs.size());
+    if (n < size)
+      for (auto const& p: logs | sliced(0, size - n))
+        elle::try_remove(p);
   }
 
-  namespace
+  int
+  tar_logs(bfs::path const& tgz,
+           std::vector<bfs::path> const& files)
   {
-    int tar_logs(bfs::path const& tgz,
-                  std::vector<bfs::path> const& files)
-    {
-      if (files.empty())
-        ELLE_LOG("there are no log files");
-      else
+    if (files.empty())
+      ELLE_LOG("there are no log files");
+    else
       {
         ELLE_DUMP("generating {} containing {}", tgz, files);
         archive(elle::archive::Format::tar_gzip, files, tgz);
       }
-      return files.size();
-    }
-  }
-
-  int tar_logs_match(bfs::path const& tgz,
-                     std::string const& match, int n)
-  {
-    return tar_logs(tgz, latest_logs_match(match, n));
-  }
-
-  int tar_logs(bfs::path const& tgz,
-               bfs::path const& base, int n)
-  {
-    return tar_logs(tgz, latest_logs(base, n));
+    return files.size();
   }
 }
