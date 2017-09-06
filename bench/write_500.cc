@@ -1,3 +1,5 @@
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <elle/log.hh>
 
 #include <memo/filesystem/filesystem.hh>
@@ -7,6 +9,13 @@
 ELLE_LOG_COMPONENT("bench");
 
 using Consensus = memo::model::doughnut::consensus::Consensus;
+
+#ifdef ELLE_WINDOWS
+# define O_CREAT _O_CREAT
+# define O_RDWR _O_RDWR
+# define O_EXCL _O_EXCL
+# define S_IFREG _S_IFREG
+#endif
 
 std::unique_ptr<Consensus>
 same_consensus(std::unique_ptr<Consensus> c)

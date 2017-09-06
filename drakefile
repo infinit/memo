@@ -1059,21 +1059,20 @@ def configure(
   bench_names = [
     'write_500',
   ]
-  if not windows:
-    cxx_config_bench += elle.boost.config_system(link = False)
-    cxx_config_bench.library_add(
-      drake.copy(elle.boost.system_dynamic, libdir, True))
-    cxx_config_bench += elle.boost.config_filesystem(link = False)
-    cxx_config_bench.library_add(
-      drake.copy(elle.boost.filesystem_dynamic, libdir, True))
-    cxx_config_bench += elle.boost.config_program_options(
-      link = False)
-    cxx_config_bench.library_add(
-      drake.copy(elle.boost.program_options_dynamic, libdir, True))
-    cxx_config_bench.library_add(
-      drake.copy(elle.boost.regex_dynamic, libdir, True))
-    memo_lib_bench = memo_lib
-  else:
+  cxx_config_bench += elle.boost.config_system(link = False)
+  cxx_config_bench.library_add(
+    drake.copy(elle.boost.system_dynamic, libdir, True))
+  cxx_config_bench += elle.boost.config_filesystem(link = False)
+  cxx_config_bench.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, libdir, True))
+  cxx_config_bench += elle.boost.config_program_options(
+    link = False)
+  cxx_config_bench.library_add(
+    drake.copy(elle.boost.program_options_dynamic, libdir, True))
+  cxx_config_bench.library_add(
+    drake.copy(elle.boost.regex_dynamic, libdir, True))
+  bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib ]
+  if windows:
     cxx_config_bench.lib('shlwapi')
     cxx_config_bench.lib('ws2_32')
     cxx_config_bench.lib('gdi32')
@@ -1081,21 +1080,14 @@ def configure(
     cxx_config_bench.lib('dbghelp')
     cxx_config_bench.lib('iphlpapi')
     cxx_config_bench.lib('crypt32')
-    cxx_config_bench.library_add(elle.boost.filesystem_static)
-    cxx_config_bench.library_add(elle.boost.program_options_static)
-    cxx_config_bench.library_add(elle.boost.system_static)
-    cxx_config_bench.library_add(elle.boost.regex_static)
     cxx_config_bench.use_whole_archive()
     cxx_config_bench.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_bench.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
-    cxx_config_bench.library_add(elle.boost.test_static)
-    cxx_config_bench.library_add(elle.boost.timer_static)
     memo_lib_bench = drake.copy(memo_lib, 'bench', strip_prefix = True)
     dokan_lib_bench = drake.copy(dokan_lib, 'bench', strip_prefix = True)
-  if not windows:
-    bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    bench_extra_libs += [dokan_lib_bench]
   else:
-    bench_extra_libs = []
+    memo_lib_bench = memo_lib
   for n in bench_names:
     bench = drake.cxx.Executable(
       'bench/%s' % n,
