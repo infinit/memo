@@ -132,6 +132,18 @@ class GCS:
                            content_type = content_type,
                            content_length = content_length)
 
+  def storage_url(self, bucket, path):
+    '''A direct access to something stored in GCS.  Will require
+    authentication to be used.
+
+    '''
+    return '{host}/{bucket_ns}_{bucket}/{path}'.format(
+      host = 'https://storage.cloud.google.com',
+      bucket_ns = self.__bucket_ns,
+      bucket = bucket,
+      path = path,
+      )
+
   def delete_url(self, bucket, path, expiration,
                    content_type = None,
                    content_length = None):

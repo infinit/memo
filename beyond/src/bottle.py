@@ -1232,7 +1232,7 @@ class Bottle(bottle.Bottle):
       recipient_name = 'Crash',
       variables = {
         'username': name,
-        'url': root + path,
+        'url': self.__gcs.storage_url('memo_logs', path),
       },
       **self.__beyond.template('Internal/Log Report'))
     return {}
