@@ -80,6 +80,10 @@ namespace memo
 
     /// All the log files whose path name match a given regex (not
     /// including the log_dir).
+    ///
+    /// Beware that incrementing the iterator for the returned
+    /// generator might throw, if, for instance, files are removed
+    /// while we scan the directory.
     auto
     log_files(std::regex const& re)
     {
@@ -151,7 +155,12 @@ namespace memo
     if (!main_log())
     {
       // Keep at most 15 main logs.
-      log_remove(std::regex{"^main/"}, 15);
+      try
+      {
+        log_remove(std::regex{"^main/"}, 15);
+      }
+      catch (bfs::filesystem_error)
+      {}
       auto l = make_log("main");
       main_log() = dynamic_cast<elle::log::FileLogger*>(l.get());
       elle::log::logger_add(std::move(l));
@@ -181,7 +190,20 @@ namespace memo
   std::vector<bfs::path>
   latest_logs(std::regex const& match, int n)
   {
-    auto paths = to_vector(log_files(match));
+    auto paths = [&]
+      {
+        try
+        {
+          return to_vector(log_files(match));
+        }
+        catch (bfs::filesystem_error const& e)
+        {
+          ELLE_WARN("cannot gather logs: {}"
+                    " (maybe logs were removed by another process)",
+                    e);
+          throw;
+        }
+      }();
     auto const begin = paths.begin();
     auto const size = int(paths.size());
     auto const num = n ? std::min(n, size) : size;

@@ -59,6 +59,9 @@ namespace memo
   /// @param match  the regex.
   /// @param n      the maximum number of contiguous logs to gather.
   ///               0 for unlimited.
+  ///
+  /// @throws bfs::filesystem_error if for instance files are removed
+  ///         during the directory traversal.
   std::vector<bfs::path>
   latest_logs(std::regex const& match, int n = 1);
 
@@ -67,6 +70,9 @@ namespace memo
   /// @param base  the log base name.  A period will be added.
   /// @param n     the maximum number of contiguous logs to gather.
   ///               0 for unlimited.
+  ///
+  /// @throws bfs::filesystem_error if for instance files are removed
+  ///         during the directory traversal.
   std::vector<bfs::path>
   latest_logs(bfs::path const& base, int n = 1);
 
@@ -75,6 +81,9 @@ namespace memo
   /// @param family  the log family name.
   /// @param n     the maximum number of contiguous logs to gather.
   ///               0 for unlimited.
+  ///
+  /// @throws bfs::filesystem_error if for instance files are removed
+  ///         during the directory traversal.
   std::vector<bfs::path>
   latest_logs_family(std::string const& family, int n = 1);
 
@@ -89,6 +98,9 @@ namespace memo
   ///
   /// @param match  a regex, which matches anything by default.
   /// @param n      the number of the most recent files _not_ to remove.
+  ///
+  /// @throws bfs::filesystem_error if for instance files are removed
+  ///         during the directory traversal.
   void log_remove(std::regex const& match = std::regex{""},
                   int n = 0);
 
