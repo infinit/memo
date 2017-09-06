@@ -30,8 +30,6 @@ ELLE_LOG_COMPONENT("memo.model.doughnut.consensus.Async");
 
 namespace memo
 {
-  namespace bfs = boost::filesystem;
-
   namespace model
   {
     namespace doughnut
@@ -66,7 +64,7 @@ namespace memo
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
-                     bfs::path journal_dir,
+                     fs::path journal_dir,
                      int max_size)
           : StackedConsensus(std::move(backend))
           , _operations()
@@ -86,10 +84,10 @@ namespace memo
         {
           if (!this->_journal_dir.empty())
           {
-            bfs::create_directories(this->_journal_dir);
-            bfs::permissions(this->_journal_dir,
-              bfs::remove_perms
-              | bfs::others_all | bfs::group_all);
+            fs::create_directories(this->_journal_dir);
+            fs::permissions(this->_journal_dir,
+              fs::remove_perms
+              | fs::others_all | fs::group_all);
           }
           if (max_size)
             this->_queue.max_size(max_size);
@@ -104,13 +102,13 @@ namespace memo
             this->_init_barrier.open();
         }
 
-        std::vector<bfs::path>
-        Async::entries(bfs::path const& root)
+        std::vector<fs::path>
+        Async::entries(fs::path const& root)
         {
-          auto paths = std::vector<bfs::path>
-            {bfs::directory_iterator(root), bfs::directory_iterator()};
+          auto paths = std::vector<fs::path>
+            {fs::directory_iterator(root), fs::directory_iterator()};
           boost::sort(paths,
-                    [] (bfs::path const& a, bfs::path const& b)
+                    [] (fs::path const& a, fs::path const& b)
                     {
                       return std::stoi(a.filename().string()) <
                         std::stoi(b.filename().string());
@@ -126,9 +124,7 @@ namespace memo
             });
           ELLE_TRACE_SCOPE("%s: restore journal from %s",
                            *this, this->_journal_dir);
-          bfs::path p(_journal_dir);
-          auto files = Async::entries(p);
-          for (auto const& p: files)
+          for (auto const& p: Async::entries(_journal_dir))
           {
             auto id = std::stoi(p.filename().string());
             Op op;
@@ -236,9 +232,9 @@ namespace memo
         }
 
         Async::Op
-        Async::_load_op(bfs::path const& p, bool signature)
+        Async::_load_op(fs::path const& p, bool signature)
         {
-          bfs::ifstream is(p, std::ios::binary);
+          fs::ifstream is(p, std::ios::binary);
           elle::serialization::binary::SerializerIn sin(is);
           sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
           sin.set_context<Doughnut*>(&this->doughnut());
@@ -349,8 +345,8 @@ namespace memo
                   if (!this->_journal_dir.empty())
                   {
                     auto path =
-                      bfs::path(_journal_dir) / std::to_string(last_candidate_index);
-                    bfs::ofstream os(path, std::ios::binary);
+                      _journal_dir / std::to_string(last_candidate_index);
+                    fs::ofstream os(path, std::ios::binary);
                     elle::serialization::binary::SerializerOut sout(os);
                     sout.set_context(ACBDontWaitForSignature{});
                     sout.set_context(OKBDontWaitForSignature{});
@@ -367,9 +363,8 @@ namespace memo
                 this->_operations.get<1>().erase(last_candidate_index);
                 if (!this->_journal_dir.empty())
                 {
-                  auto path = bfs::path(this->_journal_dir) /
-                  std::to_string(idx);
-                  bfs::remove(path);
+                  auto path = this->_journal_dir / std::to_string(idx);
+                  fs::remove(path);
                 }
                 if (this->_first_disk_index
                   && this->_first_disk_index.get() == idx)
@@ -387,9 +382,8 @@ namespace memo
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
           if (!this->_journal_dir.empty())
           {
-            auto path =
-              bfs::path(_journal_dir) / std::to_string(op.index);
-            bfs::ofstream os(path, std::ios::binary);
+            auto path = _journal_dir / std::to_string(op.index);
+            fs::ofstream os(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(os);
             sout.set_context(ACBDontWaitForSignature{});
             sout.set_context(OKBDontWaitForSignature{});
@@ -450,11 +444,12 @@ namespace memo
                                          std::exception_ptr)> res)
         {
           // Do not deadlock from init_thread.
-          if (this->_init_thread && !this->_init_thread->done() &&
-              elle::reactor::scheduler().current() != this->_init_thread.get())
+          if (this->_init_thread
+              && !this->_init_thread->done()
+              && elle::reactor::scheduler().current() != this->_init_thread.get())
             elle::reactor::wait(this->_init_barrier);
           this->_queue.open();
-          std::vector<AddressVersion> remain;
+          auto remain = std::vector<AddressVersion>{};
           for (auto addr: addresses)
           {
             bool hit = false;
@@ -497,35 +492,32 @@ namespace memo
         Async::_fetch_cache(Address address, boost::optional<int> local_version,
                             bool& hit)
         {
-          hit = false;
           auto its = this->_operations.equal_range(address);
           auto it = std::max_element(its.first, its.second,
             [](auto const& e1, auto const& e2) {
               return e1.index < e2.index;
             });
-          if (it != this->_operations.end())
+          hit = it != this->_operations.end();
+          if (!hit)
+            return {};
+          else if (it->block)
           {
-            hit = true;
-            if (it->block)
-            {
-              ELLE_TRACE("%s: fetch %f from memory queue", *this, address);
-              if (local_version)
-                if (auto m = dynamic_cast<blocks::MutableBlock*>(
-                      it->block.get()))
-                  if (m->version() == *local_version)
-                    return nullptr;
-              return it->block->clone();
-            }
-            else
-            {
-              ELLE_TRACE("%s: fetch %f from disk journal at %s", *this, address, it->index);
-              auto res = this->_load_op(it->index).block;
-              if (!res)
-                throw MissingBlock(address);
-              return res;
-            }
+            ELLE_TRACE("%s: fetch %f from memory queue", *this, address);
+            if (local_version)
+              if (auto m = dynamic_cast<blocks::MutableBlock*>(
+                    it->block.get()))
+                if (m->version() == *local_version)
+                  return nullptr;
+            return it->block->clone();
           }
-          return {};
+          else
+          {
+            ELLE_TRACE("%s: fetch %f from disk journal at %s", *this, address, it->index);
+            auto res = this->_load_op(it->index).block;
+            if (!res)
+              throw MissingBlock(address);
+            return res;
+          }
         }
 
         void
@@ -559,8 +551,8 @@ namespace memo
               this->_process_operation(std::move(op));
               if (!this->_journal_dir.empty())
               {
-                auto path = bfs::path(this->_journal_dir) / std::to_string(index);
-                bfs::remove(path);
+                auto path = this->_journal_dir / std::to_string(index);
+                fs::remove(path);
                 this->_last_processed_index = index;
               }
               this->_operations.get<1>().erase(it);

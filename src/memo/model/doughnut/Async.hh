@@ -21,6 +21,7 @@ namespace memo
   {
     namespace doughnut
     {
+      namespace fs = boost::filesystem;
       namespace consensus
       {
         ELLE_DAS_SYMBOL(remove_signature);
@@ -31,7 +32,7 @@ namespace memo
         {
         public:
           Async(std::unique_ptr<Consensus> backend,
-                boost::filesystem::path journal_dir,
+                fs::path journal_dir,
                 int max_size = 100);
           ~Async() override;
           std::unique_ptr<Local>
@@ -69,8 +70,8 @@ namespace memo
 
         public:
           static
-          std::vector<boost::filesystem::path>
-          entries(boost::filesystem::path const& root);
+          std::vector<fs::path>
+          entries(fs::path const& root);
 
           /*----------.
           | Operation |
@@ -120,7 +121,7 @@ namespace memo
           void
           _push_op(Op op);
           Async::Op
-          _load_op(boost::filesystem::path const& path, bool signature = true);
+          _load_op(fs::path const& path, bool signature = true);
           Async::Op
           _load_op(int id, bool signature = true);
           void
@@ -137,7 +138,7 @@ namespace memo
           ELLE_ATTRIBUTE(elle::reactor::Channel<int>, queue);
           ELLE_ATTRIBUTE(int, next_index);
           ELLE_ATTRIBUTE(int, last_processed_index);
-          ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
+          ELLE_ATTRIBUTE(fs::path, journal_dir);
           /// Index of the first operation stored on disk because memory is at
           /// capacity.
           ELLE_ATTRIBUTE(boost::optional<int>, first_disk_index);
