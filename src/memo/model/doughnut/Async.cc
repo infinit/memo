@@ -440,8 +440,7 @@ namespace memo
 
         void
         Async::_fetch(std::vector<AddressVersion> const& addresses,
-                      std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                         std::exception_ptr)> res)
+                      ReceiveBlock fun)
         {
           // Do not deadlock from init_thread.
           if (this->_init_thread
@@ -457,16 +456,16 @@ namespace memo
             {
               auto block = this->_fetch_cache(addr.first, addr.second, hit);
               if (hit)
-                res(addr.first, std::move(block), {});
+                fun(addr.first, std::move(block), {});
               else
                 remain.push_back(addr);
             }
             catch (MissingBlock const& mb)
             {
-              res(addr.first, {}, std::current_exception());
+              fun(addr.first, {}, std::current_exception());
             }
           }
-          this->_backend->fetch(remain, res);
+          this->_backend->fetch(remain, fun);
         }
 
         std::unique_ptr<blocks::Block>
@@ -513,10 +512,10 @@ namespace memo
           else
           {
             ELLE_TRACE("%s: fetch %f from disk journal at %s", *this, address, it->index);
-            auto res = this->_load_op(it->index).block;
-            if (!res)
+            if (auto res = this->_load_op(it->index).block)
+              return res;
+            else
               throw MissingBlock(address);
-            return res;
           }
         }
 

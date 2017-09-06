@@ -53,8 +53,7 @@ namespace memo
 
           void
           _fetch(std::vector<AddressVersion> const& addresses,
-                 std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                    std::exception_ptr)> res) override;
+                 ReceiveBlock fun) override;
 
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
@@ -109,6 +108,7 @@ namespace memo
           };
 
         private:
+          /// @param[out] hit  whether the block was in the cache.
           std::unique_ptr<blocks::Block>
           _fetch_cache(Address address, boost::optional<int> local_version,
                        bool& hit);

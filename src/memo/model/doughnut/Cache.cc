@@ -164,10 +164,9 @@ namespace memo
 
         void
         Cache::_fetch(std::vector<AddressVersion> const& addresses,
-                      std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                         std::exception_ptr)> res)
+                      ReceiveBlock fun)
         {
-          std::vector<AddressVersion> missing;
+          auto missing = std::vector<AddressVersion>{};
           for (auto a: addresses)
           {
             bool hit = false;
@@ -175,7 +174,7 @@ namespace memo
             if (hit)
             {
               ELLE_DEBUG("cache hit on %f", a);
-              res(a.first, std::move(block), {});
+              fun(a.first, std::move(block), {});
             }
             else
               missing.push_back(a);
@@ -194,7 +193,7 @@ namespace memo
               {
                 this->_insert_cache(*block);
               }
-              res(addr, std::move(block), exc);
+              fun(addr, std::move(block), exc);
             });
         }
 
@@ -202,8 +201,7 @@ namespace memo
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
           bool hit = false;
-          auto res = this->_fetch_cache(address, local_version, hit);
-          return res;
+          return this->_fetch_cache(address, local_version, hit);
         }
 
         void
@@ -325,7 +323,6 @@ namespace memo
             }
             return res;
           }
-          return {};
         }
 
         void

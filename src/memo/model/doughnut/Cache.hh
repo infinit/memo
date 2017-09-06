@@ -57,8 +57,7 @@ namespace memo
           _fetch(Address address, boost::optional<int> local_version) override;
           void
           _fetch(std::vector<AddressVersion> const& addresses,
-                 std::function<void(Address, std::unique_ptr<blocks::Block>,
-                                    std::exception_ptr)> res) override;
+                 ReceiveBlock fun) override;
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
