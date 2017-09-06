@@ -1226,12 +1226,13 @@ class Bottle(bottle.Bottle):
     '''
 
     path = bottle.request.json.get('path', '<unknown>')
+    root = 'https://storage.cloud.google.com/sh_infinit_beyond_memo_logs/'
     self.__beyond.emailer.send_one(
       recipient_email = 'crash@infinit.sh',
       recipient_name = 'Crash',
       variables = {
         'username': name,
-        'url': 'https://storage.cloud.google.com/sh_infinit_beyond_memo_logs/' + path,
+        'url': root + path,
       },
       **self.__beyond.template('Internal/Log Report'))
     return {}
