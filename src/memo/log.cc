@@ -200,7 +200,7 @@ namespace memo
         {
           ELLE_WARN("cannot gather logs: {}"
                     " (maybe logs were removed by another process)",
-                    e);
+                    e.what());
           throw;
         }
       }();

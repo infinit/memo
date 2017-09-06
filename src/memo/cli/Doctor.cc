@@ -53,7 +53,7 @@ namespace memo
   namespace cli
   {
     using Error = elle::das::cli::Error;
-    namespace bfs = boost::filesystem;
+    namespace fs = boost::filesystem;
 
 #include <memo/cli/doctor-utility.hh>
 
@@ -218,12 +218,19 @@ namespace memo
       ELLE_TRACE_SCOPE("log.delete");
       if (all && match)
         elle::err<CLIError>("cannot use --all and --match simultaneously");
-      if (all)
-        log_remove(std::regex{""}, number);
-      else if (match)
-        log_remove(*match, number);
-      else
-        elle::err<CLIError>("specify --all or --match");
+      try
+      {
+        if (all)
+          log_remove(std::regex{""}, number);
+        else if (match)
+          log_remove(*match, number);
+        else
+          elle::err<CLIError>("specify --all or --match");
+      }
+      catch (fs::filesystem_error const& e)
+      {
+        elle::err("cannot remove log files: %s", e.what());
+      }
     }
 
     void

@@ -20,10 +20,13 @@ namespace memo
 {
   namespace grpc
   {
-    bool _serving = true;
-    int _tasks = 0;
-    std::mutex _stop_mutex;
-    std::condition_variable _stop_cond;
+    namespace
+    {
+      bool _serving = true;
+      int _tasks = 0;
+      std::mutex _stop_mutex;
+      std::condition_variable _stop_cond;
+    }
 
     bool
     Task::proceed() const
