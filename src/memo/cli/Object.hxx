@@ -26,7 +26,10 @@ namespace memo
     {
       template <typename T, typename Owner, typename Names>
       struct _find_name
-      {};
+      {
+        // No more names to compare to.
+        static_assert(Names::size > 0, "Symbol not found");
+      };
 
       template <typename T, typename Owner, typename Head, typename ... Tail>
       struct _find_name<T, Owner, elle::meta::List<Head, Tail...>>
@@ -34,7 +37,7 @@ namespace memo
             std::is_same<typename Head::template attr_type<Owner>,
                          T>::value,
             Head,
-            _find_name<T, Owner,elle::meta::List<Tail...>>>
+            _find_name<T, Owner, elle::meta::List<Tail...>>>
       {};
 
       template <typename T, typename Owner>
@@ -46,7 +49,8 @@ namespace memo
         using type = bool;
         static
         bool
-        value(std::ostream& s, Object const& object, std::string const& object_name)
+        value(std::ostream& s, Object const& object,
+              std::string const& object_name)
         {
           elle::print(s, "  %-10s %s\n",
                       elle::das::cli::option_name_from_c(Symbol::name()),
@@ -77,11 +81,12 @@ namespace memo
                     Symbol::name());
       Self::Modes::template map<help_modes, Self>
         ::value(s, static_cast<Self&>(*this), Symbol::name());
-      elle::fprintf(s,
-                    "\n"
-                    "Options:\n"
-                    "%s",
-                    elle::das::cli::help(static_cast<Self&>(*this), this->options()));
+      elle::fprintf(
+        s,
+        "\n"
+        "Options:\n"
+        "%s",
+        elle::das::cli::help(static_cast<Self&>(*this), this->options()));
     }
 
     template <typename Self, typename Owner, typename Cli>
