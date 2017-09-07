@@ -890,7 +890,6 @@ namespace memo
                     std::string daddr(faddr.value()+p, faddr.value()+32);
                     int idx = 0;
                     if (auto it = elle::find(index, fhome))
-                    if (it == index.end())
                       idx = it->second;
                     else
                     {
