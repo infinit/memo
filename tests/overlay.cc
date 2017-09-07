@@ -2007,7 +2007,7 @@ ELLE_TEST_SUITE()
   TEST_NAMED(Overlay, storm_paxos, storm, 60, true, 5, 5, 100);         \
   TEST_NAMED(Overlay, storm,       storm, 60, false, 5, 5, 200);        \
   TEST_NAMED(Overlay, churn, churn, 600, false, true, true);            \
-  TEST_NAMED(Overlay, churn_socket, churn_socket, 600);
+  TEST_NAMED(Overlay, churn_socket, churn_socket, 600);                 \
 
   OVERLAY(kelips);
   OVERLAY(kouncil);

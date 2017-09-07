@@ -311,19 +311,39 @@ namespace memo
                   boost::optional<int> local_version) const override;
             void
             _register_rpcs(Connection& rpcs) override;
-            using Addresses = elle::unordered_map<Address, Decision>;
-            ELLE_ATTRIBUTE(Addresses, addresses);
+            struct DecisionEntry
+            {
+              Address address;
+              elle::Time use;
+              std::shared_ptr<Decision> decision;
+            };
+            using Addresses = bmi::multi_index_container<
+              DecisionEntry,
+              bmi::indexed_by<
+                bmi::hashed_unique<
+                  bmi::member<
+                    DecisionEntry,
+                    Address,
+                    &DecisionEntry::address>>,
+                bmi::ordered_unique<
+                  bmi::member<
+                    DecisionEntry,
+                    elle::Time,
+                    &DecisionEntry::use>>
+              >>;
+            ELLE_ATTRIBUTE_R(Addresses, addresses);
+            ELLE_ATTRIBUTE_R(int, max_addresses_size);
           private:
             void
             _remove(Address address);
             BlockOrPaxos
             _load(Address address);
-            Decision&
+            std::shared_ptr<Decision>
             _load_paxos(
               Address address,
               boost::optional<PaxosServer::Quorum> peers = {},
               std::shared_ptr<blocks::Block> value = nullptr);
-            Decision&
+            std::shared_ptr<Decision>
             _load_paxos(Address address, Decision decision);
             void
             _cache(Address address, bool immutable, Quorum quorum);

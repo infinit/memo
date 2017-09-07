@@ -576,7 +576,8 @@ namespace memo
           {
             if (auto it = elle::find(self._addresses, a))
             {
-              auto& paxos = it->second.paxos;
+              auto decision = it->decision;
+              auto& paxos = decision->paxos;
               if (auto value = paxos.current_value())
               {
                 elle::reactor::for_each_parallel(
@@ -844,7 +845,13 @@ namespace memo
         Paxos::LocalPeer::_load(Address address)
         {
           if (auto decision = elle::find(this->_addresses, address))
-            return BlockOrPaxos(&decision->second);
+          {
+            this->_addresses.modify(decision, [&](DecisionEntry& de)
+              {
+                de.use = elle::Clock::now();
+              });
+            return BlockOrPaxos(decision->decision.get());
+          }
           else
           {
             ELLE_TRACE_SCOPE("%s: load %f from storage", *this, address);
@@ -886,14 +893,19 @@ namespace memo
               return stored;
             }
             else if (stored.paxos)
-              return BlockOrPaxos(
-                &this->_load_paxos(address, std::move(*stored.paxos)));
+            {
+              auto decision = this->_load_paxos(address,
+                std::move(*stored.paxos));
+              ELLE_DEBUG("%s: reloaded %f with state %s", this, address,
+                decision->paxos);
+              return BlockOrPaxos(decision.get());
+            }
             else
               ELLE_ABORT("no block and no paxos?");
           }
         }
 
-        Paxos::LocalPeer::Decision&
+        std::shared_ptr<Paxos::LocalPeer::Decision>
         Paxos::LocalPeer::_load_paxos(
           Address address,
           boost::optional<PaxosServer::Quorum> peers,
@@ -901,12 +913,20 @@ namespace memo
         {
           try
           {
+            if (auto decision = elle::find(this->_addresses, address))
+            {
+              this->_addresses.modify(decision, [&](DecisionEntry& de)
+              {
+                de.use = elle::Clock::now();
+              });
+              return decision->decision;
+            }
             auto res = this->_load(address);
             if (res.block)
               elle::err("immutable block found when paxos was expected: %s",
                         address);
             else
-              return *res.paxos;
+              return ELLE_ENFORCE(elle::find(this->_addresses, address))->decision;
           }
           catch (silo::MissingKey const& e)
           {
@@ -936,7 +956,7 @@ namespace memo
           }
         }
 
-        Paxos::LocalPeer::Decision&
+        std::shared_ptr<Paxos::LocalPeer::Decision>
         Paxos::LocalPeer::_load_paxos(Address address,
                                       Paxos::LocalPeer::Decision decision)
         {
@@ -949,8 +969,28 @@ namespace memo
             ELLE_DUMP("schedule %f for rebalancing after load", address);
             this->_rebalancable.emplace(address, false);
           }
-          return this->_addresses.emplace(
-            address, std::move(decision)).first->second;
+          auto ir = this->_addresses.insert(DecisionEntry{
+              address,
+              elle::Clock::now(),
+              std::make_shared<Decision>(std::move(decision))
+          });
+          ELLE_ASSERT(ir.second);
+          auto res = ir.first->decision;
+          auto it = this->_addresses.get<1>().begin();
+          for (int i = 0;
+               i < signed(this->_addresses.size()) - this->_max_addresses_size;
+               ++i)
+            // Don't unload blocks if they are in use, as they could be reloaded
+            // into _addresses in the meantime and be duplicated, entailing a
+            // local split brain.
+            if (it->decision.use_count() == 1)
+            {
+              ELLE_DEBUG(
+                "dropping cache entry for %f with use index %s at state %s",
+                it->address, it->use, it->decision->paxos);
+              it = this->_addresses.get<1>().erase(it);
+            }
+          return res;
         }
 
         void
@@ -1198,7 +1238,7 @@ namespace memo
                     if (it == this->_addresses.end())
                       // The block was deleted in the meantime.
                       continue;
-                    auto quorum = it->second.paxos.current_quorum();
+                    auto quorum = it->decision->paxos.current_quorum();
                     // We can't actually rebalance this block, under_represented
                     // was wrong. Don't think this can happen but better safe
                     // than sorry.
@@ -1249,11 +1289,11 @@ namespace memo
         {
           ELLE_TRACE_SCOPE("%s: get proposal at %f: %s%s",
                            *this, address, p, insert ? " (insert)" : "");
-          auto& decision = this->_load_paxos(
+          auto decision = this->_load_paxos(
             address, insert ? boost::optional<PaxosServer::Quorum>(peers)
                             : boost::optional<PaxosServer::Quorum>());
-          auto res = decision.paxos.propose(peers, p);
-          BlockOrPaxos data(&decision);
+          auto res = decision->paxos.propose(peers, p);
+          BlockOrPaxos data(decision.get());
           this->storage()->set(
             address,
             elle::serialization::binary::serialize(data,
@@ -1270,11 +1310,11 @@ namespace memo
           {
             try
             {
-              auto& decision = this->_load_paxos(address);
+              auto decision = this->_load_paxos(address);
               auto& dht = this->paxos().doughnut();
               auto peers = Details::lookup_nodes(
                 dht,
-                decision.paxos.current_quorum(),
+                decision->paxos.current_quorum(),
                 address);
               Paxos::PaxosClient client(address, std::move(peers));
               client.state();
@@ -1322,8 +1362,8 @@ namespace memo
               if (auto res = block->validate(this->doughnut(), true)); else
                 throw ValidationFailed(res.reason());
           }
-          auto& decision = this->_load_paxos(address);
-          auto& paxos = decision.paxos;
+          auto decision = this->_load_paxos(address);
+          auto& paxos = decision->paxos;
           if (block)
             if (auto previous = paxos.current_value())
             {
@@ -1336,7 +1376,7 @@ namespace memo
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
-            BlockOrPaxos data(&decision);
+            BlockOrPaxos data(decision.get());
             this->storage()->set(
               address,
               elle::serialization::binary::serialize(
@@ -1435,7 +1475,7 @@ namespace memo
                               boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: get %f from %f", *this, address, peers);
-          auto res = this->_load_paxos(address).paxos.get(peers);
+          auto res = this->_load_paxos(address)->paxos.get(peers);
           // Honor local_version
           if (local_version && res &&
               res->value.template is<std::shared_ptr<blocks::Block>>())
@@ -1460,11 +1500,11 @@ namespace memo
           {
             ELLE_TRACE_SCOPE("%s: propagate %f on %f at %f",
                              this, block->address(), q, p);
-            auto& decision = this->_load_paxos(block->address(), q, block);
-            decision.paxos.propose(q, p);
-            decision.paxos.accept(q, p, q);
-            decision.paxos.confirm(q, p);
-            BlockOrPaxos data(&decision);
+            auto decision = this->_load_paxos(block->address(), q, block);
+            decision->paxos.propose(q, p);
+            decision->paxos.accept(q, p, q);
+            decision->paxos.confirm(q, p);
+            BlockOrPaxos data(decision.get());
             this->storage()->set(
               block->address(),
               elle::serialization::binary::serialize(
@@ -1563,101 +1603,19 @@ namespace memo
         Paxos::LocalPeer::_fetch(Address address,
                                  boost::optional<int> local_version) const
         {
-          if (this->doughnut().version() >= elle::Version(0, 5, 0))
+          elle::serialization::Context context;
+          context.set<Doughnut*>(&this->doughnut());
+          context.set<elle::Version>(
+            elle_serialization_version(this->doughnut().version()));
+          auto data =
+            elle::serialization::binary::deserialize<BlockOrPaxos>(
+              this->storage()->get(address), true, context);
+          if (!data.block)
           {
-            elle::serialization::Context context;
-            context.set<Doughnut*>(&this->doughnut());
-            context.set<elle::Version>(
-              elle_serialization_version(this->doughnut().version()));
-            auto data =
-              elle::serialization::binary::deserialize<BlockOrPaxos>(
-                this->storage()->get(address), true, context);
-            if (!data.block)
-            {
-              ELLE_TRACE("%s: plain fetch called on mutable block", *this);
-              elle::err("plain fetch called on mutable block %f", address);
-            }
-            return std::unique_ptr<blocks::Block>(data.block.release());
+            ELLE_TRACE("%s: plain fetch called on mutable block", *this);
+            elle::err("plain fetch called on mutable block %f", address);
           }
-          // Backward compatibility pre-0.5.0
-          auto decision = this->_addresses.find(address);
-          if (decision == this->_addresses.end())
-            try
-            {
-              elle::serialization::Context context;
-              context.set<Doughnut*>(&this->doughnut());
-              context.set<elle::Version>(
-                elle_serialization_version(this->doughnut().version()));
-              auto data =
-                elle::serialization::binary::deserialize<BlockOrPaxos>(
-                  this->storage()->get(address), true, context);
-              if (data.block)
-              {
-                ELLE_DEBUG("loaded immutable block from storage");
-                return std::unique_ptr<blocks::Block>(data.block.release());
-              }
-              else
-              {
-                ELLE_DEBUG("loaded mutable block from storage");
-                decision = const_cast<LocalPeer*>(this)->_addresses.emplace(
-                  address, std::move(*data.paxos)).first;
-              }
-            }
-            catch (silo::MissingKey const& e)
-            {
-              ELLE_TRACE("missing block %x", address);
-              throw MissingBlock(e.key());
-            }
-          else
-            ELLE_DEBUG("mutable block already loaded");
-          auto& paxos = decision->second.paxos;
-          if (auto highest = paxos.current_value())
-          {
-            auto version = highest->proposal.version;
-            if (decision->second.chosen == version
-              && highest->value.is<std::shared_ptr<blocks::Block>>())
-            {
-              ELLE_DEBUG("return already chosen mutable block");
-              return highest->value.get<std::shared_ptr<blocks::Block>>()
-                ->clone();
-            }
-            else
-            {
-              ELLE_TRACE_SCOPE(
-                "finalize running Paxos for version %s (last chosen %s)"
-                , version, decision->second.chosen);
-              auto block = highest->value;
-              auto peers = Details::lookup_nodes(
-                this->doughnut(), paxos.quorum(), address);
-              if (peers.empty())
-                elle::err("no peer available for fetching %f", address);
-              Paxos::PaxosClient client(this->doughnut().id(),
-                                        std::move(peers));
-              auto chosen = client.choose(version, block);
-              // FIXME: factor with the end of doughnut::Local::store
-              ELLE_DEBUG("%s: store chosen block", *this)
-              elle::unconst(decision->second).chosen = version;
-              {
-                BlockOrPaxos data(const_cast<Decision*>(&decision->second));
-                this->storage()->set(
-                  address,
-                  elle::serialization::binary::serialize(
-                    data,
-                    this->doughnut().version()),
-                  true, true);
-              }
-              // ELLE_ASSERT(block.unique());
-              // FIXME: Don't clone, it's useless, find a way to steal
-              // ownership from the shared_ptr.
-              return block.get<std::shared_ptr<blocks::Block>>()->clone();
-            }
-          }
-          else
-          {
-            ELLE_TRACE("%s: block has running Paxos but no value: %x",
-                       *this, address);
-            throw MissingBlock(address);
-          }
+          return std::unique_ptr<blocks::Block>(data.block.release());
         }
 
         void

@@ -2312,6 +2312,45 @@ ELLE_TEST_SCHEDULED(tombstones)
   BOOST_TEST(storage_c.size() == 0);
 }
 
+ELLE_TEST_SCHEDULED(unload)
+{
+  auto const max = 8;
+  elle::os::setenv("MEMO_PAXOS_CACHE_SIZE", std::to_string(max));
+  auto dht_a = make_dht(0);
+  auto dht_b = make_dht(1);
+  dht_b->overlay->connect(*dht_a->overlay);
+  auto dht_c = make_dht(2);
+  dht_c->overlay->connect(*dht_a->overlay);
+  dht_c->overlay->connect(*dht_b->overlay);
+  std::unordered_set<memo::model::Address> addresses;
+  auto paxos = std::dynamic_pointer_cast<dht::consensus::Paxos::LocalPeer>(
+    dht_a->dht->local());
+  BOOST_REQUIRE(paxos);
+  BOOST_TEST(paxos->max_addresses_size() == max);
+  for (int i = 0; i < 16; ++i)
+  {
+    auto b = dht_a->dht->make_block<blocks::MutableBlock>(
+      std::string("unload"));
+    dht_a->dht->seal_and_insert(*b);
+    addresses.emplace(b->address());
+  }
+  elle::reactor::for_each_parallel(
+    {dht_a.get(), dht_b.get(), dht_c.get()},
+    [&, max] (auto const& dht)
+    {
+      auto paxos = std::dynamic_pointer_cast<dht::consensus::Paxos::LocalPeer>(
+        dht->dht->local());
+      elle::reactor::for_each_parallel(
+        addresses,
+        [&, max] (auto const& a)
+        {
+          BOOST_TEST(paxos->addresses().size() <= max);
+          dht->dht->fetch(a);
+          BOOST_TEST(paxos->addresses().size() <= max);
+        });
+    });
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -2433,4 +2472,5 @@ ELLE_TEST_SUITE()
     }
   }
   paxos->add(BOOST_TEST_CASE(tombstones), 0, valgrind(3));
+  paxos->add(BOOST_TEST_CASE(unload), 0, valgrind(3));
 }
