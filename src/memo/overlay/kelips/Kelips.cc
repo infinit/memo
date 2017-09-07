@@ -2475,7 +2475,7 @@ namespace memo
         if (p->insert_ttl > 0)
           p->insert_ttl--;
         if (p->ttl == 0
-          || p->count <= signed(p->result.size())
+          || p->count <= signed(p->result.size() + p->insert_result.size())
           || _state.contacts[_group].empty())
         {
           packet::PutFileReply res;
@@ -2493,7 +2493,7 @@ namespace memo
                                      p->originEndpoints);
             send(res, c);
           }
-          if (p->count > signed(p->result.size()))
+          if (p->count > signed(p->result.size() + p->insert_result.size()))
           {
             ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
             _dropped_puts++;
