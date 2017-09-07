@@ -12,11 +12,11 @@ namespace memo
 {
   namespace cli
   {
-    template <typename Self, typename Owner>
-    Object<Self, Owner>::Object(Memo& memo)
+    template <typename Self, typename Owner, typename Cli>
+    Object<Self, Owner, Cli>::Object(Cli& cli)
       : elle::das::named::Function<void (decltype(cli::help = false))>(
         elle::das::bind_method(*this, cli::call), cli::help = false)
-      , _cli(memo)
+      , _cli(cli)
     {
       this->_options.emplace(
         "help", elle::das::cli::Option('h', "show this help message"));
@@ -63,12 +63,12 @@ namespace memo
       };
     }
 
-    template <typename Self, typename Owner>
+    template <typename Self, typename Owner, typename Cli>
     void
-    Object<Self, Owner>::help(std::ostream& s)
+    Object<Self, Owner, Cli>::help(std::ostream& s)
     {
       using Symbol = find_name<Self, Owner>;
-      Memo::usage(
+      Cli::usage(
         s, elle::print("%s [MODE|--help]", Symbol::name()));
       elle::fprintf(s,
                     "Memo %s management utility.\n"
@@ -84,9 +84,9 @@ namespace memo
                     elle::das::cli::help(static_cast<Self&>(*this), this->options()));
     }
 
-    template <typename Self, typename Owner>
+    template <typename Self, typename Owner, typename Cli>
     void
-    Object<Self, Owner>::call(bool help)
+    Object<Self, Owner, Cli>::call(bool help)
     {
       if (help)
         this->help(std::cout);
@@ -97,9 +97,9 @@ namespace memo
       }
     }
 
-    template <typename Self, typename Owner>
+    template <typename Self, typename Owner, typename Cli>
     void
-    Object<Self, Owner>::apply(Memo&, std::vector<std::string>& args)
+    Object<Self, Owner, Cli>::apply(Cli&, std::vector<std::string>& args)
     {
       using Symbol = find_name<Self, Owner>;
       try
@@ -109,7 +109,7 @@ namespace memo
         else
         {
           bool found = false;
-          Self::Modes::template map<mode_call, Self>::value(
+          Self::Modes::template map<mode_call, Self, Cli>::value(
             this->cli(), static_cast<Self&>(*this), args, found);
           if (!found)
             elle::err<elle::das::cli::Error>(
@@ -128,10 +128,10 @@ namespace memo
       }
     }
 
-    template <typename Self, typename Owner>
+    template <typename Self, typename Owner, typename Cli>
     template <typename Symbol, typename ... Args>
     auto
-    Object<Self, Owner>::bind(Symbol const& s, Args&& ... args)
+    Object<Self, Owner, Cli>::bind(Symbol const& s, Args&& ... args)
       -> decltype(binding(s, std::forward<Args>(args)...))
     {
       return elle::das::named::function(
@@ -141,34 +141,34 @@ namespace memo
 
     template <typename Self, typename Sig, typename Symbol>
     void
-    Mode<Self, Sig, Symbol>::apply(Memo& memo,
+    Mode<Self, Sig, Symbol>::apply(Memo& cli,
                                    std::vector<std::string>& args)
     {
       // Add the options that are common to all the modes.
       auto const options = this->options;
       auto const f = this->prototype().extend(
         help = false
-        , as = memo.default_user_name()
+        , as = cli.default_user_name()
         , cli::compatibility_version = boost::none
         , script = false
         , log = boost::optional<std::string>()
         , prometheus = boost::optional<std::string>()
       );
-      auto const verb = memo.command_line().at(1);
+      auto const verb = cli.command_line().at(1);
       auto const subst = [&](auto const& f)
         {
           return elle::print(f,
             {
               {"action",  elle::print("to %s", verb)},        // to delete
               {"hub",     beyond(true)},                      // the hub
-              {"object",  memo.command_line().at(0)},         // log
-              {"objects", plural(memo.command_line().at(0))}, // logs
+              {"object",  cli.command_line().at(0)},          // log
+              {"objects", plural(cli.command_line().at(0))},  // logs
               {"verb",    verb},                              // delete
             });
         };
       auto const show_help = [&] (std::ostream& s)
         {
-          Memo::usage(s, subst("{object} {verb} [OPTIONS]"));
+          cli.usage(s, subst("{object} {verb} [OPTIONS]"));
           s << subst(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;
@@ -188,12 +188,12 @@ namespace memo
                boost::optional<std::string> prometheus,
                auto&& ... args)
           {
-            memo.as(as);
-            memo.script(script);
+            cli.as(as);
+            cli.script(script);
             if (compatibility_version)
             {
               ensure_version_is_supported(*compatibility_version);
-              memo.compatibility_version(std::move(compatibility_version));
+              cli.compatibility_version(std::move(compatibility_version));
             }
             if (log)
               elle::log::logger_add(elle::log::make_logger(*log));

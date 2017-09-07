@@ -12,21 +12,21 @@ namespace memo
 {
   namespace cli
   {
-    template <typename Self, typename Owner = Memo>
+    template <typename Self, typename Owner = Memo, typename Cli = Memo>
     class Object;
 
-    template <typename Self, typename Owner>
+    template <typename Self, typename Owner, typename Cli>
     class Object
       : public elle::das::named::Function<void (decltype(help = false))>
     {
     public:
-      Object(Memo& memo);
+      Object(Cli& memo);
       void
       help(std::ostream& s);
       void
       call(bool help);
       void
-      apply(Memo& cli, std::vector<std::string>& args);
+      apply(Cli& cli, std::vector<std::string>& args);
       template <typename Symbol, typename ... Args>
       static
       auto
@@ -38,17 +38,17 @@ namespace memo
       auto
       bind(Symbol const& s, Args&& ... args)
         -> decltype(binding(s, std::forward<Args>(args)...));
-      ELLE_ATTRIBUTE_R(Memo&, cli);
+      ELLE_ATTRIBUTE_R(Cli&, cli);
       ELLE_ATTRIBUTE_R(elle::das::cli::Options, options, protected);
     };
 
-    template <typename Symbol, typename Object>
+    template <typename Symbol, typename Object, typename Cli = Memo>
     struct mode_call
     {
       using type = bool;
       static
       bool
-      value(memo::cli::Memo& memo,
+      value(Cli& memo,
             Object& o,
             std::vector<std::string>& args,
             bool& found)
