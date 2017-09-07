@@ -221,8 +221,8 @@ def configure(
     protoc = grpc.protoc,
     plugin = grpc.grpc_cpp_plugin)
   # Sources to compile the server part.
-  sources = drake.nodes(
-    'grpc.hh',
+  sources = gen_vs_w_named.targets() + drake.nodes(
+    'memo_vs.cc',
     'grpc.cc',
     'serializer.cc',
     'serializer.hh'
