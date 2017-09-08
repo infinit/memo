@@ -28,7 +28,9 @@ grpc = None
 
 lib = None
 cli_lib = None
+grpc_libs = None
 
+prometheus = None
 # The installed executables: bin/memo.
 installed_binaries = []
 
@@ -192,6 +194,7 @@ def configure(
 
   grpc_lib = copy_library(grpc.lib, builder = PatchAndInstall)
   protobuf_lib = copy_library(grpc.protobuf_lib, builder = PatchAndInstall)
+  global grpc_libs
   grpc_libs = [grpc_lib, protobuf_lib]
 
   ## -------------- ##
@@ -303,7 +306,6 @@ def configure(
   outguess_configure = drake.node('src/memo/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/memo/model/steg/outguess-0.2/Makefile')
 
-  # XXX: Use libraries.
   cxx_config += grpc.grpc.cxx_config
   extra_libs = []
 
@@ -313,6 +315,7 @@ def configure(
   enable_prometheus = not windows
   if enable_prometheus:
     cxx_config.define('MEMO_ENABLE_PROMETHEUS', '1')
+    global prometheus
     prometheus = drake.include('prometheus/prometheus-cpp',
                                cxx_toolkit = cxx_toolkit,
                                in_cxx_config = cxx_config,
