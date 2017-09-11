@@ -1079,7 +1079,14 @@ namespace memo
                     Details::lookup_nodes(this->_paxos.doughnut(), q, address));
                   if (q.erase(lost_id))
                   {
-                    client.choose(decision.paxos.current_version() + 1, q);
+                    if (auto choice = client.choose(
+                      decision.paxos.current_version() + 1, q))
+                    { // conflict
+                      q = decision.paxos.current_quorum();
+                      ELLE_TRACE("%s: conflict, retrying with quorum %s",
+                        this, q);
+                      continue;
+                    }
                     ELLE_TRACE("%s: evicted %f from %f quorum",
                                this, lost_id, address);
                   }

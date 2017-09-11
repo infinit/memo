@@ -1726,6 +1726,55 @@ namespace rebalancing
     }
   }
 
+  ELLE_TEST_SCHEDULED(evict_conflict)
+  {
+    auto dht_a = DHT(dht::consensus_builder = instrument(3),
+      dht::consensus::rebalance_auto_expand = true,
+      dht::consensus::node_timeout = 0s);
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %f", dht_a.dht->id());
+    auto dht_b = DHT(dht::consensus_builder = instrument(3),
+                     dht::consensus::rebalance_auto_expand = false);
+    auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
+    auto dht_c = DHT(dht::consensus_builder = instrument(3),
+          dht::consensus::rebalance_auto_expand = false);
+    dht_b.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_b.overlay);
+    ELLE_LOG("second DHT: %f", dht_b.dht->id());
+    ELLE_LOG("third DHT: %f", dht_c.dht->id());
+    auto ba = make_block(dht_a, false, "evict");
+    dht_a.dht->seal_and_insert(*ba);
+    elle::reactor::Barrier waita;
+    elle::reactor::Barrier hita;
+    local_b.accepting().connect(
+        [&] (Address const&, Paxos::PaxosClient::Proposal const& p)
+        {
+          hita.open();
+          elle::reactor::wait(waita);
+        });
+    dht_c.overlay->disconnect_all();
+    elle::reactor::Thread updater("update", [&] {
+        dynamic_cast<memo::model::blocks::MutableBlock*>(ba.get())
+          ->data(elle::Buffer("update"));
+        dht_a.dht->seal_and_insert(*ba);
+    });
+    elle::reactor::wait(hita);
+    hita.close();
+    elle::reactor::Thread evicter("evict", [&] {
+        local_a.evict()();
+    });
+    elle::reactor::wait(hita);
+    waita.open();
+    elle::reactor::wait(updater);
+    elle::reactor::wait(evicter);
+    auto dht_d = DHT(dht::consensus_builder = instrument(3));
+    auto rebalanced = elle::reactor::waiter(local_a.rebalanced(), ba->address());
+    dht_d.overlay->connect(*dht_a.overlay);
+    dht_d.overlay->connect(*dht_b.overlay);
+    elle::reactor::wait(rebalanced);
+  }
+
   auto const make_resign_dht = [] (int n, bool rebalance_auto_expand = true)
   {
     return std::make_unique<DHT>(
@@ -2445,6 +2494,7 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_CHB), 0, valgrind(3));
       rebalancing->add(BOOST_TEST_CASE(evict_removed_blocks_OKB), 0, valgrind(3));
     }
+    rebalancing->add(BOOST_TEST_CASE(evict_conflict), 0, valgrind(3));
     rebalancing->add(BOOST_TEST_CASE(resign), 0, valgrind(3));
     {
       auto conflict = &rebalancing::conflict;
