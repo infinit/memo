@@ -296,13 +296,13 @@ def configure(
   cxx_config += grpc.grpc.cxx_config
   extra_libs = []
   if grpc.memo_vs_grpc_lib:
-    grpc_lib = copy_library(grpc.grpc_lib, builder = PatchAndInstall)
-    memo_vs_grpc_lib = copy_library(grpc.memo_vs_grpc_lib, builder = PatchAndInstall)
+    grpc_lib = copy_library(grpc.lib, builder = PatchAndInstall)
+    memo_vs_grpc_lib = copy_library(grpc.memo_vs_lib, builder = PatchAndInstall)
     protobuf_lib = copy_library(grpc.protobuf_lib, builder = PatchAndInstall)
     grpc_libs = [grpc_lib, protobuf_lib, memo_vs_grpc_lib]
     extra_libs += grpc_libs
   else:
-    memo_sources += grpc.grpc.memo_vs_grpc_sources
+    memo_sources += grpc.memo_vs_sources
 
   ## ------------ ##
   ## Prometheus.  ##
