@@ -82,7 +82,7 @@ def configure(
         'exit(1 if res is None else 0)',
       ]) % (str(self.target.path()), str(self.source.path()))
       if not isinstance(self.target,
-                        (drake.cxx.Module, drake.cxx.DynLib)):
+                        (drake.cxx.Module, drake.cxx.Library)):
         self.cmd(
           'Check syntax of %s' % self.target,
           ['%s/bin/python%s' % (python.prefix, python.version),
