@@ -835,6 +835,8 @@ namespace memo
         void
         Paxos::LocalPeer::_cleanup()
         {
+          ELLE_DEBUG_SCOPE("%s: cleanup", this);
+          this->_cleaning_up = true;
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
           this->_evict_threads.clear();
@@ -1037,7 +1039,7 @@ namespace memo
           it.first->second.async_wait(
             [this, id] (const boost::system::error_code& error)
             {
-              if (!error)
+              if (!error && !this->_cleaning_up)
                 this->_evict_threads.emplace_back(
                   new elle::reactor::Thread(
                     elle::sprintf("%s: evict %f", this, id),

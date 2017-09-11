@@ -254,6 +254,7 @@ namespace memo
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>,
                            evict_threads);
+            ELLE_ATTRIBUTE_R(bool, cleaning_up);
           protected:
             void
             _cleanup() override;

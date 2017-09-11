@@ -24,6 +24,7 @@ namespace memo
           , _rebalance_auto_expand(rebalance_auto_expand)
           , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
+          , _cleaning_up(false)
           , _max_addresses_size(elle::os::getenv("MEMO_PAXOS_CACHE_SIZE", 100))
           , _rebalancable()
           , _rebalanced()
