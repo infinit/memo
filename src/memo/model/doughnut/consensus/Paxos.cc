@@ -431,7 +431,7 @@ namespace memo
                 {
                   BENCH("_fetch.run");
                   ELLE_DEBUG_SCOPE("run paxos");
-                  Paxos::PaxosClient client(
+                  auto client = Paxos::PaxosClient(
                     self.doughnut().id(), std::move(peers));
                   auto state = [&]
                     {
@@ -1135,7 +1135,7 @@ namespace memo
                     this->_paxos.doughnut(),
                     block.paxos->paxos.current_quorum(),
                     address);
-                  Paxos::PaxosClient client(
+                  auto client = Paxos::PaxosClient(
                     this->doughnut().id(), std::move(peers));
                   this->rebalance(client, address);
                 }
@@ -1244,7 +1244,7 @@ namespace memo
                       continue;
                     ELLE_DEBUG("elect new quorum")
                     {
-                      PaxosClient c(
+                      auto c = PaxosClient(
                         this->doughnut().id(),
                         Details::lookup_nodes(
                           this->doughnut(), quorum, target.address));

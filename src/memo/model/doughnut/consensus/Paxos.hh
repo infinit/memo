@@ -51,7 +51,7 @@ namespace memo
           using PaxosServer = elle::athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address> ;
           using Value = elle::Option<std::shared_ptr<blocks::Block>,
-                                     Paxos::PaxosClient::Quorum>;
+                                     PaxosClient::Quorum>;
           using Duration = std::chrono::system_clock::duration;
 
         /*-------------.
@@ -102,7 +102,7 @@ namespace memo
                      Address address,
                      std::function<PaxosClient::Quorum (PaxosClient::Quorum)> m,
                      PaxosClient::State const& version);
-          Paxos::PaxosServer::Quorum
+          PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
           void
           _resign() override;
@@ -126,7 +126,7 @@ namespace memo
           make_remote(std::shared_ptr<Dock::Connection> connection) override;
 
           using AcceptedOrError
-            = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+            = std::pair<boost::optional<PaxosClient::Accepted>,
                         std::shared_ptr<elle::Error>>;
           using GetMultiResult = std::unordered_map<Address, AcceptedOrError>;
 
@@ -169,14 +169,14 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) = 0;
+                      PaxosClient::Proposal p) = 0;
           };
 
         /*------------------.
         | Paxos::RemotePeer |
         `------------------*/
           class RemotePeer
-            : public Paxos::Peer
+            : public Peer
             , public doughnut::Remote
           {
           public:
@@ -185,7 +185,7 @@ namespace memo
             RemotePeer(Doughnut& dht,
                        std::shared_ptr<Dock::Connection> connection)
               : doughnut::Peer(dht, connection->location().id())
-              , Paxos::Peer(dht, connection->location().id())
+              , Peer(dht, connection->location().id())
               , Super(dht, std::move(connection))
             {}
             PaxosServer::Response
@@ -211,7 +211,7 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) override;
+                      PaxosClient::Proposal p) override;
             void
             store(blocks::Block const& block, StoreMode mode) override;
           };
@@ -221,7 +221,7 @@ namespace memo
         `-----------------*/
         public:
           class LocalPeer
-            : public Paxos::Peer
+            : public Peer
             , public doughnut::Local
           {
           /*-------------.
@@ -288,7 +288,7 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) override;
+                      PaxosClient::Proposal p) override;
 
             void
             store(blocks::Block const& block, StoreMode mode) override;
