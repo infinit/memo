@@ -12,7 +12,7 @@ namespace memo
           int factor,
           bool rebalance_auto_expand,
           bool rebalance_inspect,
-          std::chrono::system_clock::duration node_timeout,
+          Duration node_timeout,
           Doughnut& dht,
           Address id,
           Args&& ... args)
@@ -31,9 +31,7 @@ namespace memo
                               [this] () { this->_rebalance(); })
         {}
 
-        static constexpr auto default_node_timeout =
-          std::chrono::duration_cast<std::chrono::system_clock::duration>(
-            10min);
+        static constexpr auto default_node_timeout = 10min;
 
         template <typename ... Args>
         Paxos::Paxos(Args&& ... args)

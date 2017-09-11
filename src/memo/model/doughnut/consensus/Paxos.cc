@@ -93,20 +93,18 @@ namespace memo
 
 
         Paxos::LocalPeer::BlockRepartition::BlockRepartition(
-          Address address_, bool immutable_, PaxosServer::Quorum quorum_)
-          : address(address_)
-          , immutable(immutable_)
-          , quorum(std::move(quorum_))
+          Address a, bool immutable, PaxosServer::Quorum q)
+          : address(a)
+          , immutable(immutable)
+          , quorum(std::move(q))
         {}
 
         bool
         Paxos::LocalPeer::BlockRepartition::operator ==(
           BlockRepartition const& rhs) const
         {
-          return
-            this->address == rhs.address &&
-            this->immutable == rhs.immutable &&
-            this->quorum == rhs.quorum;
+          return std::tie(this->address, this->immutable, this->quorum)
+            == std::tie(rhs.address, rhs.immutable, rhs.quorum);
         }
 
         int
@@ -129,21 +127,12 @@ namespace memo
         `-------------*/
 
         BlockOrPaxos::BlockOrPaxos(Paxos::LocalPeer::Decision* p)
-          : block(nullptr)
-          , paxos(p, [] (Paxos::LocalPeer::Decision*) {})
+          : paxos(p, [] (Paxos::LocalPeer::Decision*) {})
         {}
 
         BlockOrPaxos::BlockOrPaxos(elle::serialization::SerializerIn& s)
-          : block(nullptr,
-                  [] (blocks::Block* p)
-                  {
-                    std::default_delete<blocks::Block>()(p);
-                  })
-          , paxos(nullptr,
-                  [] (Paxos::LocalPeer::Decision* p)
-                  {
-                    std::default_delete<Paxos::LocalPeer::Decision>()(p);
-                  })
+          : block(nullptr, std::default_delete<blocks::Block>())
+          , paxos(nullptr, std::default_delete<Paxos::LocalPeer::Decision>())
         {
           this->serialize(s);
         }
@@ -164,7 +153,7 @@ namespace memo
                      bool lenient_fetch,
                      bool rebalance_auto_expand,
                      bool rebalance_inspect,
-                     std::chrono::system_clock::duration node_timeout)
+                     Duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
           , _lenient_fetch(memo::getenv("PAXOS_LENIENT_FETCH", lenient_fetch))
@@ -850,16 +839,20 @@ namespace memo
               {
                 de.use = elle::Clock::now();
               });
-            return BlockOrPaxos(decision->decision.get());
+            return BlockOrPaxos{decision->decision.get()};
           }
           else
           {
             ELLE_TRACE_SCOPE("%s: load %f from storage", *this, address);
             auto buffer = this->storage()->get(address);
-            elle::serialization::Context context;
-            context.set<Doughnut*>(&this->doughnut());
-            context.set<elle::Version>(
-              elle_serialization_version(this->doughnut().version()));
+            auto const context = [&]
+              {
+                auto res = elle::serialization::Context{};
+                res.set<Doughnut*>(&this->doughnut());
+                res.set<elle::Version>(
+                  elle_serialization_version(this->doughnut().version()));
+                return res;
+              }();
             auto stored =
               elle::serialization::binary::deserialize<BlockOrPaxos>(
                 buffer, true, context);
@@ -898,7 +891,7 @@ namespace memo
                 std::move(*stored.paxos));
               ELLE_DEBUG("%s: reloaded %f with state %s", this, address,
                 decision->paxos);
-              return BlockOrPaxos(decision.get());
+              return BlockOrPaxos{decision.get()};
             }
             else
               ELLE_ABORT("no block and no paxos?");
@@ -1058,6 +1051,7 @@ namespace memo
           ELLE_TRACE_SCOPE("%s: evict node %f", this, lost_id);
           auto range = elle::equal_range(
             this->_node_blocks.get<by_node>(), lost_id);
+          // The addresses of the blocks that the disappeared host kept.
           // FIXME: move the range.
           auto blocks = elle::make_vector(range,
             [] (NodeBlock const& nb) { return nb.block; });
@@ -1074,9 +1068,13 @@ namespace memo
               {
                 try
                 {
-                  Paxos::PaxosClient client(
-                    this->doughnut().id(),
-                    Details::lookup_nodes(this->_paxos.doughnut(), q, address));
+                  // Contact the original quorum, *before* the removal
+                  // of lost_id.
+                  auto client =
+                    Paxos::PaxosClient(
+                      this->doughnut().id(),
+                      Details::lookup_nodes(this->_paxos.doughnut(),
+                                            q, address));
                   if (q.erase(lost_id))
                   {
                     client.choose(decision.paxos.current_version() + 1, q);
@@ -1293,7 +1291,7 @@ namespace memo
             address, insert ? boost::optional<PaxosServer::Quorum>(peers)
                             : boost::optional<PaxosServer::Quorum>());
           auto res = decision->paxos.propose(peers, p);
-          BlockOrPaxos data(decision.get());
+          auto data = BlockOrPaxos{decision.get()};
           this->storage()->set(
             address,
             elle::serialization::binary::serialize(data,
@@ -1316,7 +1314,7 @@ namespace memo
                 dht,
                 decision->paxos.current_quorum(),
                 address);
-              Paxos::PaxosClient client(address, std::move(peers));
+              auto client = Paxos::PaxosClient(address, std::move(peers));
               client.state();
             }
             catch (MissingBlock const&)
@@ -1376,7 +1374,7 @@ namespace memo
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
-            BlockOrPaxos data(decision.get());
+            auto data = BlockOrPaxos(decision.get());
             this->storage()->set(
               address,
               elle::serialization::binary::serialize(
@@ -1396,10 +1394,10 @@ namespace memo
           BENCH("confirm.local");
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
-          BlockOrPaxos block = [&] {
+          auto block = [&] {
             try
             {
-              return this->_load(address);
+              return BlockOrPaxos{this->_load(address)};
             }
             catch (silo::MissingKey const& k)
             {
@@ -1413,7 +1411,7 @@ namespace memo
             decision.paxos.confirm(peers, p);
             ELLE_DEBUG("store confirmed paxos")
             {
-              BlockOrPaxos data(&decision);
+              auto data = BlockOrPaxos(&decision);
               auto ser = [&]
               {
                 BENCH("confirm.storage");
@@ -1504,7 +1502,7 @@ namespace memo
             decision->paxos.propose(q, p);
             decision->paxos.accept(q, p, q);
             decision->paxos.confirm(q, p);
-            BlockOrPaxos data(decision.get());
+            auto data = BlockOrPaxos(decision.get());
             this->storage()->set(
               block->address(),
               elle::serialization::binary::serialize(
@@ -1656,7 +1654,7 @@ namespace memo
           elle::Buffer data =
             [&]
             {
-              BlockOrPaxos b(const_cast<blocks::Block&>(block));
+              auto b = BlockOrPaxos(const_cast<blocks::Block&>(block));
               auto res = elle::serialization::binary::serialize(
                 b, this->doughnut().version());
               b.block.release();
@@ -1792,21 +1790,19 @@ namespace memo
           {
             auto peers = Details::Peers();
             PaxosServer::Quorum peers_id;
-            // FIXME: This void the "query on the fly" optimization as it forces
-            // resolution of all peers to get their id. Any other way ?
+            // FIXME: This voids the "query on the fly" optimization
+            // as it forces resolution of all peers to get their
+            // id. Any other way?
             for (auto wpeer: owners)
-            {
-              auto peer = wpeer.lock();
-              if (!peer)
-                ELLE_WARN("%s: peer was deleted while storing", this);
-              else
+              if (auto peer = wpeer.lock())
               {
                 peers_id.insert(peer->id());
                 peers.emplace_back(
                   std::make_unique<PaxosPeer>(
                     wpeer, b->address(), boost::none, mode == STORE_INSERT));
               }
-            }
+              else
+                ELLE_WARN("%s: peer was deleted while storing", this);
             if (peers.empty())
               elle::err("no peer available for %s of %f",
                         mode == STORE_INSERT ? "insertion" : "update",
@@ -1819,7 +1815,7 @@ namespace memo
             {
               try
               {
-                Paxos::PaxosClient client(
+                auto client = Paxos::PaxosClient(
                   this->doughnut().id(), std::move(peers));
                 // Keep resolving conflicts and retrying
                 while (true)
@@ -2084,7 +2080,7 @@ namespace memo
           auto const propagate = [&] (PaxosClient::Proposal const& p)
             {
               auto local =
-              std::static_pointer_cast<LocalPeer>(this->doughnut().local());
+                std::static_pointer_cast<LocalPeer>(this->doughnut().local());
               Details::_propagate(*local, address, p, state.quorum, new_quorum);
               local->_rebalanced(address);
               return true;
@@ -2139,7 +2135,7 @@ namespace memo
                 else
                 {
                   // FIXME: does this then skip versions, possibly hiding a
-                  // different and potentially better quorum pick ?
+                  // different and potentially better quorum pick?
                   ELLE_TRACE("someone else picked a value while we rebalanced");
                   ++version;
                   continue;
@@ -2173,10 +2169,10 @@ namespace memo
         {
           ELLE_LOG_COMPONENT(
             "memo.model.doughnut.consensus.Paxos.rebalance");
-          auto backoff = elle::reactor::Backoff(10ms, 10s);
           auto local = this->doughnut().local();
           if (!local)
             return;
+          auto backoff = elle::reactor::Backoff(10ms, 10s);
           auto paxos = std::static_pointer_cast<LocalPeer>(local);
           for (bool failed = false, done = false; !done;)
           {
@@ -2250,7 +2246,7 @@ namespace memo
         /*-----.
         | Stat |
         `-----*/
-
+#if 0
         using Hits =
           std::unordered_map<std::string, boost::optional<Hit>>;
 
@@ -2271,6 +2267,7 @@ namespace memo
 
           ELLE_ATTRIBUTE_R(Hits, hits);
         };
+#endif
 
         std::unique_ptr<Consensus::Stat>
         Paxos::stat(Address const& address)
@@ -2319,7 +2316,7 @@ namespace memo
 
         Paxos::Configuration::Configuration(
           int replication_factor,
-          std::chrono::system_clock::duration node_timeout)
+          Duration node_timeout)
           : consensus::Configuration()
           , _replication_factor(replication_factor)
           , _node_timeout(node_timeout)
@@ -2358,7 +2355,7 @@ namespace memo
           catch (elle::serialization::MissingKey const&)
           {
             ELLE_ASSERT(s.in());
-            this->_node_timeout = 10min;
+            this->_node_timeout = default_node_timeout;
           }
         }
 
