@@ -309,7 +309,7 @@ def configure(
   ## ------------ ##
   ## Prometheus.  ##
   ## ------------ ##
-  enable_prometheus = False # not windows
+  enable_prometheus = not windows
   if enable_prometheus:
     cxx_config.define('MEMO_ENABLE_PROMETHEUS', '1')
     prometheus = drake.include('prometheus/prometheus-cpp',
@@ -318,8 +318,7 @@ def configure(
                                protoc = grpc.grpc.protoc,
                                protobuf_config = grpc.grpc.cxx_config,
                                protobuf_lib = grpc.grpc.protobuf_lib)
-    for p in prometheus.prometheus_include_path:
-      cxx_config.add_system_include_path(p)
+    cxx_config += prometheus.cxx_config
     prometheus_lib = copy_library(prometheus.prometheus_lib)
     extra_libs.append(prometheus_lib)
     drake.node('src/memo/model/prometheus.hh')\
@@ -409,8 +408,7 @@ def configure(
 
   # Needed for Prometheus.
   if enable_prometheus:
-    for p in prometheus.prometheus_include_path:
-      cli_cxx_config.add_system_include_path(p)
+    cli_cxx_config += prometheus.cxx_config
 
   cli_cxx_config.lib_path_runtime('../lib')
   cli_cxx_config.library_add(copy_library(elle.boost.program_options_dynamic))
