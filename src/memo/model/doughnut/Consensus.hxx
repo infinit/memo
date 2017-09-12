@@ -1,4 +1,3 @@
-
 namespace memo
 {
   namespace model

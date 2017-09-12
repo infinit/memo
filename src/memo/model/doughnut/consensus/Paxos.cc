@@ -1719,13 +1719,13 @@ namespace memo
                 return this->doughnut().overlay()->lookup(
                   b->address(), this->_factor, false);
               default:
-              elle::unreachable();
+                elle::unreachable();
             }
           }();
           if (dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             auto peers = Details::Peers();
-            PaxosServer::Quorum peers_id;
+            auto peers_id = PaxosServer::Quorum{};
             // FIXME: This voids the "query on the fly" optimization
             // as it forces resolution of all peers to get their
             // id. Any other way?
@@ -1751,7 +1751,7 @@ namespace memo
             {
               try
               {
-                auto client = Paxos::PaxosClient(
+                auto client = PaxosClient(
                   this->doughnut().id(), std::move(peers));
                 // Keep resolving conflicts and retrying
                 while (true)
@@ -1770,7 +1770,7 @@ namespace memo
                       auto const& q = chosen->get<PaxosServer::Quorum>();
                       ELLE_DEBUG_SCOPE("Paxos elected another quorum: %f", q);
                       b->seal(chosen.proposal().version + 1);
-                      throw Paxos::PaxosServer::WrongQuorum(
+                      throw PaxosServer::WrongQuorum(
                         q, peers_id, chosen.proposal());
                     }
                     else
@@ -1791,7 +1791,7 @@ namespace memo
                     break;
                 }
               }
-              catch (Paxos::PaxosServer::WrongQuorum const& e)
+              catch (PaxosServer::WrongQuorum const& e)
               {
                 ELLE_TRACE("%s", e.what());
                 peers = Details::lookup_nodes(
@@ -1889,22 +1889,24 @@ namespace memo
             *this, address, std::move(peers), local_version);
         }
 
-        Paxos::PaxosClient
+        auto
         Paxos::_client(Address const& address)
+          -> PaxosClient
         {
-          return Paxos::PaxosClient(
+          return PaxosClient(
             this->doughnut().id(), Details::_peers(*this, address));
         }
 
-        Paxos::PaxosClient::State
+        auto
         Paxos::_latest(PaxosClient& client, Address address)
+          -> PaxosClient::State
         {
           while (true)
             try
             {
               return client.state();
             }
-            catch (Paxos::PaxosServer::WrongQuorum const& e)
+            catch (PaxosServer::WrongQuorum const& e)
             {
               client.peers(
                 Details::lookup_nodes(this->doughnut(), e.expected(), address));
@@ -1923,22 +1925,23 @@ namespace memo
         }
 
         // FIXME: rebalancers will re-lookup the node ids, which sucks
-        Paxos::PaxosServer::Quorum
+        auto
         Paxos::_rebalance_extend_quorum(Address address,
                                         PaxosServer::Quorum q)
+          -> PaxosServer::Quorum
         {
           // Make sure we didn't lose a previous owner because of the overlay
           // failing to look it up.
-          PaxosServer::Quorum new_q(q);
+          auto res = PaxosServer::Quorum(q);
           for (auto const& wowner:
                  this->doughnut().overlay()->allocate(address, this->_factor))
           {
-            if (signed(new_q.size()) >= this->_factor)
+            if (signed(res.size()) >= this->_factor)
               break;
             if (auto owner = wowner.lock())
-              new_q.emplace(owner->id());
+              res.emplace(owner->id());
           }
-          return new_q;
+          return res;
         }
 
         bool
@@ -2037,11 +2040,10 @@ namespace memo
                       ELLE_TRACE(
                         "conflicted rebalancing to an non-satisfying quorum");
                       ++version;
-                      replace.reset(
-                        new Paxos::PaxosClient(
+                      replace = std::make_unique<PaxosClient>(
                           this->doughnut().id(),
                           Details::lookup_nodes(
-                            this->doughnut(), quorum, address)));
+                            this->doughnut(), quorum, address));
                       continue;
                     }
                   }
@@ -2062,13 +2064,12 @@ namespace memo
                 return propagate(conflict.proposal());
               }
             }
-            catch (Paxos::PaxosServer::WrongQuorum const& e)
+            catch (PaxosServer::WrongQuorum const& e)
             {
-              replace.reset(
-                new Paxos::PaxosClient(
+              replace = std::make_unique<PaxosClient>(
                   this->doughnut().id(),
                   Details::lookup_nodes(
-                    this->doughnut(), e.expected(), address)));
+                    this->doughnut(), e.expected(), address));
             }
             catch (elle::Error const&)
             {

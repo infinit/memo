@@ -2257,8 +2257,8 @@ ELLE_TEST_SCHEDULED(admin_keys)
 
 ELLE_TEST_SCHEDULED(disabled_crypto)
 {
-  auto key = elle::cryptography::rsa::keypair::generate(key_size());
-  memo::model::doughnut::EncryptOptions eopts(false, false, false);
+  auto const key = elle::cryptography::rsa::keypair::generate(key_size());
+  auto const eopts = dht::EncryptOptions{false, false, false};
   DHTs dhts(true, encrypt_options = eopts, keys_a = key, keys_b=key, keys_c = key);
   auto b = dhts.dht_a->make_block<blocks::ACLBlock>(elle::Buffer("canard", 6));
   auto baddr = b->address();
