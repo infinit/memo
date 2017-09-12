@@ -73,6 +73,14 @@ key_size()
 class DHTs
 {
 public:
+  using make_overlay_t
+    = auto (int,
+            memo::model::NodeLocations peers,
+            std::shared_ptr<dht::Local> local,
+            dht::Doughnut& d)
+    -> std::unique_ptr<memo::overlay::Stonehenge>;
+  using MakeOverlay = std::function<make_overlay_t>;
+
   template <typename ... Args>
   DHTs(Args&& ... args)
   {
@@ -119,13 +127,7 @@ public:
         boost::optional<elle::Version> version_c,
         boost::optional<boost::filesystem::path> monitoring_socket_path_a,
         dht::EncryptOptions encrypt_options,
-        std::function<
-          std::unique_ptr<memo::overlay::Stonehenge>(
-            int,
-            memo::model::NodeLocations peers,
-            std::shared_ptr<
-              dht::Local> local,
-            dht::Doughnut& d)> make_overlay,
+        MakeOverlay make_overlay,
         dht::Doughnut::ConsensusBuilder consensus_builder,
         bool cache)
               {
@@ -170,12 +172,7 @@ private:
        boost::optional<elle::Version> version_c,
        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
        dht::EncryptOptions encrypt_options,
-       std::function<
-         std::unique_ptr<memo::overlay::Stonehenge>(
-           int,
-           memo::model::NodeLocations peers,
-           std::shared_ptr<dht::Local> local,
-           dht::Doughnut& d)> make_overlay,
+       MakeOverlay make_overlay,
        dht::Doughnut::ConsensusBuilder consensus_builder,
        bool cache)
   {
