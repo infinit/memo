@@ -184,51 +184,51 @@ namespace memo
             elle::Version const& version,
             bool is_void)
       {
-         if (v.template is<E>())
-         {
-           ELLE_DEBUG("grpc call failed with exception %s",
-                      elle::exception_string(v.template get<E>()));
-           try
-           {
-             std::rethrow_exception(v.template get<E>());
-           }
-           catch (memo::model::MissingBlock const& mb)
-           {
-             err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
-             if (mb.address().mutable_block())
-               increment(service.errMissingMutable);
-             if (!mb.address().mutable_block())
-               increment(service.errMissingImmutable);
-           }
-           catch (memo::model::doughnut::ValidationFailed const& vf)
-           {
-             increment(service.errPermission);
-             err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
-           }
-           catch (elle::athena::paxos::TooFewPeers const& tfp)
-           {
-             increment(service.errTooFewPeers);
-             err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
-           }
-           catch (memo::model::Conflict const& c)
-           {
-             increment(service.errConflict);
-             elle::unconst(c).serialize(sout, version);
-           }
-           catch (elle::Error const& e)
-           {
-             increment(service.errOther);
-             err = ::grpc::Status(::grpc::INTERNAL, e.what());
-           }
-         }
-         else
-         {
-           increment(service.errOk);
-           if (!is_void)
-             sout.serialize(
-               cxx_to_message_name(elle::type_info<A>().name()),
-               v.template get<A>());
-         }
+        if (v.template is<E>())
+        {
+          ELLE_DEBUG("grpc call failed with exception %s",
+                     elle::exception_string(v.template get<E>()));
+          try
+          {
+            std::rethrow_exception(v.template get<E>());
+          }
+          catch (memo::model::MissingBlock const& mb)
+          {
+            err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+            if (mb.address().mutable_block())
+              increment(service.errMissingMutable);
+            if (!mb.address().mutable_block())
+              increment(service.errMissingImmutable);
+          }
+          catch (memo::model::doughnut::ValidationFailed const& vf)
+          {
+            increment(service.errPermission);
+            err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
+          }
+          catch (elle::athena::paxos::TooFewPeers const& tfp)
+          {
+            increment(service.errTooFewPeers);
+            err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
+          }
+          catch (memo::model::Conflict const& c)
+          {
+            increment(service.errConflict);
+            elle::unconst(c).serialize(sout, version);
+          }
+          catch (elle::Error const& e)
+          {
+            increment(service.errOther);
+            err = ::grpc::Status(::grpc::INTERNAL, e.what());
+          }
+        }
+        else
+        {
+          increment(service.errOk);
+          if (!is_void)
+            sout.serialize(
+              cxx_to_message_name(elle::type_info<A>().name()),
+              v.template get<A>());
+        }
       }
     };
 
