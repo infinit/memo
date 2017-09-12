@@ -91,12 +91,12 @@ public:
       version_b = boost::optional<elle::Version>(),
       version_c = boost::optional<elle::Version>(),
       monitoring_socket_path_a = boost::optional<boost::filesystem::path>(),
-      encrypt_options = memo::model::doughnut::EncryptOptions(),
+      encrypt_options = dht::EncryptOptions(),
       make_overlay =
       [] (int,
           memo::model::NodeLocations peers,
-          std::shared_ptr<memo::model::doughnut::Local> local,
-          memo::model::doughnut::Doughnut& d)
+          std::shared_ptr<dht::Local> local,
+          dht::Doughnut& d)
       {
         return std::make_unique<memo::overlay::Stonehenge>(
           peers, std::move(local), &d);
@@ -118,14 +118,14 @@ public:
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
         boost::optional<boost::filesystem::path> monitoring_socket_path_a,
-        memo::model::doughnut::EncryptOptions encrypt_options,
+        dht::EncryptOptions encrypt_options,
         std::function<
           std::unique_ptr<memo::overlay::Stonehenge>(
             int,
             memo::model::NodeLocations peers,
             std::shared_ptr<
-              memo::model::doughnut::Local> local,
-            memo::model::doughnut::Doughnut& d)> make_overlay,
+              dht::Local> local,
+            dht::Doughnut& d)> make_overlay,
         dht::Doughnut::ConsensusBuilder consensus_builder,
         bool cache)
               {
@@ -169,13 +169,13 @@ private:
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
-       memo::model::doughnut::EncryptOptions encrypt_options,
+       dht::EncryptOptions encrypt_options,
        std::function<
          std::unique_ptr<memo::overlay::Stonehenge>(
            int,
            memo::model::NodeLocations peers,
-           std::shared_ptr<memo::model::doughnut::Local> local,
-           memo::model::doughnut::Doughnut& d)> make_overlay,
+           std::shared_ptr<dht::Local> local,
+           dht::Doughnut& d)> make_overlay,
        dht::Doughnut::ConsensusBuilder consensus_builder,
        bool cache)
   {
@@ -207,8 +207,8 @@ private:
       [make_overlay, &stonehenges] (
         int n,
         memo::model::NodeLocations peers,
-        std::shared_ptr<memo::model::doughnut::Local> local,
-        memo::model::doughnut::Doughnut& d)
+        std::shared_ptr<dht::Local> local,
+        dht::Doughnut& d)
       {
         auto res = make_overlay(
           n, std::move(peers), std::move(local), d);
@@ -229,8 +229,8 @@ private:
         this->keys_a->public_key(),
         passport_a,
         consensus_builder,
-        [=] (memo::model::doughnut::Doughnut& d,
-             std::shared_ptr<memo::model::doughnut::Local> local)
+        [=] (dht::Doughnut& d,
+             std::shared_ptr<dht::Local> local)
         {
           return make_overlay(0, members, std::move(local), d);
         },
@@ -238,9 +238,9 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_a),
         dht::version = version_a,
-        memo::model::doughnut::monitoring_socket_path =
+        dht::monitoring_socket_path =
           monitoring_socket_path_a,
-        memo::model::doughnut::encrypt_options = encrypt_options);
+        dht::encrypt_options = encrypt_options);
     }
     // dht_b.
     {
@@ -256,8 +256,8 @@ private:
         this->keys_a->public_key(),
         passport_b,
         consensus_builder,
-        [=] (memo::model::doughnut::Doughnut& d,
-             std::shared_ptr<memo::model::doughnut::Local> local)
+        [=] (dht::Doughnut& d,
+             std::shared_ptr<dht::Local> local)
         {
           return make_overlay(1, members, std::move(local), d);
         },
@@ -265,7 +265,7 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
         dht::version = version_b,
-        memo::model::doughnut::encrypt_options = encrypt_options);
+        dht::encrypt_options = encrypt_options);
     }
     // dht_c.
     {
@@ -281,8 +281,8 @@ private:
         this->keys_a->public_key(),
         passport_c,
         consensus_builder,
-        [=] (memo::model::doughnut::Doughnut& d,
-             std::shared_ptr<memo::model::doughnut::Local> local)
+        [=] (dht::Doughnut& d,
+             std::shared_ptr<dht::Local> local)
         {
           return make_overlay(2, members, std::move(local), d);
         },
@@ -290,7 +290,7 @@ private:
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),
         dht::version = version_c,
-        memo::model::doughnut::encrypt_options = encrypt_options);
+        dht::encrypt_options = encrypt_options);
     }
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
@@ -548,8 +548,8 @@ namespace removal
 {
   ELLE_TEST_SCHEDULED(serialize_ACB_remove, (bool, paxos))
   {
+    auto const dht_id = memo::model::Address::random();
     Memory::Blocks dht_storage;
-    auto dht_id = memo::model::Address::random();
     memo::model::Address address;
     // Store signature removal in the first run so the second run of the DHT
     // does not fetch the block before removing it. This tests the block is
@@ -576,20 +576,20 @@ namespace removal
       auto dht = DHT(id = dht_id,
               storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
-      ctx.set<memo::model::doughnut::Doughnut*>(dht.dht.get());
+      ctx.set<dht::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_bad, true, ctx);
       // we send a remove with an obsolete signature, so consensus will retry,
       // but will fail to call sign_remove() since we don't have the proper keys
       BOOST_CHECK_THROW(dht.dht->remove(address, sig),
-                        memo::model::doughnut::ValidationFailed);
+                        dht::ValidationFailed);
     }
     ELLE_LOG("remove block")
     {
       auto dht = DHT(id = dht_id,
               storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
-      ctx.set<memo::model::doughnut::Doughnut*>(dht.dht.get());
+      ctx.set<dht::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_good, true, ctx);
       dht.dht->remove(address, sig);
@@ -758,8 +758,8 @@ namespace tests_paxos
       make_overlay =
       [&stonehenge] (int dht,
                      memo::model::NodeLocations peers,
-                     std::shared_ptr<memo::model::doughnut::Local> local,
-                     memo::model::doughnut::Doughnut& d)
+                     std::shared_ptr<dht::Local> local,
+                     dht::Doughnut& d)
       {
         if (dht == 0)
         {
@@ -881,23 +881,23 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
 }
 
 static std::unique_ptr<blocks::Block>
-cycle(memo::model::doughnut::Doughnut& dht,
+cycle(dht::Doughnut& dht,
       std::unique_ptr<blocks::Block> b)
 {
   elle::Buffer buf;
   {
     elle::IOStream os(buf.ostreambuf());
     elle::serialization::binary::SerializerOut sout(os, false);
-    sout.set_context(memo::model::doughnut::ACBDontWaitForSignature{});
-    sout.set_context(memo::model::doughnut::OKBDontWaitForSignature{});
+    sout.set_context(dht::ACBDontWaitForSignature{});
+    sout.set_context(dht::OKBDontWaitForSignature{});
     sout.serialize_forward(b);
   }
   elle::IOStream is(buf.istreambuf());
   elle::serialization::binary::SerializerIn sin(is, false);
   sin.set_context<memo::model::Model*>(&dht); // FIXME: needed ?
-  sin.set_context<memo::model::doughnut::Doughnut*>(&dht);
-  sin.set_context(memo::model::doughnut::ACBDontWaitForSignature{});
-  sin.set_context(memo::model::doughnut::OKBDontWaitForSignature{});
+  sin.set_context<dht::Doughnut*>(&dht);
+  sin.set_context(dht::ACBDontWaitForSignature{});
+  sin.set_context(dht::OKBDontWaitForSignature{});
   auto res = sin.deserialize<std::unique_ptr<blocks::Block>>();
   res->seal();
   return res;
@@ -947,7 +947,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   { // signing with group key
     std::unique_ptr<elle::cryptography::rsa::PublicKey> gkey;
     {
-      memo::model::doughnut::Group g(*dhts.dht_a, "g");
+      dht::Group g(*dhts.dht_a, "g");
       g.create();
       g.add_member(dht::User(dhts.keys_b->K(), "bob"));
       gkey.reset(new elle::cryptography::rsa::PublicKey(
@@ -1061,14 +1061,14 @@ public:
   using Address = memo::model::Address;
 
   template <typename ... Args>
-  Local(memo::model::doughnut::consensus::Paxos& paxos,
+  Local(dht::consensus::Paxos& paxos,
         int factor,
         bool rebalance_auto_expand,
         std::chrono::system_clock::duration node_timeout,
-        memo::model::doughnut::Doughnut& dht,
+        dht::Doughnut& dht,
         Address id,
         Args&& ... args)
-    : memo::model::doughnut::Peer(dht, id)
+    : dht::Peer(dht, id)
     , Super(paxos,
             factor,
             rebalance_auto_expand,
@@ -2259,7 +2259,8 @@ ELLE_TEST_SCHEDULED(disabled_crypto)
 {
   auto const key = elle::cryptography::rsa::keypair::generate(key_size());
   auto const eopts = dht::EncryptOptions{false, false, false};
-  DHTs dhts(true, encrypt_options = eopts, keys_a = key, keys_b=key, keys_c = key);
+  auto dhts = DHTs(true, encrypt_options = eopts,
+                   keys_a = key, keys_b=key, keys_c = key);
   auto b = dhts.dht_a->make_block<blocks::ACLBlock>(elle::Buffer("canard", 6));
   auto baddr = b->address();
   dhts.dht_a->insert(std::move(b));
