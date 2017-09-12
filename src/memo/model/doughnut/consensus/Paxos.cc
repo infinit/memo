@@ -1600,8 +1600,8 @@ namespace memo
               return res;
             }();
           this->storage()->set(block.address(), data,
-                              mode == STORE_INSERT,
-                              mode == STORE_UPDATE);
+                               mode == STORE_INSERT,
+                               mode == STORE_UPDATE);
           this->on_store()(block);
         }
 
@@ -1706,22 +1706,21 @@ namespace memo
                       std::unique_ptr<ConflictResolver> resolver)
         {
           ELLE_TRACE_SCOPE("%s: store %f", *this, *inblock);
-          std::shared_ptr<blocks::Block> b(inblock.release());
+          auto b = std::shared_ptr<blocks::Block>(inblock.release());
           ELLE_ASSERT(b);
           auto owners = [&]
-          {
-            switch (mode)
             {
-              case STORE_INSERT:
-                return this->doughnut().overlay()->allocate(
-                  b->address(), this->_factor);
-              case STORE_UPDATE:
-                return this->doughnut().overlay()->lookup(
-                  b->address(), this->_factor, false);
-              default:
-                elle::unreachable();
-            }
-          }();
+              switch (mode)
+              {
+                case STORE_INSERT:
+                  return this->doughnut().overlay()->allocate(
+                    b->address(), this->_factor);
+                case STORE_UPDATE:
+                  return this->doughnut().overlay()->lookup(
+                    b->address(), this->_factor, false);
+              }
+              elle::unreachable();
+            }();
           if (dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             auto peers = Details::Peers();
