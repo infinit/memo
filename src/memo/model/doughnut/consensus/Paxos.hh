@@ -71,9 +71,6 @@ namespace memo
           ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
           ELLE_ATTRIBUTE_R(bool, rebalance_inspect);
           ELLE_ATTRIBUTE_R(Duration, node_timeout);
-        private:
-          struct _Details;
-          friend struct _Details;
 
         /*-------.
         | Blocks |
