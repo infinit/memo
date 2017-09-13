@@ -27,6 +27,14 @@
 
 ELLE_LOG_COMPONENT("test.grpc");
 
+namespace
+{
+  std::string
+  to_string(memo::model::Address const& a)
+  {
+    return std::string((char const*)a.value(), 32);
+  }
+}
 
 inline
 std::string
@@ -265,7 +273,8 @@ namespace structs
   {
     bool operator == (const Simple& o) const
     { // DAS save me!
-      return str == o.str && i64 == o.i64 && ui64 == o.ui64 && b == o.b && ri64 == o.ri64 && rstr == o.rstr;
+      return std::tie(str, i64, ui64, b, ri64, rstr)
+        == std::tie(o.str, o.i64, o.ui64, o.b, o.ri64, o.rstr);
     };
     std::string str;
     int64_t i64;
@@ -284,9 +293,9 @@ ELLE_DAS_SERIALIZE(structs::Simple);
 
 ELLE_TEST_SCHEDULED(serialization)
 {
-  structs::Simple s{"foo", -42, 42, true,
-                    std::vector<int64_t>{0, -12, 42},
-                    std::vector<std::string>{"foo", "", "bar"}};
+  auto s = structs::Simple{"foo", -42, 42, true,
+                           {0, -12, 42},
+                           {"foo", "", "bar"}};
   auto reference = s;
   ::Simple sout;
   {
@@ -300,7 +309,7 @@ ELLE_TEST_SCHEDULED(serialization)
   BOOST_CHECK_EQUAL(sout.ri64_size(), 3);
   s = structs::Simple{"", 0, 0, false};
   {
-    memo::grpc::SerializerIn ser(&sout);
+    auto ser = memo::grpc::SerializerIn(&sout);
     ser.serialize_forward(s);
   }
   BOOST_CHECK_EQUAL(s, reference);
@@ -309,34 +318,45 @@ ELLE_TEST_SCHEDULED(serialization)
 
 namespace structs
 {
+  using SIOpt = elle::Option<std::string, int64_t>;
+
+  bool
+  operator == (SIOpt const& a, SIOpt const& b)
+  {
+    return a.is<std::string>() == b.is<std::string>()
+      && (a.is<std::string>()
+          ? (a.get<std::string>() == b.get<std::string>())
+          : (a.get<int64_t>() == b.get<int64_t>()));
+  }
+
   struct Complex
   {
     Complex(Simple const& s = Simple{},
             boost::optional<std::string> ost = boost::none,
             boost::optional<Simple> osi = boost::none,
             std::vector<Simple> rs = {},
-            elle::Option<std::string, int64_t> sio = (int64_t)0)
+            SIOpt sio = (int64_t)0)
       : simple(s)
       , opt_str(ost)
       , opt_simple(osi)
       , rsimple(rs)
       , siopt(sio)
     {}
-    bool operator == (const Complex& b) const
+
+    bool
+    operator == (const Complex& b) const
     {
       return simple == b.simple
         && opt_str == b.opt_str
         && opt_simple == b.opt_simple
         && rsimple == b.rsimple
-        && siopt.is<std::string>() == b.siopt.is<std::string>()
-        && (siopt.is<std::string>() ? (siopt.get<std::string>() == b.siopt.get<std::string>())
-                                    : (siopt.get<int64_t>() == b.siopt.get<int64_t>()));
+        && siopt == b.siopt;
     }
     Simple simple;
     boost::optional<std::string> opt_str;
     boost::optional<Simple> opt_simple;
     std::vector<Simple> rsimple;
-    elle::Option<std::string, int64_t> siopt;
+    SIOpt siopt;
     using Model = elle::das::Model<
     Complex,
     decltype(elle::meta::list(::symbols::simple,
@@ -533,7 +553,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     [&] {
       b.open();
       memo::grpc::serve_grpc(*servers[0]->dht, "127.0.0.1:0",
-                                &listening_port);
+                             &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
@@ -541,10 +561,21 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     ->make_block<memo::model::blocks::MutableBlock>(std::string("{}"));
   ELLE_TRACE("insert mb");
   client->dht->seal_and_insert(*mutable_block);
+
+  // In this test we maintain a hashtable ID:string -> Counter:int.
+  // Each machine ID will update its counter, and each machine is
+  // responsible to check that its counter is indeed incremented
+  // monotonically.  Since each machine push the whole hash table,
+  // this should help us catch the case where some machine would push
+  // an outdated version of the table: it would sent some other
+  // machine's counter in the past, which should be caught by that
+  // machine.
+  using Payload = std::unordered_map<std::string, int>;
+
   auto task = [&](int id) {
     ELLE_TRACE("%s: create channel", id);
     auto chan = grpc::CreateChannel(
-        elle::sprintf("127.0.0.1:%s", listening_port),
+        elle::print("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
     ELLE_TRACE("%s: create stub", id);
     auto stub = ::memo::vs::ValueStore::NewStub(chan);
@@ -555,15 +586,14 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
       grpc::ClientContext context;
       ::memo::vs::FetchResponse abs;
       ::memo::vs::FetchRequest addr;
-      addr.set_address(std::string((const char*)mutable_block->address().value(), 32));
+      addr.set_address(to_string(mutable_block->address()));
       addr.set_decrypt_data(true);
       stub->Fetch(&context, addr, &abs);
       b.CopyFrom(abs.block());
     }
-    using Payload = std::unordered_map<std::string, int>;
     namespace json = elle::serialization::json;
     auto payload = json::deserialize<Payload>(b.data_plain());
-    auto const sid = elle::sprintf("%s", id);
+    auto const sid = elle::print("%s", id);
     // Multiple updates on same block.
     ELLE_LOG("%s update start", id);
     int conflicts = 0;
@@ -609,15 +639,17 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 
 ELLE_TEST_SCHEDULED(memo_ValueStore)
 {
-  DHTs dhts(3);
+  auto dhts = DHTs(3);
   auto client = dhts.client();
   auto const alice = elle::cryptography::rsa::keypair::generate(512);
-  auto ubf = std::make_unique<memo::model::doughnut::UB>(
-      client.dht.dht.get(), "alice", alice.K(), false);
-  auto ubr = std::make_unique<memo::model::doughnut::UB>(
-      client.dht.dht.get(), "alice", alice.K(), true);
-  client.dht.dht->insert(std::move(ubf));
-  client.dht.dht->insert(std::move(ubr));
+  {
+    auto ubf = std::make_unique<memo::model::doughnut::UB>(
+        client.dht.dht.get(), "alice", alice.K(), false);
+    auto ubr = std::make_unique<memo::model::doughnut::UB>(
+        client.dht.dht.get(), "alice", alice.K(), true);
+    client.dht.dht->insert(std::move(ubf));
+    client.dht.dht->insert(std::move(ubr));
+  }
 
   elle::reactor::Barrier b;
   int listening_port = 0;
@@ -632,15 +664,14 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   auto& sched = elle::reactor::scheduler();
   elle::reactor::background([&] {
     auto chan = grpc::CreateChannel(
-        elle::sprintf("127.0.0.1:%s", listening_port),
+        elle::print("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
     auto stub = ::memo::vs::ValueStore::NewStub(chan);
     { // get missing block
       grpc::ClientContext context;
       ::memo::vs::FetchRequest req;
       ::memo::vs::FetchResponse repl;
-      req.set_address(
-        std::string((const char*)memo::model::Address::null.value(), 32));
+      req.set_address(to_string(memo::model::Address{}));
       ELLE_LOG("call...");
       auto res = stub->Fetch(&context, req, &repl);
       ELLE_LOG("...called");
@@ -701,8 +732,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       ::memo::vs::InsertImmutableBlockRequest req;
       ::memo::vs::InsertImmutableBlockResponse repl;
       req.set_data("bok bok");
-      req.set_owner(std::string(
-        (const char*)memo::model::Address::random().value(), 32));
+      req.set_owner(to_string(memo::model::Address::random()));
       stub->InsertImmutableBlock(&context, req, &repl);
       ::memo::vs::FetchRequest addr;
       ::memo::vs::FetchResponse abs;
@@ -805,8 +835,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
       ::memo::vs::InsertMutableBlockRequest req;
       ::memo::vs::InsertMutableBlockResponse repl;
       req.set_data("bok bok");
-      req.set_owner(std::string(
-        (const char*)memo::model::Address::random().value(), 32));
+      req.set_owner(to_string(memo::model::Address::random()));
       stub->InsertMutableBlock(&context, req, &repl);
       ::memo::vs::FetchRequest addr;
       ::memo::vs::FetchResponse abs;
