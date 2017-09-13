@@ -121,6 +121,7 @@ struct ProtoHelper
       return 0;
     }
   };
+
   static
   void
   protogen(Protogen& pg)
@@ -128,7 +129,7 @@ struct ProtoHelper
     auto tn = elle::type_info<O>().name();
     pg.messages[tn]; // create it
     int fid = 0;
-    std::string msg = "message " + base_name(tn) + " {\n";
+    auto msg = "message " + base_name(tn) + " {\n";
     M::Fields::template map<ProtoProcess>::value(pg, fid, msg);
     msg += "}\n";
     pg.messages[tn] = msg;
@@ -139,7 +140,7 @@ template<typename T>
 void
 Protogen::protogen()
 {
-   ProtoHelper<T>::protogen(*this);
+  ProtoHelper<T>::protogen(*this);
 }
 
 
@@ -176,7 +177,6 @@ public:
     : owner_keys(kp ? *kp : elle::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
-    pax = true;
     if (count < 0)
     {
       pax = false;
@@ -194,15 +194,14 @@ public:
 
   struct Client
   {
-    template<typename... Args>
-    Client(std::string const& name, DHT dht, Args...args)
+    Client(std::string const& name, DHT dht)
       : dht(std::move(dht))
     {}
 
     DHT dht;
   };
 
-  template<typename... Args>
+  template <typename... Args>
   DHT
   dht(bool new_key,
       boost::optional<elle::cryptography::rsa::KeyPair> kp,
@@ -212,26 +211,24 @@ public:
       : new_key ? elle::cryptography::rsa::keypair::generate(512)
       : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
-    DHT client(owner = this->owner_keys,
-               keys = k,
-               storage = nullptr,
-               dht::consensus_builder = no_cheat_consensus(pax),
-               paxos = pax,
-               std::forward<Args>(args) ...
-               );
+    auto res = DHT(owner = this->owner_keys,
+                   keys = k,
+                   storage = nullptr,
+                   dht::consensus_builder = no_cheat_consensus(pax),
+                   paxos = pax,
+                   std::forward<Args>(args)...);
     for (auto& dht: this->dhts)
-      dht.overlay->connect(*client.overlay);
-    return client;
+      dht.overlay->connect(*res.overlay);
+    return res;
   }
 
-  template<typename... Args>
+  template <typename... Args>
   Client
   client(bool new_key,
          boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
-    DHT client = dht(new_key, kp, std::forward<Args>(args)...);
-    return Client("volume", std::move(client));
+    return {"volume", dht(new_key, kp, std::forward<Args>(args)...)};
   }
 
   Client
@@ -242,7 +239,8 @@ public:
 
   elle::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
-  bool pax;
+  /// Whether running paxos.
+  bool pax = true;
 };
 
 namespace symbols
@@ -318,11 +316,11 @@ namespace structs
             boost::optional<Simple> osi = boost::none,
             std::vector<Simple> rs = {},
             elle::Option<std::string, int64_t> sio = (int64_t)0)
-    : simple(s)
-    , opt_str(ost)
-    , opt_simple(osi)
-    , rsimple(rs)
-    , siopt(sio)
+      : simple(s)
+      , opt_str(ost)
+      , opt_simple(osi)
+      , rsimple(rs)
+      , siopt(sio)
     {}
     bool operator == (const Complex& b) const
     {
