@@ -68,7 +68,7 @@ namespace memo
                   bool purge);
 
       /*---------------.
-y      | Mode: export.  |
+      | Mode: export.  |
       `---------------*/
 
       Mode<Self,

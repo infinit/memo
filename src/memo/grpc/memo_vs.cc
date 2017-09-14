@@ -101,9 +101,8 @@ namespace memo
       {
         auto& sched = elle::reactor::scheduler();
         this->_method_names.push_back(std::make_unique<std::string>(route));
-        int index = 0;
         this->_counters.push_back(prom::make(_call_f, {{"call", route}}));
-        index = this->_counters.size()-1;
+        auto const index = this->_counters.size()-1;
 
         ::grpc::Service::AddMethod(
           new ::grpc::RpcServiceMethod(
@@ -292,8 +291,10 @@ namespace memo
     }
 
     using Update =
-      std::function<void(std::unique_ptr<memo::model::blocks::Block>,
-         std::unique_ptr<memo::model::ConflictResolver>, bool)>;
+      std::function<auto (std::unique_ptr<memo::model::blocks::Block>,
+                          std::unique_ptr<memo::model::ConflictResolver>,
+                          bool)
+                    -> void>;
 
     Update
     make_update_wrapper(Update f)
