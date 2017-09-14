@@ -232,11 +232,17 @@ public:
 
   template <typename... Args>
   Client
-  client(bool new_key = false,
-         boost::optional<elle::cryptography::rsa::KeyPair> kp = {},
+  client(bool new_key,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     return dht(new_key, kp, std::forward<Args>(args)...);
+  }
+
+  Client
+  client(bool new_key = false)
+  {
+    return client(new_key, {});
   }
 
   elle::cryptography::rsa::KeyPair owner_keys;
