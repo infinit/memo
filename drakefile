@@ -793,6 +793,7 @@ def configure(
       'version': git.description(),
     })
   docker_file.add(install_nodes(docker_path), '/usr')
+  docker_file.run("apk update && apk add libgc++ && rm -rf /var/cache/apk/*")
   drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
