@@ -202,7 +202,7 @@ public:
 
   struct Client
   {
-    Client(std::string const& name, DHT dht)
+    Client(DHT dht)
       : dht(std::move(dht))
     {}
 
@@ -232,17 +232,11 @@ public:
 
   template <typename... Args>
   Client
-  client(bool new_key,
-         boost::optional<elle::cryptography::rsa::KeyPair> kp,
+  client(bool new_key = false,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp = {},
          Args... args)
   {
-    return {"volume", dht(new_key, kp, std::forward<Args>(args)...)};
-  }
-
-  Client
-  client(bool new_key = false)
-  {
-    return client(new_key, {});
+    return dht(new_key, kp, std::forward<Args>(args)...);
   }
 
   elle::cryptography::rsa::KeyPair owner_keys;
@@ -521,10 +515,20 @@ ELLE_TEST_SCHEDULED(protogen)
     BOOST_TEST_MESSAGE(m.second);
 }
 
+/// Test gRPC API with multiple concurrent clients.
 ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 {
+  // In this test we maintain a hash table ID:string -> Counter:int.
+  // Each machine ID will update its counter, and each machine is
+  // responsible to check that its counter is indeed incremented
+  // monotonically.  Since each machine pushes the whole hash table,
+  // this should help us catch the case where some machine would push
+  // an outdated version of the table: it would sent some other
+  // machine's counter in the past, which should be caught by that
+  // machine.
+  using Payload = std::unordered_map<std::string, int>;
+
   namespace json = elle::serialization::json;
-  // Test GRPC API with multiple concurrent clients
   auto make_kouncil = [](memo::model::doughnut::Doughnut& dht,
                          std::shared_ptr<memo::model::doughnut::Local> local)
   {
@@ -553,6 +557,13 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   discover(*client, *servers[0], false);
   elle::reactor::wait(client->dht->overlay()->on_discovery(),
     [&](NodeLocation, bool) { return true;});
+  // Initialize the block with the empty Payload (in Json).
+  auto mutable_block = client->dht
+    ->make_block<memo::model::blocks::MutableBlock>(std::string("{}"));
+  ELLE_TRACE("insert mb")
+    client->dht->seal_and_insert(*mutable_block);
+
+  // Set up grpc server.
   elle::reactor::Barrier b;
   int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
@@ -563,20 +574,6 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
-  auto mutable_block = client->dht
-    ->make_block<memo::model::blocks::MutableBlock>(std::string("{}"));
-  ELLE_TRACE("insert mb");
-  client->dht->seal_and_insert(*mutable_block);
-
-  // In this test we maintain a hashtable ID:string -> Counter:int.
-  // Each machine ID will update its counter, and each machine is
-  // responsible to check that its counter is indeed incremented
-  // monotonically.  Since each machine pushes the whole hash table,
-  // this should help us catch the case where some machine would push
-  // an outdated version of the table: it would sent some other
-  // machine's counter in the past, which should be caught by that
-  // machine.
-  using Payload = std::unordered_map<std::string, int>;
 
   auto task = [&](int id) {
     ELLE_TRACE("%s: create channel", id);
@@ -623,7 +620,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
           ++conflicts;
           payload = json::deserialize<Payload>(b.data_plain());
           if (i)
-            BOOST_CHECK_EQUAL(payload[sid], i-1);
+            BOOST_TEST(payload[sid] == i-1);
           else
             BOOST_CHECK(!elle::contains(payload, sid));
         }
