@@ -523,6 +523,7 @@ ELLE_TEST_SCHEDULED(protogen)
 
 ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
 {
+  namespace json = elle::serialization::json;
   // Test GRPC API with multiple concurrent clients
   auto make_kouncil = [](memo::model::doughnut::Doughnut& dht,
                          std::shared_ptr<memo::model::doughnut::Local> local)
@@ -530,15 +531,20 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
     return std::make_unique<memo::overlay::kouncil::Kouncil>(&dht, local);
   };
   auto const keys = elle::cryptography::rsa::keypair::generate(512);
-  auto servers = std::vector<std::unique_ptr<DHT>>{};
-  for (int i=0; i<3; ++i)
-    servers.push_back(std::make_unique<DHT>(
-      ::keys = keys,
-      ::id = special_id(i+1),
-      ::make_overlay = make_kouncil,
-      ::paxos = true));
-  for (int j=1; j<3; ++j)
-    ::discover(*servers[0], *servers[j], false, false, true, true);
+  auto servers = [&]
+    {
+      auto constexpr nservers = 3;
+      auto res = std::vector<std::unique_ptr<DHT>>{};
+      for (int i=0; i<nservers; ++i)
+        res.push_back(std::make_unique<DHT>(
+          ::keys = keys,
+          ::id = special_id(i+1),
+          ::make_overlay = make_kouncil,
+          ::paxos = true));
+      for (int j=1; j<nservers; ++j)
+        ::discover(*res[0], *res[j], false, false, true, true);
+      return res;
+    }();
   auto client = std::make_unique<DHT>(
       ::keys = keys,
       ::make_overlay = make_kouncil,
@@ -565,7 +571,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   // In this test we maintain a hashtable ID:string -> Counter:int.
   // Each machine ID will update its counter, and each machine is
   // responsible to check that its counter is indeed incremented
-  // monotonically.  Since each machine push the whole hash table,
+  // monotonically.  Since each machine pushes the whole hash table,
   // this should help us catch the case where some machine would push
   // an outdated version of the table: it would sent some other
   // machine's counter in the past, which should be caught by that
@@ -591,7 +597,6 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
       stub->Fetch(&context, addr, &abs);
       b.CopyFrom(abs.block());
     }
-    namespace json = elle::serialization::json;
     auto payload = json::deserialize<Payload>(b.data_plain());
     auto const sid = elle::print("%s", id);
     // Multiple updates on same block.
@@ -612,11 +617,15 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
         BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
         if (repl.has_current())
         {
+          // There's a conflict: the data was changed.  Make sure that
+          // our counter was untouched.
           b.CopyFrom(repl.current());
           ++conflicts;
           payload = json::deserialize<Payload>(b.data_plain());
-          if (i != 0)
+          if (i)
             BOOST_CHECK_EQUAL(payload[sid], i-1);
+          else
+            BOOST_CHECK(!elle::contains(payload, sid));
         }
         else
           break;
@@ -633,8 +642,15 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
       });
     elle::reactor::wait(s);
   };
-  ELLE_TRACE("final check");
-  auto nb = client->dht->fetch(mutable_block->address());
+  ELLE_TRACE("final check")
+    {
+      auto nb = client->dht->fetch(mutable_block->address());
+      auto const& payload = nb->data().string();
+      ELLE_TRACE("payload: {}", payload);
+      BOOST_TEST(json::deserialize<Payload>(payload) ==
+                 (Payload{{"0", 19}, {"1", 19}, {"2", 19},
+                          {"3", 19}, {"4", 19}}));
+    }
 }
 
 ELLE_TEST_SCHEDULED(memo_ValueStore)
