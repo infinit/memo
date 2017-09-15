@@ -389,10 +389,10 @@ namespace memo
             res->rpc_protocol = protocol_get(protocol);
           return res;
         }();
-      auto const encrypt_options = memo::model::doughnut::EncryptOptions(
+      auto const encrypt_options = memo::model::doughnut::EncryptOptions{
         !disable_encrypt_at_rest,
         !disable_encrypt_rpc,
-        !disable_signature);
+        !disable_signature};
       auto dht =
         std::make_unique<dnut::Configuration>(
           memo::model::Address::random(0),

@@ -143,7 +143,6 @@ namespace memo
       ///
       /// @arg address  Address of the blocks to place
       /// @arg n        How many owners to look for
-      /// @arg fast     Whether to prefer a faster, partial answer.
       MemberGenerator
       allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)

@@ -184,7 +184,7 @@ namespace memo
           // destructor.
           auto peers = this->doughnut().overlay()->lookup(address, factor);
           int count = 0;
-          elle::With<elle::reactor::Scope>() <<  [&] (elle::reactor::Scope& s)
+          elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
           {
             for (auto p: peers)
             {
