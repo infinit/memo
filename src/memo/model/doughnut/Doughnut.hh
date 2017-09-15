@@ -85,29 +85,25 @@ namespace memo
 
       struct EncryptOptions
       {
-        bool encrypt_at_rest;     // encrypt data on storage
-        bool encrypt_rpc;         // encrypt data in-flight
-        bool validate_signatures; // compute and validate signatures
-
-        EncryptOptions(bool at_rest, bool rpc, bool sig)
-          : encrypt_at_rest(at_rest)
-          , encrypt_rpc(rpc)
-          , validate_signatures(sig)
-          {}
-        EncryptOptions()
-         : encrypt_at_rest(true)
-         , encrypt_rpc(true)
-         , validate_signatures(true)
-         {}
-        EncryptOptions(EncryptOptions&& b) = default;
-        EncryptOptions(EncryptOptions const& b) = default;
-        EncryptOptions&
-        operator = (EncryptOptions &&) = default;
+        // FIXME: this ctor is useless, but needed for GCC 4.9.  GCC 5
+        // is fixed.
+        EncryptOptions(bool at_rest = true, bool rpc = true,
+                       bool validate = true)
+          : encrypt_at_rest{at_rest}
+          , encrypt_rpc{rpc}
+          , validate_signatures{validate}
+        {}
         using Model = elle::das::Model<
           EncryptOptions,
-          elle::meta::List<symbols::Symbol_encrypt_at_rest,
-                           symbols::Symbol_encrypt_rpc,
-                           symbols::Symbol_validate_signatures>>;
+          decltype(elle::meta::list(symbols::encrypt_at_rest,
+                                    symbols::encrypt_rpc,
+                                    symbols::validate_signatures))>;
+        /// Encrypt data on storage.
+        bool encrypt_at_rest = true;
+        /// encrypt data in-flight.
+        bool encrypt_rpc = true;
+        /// Compute and validate signatures.
+        bool validate_signatures = true;
       };
 
       /// Doughnut.

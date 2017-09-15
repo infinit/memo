@@ -101,9 +101,8 @@ namespace memo
       {
         auto& sched = elle::reactor::scheduler();
         this->_method_names.push_back(std::make_unique<std::string>(route));
-        int index = 0;
         this->_counters.push_back(prom::make(_call_f, {{"call", route}}));
-        index = this->_counters.size()-1;
+        auto const index = this->_counters.size()-1;
 
         ::grpc::Service::AddMethod(
           new ::grpc::RpcServiceMethod(
@@ -184,51 +183,51 @@ namespace memo
             elle::Version const& version,
             bool is_void)
       {
-         if (v.template is<E>())
-         {
-           ELLE_DEBUG("grpc call failed with exception %s",
-                      elle::exception_string(v.template get<E>()));
-           try
-           {
-             std::rethrow_exception(v.template get<E>());
-           }
-           catch (memo::model::MissingBlock const& mb)
-           {
-             err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
-             if (mb.address().mutable_block())
-               increment(service.errMissingMutable);
-             if (!mb.address().mutable_block())
-               increment(service.errMissingImmutable);
-           }
-           catch (memo::model::doughnut::ValidationFailed const& vf)
-           {
-             increment(service.errPermission);
-             err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
-           }
-           catch (elle::athena::paxos::TooFewPeers const& tfp)
-           {
-             increment(service.errTooFewPeers);
-             err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
-           }
-           catch (memo::model::Conflict const& c)
-           {
-             increment(service.errConflict);
-             elle::unconst(c).serialize(sout, version);
-           }
-           catch (elle::Error const& e)
-           {
-             increment(service.errOther);
-             err = ::grpc::Status(::grpc::INTERNAL, e.what());
-           }
-         }
-         else
-         {
-           increment(service.errOk);
-           if (!is_void)
-             sout.serialize(
-               cxx_to_message_name(elle::type_info<A>().name()),
-               v.template get<A>());
-         }
+        if (v.template is<E>())
+        {
+          ELLE_DEBUG("grpc call failed with exception %s",
+                     elle::exception_string(v.template get<E>()));
+          try
+          {
+            std::rethrow_exception(v.template get<E>());
+          }
+          catch (memo::model::MissingBlock const& mb)
+          {
+            err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+            if (mb.address().mutable_block())
+              increment(service.errMissingMutable);
+            if (!mb.address().mutable_block())
+              increment(service.errMissingImmutable);
+          }
+          catch (memo::model::doughnut::ValidationFailed const& vf)
+          {
+            increment(service.errPermission);
+            err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
+          }
+          catch (elle::athena::paxos::TooFewPeers const& tfp)
+          {
+            increment(service.errTooFewPeers);
+            err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
+          }
+          catch (memo::model::Conflict const& c)
+          {
+            increment(service.errConflict);
+            elle::unconst(c).serialize(sout, version);
+          }
+          catch (elle::Error const& e)
+          {
+            increment(service.errOther);
+            err = ::grpc::Status(::grpc::INTERNAL, e.what());
+          }
+        }
+        else
+        {
+          increment(service.errOk);
+          if (!is_void)
+            sout.serialize(
+              cxx_to_message_name(elle::type_info<A>().name()),
+              v.template get<A>());
+        }
       }
     };
 
@@ -292,8 +291,10 @@ namespace memo
     }
 
     using Update =
-      std::function<void(std::unique_ptr<memo::model::blocks::Block>,
-         std::unique_ptr<memo::model::ConflictResolver>, bool)>;
+      std::function<auto (std::unique_ptr<memo::model::blocks::Block>,
+                          std::unique_ptr<memo::model::ConflictResolver>,
+                          bool)
+                    -> void>;
 
     Update
     make_update_wrapper(Update f)

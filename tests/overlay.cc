@@ -58,7 +58,7 @@ public:
   UTPInstrument(int port)
     : server()
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
-    , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
+    , _thread(new elle::reactor::Thread(elle::print("%s server", this),
                                         [this] { this->_serve(); }))
   {
     this->server.bind({});
@@ -116,7 +116,7 @@ public:
   TCPInstrument(int port)
     : _socket("127.0.0.1", port)
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
-    , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
+    , _thread(new elle::reactor::Thread(elle::print("%s server", this),
                                         [this] { this->_serve(); }))
   {
     this->_server.listen();
@@ -176,12 +176,12 @@ private:
     auto socket = this->_server.accept();
     elle::With<elle::reactor::Scope>() << [&] (auto& scope)
     {
-      scope.run_background(elle::sprintf("%s forward", this),
+      scope.run_background(elle::print("%s forward", this),
                            [this, &socket]
                            {
                              this->_forward(*socket, this->_socket);
                            });
-      scope.run_background(elle::sprintf("%s backward", this),
+      scope.run_background(elle::print("%s backward", this),
                            [this, &socket]
                            {
                              this->_forward(this->_socket, *socket);
@@ -272,7 +272,7 @@ namespace
     else if (auto* s = dynamic_cast<net::UTPSocket*>(p.stream().get()))
       s->close();
     else
-      BOOST_FAIL(elle::sprintf("could not obtain socket pointer for %s", p));
+      BOOST_FAIL(elle::print("could not obtain socket pointer for %s", p));
   }
 
 
@@ -986,7 +986,7 @@ ELLE_TEST_SCHEDULED(
   elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
   {
     for (auto& c: clients)
-      s.run_background(elle::sprintf("storm %s", c), [&] {
+      s.run_background(elle::print("storm %s", c), [&] {
         try
         {
           for (int i=0; i<nactions; ++i)
@@ -1931,12 +1931,12 @@ ELLE_TEST_SUITE()
     1;
 #endif
 
-  // memo::setenv("CONNECT_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
-  // memo::setenv("SOFTFAIL_TIMEOUT", elle::sprintf("%sms", valgrind(100, 20)));
+  // memo::setenv("CONNECT_TIMEOUT", elle::print("%sms", valgrind(100, 20)));
+  // memo::setenv("SOFTFAIL_TIMEOUT", elle::print("%sms", valgrind(100, 20)));
   memo::setenv("KOUNCIL_WATCHER_INTERVAL",
-               elle::sprintf("%sms", factor * valgrind(20, 50)));
+               elle::print("%sms", factor * valgrind(20, 50)));
   memo::setenv("KOUNCIL_WATCHER_MAX_RETRY",
-               elle::sprintf("%sms", valgrind(20, 50)));
+               elle::print("%sms", valgrind(20, 50)));
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_config = TestConfiguration{
     [] (Doughnut& dht, std::shared_ptr<Local> local)
