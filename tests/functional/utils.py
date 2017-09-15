@@ -192,6 +192,8 @@ class Memo(TemporaryDirectory):
           kill = False):
     '''Return (stdout, stderr).'''
     args = [binary] + args
+    out = None
+    err = None
     try:
       process = self.spawn(
         args, input, return_code, env,
@@ -214,8 +216,10 @@ class Memo(TemporaryDirectory):
       if kill:
         return out, err
       raise
-    out = out.decode('utf-8')
-    err = err.decode('utf-8')
+    if out is not None:
+      out = out.decode('utf-8')
+    if err is not None:
+      err = err.decode('utf-8')
     # log('STDOUT: %s' % out)
     # log('STDERR: %s' % err)
     if process.returncode != return_code:

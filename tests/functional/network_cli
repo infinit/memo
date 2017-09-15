@@ -7,7 +7,7 @@ import json
 #
 # network_cli:297: info: Got exception while trying to kill process:
 #    Invalid file object: <_io.BufferedReader name=22>
-timeout = 5 if windows else 2
+timeout = 20 if windows else 2
 
 with_kvs = os.environ.get('TEST_MEMO_WITH_KVS', '1') == '1'
 
