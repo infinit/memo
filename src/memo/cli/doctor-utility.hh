@@ -1868,7 +1868,7 @@ namespace
     {
       size_t min = 50 * 1024 * 1024;
       double min_ratio = 0.02;
-      auto f = bfs::space(memo::xdg_data_home());
+      auto f = bfs::space(xdg::get().home_dir());
       result.space_left = {min, min_ratio, f.available, f.capacity};
     }
     ELLE_TRACE("look for Memo related environment")
@@ -1890,10 +1890,10 @@ namespace
             store(result.permissions, path.string(), false, false, false);
         };
       test_permissions(elle::system::home_directory());
-      test_permissions(memo::xdg_cache_home());
-      test_permissions(memo::xdg_config_home());
-      test_permissions(memo::xdg_data_home());
-      test_permissions(memo::xdg_state_home());
+      test_permissions(xdg::get().cache_dir());
+      test_permissions(xdg::get().config_dir());
+      test_permissions(xdg::get().data_dir());
+      test_permissions(xdg::get().state_dir());
     }
   }
 
@@ -1958,7 +1958,7 @@ namespace
                            bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
-    auto& memo = cli.memo();
+    auto& memo = cli.backend();
     auto const& username = cli.as().value_or(cli.default_user_name());
 
     auto users = parse(memo.users_get());
@@ -2099,13 +2099,13 @@ namespace
       if (it->path() == path)
         it.no_push();
     };
-    for (auto it = bfs::recursive_directory_iterator(memo::xdg_data_home());
+    for (auto it = bfs::recursive_directory_iterator(xdg::get().data_dir());
          it != bfs::recursive_directory_iterator();
          ++it)
     {
       // Do not explore recursively the following paths.
-      do_not_recurse_deeper(it, memo::xdg_data_home() / "blocks");
-      do_not_recurse_deeper(it, memo::xdg_data_home() / "ui");
+      do_not_recurse_deeper(it, xdg::get().data_dir() / "blocks");
+      do_not_recurse_deeper(it, xdg::get().data_dir() / "ui");
       auto p = *it;
       if (is_visible_file(p))
       {
@@ -2136,11 +2136,11 @@ namespace
         elle::reactor::yield();
       }
     }
-    for (auto it = bfs::recursive_directory_iterator(memo::xdg_cache_home());
+    for (auto it = bfs::recursive_directory_iterator(xdg::get().cache_dir());
          it != bfs::recursive_directory_iterator();
          ++it)
     {
-      do_not_recurse_deeper(it, memo::xdg_cache_home() / "logs");
+      do_not_recurse_deeper(it, xdg::get().cache_dir() / "logs");
       auto p = *it;
       if (is_visible_file(p))
       {
@@ -2155,17 +2155,17 @@ namespace
       }
       elle::reactor::yield();
     }
-    for (auto it = bfs::recursive_directory_iterator(memo::xdg_state_home());
+    for (auto it = bfs::recursive_directory_iterator(xdg::get().state_dir());
          it != bfs::recursive_directory_iterator();
          ++it)
     {
-      do_not_recurse_deeper(it, memo::xdg_state_home() / "cache");
+      do_not_recurse_deeper(it, xdg::get().state_dir() / "cache");
       auto p = *it;
       if (is_visible_file(p))
       {
         try
         {
-          if (p.path() != memo::xdg_state_home() / "critical.log")
+          if (p.path() != xdg::get().state_dir() / "critical.log")
             store(leftovers, p.path().string());
         }
         catch (...)

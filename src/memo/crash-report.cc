@@ -5,8 +5,6 @@
 
 ELLE_LOG_COMPONENT("memo.crash-report");
 
-
-
 #if MEMO_ENABLE_CRASH_REPORT
 
 #include <string>
@@ -20,6 +18,7 @@ ELLE_LOG_COMPONENT("memo.crash-report");
 #include <crash-report/CrashReporter.hh>
 
 #include <memo/log.hh>
+#include <memo/Memo.hh>
 #include <memo/utility.hh> //canonical_folder, etc.
 
 namespace memo
@@ -30,7 +29,7 @@ namespace memo
   auto
   make_reporter()
   {
-    auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+    auto const dumps_path = canonical_folder(xdg::get().cache_dir() / "crashes");
     ELLE_DEBUG("dump to %s", dumps_path);
 
     // FIXME: Should be unique_ptr, but something in our handling of
@@ -71,8 +70,8 @@ namespace memo
     {
       // Don't create the error handler within the thread, it might not
       // like that, and might be created too late to catch very early crashes.
-      return std::make_unique<elle::reactor::Thread>("crash report",
-        [cr = make_reporter()]
+      return std::make_unique<elle::reactor::Thread>(
+        "crash report", [cr = make_reporter()]
         {
           cr->upload_existing();
         });

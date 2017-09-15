@@ -3,6 +3,7 @@
 #include <elle/reactor/scheduler.hh>
 #include <elle/serialization/json.hh>
 
+#include <memo/grpc/memo_vs.hh>
 #include <memo/grpc/memo_vs_with_named.grpc.pb.h>
 #include <memo/grpc/grpc.hh>
 #include <memo/grpc/serializer.hh>
@@ -92,12 +93,19 @@ namespace memo
                  const REQ* request,
                  RESP* response);
 
-    class Service: public ::grpc::Service
+    class Service
+      : public ::grpc::Service
     {
     public:
+      Service(Server& server)
+        : _server(server)
+      {}
+
+    public:
       template <typename GArg, typename GRet, bool NoExcept=false, typename NF>
-      void AddMethod(NF& nf, model::doughnut::Doughnut& dht,
-                     std::string const& route)
+      void
+      AddMethod(NF& nf, model::doughnut::Doughnut& dht,
+                std::string const& route)
       {
         auto& sched = elle::reactor::scheduler();
         this->_method_names.push_back(std::make_unique<std::string>(route));
@@ -142,7 +150,8 @@ namespace memo
       prom::CounterPtr errMissingImmutable = prom::make(_res_f, {{"result", "missing_immutable"}});
 
     private:
-      std::vector<std::unique_ptr<std::string>> _method_names;
+      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<std::string>>, method_names);
+      ELLE_ATTRIBUTE_X(Server&, server);
     };
 
     template <typename T>
@@ -178,7 +187,8 @@ namespace memo
       template <typename T>
       static
       void
-      value(Service& service, SerializerOut& sout, T& v,
+      value(Service& service,
+            SerializerOut& sout, T& v,
             ::grpc::Status& err,
             elle::Version const& version,
             bool is_void)
@@ -243,7 +253,7 @@ namespace memo
     {
       auto status = ::grpc::Status::OK;
       auto code = ::grpc::INTERNAL;
-      Task task;
+      auto task = service.server().task();
       if (!task.proceed())
         return ::grpc::Status(::grpc::INTERNAL, "server is shuting down");
       sched.mt_run<void>(
@@ -329,14 +339,17 @@ namespace memo
       };
     }
 
-    std::unique_ptr<::grpc::Service>
-    doughnut_service(model::Model& model)
+    void
+    serve_memo_vs(model::Model& model,
+                  std::string const& ep,
+                  int* effective_port)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(model);
       using UpdateNamed = decltype(dht.update);
       // We need to store our wrapper somewhere
       static std::vector<std::shared_ptr<UpdateNamed>> update_wrappers;
-      auto ptr = std::make_unique<Service>();
+      memo::grpc::Server server{};
+      auto ptr = std::make_unique<Service>(server);
       ptr->AddMethod<::memo::vs::FetchRequest, ::memo::vs::FetchResponse>
         (dht.fetch, dht, "/memo.vs.ValueStore/Fetch");
       ptr->AddMethod<::memo::vs::InsertRequest, ::memo::vs::InsertResponse>
@@ -364,7 +377,7 @@ namespace memo
       ptr->AddMethod<::memo::vs::NamedBlockAddressRequest,
         ::memo::vs::NamedBlockAddressResponse, true>
         (dht.named_block_address, dht, "/memo.vs.ValueStore/NamedBlockAddress");
-      return std::move(ptr);
+      server(ptr.get(), ep, effective_port);
     }
   }
 }

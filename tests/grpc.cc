@@ -7,6 +7,7 @@
 
 #include <boost/optional.hpp>
 
+#include <memo/grpc/memo_vs.hh>
 #include <memo/grpc/memo_vs.grpc.pb.h>
 #include <memo/model/MissingBlock.hh>
 #include <memo/model/blocks/MutableBlock.hh>
@@ -575,8 +576,8 @@ ELLE_TEST_SCHEDULED(memo_ValueStore_parallel)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      memo::grpc::serve_grpc(*servers[0]->dht, "127.0.0.1:0",
-                             &listening_port);
+      memo::grpc::serve_memo_vs(*servers[0]->dht, "127.0.0.1:0",
+                                &listening_port);
     });
   elle::reactor::wait(b);
   ELLE_TRACE("will connect to 127.0.0.1:%s", listening_port);
@@ -675,7 +676,7 @@ ELLE_TEST_SCHEDULED(memo_ValueStore)
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       b.open();
-      memo::grpc::serve_grpc(*client.dht.dht,
+      memo::grpc::serve_memo_vs(*client.dht.dht,
                                 "127.0.0.1:0", &listening_port);
     });
   elle::reactor::wait(b);

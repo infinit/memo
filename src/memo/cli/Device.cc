@@ -125,7 +125,7 @@ namespace memo
                    std::string const& name,
                    boost::optional<std::string> const& passphrase)
       {
-        auto& memo = cli.memo();
+        auto& memo = cli.backend();
         auto pass = passphrase ? *passphrase : Memo::read_passphrase();
         auto hashed_pass = cli.hash_password(pass, _pair_salt);
         try
@@ -183,7 +183,7 @@ namespace memo
                     boost::optional<std::string> const& passphrase,
                     bool countdown)
       {
-        auto& memo = cli.memo();
+        auto& memo = cli.backend();
         auto user = cli.as_user();
         auto pass = passphrase ? *passphrase : Memo::read_passphrase();
         auto key = elle::cryptography::SecretKey{pass};

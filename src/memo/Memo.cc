@@ -3,6 +3,10 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
+#include <elle/cryptography/hash.hh>
+#include <elle/format/hexadecimal.hh>
+
+
 #include <elle/bytes.hh>
 #include <elle/find.hh>
 #include <elle/log.hh>
@@ -27,7 +31,7 @@ namespace memo
     bfs::path
     storages_path()
     {
-      auto res = xdg_data_home() / "storages";
+      auto res = xdg::get().data_dir() / "storages";
       create_directories(res);
       return res;
     }
@@ -214,7 +218,7 @@ namespace memo
     auto const network = this->network_get(name, user, true);
     auto const path = this->_network_path(network.name, user);
     // XXX Should check async cache to make sure that it's empty.
-    bfs::remove_all(network.cache_dir(user).parent_path());
+    bfs::remove_all(this->_network_cache_dir(name_, user).parent_path());
     if (bfs::exists(path))
     {
       boost::system::error_code erc;
@@ -266,9 +270,10 @@ namespace memo
           name);
       });
       pacify_exception([&] {
-        return this->_delete_all(network.cache_dir(u).parent_path(),
-                                 "cache for network", name);
-      });
+          return this->_delete_all(
+            this->_network_cache_dir(name, u).parent_path(),
+            "cache for network", name);
+        });
     }
     return pacify_exception([&] {
       return this->_delete(this->_network_descriptor_path(name),
@@ -483,7 +488,7 @@ namespace memo
   bfs::path
   Memo::_avatars_path() const
   {
-    auto res = xdg_cache_home() / "avatars";
+    auto res = xdg::get().cache_dir() / "avatars";
     create_directories(res);
     return res;
   }
@@ -512,7 +517,8 @@ namespace memo
     // Fallback in the deprecated silo location.
     catch (MissingLocalResource const&)
     {
-      this->_open_read(f, deprecated::storages_path() / name, name, "storage");
+      this->_open_read(f, deprecated::storages_path() / name, name,
+                       "storage");
     }
     return load<SiloConfigPtr>(f);
   }
@@ -787,7 +793,7 @@ namespace memo
   bfs::path
   Memo::_credentials_path() const
   {
-    auto res = xdg_data_home() / "credentials";
+    auto res = xdg::get().data_dir() / "credentials";
     create_directories(res);
     return res;
   }
@@ -809,7 +815,7 @@ namespace memo
   bfs::path
   Memo::_network_descriptors_path() const
   {
-    auto res = xdg_data_home() / "networks";
+    auto res = xdg::get().data_dir() / "networks";
     create_directories(res);
     return res;
   }
@@ -823,7 +829,7 @@ namespace memo
   bfs::path
   Memo::_networks_path(bool create_dir) const
   {
-    auto res = xdg_data_home() / "linked_networks";
+    auto res = xdg::get().data_dir() / "linked_networks";
     if (create_dir)
       create_directories(res);
     return res;
@@ -848,9 +854,31 @@ namespace memo
   }
 
   bfs::path
+  Memo::_network_cache_dir(std::string const& name_,
+                           User const& user) const
+  {
+    auto name = this->qualified_name(name_, user);
+    // Move the code to Memo and let cli::Network passing it to Network.
+    return memo::Network(name).cache_dir(user);
+  }
+
+  bfs::path
+  Memo::_network_monitoring_socket_path(std::string const& name_,
+                                        User const& user) const
+  {
+#ifdef ELLE_WINDOWS
+    elle::unreachable();
+#else
+    auto name = this->qualified_name(name_, user);
+    // Move the code to Memo and let cli::Network passing it to Network.
+    return memo::Network(name).monitoring_socket_path(user);
+#endif
+  }
+
+  bfs::path
   Memo::_passports_path() const
   {
-    auto res = xdg_data_home() / "passports";
+    auto res = xdg::get().data_dir() / "passports";
     create_directories(res);
     return res;
   }
@@ -865,7 +893,7 @@ namespace memo
   bfs::path
   Memo::_silos_path() const
   {
-    auto res = xdg_data_home() / "silos";
+    auto res = xdg::get().data_dir() / "silos";
     create_directories(res);
     return res;
   }
@@ -879,7 +907,7 @@ namespace memo
   bfs::path
   Memo::_users_path() const
   {
-    auto res = xdg_data_home() / "users";
+    auto res = xdg::get().data_dir() / "users";
     create_directories(res);
     return res;
   }
@@ -893,7 +921,7 @@ namespace memo
   bfs::path
   Memo::_key_value_stores_path() const
   {
-    auto root = xdg_data_home() / "kvs";
+    auto root = xdg::get().data_dir() / "kvs";
     create_directories(root);
     return root;
   }

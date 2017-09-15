@@ -97,25 +97,27 @@ namespace
   }
 
   bool
-  environ_check_()
+  environ_check_(std::string const& prefix_)
   {
+    auto prefix = prefix_ + "_";
     // Number of unknown var names.
     auto unknown = 0;
     auto const env = elle::os::environ();
     ELLE_DUMP("checking: %s", env);
     for (auto const& p: env)
-      if (auto v = elle::tail(p.first, "MEMO_"))
+      if (auto v = elle::tail(p.first, prefix))
       {
         // Whether we checked the variable name.
         auto checked = false;
 
-        // Map MEMO_NO_FOO=1 to MEMO_FOO=0, and MEMO_DISABLE_FOO=1 to MEMO_FOO=0.
+        // Map ${PREFIX}_NO_FOO=1 to $PREFIX_FOO=0, and ${PREFIX}_DISABLE_FOO=1
+        // to ${PREFIX}_FOO=0.
         for (auto prefix: {"DISABLE_", "NO_"})
           if (auto suffix = elle::tail(*v, prefix))
           {
             const auto& old_var = p.first;
             const auto old_val = elle::os::getenv(old_var, false);
-            const auto new_var = "MEMO_" + *suffix;
+            const auto new_var = prefix + *suffix;
             const auto new_val = elle::os::getenv(new_var, true);
             if (elle::os::inenv(new_var) && old_val != !new_val)
             {
@@ -132,12 +134,13 @@ namespace
             checked = true;
           }
 
-        // Check variables that are not MEMO_NO_* nor MEMO_DISABLE_*.
+        // Check variables that are not ${PREFIX}_NO_* nor ${PREFIX}_DISABLE_*.
         if (!checked)
           unknown += !known_name(*v);
       }
     if (unknown)
-      ELLE_WARN("known MEMO_* environment variables: %s", elle::keys(vars()));
+      ELLE_WARN("known %s_* environment variables: %s",
+                prefix,  elle::keys(vars()));
     return true;
   }
 }
@@ -145,16 +148,16 @@ namespace
 namespace memo
 {
   void
-  environ_check()
+  environ_check(std::string const& prefix)
   {
     ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
-    static auto _ = environ_check_();
+    static auto _ = environ_check_(prefix);
   }
 
   bool
   environ_valid_name(std::string const& v)
   {
-    environ_check();
+    environ_check("MEMO");
     return known_name(v);
   }
 }

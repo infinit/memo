@@ -149,13 +149,18 @@ namespace memo
                                     cli::passport,
                                     cli::silo,
                                     cli::user));
+      virtual
       void
       help(std::ostream& s) const;
       void
       call(bool help, bool version) const;
+      virtual
       void
       print(std::ostream& o) const;
-      ELLE_ATTRIBUTE_R(memo::Memo&, memo);
+      virtual
+      memo::Memo&
+      backend() const;
+      ELLE_ATTRIBUTE(memo::Memo&, memo);
       ELLE_ATTRIBUTE_RW(std::vector<std::string>, command_line);
       ELLE_ATTRIBUTE_RW(boost::optional<std::string>, as);
       ELLE_ATTRIBUTE_RW(boost::optional<elle::Version>, compatibility_version);
@@ -163,6 +168,12 @@ namespace memo
       ELLE_ATTRIBUTE_RW(bool, script);
       /// Signal handler for termination.
       boost::signals2::signal<void ()> killed;
+    };
+
+    auto const options = elle::das::cli::Options
+    {
+      {"help", {'h', "show this help message"}},
+      {"version", {'v', "show software version"}},
     };
   }
 }

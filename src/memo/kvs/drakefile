@@ -2,6 +2,7 @@ import os
 
 import drake
 import drake.go
+import drake.gRPC
 
 header = None
 library = None
@@ -27,8 +28,10 @@ def configure(
 
   local_config = drake.go.Config(go_config)
 
-  gen_vs = grpc.GRPCGoGen(grpc.memo_vs_with_named_proto, grpc.grpc.protoc,
-                          toolkit = go_toolkit)
+  gen_vs = drake.gRPC.GoGen(grpc.memo_vs_with_named_proto,
+                            grpc.grpc.protoc,
+                            toolkit = go_toolkit)
+
   class CopyToEmptyDirectory(drake.Copy):
 
     def execute(self):
@@ -47,14 +50,14 @@ def configure(
                        strip_prefix = True,
                        builder = CopyToEmptyDirectory)
   service_proto = drake.node('protobuf/memo_kvs.proto')
-  gen_go = grpc.GRPCGoGen(service_proto,
-                          grpc.grpc.protoc,
-                          toolkit = go_toolkit)
+  gen_go = drake.gRPC.GoGen(service_proto,
+                            grpc.grpc.protoc,
+                            toolkit = go_toolkit)
   kvs_grpc = drake.copy(gen_go.targets(), 'src/memo/kvs/service',
                         strip_prefix = True)
-  gen_kvs_data = grpc.GRPCGoGen(drake.node('protobuf/memo_kvs_data.proto'),
-                                grpc.grpc.protoc,
-                                toolkit = go_toolkit)
+  gen_kvs_data = drake.gRPC.GoGen(drake.node('protobuf/memo_kvs_data.proto'),
+                                  grpc.grpc.protoc,
+                                  toolkit = go_toolkit)
   kvs_data = drake.copy(gen_kvs_data.targets(), 'src/memo/kvs/data',
                         strip_prefix = True)
   local_config.add_include_path(drake.path_build())
@@ -122,11 +125,11 @@ def configure(
   rule_build << header
   rule_build << library
 
-  gen_cpp = grpc.GRPCCxxGen(
+  gen_cpp = drake.gRPC.CxxGen(
     service_proto,
     grpc.grpc.protoc,
     grpc.grpc.grpc_cpp_plugin)
-  gen_py = grpc.GRPCPyGen(
+  gen_py = drake.gRPC.PyGen(
     service_proto,
     grpc.grpc.protoc,
     grpc.grpc.grpc_python_plugin)

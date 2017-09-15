@@ -37,8 +37,8 @@ namespace memo
                                          std::string const&,
                                          std::string const&)>;
     Network(std::string name,
-            std::unique_ptr<model::ModelConfig> model,
-            boost::optional<std::string> description);
+            std::unique_ptr<model::ModelConfig> model = nullptr,
+            boost::optional<std::string> description = {});
 
     Network(elle::serialization::SerializerIn& s);
 

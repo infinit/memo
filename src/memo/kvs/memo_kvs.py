@@ -23,11 +23,11 @@ def fetch(key):
 def insert(key, value):
   store.Insert(InsertRequest(key = key, value = value.encode('utf-8')))
 
-def list_():
-  return list(map(lambda i: i.key, store.List(ListRequest()).items))
+def list_(**kwargs):
+  return list(map(lambda i: i.key, store.List(ListRequest(**kwargs)).items))
 
 def update(key, value):
-  store.Update(UpdateRequest(key = key, value = value.encode('utf-8')))
+  return store.Update(UpdateRequest(key = key, value = value.encode('utf-8')))
 
 def upsert(key, value):
-  store.Upsert(UpsertRequest(key = key, value = value.encode('utf-8')))
+  return store.Upsert(UpsertRequest(key = key, value = value.encode('utf-8')))

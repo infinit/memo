@@ -5,6 +5,7 @@
 #include <memo/cli/Memo.hh>
 #include <memo/cli/utility.hh>
 #include <memo/grpc/grpc.hh>
+#include <memo/grpc/memo_vs.hh>
 #include <memo/kvs/lib/libkvs.h>
 #include <memo/model/doughnut/Doughnut.hh>
 #include <memo/model/doughnut/Local.hh>
@@ -92,7 +93,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto network = memo.network_get(network_name, owner);
@@ -123,7 +124,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("delete");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -144,7 +145,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -166,7 +167,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("fetch");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       using KeyValueStoresMap
         = std::unordered_map<std::string, std::vector<memo::KeyValueStore>>;
@@ -210,7 +211,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("import");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto input = this->cli().get_input(input_name);
       auto s = elle::serialization::json::SerializerIn(*input, false);
       auto kvs = memo::KeyValueStore(s);
@@ -228,7 +229,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("list");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
 
       if (cli.script())
       {
@@ -266,7 +267,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("pull");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       memo.hub_delete("kvs", name, owner, false, purge);
@@ -282,7 +283,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("push");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -322,7 +323,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto const name = memo.qualified_name(unqualified_name, owner);
       auto kvs = memo.key_value_store_get(name);
@@ -347,9 +348,9 @@ namespace memo
       auto dht_grpc_thread = std::make_unique<elle::reactor::Thread>
         ("DHT gRPC",
         [dht = dht.get(), &dht_grpc_port] {
-          memo::grpc::serve_grpc(
-            *dht, "127.0.0.1:0", &dht_grpc_port);
-      });
+          memo::grpc::serve_memo_vs(*dht,
+            "127.0.0.1:0", &dht_grpc_port);
+        });
       // Wait for DHT gRPC server to be running.
       while (dht_grpc_port == 0)
         elle::reactor::sleep(100ms);

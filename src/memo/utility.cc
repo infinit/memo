@@ -4,6 +4,7 @@
 
 #include <elle/format/base64.hh>
 #include <elle/json/exceptions.hh>
+#include <elle/system/XDG.hh>
 
 #include <elle/cryptography/hash.hh>
 #include <elle/cryptography/rsa/KeyPair.hh>
@@ -125,5 +126,25 @@ namespace memo
   {
     static const auto email_regex = std::regex(EMAIL_REGEX);
     return std::regex_match(candidate, email_regex);
+  }
+
+  namespace xdg
+  {
+    namespace
+    {
+      auto _xdg = elle::system::XDG{"infinit", "memo"};
+    }
+
+    elle::system::XDG const&
+    get()
+    {
+      return _xdg;
+    }
+
+    void
+    set(elle::system::XDG const& xdg)
+    {
+      _xdg = xdg;
+    }
   }
 }

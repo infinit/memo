@@ -115,7 +115,7 @@ namespace memo
         // XXX: move to memo::avatar_save maybe ?
         bfs::ofstream f;
         bool existed = memo::Memo::_open_write(
-          f, api.cli().memo()._avatar_path(name),
+          f, api.cli().backend()._avatar_path(name),
           name, "avatar", true, std::ios::out | std::ios::binary);
         f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
         api.cli().report_action(existed ? "updated" : "saved",
@@ -134,7 +134,7 @@ namespace memo
           std::istreambuf_iterator<char>{});
         elle::ConstWeakBuffer data(s.data(), s.size());
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().memo().hub_push_data(
+        api.cli().backend().hub_push_data(
           url, "avatar", self.name, data, "image/jpeg", self);
         save_avatar(api, self.name, data);
       }
@@ -143,7 +143,7 @@ namespace memo
       fetch_avatar(User& api, std::string const& name)
       {
         auto url = elle::sprintf("users/%s/avatar", name);
-        auto request = api.cli().memo().hub_fetch_request(
+        auto request = api.cli().backend().hub_fetch_request(
           url, "avatar", name);
         if (request->status() == elle::reactor::http::StatusCode::OK)
         {
@@ -160,7 +160,7 @@ namespace memo
       pull_avatar(User& api, memo::User& self)
       {
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        api.cli().memo().hub_delete(url, "avatar", self.name, self);
+        api.cli().backend().hub_delete(url, "avatar", self.name, self);
       }
 
       memo::User
@@ -203,7 +203,7 @@ namespace memo
             password = Memo::read_password();
           if (!user.ldap_dn)
             user.password_hash = Memo::hub_password_hash(*password);
-          api.cli().memo().hub_push<elle::das::Serializer<PrivateUserPublish>>(
+          api.cli().backend().hub_push<elle::das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -211,7 +211,7 @@ namespace memo
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          api.cli().memo().hub_push<elle::das::Serializer<PublicUserPublish>>(
+          api.cli().backend().hub_push<elle::das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -258,7 +258,7 @@ namespace memo
         this->cli().report_exported(std::cout, "user", user.name);
       }
       else
-        this->cli().memo().user_save(user);
+        this->cli().backend().user_save(user);
       if (push)
         user_push(*this, user, password, full);
     }
@@ -270,7 +270,7 @@ namespace memo
                       bool force)
     {
       ELLE_TRACE_SCOPE("delete");
-      auto& ifnt = this->cli().memo();
+      auto& ifnt = this->cli().backend();
       auto user = ifnt.user_get(name);
       if (user.private_key && !this->cli().script() && !force)
       {
@@ -329,7 +329,7 @@ namespace memo
                       boost::optional<std::string> path)
     {
       ELLE_TRACE_SCOPE("export");
-      auto user = this->cli().memo().user_get(name);
+      auto user = this->cli().backend().user_get(name);
       auto output = this->cli().get_output(path);
       auto avatar = this->cli().avatar_path(name);
       if (avatar)
@@ -375,9 +375,9 @@ namespace memo
         };
         try
         {
-          auto user = this->cli().memo().hub_fetch<memo::User>(
+          auto user = this->cli().backend().hub_fetch<memo::User>(
             "user", elle::reactor::http::url_encode(name));
-          this->cli().memo().user_save(std::move(user));
+          this->cli().backend().user_save(std::move(user));
           avatar();
         }
         catch (ResourceAlreadyFetched const& e)
@@ -392,7 +392,7 @@ namespace memo
     User::mode_hash(std::string const& name)
     {
       ELLE_TRACE_SCOPE("hash");
-      auto user = this->cli().memo().user_get(name);
+      auto user = this->cli().backend().user_get(name);
       auto key_hash = memo::model::doughnut::short_key_hash(user.public_key);
       if (this->cli().script())
       {
@@ -413,7 +413,7 @@ namespace memo
       auto input = this->cli().get_input(path);
       auto user =
         elle::serialization::json::deserialize<memo::User>(*input, false);
-      this->cli().memo().user_save(user);
+      this->cli().backend().user_save(user);
       this->cli().report_imported("user", user.name);
     }
 
@@ -421,7 +421,7 @@ namespace memo
     User::mode_list()
     {
       ELLE_TRACE_SCOPE("list");
-      auto users = this->cli().memo().users_get();
+      auto users = this->cli().backend().users_get();
       boost::optional<memo::User> self;
       try
       {
@@ -473,10 +473,10 @@ namespace memo
       auto pass = password.value_or(Memo::read_password());
       auto hashed_pass = Memo::hub_password_hash(pass);
       auto c = LoginCredentials{name, hashed_pass, pass};
-      auto json = this->cli().memo().hub_login(name, c);
+      auto json = this->cli().backend().hub_login(name, c);
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<memo::User>();
-      this->cli().memo().user_save(user, true);
+      this->cli().backend().user_save(user, true);
     }
 
     void
@@ -484,7 +484,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
-      this->cli().memo().hub_delete("user", name, self, false, purge);
+      this->cli().backend().hub_delete("user", name, self, false, purge);
     }
 
     void
@@ -496,7 +496,7 @@ namespace memo
                     bool full)
     {
       ELLE_TRACE_SCOPE("push");
-      auto user = this->cli().memo().user_get(name);
+      auto user = this->cli().backend().user_get(name);
       // FIXME: why does push provide a way to update those fields?
       if (email || fullname)
       {
@@ -504,7 +504,7 @@ namespace memo
           user.email = *email;
         if (fullname)
           user.fullname = *fullname;
-        this->cli().memo().user_save(user, true);
+        this->cli().backend().user_save(user, true);
       }
       user_push(*this, user, password, full);
       if (avatar)
@@ -544,13 +544,13 @@ namespace memo
       auto user_exists = false;
       try
       {
-        this->cli().memo().user_get(name);
+        this->cli().backend().user_get(name);
         user_exists = true;
       }
       catch (elle::Error const&)
       {
         user_push(*this, user, password, full);
-        this->cli().memo().user_save(user);
+        this->cli().backend().user_save(user);
       }
       if (user_exists)
         elle::err("user %s already exists locally", name);

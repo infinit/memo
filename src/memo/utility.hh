@@ -9,6 +9,7 @@
 #include <elle/system/user_paths.hh>
 #include <elle/system/username.hh>
 #include <elle/unordered_map.hh>
+#include <elle/system/XDG.hh>
 
 #include <elle/reactor/http/Request.hh>
 
@@ -106,92 +107,13 @@ namespace memo
     return canonical(path);
   }
 
-  inline
-  bfs::path
-  home()
+  namespace xdg
   {
-    auto const memo_home = memo::getenv("HOME", ""s);
-    return memo_home.empty() ? elle::system::home_directory() : memo_home;
-  }
+    elle::system::XDG const&
+    get();
 
-  inline
-  bfs::path
-  _xdg(std::string const& type,
-       bfs::path const& def)
-  {
-    auto const memo = memo::getenv(type, ""s);
-    auto const xdg = elle::os::getenv("XDG_" + type, ""s);
-    auto const dir =
-      !memo.empty() ? memo :
-      !xdg.empty() ? bfs::path(xdg) / "infinit/memo" :
-      def;
-    try
-    {
-      return canonical_folder(dir);
-    }
-    catch (bfs::filesystem_error& e)
-    {
-      ELLE_LOG_COMPONENT("xdg");
-      std::string env =
-        !memo.empty() ? "MEMO_" : !xdg.empty() ? "XDG_" : "";
-      if (!env.empty())
-        ELLE_WARN("Invalid \"%s%s\" directory: %s", env, type, e.what());
-      elle::err(e.what());
-    }
-  }
-
-  inline
-  bfs::path
-  _xdg_home(std::string const& type,
-            bfs::path const& def)
-  {
-    return _xdg(type + "_HOME", home() / def / "infinit/memo");
-  }
-
-  inline
-  bfs::path
-  xdg_cache_home()
-  {
-    return _xdg_home("CACHE", ".cache");
-  }
-
-  inline
-  bfs::path
-  xdg_config_home()
-  {
-    return _xdg_home("CONFIG", ".config");
-  }
-
-  inline
-  bfs::path
-  xdg_data_home()
-  {
-    return _xdg_home("DATA", ".local/share");
-  }
-
-  inline
-  bfs::path
-  tmpdir()
-  {
-    return elle::os::getenv("TMPDIR", "/tmp");;
-  }
-
-  inline
-  bfs::path
-  xdg_runtime_dir(boost::optional<std::string> fallback = {})
-  {
-    return _xdg(
-      "RUNTIME_DIR",
-      fallback
-        ? *fallback
-        : tmpdir() / "memo" / elle::system::username());
-  }
-
-  inline
-  bfs::path
-  xdg_state_home()
-  {
-    return _xdg_home("STATE", ".local/state");
+    void
+    set(elle::system::XDG const&);
   }
 
   using Headers = elle::unordered_map<std::string, std::string>;

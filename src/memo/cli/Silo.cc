@@ -124,7 +124,7 @@ namespace memo
           s.serialize_forward(config);
         }
         else
-          cli.memo().silo_save(config->name, config);
+          cli.backend().silo_save(config->name, config);
       }
     }
 
@@ -139,7 +139,7 @@ namespace memo
     {
       if (!root)
         root = elle::sprintf("storage_%s", name);
-      auto account = this->cli().memo().credentials_dropbox(account_name);
+      auto account = this->cli().backend().credentials_dropbox(account_name);
       mode_create(
         this->cli(),
         output,
@@ -158,8 +158,9 @@ namespace memo
                                   boost::optional<std::string> output,
                                   boost::optional<std::string> root)
     {
-      auto const path = root ? memo::canonical_folder(root.get())
-        : (memo::xdg_data_home() / "blocks" / name);
+      auto const path = root
+        ? memo::canonical_folder(root.get())
+        : xdg::get().data_dir() / "blocks" / name;
       if (bfs::exists(path))
       {
         if (!bfs::is_directory(path))
@@ -189,7 +190,7 @@ namespace memo
                            boost::optional<std::string> root)
     {
       auto self = this->cli().as_user();
-      auto const account = this->cli().memo().credentials_gcs(account_name);
+      auto const account = this->cli().backend().credentials_gcs(account_name);
       mode_create(
         this->cli(),
         output,
@@ -217,7 +218,7 @@ namespace memo
     {
       if (!root)
         root = elle::sprintf("%s_blocks", name);
-      auto account = this->cli().memo().credentials_aws(account_name);
+      auto account = this->cli().backend().credentials_aws(account_name);
       auto aws_credentials = elle::service::aws::Credentials(
         account->access_key_id,
         account->secret_access_key,
@@ -261,7 +262,7 @@ namespace memo
       auto self = this->cli().as_user();
       if (!root)
         root = elle::sprintf(".infinit_%s", name);
-      auto account = this->cli().memo().credentials_google(account_name);
+      auto account = this->cli().backend().credentials_google(account_name);
       mode_create(
         this->cli(),
         output,
@@ -279,7 +280,7 @@ namespace memo
                       boost::optional<std::string> output)
     {
       auto o = this->cli().get_output(output);
-      auto silo = this->cli().memo().silo_get(name);
+      auto silo = this->cli().backend().silo_get(name);
       elle::serialization::json::serialize(silo, *o, false);
       this->cli().report_exported(std::cout, "silo", name);
     }
@@ -294,7 +295,7 @@ namespace memo
         if (silo->name.empty())
           elle::err("silo name is empty");
         // FIXME: no need to pass the name
-        this->cli().memo().silo_save(silo->name, silo);
+        this->cli().backend().silo_save(silo->name, silo);
         this->cli().report_imported("silo", silo->name);
       }
     }
@@ -309,7 +310,7 @@ namespace memo
                   ? elle::human_data_size(*silo->capacity)
                   : "unlimited");
         };
-      auto silos = this->cli().memo().silos_get();
+      auto silos = this->cli().backend().silos_get();
       if (this->cli().script())
       {
         auto l = elle::json::Array{};
@@ -338,7 +339,7 @@ namespace memo
                       bool clear,
                       bool purge)
     {
-      auto& memo = this->cli().memo();
+      auto& memo = this->cli().backend();
       auto silo = memo.silo_get(name);
       auto fs_silo =
         dynamic_cast<memo::silo::FilesystemSiloConfig*>(silo.get());

@@ -29,19 +29,7 @@
 ELLE_LOG_COMPONENT("cli");
 
 namespace bfs = boost::filesystem;
-
 using namespace std::literals;
-
-namespace
-{
-  /// How the user called us.
-  auto argv_0 =
-#ifdef INFINIT_BINARY
-  "infinit"s;
-#else
-  "memo"s;
-#endif
-}
 
 namespace memo
 {
@@ -76,27 +64,6 @@ namespace memo
           }
         }
       }
-
-      void
-      check_broken_locale()
-      {
-#if defined ELLE_LINUX
-        // boost::filesystem uses the default locale, detect here if
-        // it can't be instantiated.  Not required on OS X, see
-        // boost/libs/filesystem/src/path.cpp:819.
-        try
-        {
-          std::locale("");
-        }
-        catch (std::exception const& e)
-        {
-          ELLE_WARN("Something is wrong with your locale settings,"
-                    " overriding: %s",
-                    e.what());
-          elle::os::setenv("LC_ALL", "C");
-        }
-#endif
-      }
     }
 
     namespace
@@ -129,14 +96,14 @@ namespace memo
       , _script(false)
     {
       install_signal_handlers(*this);
-      this->_memo.report_local_action().connect(
+      this->backend().report_local_action().connect(
         [this] (std::string const& action,
                 std::string const& type,
                 std::string const& name)
         {
           this->report_action(action, pretty_object(type), name, "locally");
         });
-      this->_memo.report_remote_action().connect(
+      this->backend().report_remote_action().connect(
         [this] (std::string const& action,
                 std::string const& type,
                 std::string const& name)
@@ -155,23 +122,17 @@ namespace memo
     memo::User
     Memo::default_user()
     {
-      return this->memo().user_get(this->default_user_name());
+      return this->backend().user_get(this->default_user_name());
     }
 
     memo::User
     Memo::as_user()
     {
-      return this->memo().user_get(this->_as.get());
+      return this->backend().user_get(this->_as.get());
     }
 
     namespace
     {
-      auto const options = elle::das::cli::Options
-        {
-          {"help", {'h', "show this help message"}},
-          {"version", {'v', "show software version"}},
-        };
-
       template <typename Symbol>
       struct help_object
       {
@@ -211,41 +172,6 @@ namespace memo
         elle::err<CLIError>("missing object type");
     }
 
-    namespace
-    {
-      /// Return true if we found (and ran) the command.
-      bool
-      run_command(Memo& cli, std::vector<std::string>& args)
-      {
-        cli.command_line(args);
-        bool res = false;
-        memo::cli::Memo::Objects::map<mode_call, Memo>::value(
-          cli, cli, args, res);
-        return res;
-      }
-
-      void
-      main_impl(std::vector<std::string>& args)
-      {
-        auto memo = memo::Memo{};
-        auto&& cli = Memo(memo);
-        if (args.empty() || elle::das::cli::is_option(args[0], options))
-          elle::das::cli::call(cli, args, options);
-        else if (!run_command(cli, args))
-          elle::err<CLIError>("unknown object type: %s", args[0]);
-      }
-
-      void
-      main(std::vector<std::string>& args)
-      {
-        auto report_thread = make_reporter_thread();
-        check_broken_locale();
-        environ_check();
-        main_impl(args);
-        if (report_thread)
-          elle::reactor::wait(*report_thread);
-      }
-    }
 
     /*--------.
     | Helpers |
@@ -254,7 +180,7 @@ namespace memo
     void
     Memo::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
+      s << "Usage: memo " << usage << std::endl;
     }
 
     /// An input file, and its clean-up function.
@@ -303,7 +229,7 @@ namespace memo
     boost::optional<bfs::path>
     Memo::avatar_path(std::string const& name) const
     {
-      auto path = this->memo()._avatar_path(name);
+      auto path = this->backend()._avatar_path(name);
       if (exists(path))
         return path;
       else
@@ -459,61 +385,13 @@ namespace memo
     void
     Memo::print(std::ostream& o) const
     {
-      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->_memo);
+      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->backend());
     }
-  }
-}
 
-namespace
-{
-  int
-  cli_error(std::string const& error, boost::optional<std::string> object = {})
-  {
-    elle::fprintf(std::cerr, "%s: command line error: %s\n", argv_0, error);
-    auto const obj = object ? " " + *object : "";
-    elle::fprintf(std::cerr,
-                  "Try '%s%s --help' for more information.\n",
-                  argv_0, obj);
-    return 2;
-  }
-}
-
-int
-main(int const argc, char const* const* const argv)
-{
-  argv_0 = argv[0];
-  try
-  {
-    memo::make_main_log();
-    auto args = std::vector<std::string>(argv, argv + argc);
-    ELLE_DEBUG("command line: {}", args);
-    args.erase(args.begin());
-    elle::reactor::Scheduler s;
-    elle::reactor::Thread main(s, "main", [&] { memo::cli::main(args); });
-    s.run();
-  }
-  catch (memo::cli::CLIError const& e)
-  {
-    return cli_error(e.what(), e.object());
-  }
-  catch (elle::das::cli::Error const& e)
-  {
-    return cli_error(e.what());
-  }
-  catch (elle::Error const& e)
-  {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
-    if (memo::getenv("BACKTRACE", false))
-      elle::fprintf(std::cerr, "%s\n", e.backtrace());
-    return 1;
-  }
-  catch (bfs::filesystem_error const& e)
-  {
-    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv_0, e.what());
-    return 1;
-  }
-  catch (elle::Exit const& e)
-  {
-    return e.return_code();
+    memo::Memo&
+    Memo::backend() const
+    {
+      return this->_memo;
+    }
   }
 }

@@ -4,10 +4,8 @@
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include <elle/format/hexadecimal.hh>
-
 #include <elle/cryptography/hash.hh>
-
+#include <elle/format/hexadecimal.hh>
 #include <elle/reactor/http/Request.hh>
 
 #include <memo/Memo.hh>
@@ -280,8 +278,8 @@ namespace memo
   Network::cache_dir(User const& user) const
   {
     // "/cache" and "/async" are added by Doughnut.
-    auto old_dir = xdg_state_home() / "cache" / this->name;
-    auto new_dir = xdg_state_home() / "cache" / user.name / this->name;
+    auto old_dir = xdg::get().state_dir() / "cache" / this->name;
+    auto new_dir = xdg::get().state_dir() / "cache" / user.name / this->name;
     create_directories(new_dir / "async");
     if (bfs::exists(old_dir / "async") && !bfs::is_empty(old_dir / "async"))
     {
@@ -314,7 +312,7 @@ namespace memo
       "%s/%s/%s", elle::system::username(), user.name, this->name);
     auto hashed = crypto::hash(qualified_name, crypto::Oneway::sha);
     auto socket_id = elle::format::hexadecimal::encode(hashed);
-    return memo::xdg_runtime_dir() / "monitor"
+    return xdg::get().runtime_dir()  / "monitor"
       / elle::sprintf("%s.sock", std::string(socket_id).substr(0, 6));
 #endif
   }

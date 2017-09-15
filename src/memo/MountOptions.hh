@@ -44,9 +44,12 @@ namespace memo
     using Strings = std::vector<std::string>;
     using Environ = std::unordered_map<std::string, std::string>;
 
-    void to_commandline(Strings& arguments, Environ& env) const;
-    Strings to_commandline() const;
-    void merge(MountOptions const& other);
+    void
+    to_commandline(Strings& arguments, Environ& env) const;
+    Strings
+    to_commandline() const;
+    void
+    merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
     boost::optional<Strings> fuse_options;
@@ -97,7 +100,8 @@ namespace memo
   };
 
   /// Print for debugging.
-  std::ostream& operator<<(std::ostream& os, MountOptions const& mo);
+  std::ostream&
+  operator<<(std::ostream& os, MountOptions const& mo);
 }
 
 ELLE_DAS_SERIALIZE(memo::MountOptions);

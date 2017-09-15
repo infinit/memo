@@ -66,11 +66,11 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("describe");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner);
       auto dht = network.run(owner);
-      bfs::path async_path = network.cache_dir(owner) / "async";
+      auto const async_path = memo._network_cache_dir(network.name, owner) / "async";
       auto report = [&] (bfs::path const& path)
         {
           auto name = path.filename().string();
@@ -106,11 +106,11 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto network = memo.network_get(network_name, owner);
       auto id = std::to_string(operation);
-      auto path = network.cache_dir(owner) / "async" / id;
+      auto path = memo._network_cache_dir(network.name, owner) / "async" / id;
       auto op = get_operation(memo, owner, network, path, id);
       elle::serialization::json::serialize(op, std::cout);
     }
@@ -124,7 +124,7 @@ namespace memo
     {
       ELLE_TRACE_SCOPE("stat");
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto networks = std::vector<memo::Network>{};
       if (network_name)
@@ -134,7 +134,7 @@ namespace memo
       auto res = elle::json::Object{};
       for (auto const& network: networks)
       {
-        bfs::path async_path = network.cache_dir(owner) / "async";
+        auto const async_path = memo._network_cache_dir(network.name, owner) / "async";
         int operation_count = 0;
         int64_t data_size = 0;
         if (bfs::exists(async_path))

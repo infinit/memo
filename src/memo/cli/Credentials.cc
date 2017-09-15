@@ -168,7 +168,7 @@ namespace memo
                           bool google_drive)
     {
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.ensure_at_least_one("add");
@@ -217,7 +217,7 @@ namespace memo
       {
         if (service.attr_get(enabled))
         {
-          auto& memo = cred.cli().memo();
+          auto& memo = cred.cli().backend();
           memo.credentials_delete(ServicePrint<Service>::name, account_name);
           if (pull)
             pull_(cred.cli(), service, account_name, true);
@@ -296,7 +296,7 @@ namespace memo
                             bool gcs, bool google_drive)
     {
       auto& cli = this->cli();
-      auto& memo = cli.memo();
+      auto& memo = cli.backend();
       auto owner = cli.as_user();
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
@@ -363,7 +363,7 @@ namespace memo
                                    ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
-        cli.memo().hub_delete(
+        cli.backend().hub_delete(
           where,
           elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
           ServicePrint<Service>::name, owner, allow_missing);
@@ -443,7 +443,7 @@ namespace memo
     {
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
-      auto& memo = this->cli().memo();
+      auto& memo = this->cli().backend();
       list_(memo, e, cli::aws,          s::credentials_aws);
       list_(memo, e, cli::dropbox,      s::credentials_dropbox);
       list_(memo, e, cli::google_drive, s::credentials_google);

@@ -197,7 +197,7 @@ namespace memo
     bfs::path
     daemon_sock_path()
     {
-      return memo::xdg_runtime_dir() / "daemon.sock";
+      return xdg::get().runtime_dir() / "daemon.sock";
     }
 
 #ifndef ELLE_WINDOWS
@@ -441,6 +441,27 @@ namespace memo
                             mode, elle::keys(modes));
       else
         return i->second;
+    }
+
+    void
+    check_broken_locale()
+    {
+#if defined MEMO_LINUX
+      // boost::filesystem uses the default locale, detect here if
+      // it can't be instantiated.  Not required on OS X, see
+      // boost/libs/filesystem/src/path.cpp:819.
+      try
+      {
+        std::locale("");
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Something is wrong with your locale settings,"
+                  " overriding: %s",
+                  e.what());
+        elle::os::setenv("LC_ALL", "C");
+      }
+#endif
     }
   }
 }
