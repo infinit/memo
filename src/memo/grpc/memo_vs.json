@@ -440,7 +440,7 @@
           "name": "payload",
           "type": "oneof",
           "documentation": {
-            "abstract": "The payload of the block, data or data_plain, depeding of the Block"
+            "abstract": "The payload of the block: data or data_plain, depending on the Block"
           },
           "values": [
             {

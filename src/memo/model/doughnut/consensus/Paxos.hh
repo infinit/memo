@@ -51,7 +51,8 @@ namespace memo
           using PaxosServer = elle::athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address> ;
           using Value = elle::Option<std::shared_ptr<blocks::Block>,
-                                     Paxos::PaxosClient::Quorum>;
+                                     PaxosClient::Quorum>;
+          using Duration = std::chrono::system_clock::duration;
 
         /*-------------.
         | Construction |
@@ -62,17 +63,14 @@ namespace memo
                 bool lenient_fetch,
                 bool rebalance_auto_expand,
                 bool rebalance_inspect,
-                std::chrono::system_clock::duration node_timeout);
+                Duration node_timeout);
           template <typename ... Args>
           Paxos(Args&& ... args);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
           ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
           ELLE_ATTRIBUTE_R(bool, rebalance_inspect);
-          ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
-        private:
-          struct _Details;
-          friend struct _Details;
+          ELLE_ATTRIBUTE_R(Duration, node_timeout);
 
         /*-------.
         | Blocks |
@@ -101,7 +99,7 @@ namespace memo
                      Address address,
                      std::function<PaxosClient::Quorum (PaxosClient::Quorum)> m,
                      PaxosClient::State const& version);
-          Paxos::PaxosServer::Quorum
+          PaxosServer::Quorum
           _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
           void
           _resign() override;
@@ -125,7 +123,7 @@ namespace memo
           make_remote(std::shared_ptr<Dock::Connection> connection) override;
 
           using AcceptedOrError
-            = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+            = std::pair<boost::optional<PaxosClient::Accepted>,
                         std::shared_ptr<elle::Error>>;
           using GetMultiResult = std::unordered_map<Address, AcceptedOrError>;
 
@@ -168,14 +166,14 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) = 0;
+                      PaxosClient::Proposal p) = 0;
           };
 
         /*------------------.
         | Paxos::RemotePeer |
         `------------------*/
           class RemotePeer
-            : public Paxos::Peer
+            : public Peer
             , public doughnut::Remote
           {
           public:
@@ -184,7 +182,7 @@ namespace memo
             RemotePeer(Doughnut& dht,
                        std::shared_ptr<Dock::Connection> connection)
               : doughnut::Peer(dht, connection->location().id())
-              , Paxos::Peer(dht, connection->location().id())
+              , Peer(dht, connection->location().id())
               , Super(dht, std::move(connection))
             {}
             PaxosServer::Response
@@ -210,7 +208,7 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) override;
+                      PaxosClient::Proposal p) override;
             void
             store(blocks::Block const& block, StoreMode mode) override;
           };
@@ -220,7 +218,7 @@ namespace memo
         `-----------------*/
         public:
           class LocalPeer
-            : public Paxos::Peer
+            : public Peer
             , public doughnut::Local
           {
           /*-------------.
@@ -238,7 +236,7 @@ namespace memo
                       int factor,
                       bool rebalance_auto_expand,
                       bool rebalance_inspect,
-                      std::chrono::system_clock::duration node_timeout,
+                      Duration node_timeout,
                       Doughnut& dht,
                       Address id,
                       Args&& ... args);
@@ -251,7 +249,7 @@ namespace memo
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
             ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr,
                              rebalance_inspector);
-            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE_R(Duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>,
                            evict_threads);
             ELLE_ATTRIBUTE_R(bool, cleaning_up);
@@ -288,7 +286,7 @@ namespace memo
             void
             propagate(PaxosServer::Quorum  q,
                       std::shared_ptr<blocks::Block> block,
-                      Paxos::PaxosClient::Proposal p) override;
+                      PaxosClient::Proposal p) override;
 
             void
             store(blocks::Block const& block, StoreMode mode) override;
@@ -471,12 +469,12 @@ namespace memo
             using Super = consensus::Configuration;
           public:
             Configuration(int replication_factor,
-                          std::chrono::system_clock::duration node_timeout);
+                          Duration node_timeout);
             ELLE_CLONABLE();
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_RW(int, replication_factor);
-            ELLE_ATTRIBUTE_RW(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE_RW(Duration, node_timeout);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
           public:
@@ -495,17 +493,19 @@ namespace memo
 
         struct BlockOrPaxos
         {
+          /// A unique_ptr with a changeable deletion function.
+          template <typename T>
+          using unique_ptr
+            = std::unique_ptr<T, std::function<auto (T*) -> void>>;
+
           explicit
           BlockOrPaxos(blocks::Block& b);
           explicit
           BlockOrPaxos(Paxos::LocalPeer::Decision* p);
           explicit
           BlockOrPaxos(elle::serialization::SerializerIn& s);
-          std::unique_ptr<
-            blocks::Block, std::function<void(blocks::Block*)>> block;
-          std::unique_ptr<
-            Paxos::LocalPeer::Decision,
-            std::function<void(Paxos::LocalPeer::Decision*)>> paxos;
+          unique_ptr<blocks::Block> block;
+          unique_ptr<Paxos::LocalPeer::Decision> paxos;
           void
           serialize(elle::serialization::Serializer& s);
           using serialization_tag = memo::serialization_tag;
