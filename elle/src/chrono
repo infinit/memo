@@ -1,0 +1,97 @@
+#pragma once
+
+#include_next <chrono>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <string>
+
+#include <elle/err.hh>
+#include <elle/meta.hh>
+#include <elle/print-fwd.hh>
+
+namespace std
+{
+  namespace chrono
+  {
+    template <typename T, std::intmax_t Num, std::intmax_t Den>
+    std::ostream&
+    operator << (std::ostream& o,
+                 std::chrono::duration<T, std::ratio<Num, Den>> const& t)
+    {
+      // For some reason, std::abs defines only overloads for signed
+      // types.  So calling it with unsigned types is ambiguous.
+      auto abs = [](auto l)
+        {
+          return elle::meta::static_if<std::is_unsigned<decltype(l)>{}>
+          ([](auto l) { return l; },
+           [](auto l) { return std::abs(l); })
+          (l);
+        };
+      // FIXME: C++17 has std::abs for durations.
+      auto const log = std::ceil(std::log10(abs(t.count())));
+      auto const significant = int(std::pow(10, std::max(log - 3, 0.)));
+      auto const pretty = double(t.count() / significant) * significant;
+      if (Den / Num / significant >= 1000'000'000)
+        elle::print(o, "%sns", pretty * Num * 1000'000'000 / Den);
+      else if (Den / Num / significant >= 1'000'000)
+        elle::print(o, "%sus", pretty * Num * 1'000'000 / Den);
+      else if (Den / Num / significant >= 1000)
+        elle::print(o, "%sms", pretty * Num * 1000 / Den);
+      else
+        elle::print(o, "%ss", pretty * Num / Den);
+      return o;
+    }
+
+    template <typename Duration>
+    Duration
+    duration_from_string(std::string const& repr)
+    {
+      auto const pos = repr.find_first_not_of("-0123456789");
+      if (pos == std::string::npos)
+        elle::err("missing duration unit: {}", repr);
+      if (pos == 0)
+        elle::err("invalid duration: {}", repr);
+      // FIXME: don't convert to int, but to Duration::Repr.
+      auto const ticks = std::stoi(repr.substr(0, pos));
+      auto const unit = repr.substr(pos);
+      if (unit == "d")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::duration<typename Duration::rep,
+            std::ratio<24 * 60 * 60, 1>>(ticks));
+      else if (unit == "h")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::hours(ticks));
+      else if (unit == "min")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::minutes(ticks));
+      else if (unit == "s")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::seconds(ticks));
+      else if (unit == "ms")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::milliseconds(ticks));
+      else if (unit == "us")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::microseconds(ticks));
+      else if (unit == "ns")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::nanoseconds(ticks));
+      else if (unit == "ps")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::duration<typename Duration::rep,
+            std::pico>(ticks));
+      else if (unit == "fs")
+        return std::chrono::duration_cast<Duration>(
+          std::chrono::duration<typename Duration::rep,
+            std::femto>(ticks));
+      else
+        elle::err("invalid duration unit: %s", unit);
+    }
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

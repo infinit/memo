@@ -1,0 +1,109 @@
+#pragma once
+
+#include_next <tuple>
+#include <elle/print-fwd.hh>
+
+namespace std
+{
+  namespace
+  {
+    template <int idx, typename T>
+    std::enable_if_t<idx == tuple_size<T>::value, void>
+    print_tuple(std::ostream&, T const&, bool)
+    {};
+
+    template <int idx, typename T>
+    std::enable_if_t<idx < tuple_size<T>::value, void>
+    print_tuple(std::ostream& s, T const& v, bool first)
+    {
+      if (!first)
+        elle::print(s, ", %s", get<idx>(v));
+      else
+        elle::print(s, "%s", get<idx>(v));
+      print_tuple<idx + 1, T>(s, v, false);
+    };
+
+    template <typename F, typename Tuple, int Total, int... N>
+    struct _forward_tuple
+    {
+      using Next = _forward_tuple<
+        F, Tuple, Total - 1, N..., sizeof...(N)>;
+      static
+      auto
+      call(F const& f, Tuple && t)
+        -> decltype(Next::call(f, std::forward<Tuple>(t)))
+      {
+        return Next::call(f, std::forward<Tuple>(t));
+      }
+    };
+
+    template <typename F, typename Tuple, int ... N>
+    struct _forward_tuple<F, Tuple, 0, N...>
+    {
+      static
+      auto
+      call(F const& f, Tuple && t)
+        -> decltype(f(std::get<N>(std::forward<Tuple>(t))...))
+      {
+        return f(std::get<N>(std::forward<Tuple>(t))...);
+      }
+    };
+  }
+
+  template <typename ... Elts>
+  ostream&
+  operator <<(ostream& out, tuple<Elts...> const& v)
+  {
+    elle::print(out, "(");
+    print_tuple<0, tuple<Elts...>>(out, v, true);
+    elle::print(out, ")");
+    return out;
+  }
+
+  template <typename F, typename T>
+  auto
+  forward_tuple(F const& f, T&& tuple)
+    -> decltype(
+      _forward_tuple<F, T, std::tuple_size<typename std::decay<T>::type>::value>
+      ::call(f, std::forward<T>(tuple)))
+  {
+    return
+      _forward_tuple<F, T, std::tuple_size<typename std::decay<T>::type>::value>
+      ::call(f, std::forward<T>(tuple));
+  }
+
+  /*----.
+  | Any |
+  `----*/
+
+  namespace _details
+  {
+    template <int i, typename ... T>
+    std::enable_if_t<i == 0, bool>
+    any(std::tuple<T...> const& v)
+    {
+      return false;
+    }
+
+    template <int i, typename ... T>
+    std::enable_if_t<0 < i, bool>
+    any(std::tuple<T...> const& v)
+    {
+      if (std::get<i - 1>(v))
+        return true;
+      else
+        return any<i - 1>(v);
+    }
+  }
+
+  template <typename ... T>
+  bool
+  any(std::tuple<T...> const& v)
+  {
+    return _details::any<sizeof ... (T)>(v);
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

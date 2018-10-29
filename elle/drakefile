@@ -1,0 +1,1637 @@
+import collections
+import drake
+import drake.cxx
+import drake.docker
+import drake.cxx.boost
+import os
+import sys
+
+from itertools import chain
+
+MACOSX_DEPLOYMENT_TARGET = '10.7'
+
+archs = None
+athena = None
+aws = None
+boost = None
+config = None
+cryptography = None
+curl_config = None
+curl_lib = None
+cxx_toolkit = None
+das = None
+dropbox = None
+elle = None
+libarchive_config = None
+libarchive_lib = None
+openssl_config = None
+openssl_lib_crypto = None
+openssl_lib_ssl = None
+openssl_libs_eay = []
+protocol = None
+python3 = None
+reactor = None
+rule_check = None
+rule_tests = None
+valgrind = None
+zlib_config = None
+zlib_lib = None
+
+with open(str(drake.path_source('drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
+def set_archs(value):
+  global archs
+  archs = value
+
+def set_boost(value):
+  global boost
+  boost = value
+
+def set_python3(value):
+  global python3
+  python3 = value
+
+def set_valgrind(value):
+  global valgrind
+  valgrind = value
+
+def set_cxx_toolkit(value):
+  global cxx_toolkit
+  cxx_toolkit = value
+
+def configure(cxx_toolkit = None,
+              cxx_toolkit_host = None,
+              cxx_config = drake.cxx.Config(),
+              archs = [],
+              fuse = None,
+              production_build = False,
+              boost = None,
+              python3 = None,
+              python_version = None,
+              enable_cryptographic_rotation = False,
+              prefix = False,
+              valgrind = None,
+              valgrind_tests = False,
+              build_openssl_eay = False,
+              cryptography_python = True,
+              codesign = False,
+  ):
+
+  global athena
+  global aws
+  global config
+  global cryptography
+  global das
+  global dropbox
+  global elle
+  global protocol
+  global reactor
+
+  global curl_config, curl_lib
+  global openssl_config, openssl_lib_ssl, openssl_lib_crypto, openssl_libs_eay
+  global zlib_config, zlib_lib
+  global libarchive_config, libarchive_lib
+
+  ## ------------- ##
+  ## Architectures ##
+  ## ------------- ##
+
+  if archs:
+    if cxx_toolkit.os is not drake.os.ios:
+      raise Exception("building for multiple architectures only supported on "\
+                      "iOS")
+    set_archs(archs)
+
+  ## -------- ##
+  ## Valgrind ##
+  ## -------- ##
+
+  if valgrind is not False:
+    if valgrind is True or valgrind is None:
+      try:
+        valgrind = drake.valgrind.Valgrind()
+      except Exception as e:
+        if valgrind is True:
+          raise
+        else:
+          valgrind = None
+  else:
+    valgrind = None
+  set_valgrind(valgrind)
+  config = drake.cxx.Config()
+  config.add_local_include_path('src')
+  cxx_config = drake.cxx.Config(cxx_config)
+  cxx_config.add_local_include_path('src')
+  cxx_toolkit = cxx_toolkit or drake.cxx.Toolkit()
+  if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+    cxx_config.use_local_libcxx = True
+  cxx_toolkit_host = cxx_toolkit_host or cxx_toolkit
+  set_cxx_toolkit(cxx_toolkit)
+  if cxx_toolkit.os is drake.os.ios:
+    print('Cross compiling for iOS')
+
+  windows = cxx_toolkit.os is drake.os.windows
+
+  if prefix is not False:
+    prefix = drake.Path(prefix)
+
+  if python3 is not False:
+    if python_version is None:
+      python_version = (drake.Version(3, 6),
+                        drake.Version(3, 5),
+                        drake.Version(3, 4),
+                        drake.Version(3, 3),
+                        drake.Version(3, 2))
+    elif not isinstance(python_version, collections.Iterable):
+      python_version = (python_version,)
+    if python3 is None and drake.cxx.PkgConfig.available:
+      def versions():
+        for v in python_version:
+          yield ('python', v)
+          yield ('python3', v) # CentOS
+          yield ('python-%s' % v, v) # Gentoo
+      for pkg_name, version in versions():
+        pkg = drake.cxx.PkgConfig(pkg_name, version = version)
+        if pkg.exists:
+          python3 = pkg.prefix
+          break
+    include_dir = list(itertools.chain(
+      ('include',),
+      *(('include/python%s' % v,
+         'include/python%sm' % v) for v in python_version)))
+    python3 = drake.cxx.find_library(
+      'pyconfig.h',
+      prefix = python3,
+      include_dir = include_dir)
+    python_version = cxx_toolkit.preprocess('''\
+  #include <patchlevel.h>
+  PY_MAJOR_VERSION
+  PY_MINOR_VERSION''', config = python3)
+    python_version = python_version.split('\n')[-3:-1]
+    python_version = drake.Version(*map(int, python_version))
+    if windows:
+      python_bin = 'python.exe'
+    else:
+      python_bin = 'bin/python%s' % python_version
+    python3.python_interpreter = python3.prefix / python_bin
+    python3.version = python_version
+  else:
+    python3 = None
+  set_python3(python3)
+
+  ## -------- ##
+  ## Patchelf ##
+  ## -------- ##
+
+  patchelf_version = drake.Version(0, 9)
+  patchelf_basename = 'patchelf-%s' % patchelf_version
+  patchelf_url = \
+    'https://nixos.org/releases/patchelf/{}/{}.tar.bz2'.format(
+      patchelf_basename, patchelf_basename)
+  patchelf_tarball = \
+    drake.node('patchelf/%s.tar.bz2' % patchelf_basename)
+  patchelf_configure = \
+    drake.node('patchelf/%s/configure' % patchelf_basename)
+  patchelf_prefix = drake.path_build('patchelf')
+  patchelf_prefix_absolute = drake.path_root() / patchelf_prefix
+  patchelf = drake.node('patchelf/bin/patchelf')
+  drake.HTTPDownload(
+    patchelf_url,
+    patchelf_tarball,
+    fingerprint = 'd02687629c7e1698a486a93a0d607947',
+  )
+  drake.TarballExtractor(
+    patchelf_tarball,
+    targets = ['%s/configure' % patchelf_basename],
+  )
+  GNUBuilder(
+    cxx_toolkit,
+    configure = patchelf_configure,
+    configure_args = [
+      '--prefix=%s' % patchelf_prefix_absolute,
+      'CXX=%s' % ' '.join(cxx_toolkit_host.command_cxx),
+    ],
+    targets = [patchelf],
+    sources = [],
+  )
+  if cxx_toolkit.os not in [drake.os.windows, drake.os.ios]:
+    cxx_toolkit.patchelf = patchelf
+  drake.Rule('patchelf') << patchelf
+
+  ## ---- ##
+  ## Zlib ##
+  ## ---- ##
+
+  zlib_version = '1.2.11'
+  zlib_basename = 'zlib-%s' % zlib_version
+  zlib_tarball = drake.node('zlib/%s.tar.gz' % zlib_basename)
+  zlib_prefix = drake.Path('zlib')
+  zlib_build = zlib_prefix / zlib_basename
+  zlib_configure = drake.node(zlib_build / 'configure')
+  # They don't always update their configure (which is not generated
+  # by Autoconf).  However, the zlib.h file is updated with the
+  # version number.
+  zlib_main_header = drake.node(zlib_build / 'zlib.h')
+  zlib_url = 'http://zlib.net/%s.tar.gz' % zlib_basename
+  drake.HTTPDownload(
+    zlib_url,
+    zlib_tarball,
+    fingerprint = '1c9f62f0778697a09d36121ead88e08e'
+  )
+  drake.TarballExtractor(
+    zlib_tarball,
+    targets = ['%s/%s' % (zlib_basename, 'configure'),
+               '%s/%s' % (zlib_basename, 'zlib.h'),
+               ],
+  )
+
+  zlib_env = {}
+  if windows:
+    # XXX only for mingw
+    zlib_makefile = 'win32/Makefile.gcc'
+    zlib_lib = drake.cxx.StaticLib('zlib/lib/libz.a')
+    zlib_configure_call = None
+    zlib_configure_args = ['--static']
+  else:
+    zlib_env['CC'] = ' '.join(cxx_toolkit.command_c)
+    zlib_env['CFLAGS'] = '-fPIC -w'
+    zlib_makefile = None
+    zlib_configure_call = zlib_configure
+    zlib_configure_args = []
+    if cxx_toolkit.os is drake.os.macos:
+      zlib_lib = drake.cxx.DynLib('zlib/lib/libz.%s.dylib' % zlib_version)
+    elif cxx_toolkit.os in [drake.os.linux]:
+      zlib_lib = drake.cxx.DynLib('zlib/lib/libz.so.1')
+    elif cxx_toolkit.os is drake.os.android:
+      zlib_lib = drake.cxx.StaticLib('zlib/lib/libz.a')
+      zlib_configure_args = ['--static']
+    elif cxx_toolkit.os is drake.os.ios:
+      zlib_lib = drake.cxx.StaticLib('zlib/lib/libz.a')
+      zlib_arch_str = ''
+      for arch in archs:
+        zlib_arch_str += '-arch %s ' % arch
+      zlib_env['CC'] += ' %s -mios-version-min=7.0' % (zlib_arch_str)
+      zlib_env['SDKROOT'] = os.environ['SDKROOT']
+      zlib_env['CFLAGS'] += ' -isysroot %s' % os.environ['SDKROOT']
+  zlib_libs = [zlib_lib,]
+
+  zlib_prefix_absolute = drake.path_build(zlib_prefix,
+                                          absolute = True)
+  zlib_args = [
+    "BINARY_PATH='%s/bin'" % zlib_prefix_absolute,
+    "INCLUDE_PATH='%s/include'" % zlib_prefix_absolute,
+    "LIBRARY_PATH='%s/lib'" % zlib_prefix_absolute,
+  ]
+  if windows:
+    zlib_args.append("PREFIX=%s" % cxx_toolkit.prefix)
+  GNUBuilder(
+    cxx_toolkit,
+    configure = zlib_configure_call,
+    configure_args = [
+      '--prefix=%s' % zlib_prefix_absolute,
+    ] + zlib_configure_args,
+    additional_env = zlib_env,
+    working_directory = drake.path_build(zlib_build),
+    targets = zlib_libs + drake.nodes('zlib/include/zlib.h',
+                                      'zlib/include/zconf.h'),
+    makefile = zlib_makefile,
+    sources = [zlib_configure, zlib_main_header],
+    build_args = ['install'] + list(s.replace('\\', '/') for s in zlib_args)
+  )
+  zlib_config = drake.cxx.Config()
+  zlib_config.add_local_include_path('zlib/include')
+  drake.Rule('zlib') << zlib_libs
+
+  ## ------- ##
+  ## OpenSSL ##
+  ## ------- ##
+  openssl_rule = drake.Rule('openssl')
+  openssl_version = '1.0.2'
+  openssl_release_tag = 'j'
+  openssl_basename = 'openssl-%s' % (openssl_version + openssl_release_tag)
+  openssl_tarball = drake.node('openssl/%s.tar.gz' % openssl_basename)
+  openssl_prefix = drake.Path('openssl')
+  openssl_build = openssl_prefix / openssl_basename
+  # Only the latest release is in source/ all other releases are in
+  # source/old/<version>. Use the old location as a fallback.
+  drake.HTTPDownload(
+    [
+      'http://www.openssl.org/source/%s.tar.gz' % openssl_basename,
+      'http://www.openssl.org/source/old/%s/%s.tar.gz' % (
+        openssl_version, openssl_basename),
+      'http://www.openssl.org/source/old/%s%s/%s.tar.gz' % (
+        openssl_version, openssl_release_tag, openssl_basename),
+    ],
+    openssl_tarball,
+    fingerprint = '96322138f0b69e61b7212bc53d5e912b')
+  openssl_headers = [
+    'include/openssl/aes.h',
+    'include/openssl/asn1.h',
+    'include/openssl/asn1_mac.h',
+    'include/openssl/asn1t.h',
+    'include/openssl/bio.h',
+    'include/openssl/blowfish.h',
+    'include/openssl/bn.h',
+    'include/openssl/buffer.h',
+    'include/openssl/camellia.h',
+    'include/openssl/cast.h',
+    'include/openssl/cmac.h',
+    'include/openssl/cms.h',
+    'include/openssl/comp.h',
+    'include/openssl/conf.h',
+    'include/openssl/conf_api.h',
+    'include/openssl/crypto.h',
+    'include/openssl/des.h',
+    'include/openssl/des_old.h',
+    'include/openssl/dh.h',
+    'include/openssl/dsa.h',
+    'include/openssl/dso.h',
+    'include/openssl/dtls1.h',
+    'include/openssl/e_os2.h',
+    'include/openssl/ebcdic.h',
+    'include/openssl/ec.h',
+    'include/openssl/ecdh.h',
+    'include/openssl/ecdsa.h',
+    'include/openssl/engine.h',
+    'include/openssl/err.h',
+    'include/openssl/evp.h',
+    'include/openssl/hmac.h',
+    'include/openssl/idea.h',
+    'include/openssl/krb5_asn.h',
+    'include/openssl/kssl.h',
+    'include/openssl/lhash.h',
+    'include/openssl/md4.h',
+    'include/openssl/md5.h',
+    'include/openssl/mdc2.h',
+    'include/openssl/modes.h',
+    'include/openssl/obj_mac.h',
+    'include/openssl/objects.h',
+    'include/openssl/ocsp.h',
+    'include/openssl/opensslconf.h',
+    'include/openssl/opensslv.h',
+    'include/openssl/ossl_typ.h',
+    'include/openssl/pem.h',
+    'include/openssl/pem2.h',
+    'include/openssl/pkcs12.h',
+    'include/openssl/pkcs7.h',
+    'include/openssl/pqueue.h',
+    'include/openssl/rand.h',
+    'include/openssl/rc2.h',
+    'include/openssl/rc4.h',
+    'include/openssl/ripemd.h',
+    'include/openssl/rsa.h',
+    'include/openssl/safestack.h',
+    'include/openssl/seed.h',
+    'include/openssl/sha.h',
+    'include/openssl/srp.h',
+    'include/openssl/srtp.h',
+    'include/openssl/ssl.h',
+    'include/openssl/ssl2.h',
+    'include/openssl/ssl23.h',
+    'include/openssl/ssl3.h',
+    'include/openssl/stack.h',
+    'include/openssl/symhacks.h',
+    'include/openssl/tls1.h',
+    'include/openssl/ts.h',
+    'include/openssl/txt_db.h',
+    'include/openssl/ui.h',
+    'include/openssl/ui_compat.h',
+    'include/openssl/whrlpool.h',
+    'include/openssl/x509.h',
+    'include/openssl/x509_vfy.h',
+    'include/openssl/x509v3.h',
+  ]
+  drake.TarballExtractor(
+    openssl_tarball,
+    targets = ['%s/Configure' % openssl_basename],
+    patch_dir = openssl_basename,
+  )
+  # This is not a configure from Autoconf.  However it is sufficiently
+  # alike so that our GNUBuilder can be used.
+  openssl_configure = drake.node(openssl_build / 'Configure')
+  from drake.cxx import DynLib, StaticLib
+  openssl_shared = True
+  openssl_env = {
+    'CC': ' '.join(cxx_toolkit.command_c + ['-w']),
+    'PERL': 'perl',
+  }
+  if cxx_toolkit.os in [drake.os.linux]:
+    openssl_lib_ssl = DynLib(openssl_prefix / 'lib/libssl.so.1.0.0')
+    openssl_lib_crypto = DynLib(openssl_prefix / 'lib/libcrypto.so.1.0.0')
+  elif cxx_toolkit.os is drake.os.macos:
+    openssl_lib_ssl = DynLib(openssl_prefix / 'lib/libssl.1.0.0.dylib')
+    openssl_lib_crypto = DynLib(openssl_prefix / 'lib/libcrypto.1.0.0.dylib')
+  elif cxx_toolkit.os in [drake.os.windows, drake.os.ios, drake.os.android]:
+    openssl_lib_ssl = StaticLib(openssl_prefix / 'lib/libssl.a')
+    openssl_lib_crypto = StaticLib(openssl_prefix / 'lib/libcrypto.a')
+    openssl_shared = False
+  openssl_libs = [openssl_lib_ssl, openssl_lib_crypto]
+  openssl_prefix_absolute = \
+    drake.path_build(openssl_prefix, absolute = True)
+  if cxx_toolkit.os is drake.os.linux:
+    if cxx_toolkit.architecture == drake.architecture.x86_64:
+      os_string = 'linux-x86_64'
+    elif cxx_toolkit.architecture == drake.architecture.x86:
+      os_string = 'linux-generic32'
+    elif cxx_toolkit.architecture == drake.architecture.arm:
+      os_string = 'linux-armv4'
+  elif cxx_toolkit.os is drake.os.android:
+    os_string = 'android'
+  elif windows:
+    os_string = 'mingw64'
+    del openssl_env['CC']
+    openssl_env['CROSS_COMPILE'] = '%s' % cxx_toolkit.prefix
+  elif cxx_toolkit.os is drake.os.macos:
+    os_string = 'darwin64-x86_64-cc'
+  elif cxx_toolkit.os is drake.os.ios:
+    os_string = 'iphoneos-cross'
+    openssl_env['CROSS_TOP'] = os.environ['CROSS_TOP']
+    openssl_env['CROSS_SDK'] = os.environ['CROSS_SDK']
+    crypto_arch_libs = []
+    ssl_arch_libs = []
+  if cxx_toolkit.os is drake.os.ios and archs:
+    for arch in archs:
+      openssl_env['CC'] = \
+        '%s -arch %s -mios-version-min=7.0' % (cxx_toolkit.c, arch)
+      openssl_arch_prefix = openssl_prefix / drake.Path('%s' % arch)
+      crypto_arch_lib = StaticLib(openssl_arch_prefix / 'lib/libcrypto.a')
+      crypto_arch_libs.append(crypto_arch_lib)
+      ssl_arch_lib = StaticLib(openssl_arch_prefix / 'lib/libssl.a')
+      ssl_arch_libs.append(ssl_arch_lib)
+      GNUBuilder(
+        cxx_toolkit,
+        configure = openssl_configure,
+        configure_interpreter = 'perl',
+        targets = [crypto_arch_lib, ssl_arch_lib],
+        configure_args = [
+          '--prefix=%s' % drake.path_build(openssl_arch_prefix, absolute = True),
+          openssl_shared and 'shared' or 'no-shared',
+          '-DPURIFY',
+          os_string,
+        ],
+        build_args = [
+        'build_libs', 'install', 'clean'
+        ],
+        additional_env = openssl_env,
+      )
+    FatLibraryGenerator(crypto_arch_libs, openssl_lib_crypto)
+    FatLibraryGenerator(ssl_arch_libs, openssl_lib_ssl,
+                        headers = openssl_headers,
+                        input_headers = openssl_build / 'include',
+                        output_headers = openssl_prefix)
+
+  else:
+    def build_ssl_libs(targets,
+                       sharing_model):
+      GNUBuilder(
+        cxx_toolkit,
+        configure = openssl_configure,
+        configure_interpreter = 'perl',
+        targets = targets,
+        configure_args = [
+          '--prefix=%s' % openssl_prefix_absolute,
+          sharing_model,
+          '-DPURIFY',
+          os_string,
+        ],
+        build_args = [
+          'all', 'install_sw',
+        ],
+        additional_env = openssl_env,
+      )
+    build_ssl_libs(
+      targets = chain(
+        openssl_libs,
+        (drake.node(openssl_prefix / p) for p in openssl_headers)),
+      sharing_model = openssl_shared and 'shared' or 'no-shared')
+    if build_openssl_eay and windows:
+      names = ['bin/libeay32.dll', 'bin/ssleay32.dll', 'lib/libssl.dll.a', 'lib/libcrypto.dll.a']
+      openssl_libs_eay = [DynLib(openssl_prefix / name) for name in names]
+      build_ssl_libs(targets = openssl_libs_eay,
+                     sharing_model = 'shared')
+      openssl_eay_rule = drake.Rule('openssl/eay')
+      openssl_eay_rule << openssl_libs_eay
+      openssl_rule << openssl_eay_rule
+  openssl_rule << openssl_libs
+  openssl_config = drake.cxx.Config()
+  openssl_config.add_local_include_path(openssl_prefix / 'include')
+
+  ## ---- ##
+  ## Curl ##
+  ## ---- ##
+
+  curl_basename = 'curl-7.51.0'
+  curl_tarball = drake.node('curl/%s.tar.gz' % curl_basename)
+  curl_prefix = drake.Path('curl')
+  curl_build = curl_prefix / curl_basename
+  curl_url = 'http://curl.haxx.se/download/%s.tar.gz' % curl_basename
+  drake.HTTPDownload(curl_url, curl_tarball,
+                     fingerprint = '490e19a8ccd1f4a244b50338a0eb9456')
+  drake.TarballExtractor(
+    curl_tarball,
+    targets = ['%s/%s' % (curl_basename, f) for f in (
+      'configure',
+    )],
+    patches = ((drake.node('.patches/curl.patch'),1),),
+    patch_dir = curl_basename,
+  )
+  curl_configure = drake.node(curl_build / 'configure')
+  from drake.cxx import DynLib, StaticLib
+  if cxx_toolkit.os is drake.os.linux:
+    curl_lib = DynLib(curl_prefix / 'lib/libcurl.so.4')
+  elif cxx_toolkit.os is drake.os.macos:
+    curl_lib = DynLib(curl_prefix / 'lib/libcurl.4.dylib')
+  elif cxx_toolkit.os in [drake.os.windows, drake.os.ios, drake.os.android]:
+    curl_lib = StaticLib(curl_prefix / 'lib/libcurl.a')
+  else:
+    raise Exception('Unknown OS')
+  curl_openssl_libs = drake.copy(openssl_libs, curl_prefix / 'lib',
+                                 strip_prefix = True)
+  curl_zlib_libs = drake.copy(zlib_libs, curl_prefix / 'lib',
+                              strip_prefix = True)
+  curl_configure_args = [
+    '--with-ssl=%s' % drake.path_build(openssl_prefix,
+                                       absolute = True),
+    '--with-zlib=%s' % drake.path_build(zlib_prefix,
+                                        absolute = True),
+    '--enable-hidden-symbols',
+    '--enable-optimize',
+    '--enable-warnings',
+    '--enable-threaded-resolver',
+    '--disable-ldap',
+    '--disable-ldaps',
+    '--disable-manual',
+    '--disable-rtmp',
+    '--disable-sspi',
+    '--disable-ssh',
+    '--disable-rtsp',
+    '--with-gssapi',
+    '--without-libidn',
+  ]
+  if cxx_toolkit.os is not drake.os.ios:
+    curl_configure_args.append(
+      '--prefix=%s' % drake.path_build(curl_prefix, absolute = True))
+  if isinstance(curl_lib, StaticLib):
+    curl_configure_args.extend([
+      '--disable-shared',
+      '--enable-static',
+    ])
+  else:
+    curl_configure_args.extend([
+      '--enable-shared',
+      '--disable-static',
+    ])
+  # if cxx_toolkit.os is drake.os.linux:
+  #   # So curl links its curl binary with the right SSL.
+  #   curl_configure_args.append(
+  #     'LDFLAGS=-Wl,-rpath-link,%s -ldl' % (openssl_prefix / 'lib'))
+  curl_env = {
+    'CC': ' '.join(cxx_toolkit.command_c),
+    'CFLAGS': '-w',
+    # Be sure to control pkg-config, otherwise, because curl's
+    # configure.ac checks pkg-config *before* --with-zlib, we might
+    # end up using the system's copy instead ours.
+    'PKG_CONFIG_PATH': str(drake.path_build(zlib_prefix, absolute = True) / 'lib' / 'pkgconfig'),
+  }
+  if cxx_toolkit.architecture is drake.architecture.arm:
+    curl_configure_args.append('--host=%s' % cxx_toolkit.cxx[:-4])
+  else:
+    curl_configure_args.append('--host=%s' % drake.host())
+  if cxx_toolkit.os is drake.os.macos:
+    path = drake.path_build(zlib_prefix, absolute = True) / 'lib'
+    curl_configure_args.append('DYLD_FALLBACK_LIBRARY_PATH=%s' % path)
+  elif windows:
+    curl_env['LIBS'] = '-lcrypt32 -lgdi32'
+    curl_configure_args.append('--build=%s' % cxx_toolkit.prefix[:-1])
+  elif cxx_toolkit.os is drake.os.ios:
+    curl_configure_args.append('--with-sysroot=%s' % os.environ['SDKROOT'])
+  elif cxx_toolkit.os is drake.os.android:
+    # configure is making a runtime library availability check
+    curl_env['LD_LIBRARY_PATH'] = \
+      str(drake.path_build(curl_prefix / 'lib', absolute = True))
+  curl_dependency_libs = curl_openssl_libs + curl_zlib_libs
+  curl_headers = [
+    'include/curl/typecheck-gcc.h',
+    'include/curl/stdcheaders.h',
+    'include/curl/easy.h',
+    'include/curl/mprintf.h',
+    'include/curl/curl.h',
+    'include/curl/curlver.h',
+    'include/curl/multi.h',
+    'include/curl/curlrules.h'
+  ]
+  if cxx_toolkit.os is drake.os.ios and archs:
+    curl_arch_libs = []
+    for arch in archs:
+      curl_configure_arch_args = list(curl_configure_args)
+      curl_arch_prefix = curl_prefix / drake.Path('%s' % arch)
+      curl_env['CC'] += ' -arch %s -mios-version-min=7.0' % (arch)
+      arch_str = 'aarch64' if arch is 'arm64' else arch
+      curl_configure_arch_args.append('--host=%s-apple-darwin' % arch_str)
+      curl_configure_arch_args.append(
+        '--prefix=%s' % drake.path_build(curl_arch_prefix, absolute = True))
+      curl_arch_lib = StaticLib(curl_arch_prefix / 'lib/libcurl.a')
+      curl_arch_libs.append(curl_arch_lib)
+      GNUBuilder(
+        cxx_toolkit,
+        configure = curl_configure,
+        working_directory = drake.path_build(curl_build),
+        targets = [curl_arch_lib],
+        configure_args = curl_configure_arch_args,
+        sources = curl_dependency_libs + [curl_configure],
+        build_args = ['all', 'install', 'distclean'],
+        additional_env = curl_env,
+      )
+    FatLibraryGenerator(curl_arch_libs, curl_lib,
+                        headers = curl_headers,
+                        input_headers = curl_prefix / ('%s/include' % archs[0]),
+                        output_headers = curl_prefix)
+  else:
+    GNUBuilder(
+      cxx_toolkit,
+      configure = curl_configure,
+      working_directory = drake.path_build(curl_build),
+      targets = [curl_lib] +
+        drake.nodes(*(curl_prefix / path for path in
+                      curl_headers)),
+      configure_args = curl_configure_args,
+      sources = curl_dependency_libs + [curl_configure],
+      build_args = ['all', 'install',],
+      additional_env = curl_env,
+    )
+  for lib in curl_dependency_libs:
+    curl_lib.dependency_add(lib)
+  curl_config = drake.cxx.Config()
+  curl_config.add_local_include_path(curl_prefix / 'include')
+  if windows:
+    curl_config.define('CURL_STATICLIB', '1')
+  drake.Rule('curl') << curl_lib
+
+  ## ---------- ##
+  ## LibArchive ##
+  ## ---------- ##
+
+  libarchive_version = '3.2.2'
+  libarchive_basename = 'libarchive-%s' % libarchive_version
+  libarchive_tarball = \
+    drake.node('libarchive/%s.tar.gz' % libarchive_basename)
+  libarchive_prefix = drake.Path('libarchive')
+  libarchive_build = libarchive_prefix / libarchive_basename
+  libarchive_configure = drake.node(libarchive_build / 'configure')
+  libarchive_url = \
+    'http://libarchive.org/downloads/%s.tar.gz' % libarchive_basename
+  drake.HTTPDownload(
+    libarchive_url,
+    libarchive_tarball,
+    fingerprint = '1ec00b7dcaf969dd2a5712f85f23c764',
+  )
+  libarchive_patches = ()
+  if cxx_toolkit.os is drake.os.android:
+      libarchive_patches = ((drake.node('.patches/libarchive_android.patch'), 0),)
+  drake.TarballExtractor(
+    libarchive_tarball,
+    targets = ['libarchive-%s/configure' % libarchive_version],
+    patches = libarchive_patches
+  )
+  libarchive_openssl_libs = \
+    drake.copy(openssl_libs, libarchive_prefix / 'lib',
+               strip_prefix = True)
+  libarchive_zlib_libs = \
+    drake.copy(zlib_libs, libarchive_prefix / 'lib',
+               strip_prefix = True)
+  libarchive_dependency_libs = \
+    libarchive_openssl_libs + libarchive_zlib_libs
+  libarchive_env = {}
+  libarchive_configure_args = [
+    '--disable-acl',
+    '--disable-xattr',
+    'CPPFLAGS=-I%s/include -I%s/include' % (openssl_prefix_absolute,
+                                            zlib_prefix_absolute),
+    'CFLAGS=-w', # No warnings.
+    'LDFLAGS=-L%s/lib -L%s/lib' % (openssl_prefix_absolute,
+                                   zlib_prefix_absolute),
+    '--without-bz2lib',
+    '--without-expat',
+    '--without-lzma',
+    '--without-lzo2',
+    '--without-nettle',
+    '--without-xml2',
+  ]
+  if windows:
+    libarchive_lib = drake.cxx.StaticLib(libarchive_prefix / 'lib/libarchive.a')
+    bsdcpio = drake.cxx.Executable('libarchive/bin/bsdcpio.exe')
+    bsdtar = drake.cxx.Executable('libarchive/bin/bsdtar.exe')
+    libarchive_configure_args += ['--disable-shared']
+    libarchive_configure_args += ['--host=%s' % cxx_toolkit.prefix[:-1]]
+  elif cxx_toolkit.os is drake.os.ios:
+    bsdcpio = drake.cxx.Executable('libarchive/bin/bsdcpio')
+    bsdtar = drake.cxx.Executable('libarchive/bin/bsdtar')
+    libarchive_lib = drake.cxx.StaticLib(libarchive_prefix / 'lib/libarchive.a')
+  elif cxx_toolkit.os is drake.os.android:
+    bsdcpio = drake.cxx.Executable('libarchive/bin/bsdcpio')
+    bsdtar = drake.cxx.Executable('libarchive/bin/bsdtar')
+    libarchive_lib = drake.cxx.StaticLib(libarchive_prefix / 'lib/libarchive.a')
+  else:
+    bsdcpio = drake.cxx.Executable('libarchive/bin/bsdcpio')
+    bsdtar = drake.cxx.Executable('libarchive/bin/bsdtar')
+    libarchive_preload = ':'.join(str(drake.path_root() / n.path())
+                                  for n in libarchive_dependency_libs)
+    if cxx_toolkit.os is drake.os.macos:
+      libarchive_lib = 'lib/libarchive.13.dylib'
+      libarchive_configure_args.append('DYLD_INSERT_LIBRARIES=%s' %
+                                       libarchive_preload)
+    elif cxx_toolkit.os is drake.os.linux:
+      libarchive_lib = 'lib/libarchive.so.13'
+      libarchive_env = {'LD_PRELOAD': libarchive_preload}
+    libarchive_lib = drake.cxx.DynLib(libarchive_prefix / libarchive_lib)
+  if cxx_toolkit.architecture is drake.architecture.arm:
+    libarchive_configure_args += ['--host=%s' % cxx_toolkit.cxx[:-4]]
+
+  libarchive_prefix_absolute = drake.path_build(libarchive_prefix,
+                                                absolute = True)
+  if cxx_toolkit.os is not drake.os.ios:
+    libarchive_configure_args.append('--prefix=%s' % libarchive_prefix_absolute)
+  libarchive_headers = [
+    'include/archive.h',
+    'include/archive_entry.h',
+  ]
+  if cxx_toolkit.os is drake.os.ios:
+    libarchive_arch_libs = []
+    for arch in archs:
+      libarchive_arch_prefix = libarchive_prefix / drake.Path('%s' % arch)
+      libarchive_arch_configure_args = list(libarchive_configure_args)
+      libarchive_arch_configure_args += [
+        '--host=%s-apple-darwin' % 'armv7',#xxx% arch,
+        '--prefix=%s' % drake.path_build(libarchive_arch_prefix, absolute = True)
+      ]
+      libarchive_env.update({
+        'CC': '%s -arch %s -mios-version-min=7.0' % (cxx_toolkit.c, arch),
+        'CFLAGS': '-isysroot %s' % os.environ['SDKROOT'],
+      })
+      libarchive_arch_lib = \
+        drake.cxx.StaticLib(libarchive_arch_prefix / 'lib/libarchive.a')
+      libarchive_arch_libs.append(libarchive_arch_lib)
+      GNUBuilder(
+        cxx_toolkit,
+        configure = libarchive_configure,
+        configure_args = libarchive_arch_configure_args,
+        additional_env = libarchive_env,
+        working_directory = drake.path_build(libarchive_build),
+        targets = [libarchive_arch_lib,],
+        sources = [libarchive_configure] + libarchive_dependency_libs,
+        build_args = ['all', 'install', 'clean'],
+      )
+    FatLibraryGenerator(libarchive_arch_libs, libarchive_lib,
+                        headers = libarchive_headers,
+                        input_headers = libarchive_prefix / ('%s/include' % archs[0]),
+                        output_headers = libarchive_prefix)
+  else:
+    libarchive_env.update({
+      'CC': ' '.join(cxx_toolkit.command_c),
+    })
+    GNUBuilder(
+      cxx_toolkit,
+      configure = libarchive_configure,
+      configure_args = libarchive_configure_args,
+      additional_env = libarchive_env,
+      working_directory = drake.path_build(libarchive_build),
+      targets = chain([
+        libarchive_lib,
+        bsdcpio,
+        bsdtar,
+      ],
+      (drake.node(libarchive_prefix / p)
+            for p in libarchive_headers)),
+      sources = [libarchive_configure] + libarchive_dependency_libs,
+    )
+  for lib in libarchive_dependency_libs:
+    libarchive_lib.dependency_add(lib)
+  libarchive_config = drake.cxx.Config()
+  libarchive_config.add_local_include_path(libarchive_prefix / 'include')
+  drake.Rule('libarchive') << libarchive_lib
+
+  ## ----- ##
+  ## Boost ##
+  ## ----- ##
+
+  boost_static = cxx_toolkit.os in [drake.os.ios]
+  boost_version = drake.Version(1, 67, 0)
+  if boost is not None:
+    boost = drake.cxx.boost.Boost(
+      cxx_toolkit = cxx_toolkit,
+      prefix = boost,
+      version_effective = boost_version,
+      prefer_shared = not boost_static,
+    )
+  else:
+    boost_basename = 'boost_%s' % str(boost_version).replace('.', '_')
+    boost_tarball = drake.node('boost/%s.tar.gz' % boost_basename)
+    boost_prefix = drake.Path('boost')
+    boost_prefix_abs = drake.Path(os.getcwd()) / drake.path_build() / boost_prefix
+    boost_host = \
+      'https://dl.bintray.com/boostorg/release/1.67.0/source/'
+    boost_url = '%s/%s.tar.gz' % (boost_host, boost_basename)
+    drake.HTTPDownload(
+      boost_url,
+      boost_tarball,
+      fingerprint = '4850fceb3f2222ee011d4f3ea304d2cb',
+    )
+    boost_patches = [
+      (drake.Node('.patches/boost_asio_ssl.patch'), 1),
+      (drake.Node('.patches/boost_optional.patch'), 1),
+      (drake.Node('.patches/boost_warnings.patch'), 1),
+    ]
+    boost_locale_enabled = cxx_toolkit.os in [drake.os.windows]
+    boost_attributes = {}
+    exec(open(str(drake.path_source('boost.py')), 'r').read(),
+         boost_attributes)
+    boost_patched_sources = boost_attributes['patched_sources']
+    if cxx_toolkit.os is drake.os.macos:
+      boost_patched_sources += [
+        'boostcpp.jam', # boost_build_osx.patch
+      ]
+      boost_patches += [
+        (drake.Node('.patches/boost_build_osx.patch'), 1),
+      ]
+    drake.TarballExtractor(
+      boost_tarball,
+      targets = ['%s/%s' % (boost_basename, f)
+        for f in boost_patched_sources + ['bootstrap.sh']
+      ],
+      patches = boost_patches,
+      patch_dir = boost_basename,
+    )
+    boost_bootstrap = drake.node('boost/%s/bootstrap.sh' % boost_basename)
+    boost_prefix = 'boost/%s' % boost_version
+    boost_prefix_abs = drake.path_root() / drake.path_build(boost_prefix)
+    boost_built_libraries = [
+      'atomic',
+      'chrono',
+      'context',
+      'date_time',
+      'filesystem',
+      'program_options',
+      'regex',
+      'signals',
+      'system',
+      ('test', 'unit_test_framework'),
+      ('thread',
+       'thread_win32' if windows else 'thread'),
+      'timer',
+    ]
+    boost_bootstrap_libraries, boost_library_names = ([
+      l[i] if isinstance(l, tuple) else l
+      for l in boost_built_libraries]
+      for i in (0, 1))
+    if python3 is not None and not windows:
+      boost_bootstrap_libraries.append('python')
+    if boost_locale_enabled:
+      boost_bootstrap_libraries.append('locale')
+    boost_bootstrap_command = [
+      './bootstrap.sh',
+      '--prefix=%s' % boost_prefix_abs,
+      '--with-libraries=%s' % ','.join(boost_bootstrap_libraries),
+      '--without-icu',
+    ]
+    if python3 is not None and not windows:
+      boost_bootstrap_command.append('--with-python=%s' % python_version)
+    boost_bjam = drake.node('boost/%s/b2' % boost_basename)
+    if python3 is not None and not windows:
+      boost_library_names.append('python{}{}'.format(python3.version.major, python3.version.minor))
+    if boost_locale_enabled:
+      boost_library_names.append('locale')
+    if cxx_toolkit.os is drake.os.macos:
+      boost_static_format = '%s/lib/libboost_%s.a'
+      boost_dynamic_format = '%s/lib/libboost_%s.dylib'
+      boost_dynamic_versioned_format = \
+        '%%s/lib/libboost_%%s-%s_%s.dylib' % \
+        (boost_version.major, boost_version.minor)
+    elif windows:
+      if boost_static:
+        boost_static_format = '%s/lib/libboost_%s-mt-s.a'
+        boost_dynamic_format = None
+        boost_dynamic_versioned_format = None
+      else:
+        boost_static_format = '%s/lib/libboost_%s-mt.dll.a'
+        boost_dynamic_format = '%s/lib/libboost_%s-mt.dll'
+        boost_dynamic_versioned_format = None
+    elif cxx_toolkit.os is drake.os.ios:
+      boost_static_format = '%s/lib/libboost_%s-mt-s.a'
+      boost_dynamic_format = None
+      boost_dynamic_versioned_format = None
+    else:
+      boost_static_format = '%s/lib/libboost_%s.a'
+      boost_dynamic_format = '%s/lib/libboost_%s.so'
+      boost_dynamic_versioned_format = \
+        '%%s/lib/libboost_%%s.so.%s' % boost_version
+    if boost_static:
+      boost_fmt = ((drake.cxx.StaticLib, boost_static_format),)
+    else:
+      boost_fmt = ((drake.cxx.DynLib, boost_dynamic_format),
+           (drake.cxx.DynLib, boost_dynamic_versioned_format))
+    boost_libraries = (
+      [t(fmt % (boost_prefix, name))
+       for t, fmt in boost_fmt
+       if fmt is not None]
+      for name in boost_library_names)
+    boost_libraries = list(chain(*boost_libraries))
+
+    class BoostUserConfigGenerator(drake.Builder):
+
+      def __init__(self, destination, cxx_toolkit):
+        self.__toolkit = cxx_toolkit
+        self.__user_config = destination
+        # Depend on boost_bootstrap because the configuration is in
+        # the tarball extraction path and would be erased if
+        # extraction occurs after.
+        super().__init__([boost_bootstrap], [self.__user_config])
+
+      def execute(self):
+        self.output('Generate %s' % self.__user_config,
+                    'Generate Boost user configuration')
+        with open(str(self.__user_config.path()), 'w') as f:
+          params = self.params
+          params['linkflags'] = ' '.join(
+            '<linkflags>%s' % f for f in params['linkflags'])
+          print(self.format % params, file = f)
+        return True
+
+      @property
+      def user_config(self):
+        return self.__user_config
+
+      @property
+      def format(self):
+        res = '''\
+using %(compiler)s : : %(cxx)s : %(linkflags)s ;
+'''
+        if python3 is not None:
+          res += '''\
+using python : %(python_version)s : %(python_prefix)s/%(python_bin)s : %(python_prefix)s/%(python_include)s : %(python_prefix)s/lib %(extra)s;
+'''
+        return res
+
+      @property
+      def params(self):
+        cxx = ' '.join(self.__toolkit.command_cxx)
+        linkflags = []
+        if windows:
+          extra = ': <target-os>windows '
+          linkflags = ['-static-libgcc', '-Wl,-Bstatic', '-lstdc++', '-lpthread', '-Wl,-Bdynamic']
+        elif cxx_toolkit.os is drake.os.ios:
+          boost_arch_str = ''
+          for arch in archs:
+            boost_arch_str += '-arch %s ' % arch
+          cxx = '%s %s -fvisibility=hidden -fvisibility-inlines-hidden' % (cxx, boost_arch_str)
+          cxx += '\n: <striper> <root>%s' % os.environ['CROSS_TOP']
+          cxx += '\n: <architecture>arm <target-os>iphone'
+          extra = ''
+        else:
+          extra = ''
+        if cxx_toolkit.os is drake.os.macos:
+          if cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+            compiler = 'clang'
+          else:
+            compiler = 'darwin'
+        elif cxx_toolkit.os is drake.os.ios:
+          compiler = 'darwin'
+        else:
+          compiler = 'gcc'
+        res = {
+          'compiler': compiler,
+          'cxx': cxx,
+          'extra': extra,
+          'linkflags': linkflags,
+        }
+        if python3 is not None:
+          res.update({
+            'python_bin': python_bin,
+            'python_include': python3.include_dir,
+            'python_prefix': python3.prefix,
+            'python_version': python_version,
+          })
+        return res
+
+      def hash(self):
+        return self.format, self.params, self.__toolkit.cxx
+
+    boost_user_config = BoostUserConfigGenerator(
+      drake.node('boost/%s/user-config.jam' % boost_basename),
+      cxx_toolkit).user_config
+
+    drake.ShellCommand(
+      sources = [boost_bootstrap, boost_user_config],
+      targets = [boost_bjam],
+      command = boost_bootstrap_command,
+      pretty = 'Bootstrap boost',
+      cwd = drake.path_build('boost/%s' % boost_basename))
+
+    class BoostBuilder(drake.Builder):
+
+      def __init__(self, sources, targets):
+        self.__targets = targets
+        self.__cwd = drake.path_build('boost/%s' % boost_basename)
+        super().__init__(srcs = sources, dsts = targets)
+        if cxx_toolkit.os is drake.os.macos:
+          if cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+            toolset = 'clang'
+          else:
+            toolset = 'darwin'
+        elif cxx_toolkit.os is drake.os.ios:
+          toolset = 'darwin'
+        elif windows:
+          toolset = 'gcc-mingw'
+        else:
+          toolset = 'gcc'
+        self.__command = [
+          './b2', '-q', 'install', '--ignore-site-config',
+          'toolset=%s' % toolset,
+          '--disable-icu',
+          '--user-config=user-config.jam',
+        ]
+        for opt in ['link', 'runtime-link']:
+          self.__command.append('{}={}'.format(opt, 'static' if boost_static else 'shared'))
+        if windows:
+          self.__command += [
+            'target-os=windows',
+            'threading=multi,single',
+            'threadapi=win32',
+            'abi=ms',
+            'binary-format=pe',
+            '--layout=tagged',
+            '--prefix=%s' % boost_prefix_abs,
+            '-sBUILD=<define>BOOST_USE_WINDOWS_H=1',
+            'cxxflags=-std=c++11 -include cmath -DBOOST_USE_WINDOWS_H -DBOOST_LEXICAL_CAST_ASSUME_C_LOCALE',
+            'linkflags=-std=c++11',
+          ]
+        elif cxx_toolkit.os is drake.os.macos and \
+            cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+          self.__command += [
+            'cxxflags=-stdlib=libc++ -std=c++11 -mmacosx-version-min={}'
+            .format(MACOSX_DEPLOYMENT_TARGET),
+            'linkflags=-stdlib=libc++ -std=c++11',
+            '--layout=infinit_osx',
+          ]
+        elif cxx_toolkit.os is drake.os.ios:
+          self.__command += [
+            'cxxflags=-stdlib=libc++ -std=c++11',
+            'linkflags=-stdlib=libc++ -std=c++11',
+            'toolset=darwin',
+            '--layout=tagged',
+            '--prefix=%s' % boost_prefix_abs,
+            'target-os=iphone',
+            'architecture=arm',
+            'define=_LITTLE_ENDIAN',
+            'macosx-version=iphone-8.0',
+            'abi=aapcs',
+          ]
+        elif cxx_toolkit.os is drake.os.android or cxx_toolkit.architecture == drake.architecture.arm:
+          self.__command += [
+            'cxxflags=-std=c++11',
+            'linkflags=-std=c++11',
+            'abi=aapcs',
+          ]
+        else:
+          self.__command += [
+            'cxxflags=-std=c++11',
+            'linkflags=-std=c++11',
+          ]
+
+      def execute(self):
+        # FIXME: Code duplication with PatchAndInstall.
+        with drake.CWDPrinter(
+            drake.path_build('.', absolute = True) / self.__cwd):
+          if not self.cmd('Build Boost',
+                          self.__command,
+                          self.__cwd):
+            return False
+        if cxx_toolkit.os is drake.os.macos:
+          for target in self.__targets:
+            if isinstance(target, drake.cxx.DynLib):
+              cmd = ['install_name_tool',
+                     '-id', '@rpath/%s' % target.name().basename(),
+                      str(target.path())]
+              if not self.cmd('Fix id of %s' % target.path(), cmd):
+                return False
+              if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.clang:
+                # Use our libc++.
+                cmd = ['install_name_tool',
+                       '-change', '/usr/lib/libc++.1.dylib',
+                       '@rpath/libc++.1.dylib',
+                       str(target)]
+                if not self.cmd('Use our libc++ for %s' % target, cmd):
+                  return False
+              for dep in (t for t in self.__targets if isinstance(t, drake.cxx.DynLib)):
+                cmd = [
+                  'install_name_tool',
+                  '-change',
+                  '%s' % dep.name().basename(),
+                  '@rpath/%s' % dep.name().basename(),
+                  str(target.path()),
+                ]
+                if not self.cmd('Fix %s path for %s' % (target, dep), cmd):
+                  return False
+        return True
+
+      def hash(self):
+        return self.__command
+    boost_patched_sources = [
+      drake.node('boost/%s/%s' % (boost_basename, f))
+        for f in boost_attributes['patched_sources']
+    ]
+    boost_headers_ = [
+      drake.node('boost/%s/%s' % (boost_version, n))
+        for n in boost_attributes['headers']
+    ]
+    BoostBuilder(
+      sources = [boost_bjam, boost_user_config] + boost_patched_sources,
+      targets = boost_libraries + boost_headers_)
+    if windows and python3:
+      python_version_tuple = \
+        (python3.prefix, python_version.major, python_version.minor)
+      python_dll = drake.node('%s/python%s%s.dll' % python_version_tuple)
+      boost_fs = drake.node('boost/lib/libboost_python3-mt-s.a')
+      boost_fs.dependency_add(python_dll)
+    boost = drake.cxx.boost.Boost(
+      cxx_toolkit = cxx_toolkit,
+      prefix = boost_prefix,
+      version_effective = boost_version,
+      prefer_shared = not boost_static,
+    )
+    boost_rule = drake.Rule('boost')
+    boost_rule << boost_headers_
+    boost_rule << boost_libraries
+    # Fix ::hypot issues on windows.
+  #if windows and python3:
+  #  boost.config_python(static = True).flag('-include')
+  #  boost.config_python(static = True).flag('cmath')
+  set_boost(boost)
+
+  ## ------------- ##
+  ##    LDAP       ##
+  ## ------------- ##
+  ldap_config = None
+  ldap_libs = None
+  if not windows and cxx_toolkit.architecture is not drake.architecture.arm:
+    ldap_version = drake.Version(2, 4, 44)
+    ldap_basename = 'openldap-%s' % ldap_version
+    ldap_url = 'http://www.openldap.org/software/download/OpenLDAP/openldap-release/%s.tgz' % ldap_basename
+    #ldap_url = 'ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/%s.tgz' % ldap_basename
+    ldap_tarball = drake.node('openldap/%s.tgz' % ldap_basename)
+    ldap_configure = drake.node('openldap/%s/configure' % ldap_basename)
+    ldap_prefix = drake.Path('openldap')
+    ldap_targets = [
+      drake.node(ldap_prefix / p) for p in [
+        'lib/liblber.a',
+        'lib/libldap_r.a',
+        'bin/ldapsearch',
+        'include/ldap.h',
+      ]]
+    # ldap_prefix_absolute = drake.path_root() / ldap_prefix
+    drake.HTTPDownload(ldap_url, ldap_tarball,
+                       fingerprint='693ac26de86231f8dcae2b4e9d768e51')
+    drake.TarballExtractor(ldap_tarball, targets = ['%s/configure' % ldap_basename])
+    GNUBuilder(
+      cxx_toolkit,
+      configure = ldap_configure,
+      configure_args = [
+        '--prefix=%s' % drake.path_build(ldap_prefix, absolute = True),
+        '--without-cyrus-sasl',
+        '--disable-spasswd',
+        '--disable-slapd',
+        '--disable-shared',
+        'CC={}'.format(drake.command_flatten(cxx_toolkit_host.command_c)),
+        'CXX={}'.format(drake.command_flatten(cxx_toolkit_host.command_cxx)),
+        'CXXFLAGS=-fPIC -w',
+        'CFLAGS=-fPIC -w',
+        'CPPFLAGS=-I%s/include' % drake.path_build(openssl_prefix, absolute = True),
+        ],
+      build_args = ['install', 'SOELIM=echo'],
+      targets = ldap_targets,
+      sources = [drake.node(openssl_prefix / p) for p in openssl_headers],
+    )
+    ldap_libs = drake.nodes(
+        '%s/lib/libldap_r.a' % ldap_prefix,
+        '%s/lib/liblber.a' % ldap_prefix,
+        )
+    ldap_config = drake.cxx.Config(cxx_config)
+    ldap_config.add_local_include_path(ldap_prefix / 'include')
+    drake.Rule('openldap') << ldap_targets
+
+  ## ------------- ##
+  ## Configuration ##
+  ## ------------- ##
+
+  cxx_config = drake.cxx.Config(cxx_config)
+  if cxx_toolkit.os == drake.os.linux:
+    config.define('ELLE_LINUX')
+    cxx_config.define('ELLE_LINUX')
+  elif cxx_toolkit.os == drake.os.android:
+    config.define('ELLE_ANDROID')
+    cxx_config.define('ELLE_ANDROID')
+  elif cxx_toolkit.os == drake.os.macos:
+    config.define('ELLE_MACOS')
+    cxx_config.define('ELLE_MACOS')
+  elif cxx_toolkit.os == drake.os.windows:
+    config.define('ELLE_WINDOWS')
+    cxx_config.define('ELLE_WINDOWS')
+    cxx_config.define('BOOST_USE_WINDOWS_H')
+    cxx_config.define('WIN32_LEAN_AND_MEAN')
+    cxx_config.lib('dbghelp')
+    cxx_config.lib('shlwapi')
+    cxx_config.lib('ws2_32')
+    cxx_config.lib('gdi32')
+    cxx_config.lib('mswsock')
+    cxx_config.lib('iphlpapi')
+    cxx_config.lib('crypt32')
+  elif cxx_toolkit.os is drake.os.ios:
+    config.define('ELLE_IOS')
+    cxx_config.define('ELLE_IOS')
+  cxx_config.export_dynamic = True
+  cxx_config.warnings.parentheses = False
+  cxx_config.warnings.empty_body = False
+  # Clang/GCC disagree on std::hash struct versus class.
+  cxx_config.warnings.mismatched_tags = False
+  # GCC 6 warns of misleading indentation on all "if (...) {} else" macros
+  # (e.g. ELLE_LOG_LEVEL).
+  cxx_config.warnings.misleading_indentation = False
+  Warnings = drake.cxx.Config.Warnings
+  cxx_config.warnings.missing_declarations = Warnings.Error
+  cxx_config.warnings.return_type = Warnings.Error
+  cxx_config.warnings.delete_virtual_dtor = Warnings.Error
+
+  # XXX.
+  sources = drake.nodes(
+    'src/bitset',
+    'src/chrono',
+    'src/deque',
+    'src/iosfwd',
+    'src/iostream',
+    'src/list',
+    'src/map',
+    'src/memory',
+    'src/set',
+    'src/stdlib.h',
+    'src/string',
+    'src/tuple',
+    'src/type_traits',
+    'src/unordered_map',
+    'src/unordered_set',
+    'src/utility',
+    'src/vector',
+    type = drake.cxx.Header
+  )
+
+  ## -------------- ##
+  ## Subdirectories ##
+  ## -------------- ##
+
+  elle = drake.include(
+    'src/elle',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    zlib_config = zlib_config,
+    zlib_lib = zlib_lib,
+    libarchive_config = libarchive_config,
+    libarchive_lib = libarchive_lib,
+    boost = boost,
+    python3 = python3,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+    ldap_libs = ldap_libs,
+    ldap_config = ldap_config,
+    openssl_lib_crypto = openssl_lib_crypto,
+    openssl_lib_ssl = openssl_lib_ssl,
+  )
+  cryptography = drake.include(
+    'src/elle/cryptography',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    openssl_config = openssl_config,
+    openssl_lib_crypto = openssl_lib_crypto,
+    openssl_lib_ssl = openssl_lib_ssl,
+    enable_rotation = enable_cryptographic_rotation,
+    boost = boost,
+    elle = elle,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+    python = python3,
+    # XXX: Fix the python binding on Windows.
+    build_python_module = cryptography_python and not windows,
+  )
+  das = drake.include(
+    'src/elle/das',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    elle = elle,
+    boost = boost,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+  reactor = drake.include(
+    'src/elle/reactor',
+    zlib_config = zlib_config,
+    zlib_lib = zlib_lib,
+    curl_config = curl_config,
+    curl_lib = curl_lib,
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    boost = boost,
+    openssl_config = openssl_config,
+    openssl_lib_crypto = openssl_lib_crypto,
+    openssl_lib_ssl = openssl_lib_ssl,
+    python3 = python3,
+    elle = elle,
+    das = das,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+    archs = archs,
+    fuse = fuse,
+    codesign = codesign,
+  )
+  athena = drake.include(
+    'src/elle/athena',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    elle = elle,
+    das = das,
+    reactor = reactor,
+    cryptography = cryptography,
+    boost = boost,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+  dropbox = drake.include(
+    'src/elle/service/dropbox',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    elle = elle,
+    das = das,
+    reactor = reactor,
+    boost = boost,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+  protocol = drake.include(
+    'src/elle/protocol',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    boost = boost,
+    cryptography = cryptography,
+    elle = elle,
+    reactor = reactor,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+  aws = drake.include(
+    'src/elle/service/aws',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    boost = boost,
+    cryptography = cryptography,
+    elle = elle,
+    reactor = reactor,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+  nbd = drake.include(
+    'nbd',
+    cxx_toolkit = cxx_toolkit,
+    cxx_config = cxx_config,
+    boost = boost,
+    elle = elle,
+    reactor = reactor,
+    prefix = prefix,
+    valgrind = valgrind,
+    valgrind_tests = valgrind_tests,
+  )
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  config += cryptography.config
+  config += elle.config
+  config += protocol.config
+  config += reactor.config
+  config += aws.config
+
+  submodules = [
+    athena,
+    aws,
+    cryptography,
+    das,
+    elle,
+    nbd,
+    protocol,
+    reactor,
+  ]
+
+  def recurse(rule, attr):
+    for m in submodules:
+      r = getattr(m, attr)
+      if r is not None:
+        rule << r
+
+  rule_build = drake.Rule('build')
+  recurse(rule_build, 'rule_build')
+
+  global rule_tests
+  rule_tests = drake.Rule('tests')
+  recurse(rule_tests, 'rule_tests')
+
+  global rule_check
+  rule_check = drake.Rule('check')
+  recurse(rule_check, 'rule_check')
+
+  if prefix:
+    rule_install = drake.Rule('install')
+    recurse(rule_install, 'rule_install')
+
+  rule_examples = drake.Rule('examples')
+  recurse(rule_examples, 'rule_examples')
+
+  class Tar(drake.Builder):
+
+    def __init__(self, sources, tarball, strip = None):
+      super().__init__(srcs = sources,
+                       dsts = [tarball])
+      self.__strip = strip
+
+    @property
+    def tarball(self):
+      return self.targets()[0]
+
+    def execute(self):
+      self.output('Tar %s' % self.tarball)
+      try:
+        os.remove(str(self.tarball))
+      except FileNotFoundError:
+        pass
+      import tarfile
+      with tarfile.TarFile(str(self.tarball), mode = 'w') as tar:
+        for source, node in self.sources().items():
+          dest = source
+          if self.__strip:
+            dest = source.without_prefix(self.__strip)
+          tar.add(str(node.path()),
+                  arcname = str(dest))
+      return True
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  def headers():
+    yield from (node for node in sources
+                if isinstance(node, drake.cxx.Header))
+
+  def recurse_headers():
+    for m in submodules:
+      yield from getattr(m, 'headers', ())
+
+  def boost_headers():
+    yield from (node for node in boost_headers_
+                if isinstance(node, drake.cxx.Header))
+
+  def symlink_versionned_libs(node):
+    import copy
+    import re
+    for dep in copy.copy(node.dependencies):
+      if isinstance(dep, drake.cxx.DynLib):
+        if re.compile(".*\.so\..+").match(str(dep.path())):
+          yield from [
+            drake.Symlink(dep.path().with_extension('so'), dep, relative = True)
+          ]
+      yield from symlink_versionned_libs(dep)
+
+  def install(prefix, recurse = False):
+    prefix = drake.Path(prefix)
+    yield from drake.install(
+      headers(), prefix / 'include', strip_prefix = True)
+    yield from drake.install(
+      recurse_headers(), prefix / 'include', strip_prefix = 'src')
+    yield from drake.install(
+      boost_headers(), prefix / 'include',
+      strip_prefix = 'boost/%s/include' % boost_version)
+    if recurse:
+      for m in submodules:
+        lib = getattr(m, 'library', None)
+        if lib:
+          libs = [lib] + list(filter(
+            lambda lib: not isinstance(lib, drake.cxx.StaticLib),
+            lib.dependencies_recursive))
+          libs += list(chain(*map(symlink_versionned_libs, libs)))
+          yield from drake.install(
+            libs,
+            prefix / 'lib',
+            strip_prefix = True,
+            follow_symlinks = False)
+
+  if prefix:
+    rule_install << install(prefix)
+
+  elle_tarball = drake.Node('elle.tar.gz')
+  tarball_prefix = 'tarball'
+  Tar(sources = install(tarball_prefix, recurse = True),
+      tarball = elle_tarball,
+      strip = tarball_prefix)
+
+  ## -------- ##
+  ## Examples ##
+  ## -------- ##
+
+  example_config = drake.cxx.Config(cxx_config)
+  example_config += das.config + elle.config + reactor.config + \
+                    cryptography.config
+  if not boost.prefer_shared:
+    example_config += boost.config_system(static = True)
+  else:
+    example_config.library_add(boost.system_dynamic)
+    example_config.library_add(boost.thread_dynamic)
+    example_config.library_add(boost.filesystem_dynamic)
+  examples = [
+    'samples/http_get_signed_json',
+    'samples/get_wikipedia',
+    'demo/google_maps',
+  ]
+  for example in examples:
+    rule_examples << drake.cxx.Executable(
+      'examples/%s' % example,
+      [
+        drake.node('examples/%s.cc' % example),
+        elle.library, reactor.library, cryptography.library
+      ],
+      cxx_toolkit, example_config)
+  examples = drake.nodes(
+    *[
+      'examples/%s.cc' % x for x in
+      list(chain(examples, elle.examples,
+                 [x[0] for x in cryptography.examples], das.examples))
+    ])
+
+  with drake.templating.Context(content = {
+      'prefix': '/usr/elle',
+  }):
+    drake.nodes(
+      'examples/drakefile.tmpl',
+      'examples/Makefile.tmpl',
+      'examples/CMakeLists.txt.tmpl',
+    )
+  examples += drake.nodes(
+    'examples/drakefile',
+    'examples/Makefile',
+    'examples/CMakeLists.txt',
+    'examples/example.key'
+  )
+  examples_tarball = drake.Node('examples.tar.gz')
+  Tar(sources = examples,
+      tarball = examples_tarball)
+  rule_examples << examples_tarball
+
+  ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  # Elle image.
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'elle', drake.git.Git().description()
+  )
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu:zesty',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': drake.git.Git().description(),
+    })
+  docker_file.run('apt-get update && '
+                  'apt-get install -y '
+                  'g++ python3 python3-pip git virtualenv fuse cmake')
+  docker_file.run('apt-get clean')
+  docker_file.run('git clone https://github.com/infinit/drake.git '
+                  '/opt/drake --recursive')
+  docker_file.env('PYTHONPATH', '/opt/drake/src:$PYTHONPATH')
+  docker_file.run('ln -s /opt/drake/src/bin/drake /bin/drake')
+  docker_file.run('pip3 install -r /opt/drake/requirements.txt')
+  docker_file.add(
+    drake.copy(elle_tarball, docker_path, strip_prefix = True),
+    '/usr/elle')
+  docker_file.add(
+    drake.copy(examples_tarball, docker_path, strip_prefix = True),
+    '/home/root')
+  docker_file.workdir('/home/root/build')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:

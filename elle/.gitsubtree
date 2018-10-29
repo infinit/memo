@@ -1,0 +1,27 @@
+[cpp-netlib/uri]
+	path = src/elle/reactor/modules/cpp-netlib/uri
+	url = https://github.com/cpp-netlib/uri
+[date]
+	path = src/elle/date
+	url = https://github.com/HowardHinnant/date.git
+[dokan]
+	path = src/elle/reactor/modules/dokany
+        url = https://github.com/dokan-dev/dokany
+[dopenssl]
+	path = src/elle/cryptography/modules/dopenssl
+	url = https://github.com/infinit/dopenssl
+[drake]
+	path = drake
+	url = git@gitlab.gruntech.org:mefyl/drake
+[json-spirit]
+	path = src/elle/json/modules/json-spirit
+	url = https://github.com/infinitdotio/json-spirit
+[libutp]
+	path = src/elle/reactor/modules/libutp
+	url = https://github.com/bittorrent/libutp
+[miniupnp]
+	path = src/elle/reactor/modules/miniupnp
+	url = https://github.com/miniupnp/miniupnp
+[osxfuse]
+	path = src/elle/reactor/modules/osxfuse
+        url = https://github.com/osxfuse/osxfuse

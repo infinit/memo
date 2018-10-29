@@ -1,0 +1,209 @@
+#include <openssl/engine.h>
+#include <openssl/crypto.h>
+#include <openssl/dh.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+
+#include <elle/log.hh>
+#include <elle/serialization/binary.hh>
+
+#include <elle/cryptography/Error.hh>
+#include <elle/cryptography/bn.hh>
+#include <elle/cryptography/cryptography.hh>
+#include <elle/cryptography/dh/KeyPair.hh>
+#include <elle/cryptography/dh/PrivateKey.hh>
+#include <elle/cryptography/dh/PublicKey.hh>
+#include <elle/cryptography/dh/low.hh>
+#include <elle/cryptography/finally.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/raw.hh>
+
+namespace elle
+{
+  namespace cryptography
+  {
+    namespace dh
+    {
+      /*-------------.
+      | Construction |
+      `-------------*/
+
+      PrivateKey::PrivateKey(::EVP_PKEY* key):
+        _key(key)
+      {
+        ELLE_ASSERT(key);
+        ELLE_ASSERT(key->pkey.dh->pub_key);
+        ELLE_ASSERT(key->pkey.dh->priv_key);
+
+        // Make sure the cryptographic system is set up.
+        cryptography::require();
+
+        this->_check();
+      }
+
+      PrivateKey::PrivateKey(::DH* dh)
+      {
+        ELLE_ASSERT(dh);
+        ELLE_ASSERT(dh->pub_key);
+        ELLE_ASSERT(dh->priv_key);
+
+        // Make sure the cryptographic system is set up.
+        cryptography::require();
+
+        if (::EVP_PKEY_type(this->_key->type) != EVP_PKEY_DH)
+          throw Error(
+            elle::sprintf("the EVP_PKEY key is not of type DH: %s",
+                          ::EVP_PKEY_type(this->_key->type)));
+
+        // Construct the private key based on the given DH structure.
+        this->_construct(dh);
+
+        this->_check();
+      }
+
+      PrivateKey::PrivateKey(PrivateKey const& other)
+      {
+        ELLE_ASSERT(other._key->pkey.dh->pub_key);
+        ELLE_ASSERT(other._key->pkey.dh->priv_key);
+
+        // Make sure the cryptographic system is set up.
+        cryptography::require();
+
+        // Duplicate the DH structure.
+        DH* _dh = low::DH_dup(other._key->pkey.dh);
+
+        ELLE_CRYPTOGRAPHY_FINALLY_ACTION_FREE_DH(_dh);
+
+        this->_construct(_dh);
+
+        ELLE_CRYPTOGRAPHY_FINALLY_ABORT(_dh);
+
+        this->_check();
+      }
+
+      PrivateKey::PrivateKey(PrivateKey&& other):
+        _key(std::move(other._key))
+      {
+        // Make sure the cryptographic system is set up.
+        cryptography::require();
+
+        this->_check();
+      }
+
+      /*--------.
+      | Methods |
+      `--------*/
+
+      void
+      PrivateKey::_construct(::DH* dh)
+      {
+        ELLE_ASSERT(dh);
+
+        // Initialise the private key structure.
+        ELLE_ASSERT_EQ(this->_key, nullptr);
+        this->_key.reset(::EVP_PKEY_new());
+
+        if (this->_key == nullptr)
+          throw Error(
+            elle::sprintf("unable to allocate the EVP_PKEY structure: %s",
+                          ::ERR_error_string(ERR_get_error(), nullptr)));
+
+        // Set the dh structure into the private key.
+        if (::EVP_PKEY_assign_DH(this->_key.get(), dh) <= 0)
+          throw Error(
+            elle::sprintf("unable to assign the DH key to the EVP_PKEY "
+                          "structure: %s",
+                          ::ERR_error_string(ERR_get_error(), nullptr)));
+      }
+
+      void
+      PrivateKey::_check() const
+      {
+        ELLE_ASSERT(this->_key);
+        ELLE_ASSERT(this->_key->pkey.dh);
+        ELLE_ASSERT(this->_key->pkey.dh->pub_key);
+        ELLE_ASSERT(this->_key->pkey.dh->priv_key);
+      }
+
+      SecretKey
+      PrivateKey::agree(PublicKey const& peer_K) const
+      {
+        return (raw::asymmetric::agree(this->_key.get(),
+                                       peer_K.key().get()));
+      }
+
+      uint32_t
+      PrivateKey::size() const
+      {
+        return (static_cast<uint32_t>(
+                  ::EVP_PKEY_size(this->_key.get())));
+      }
+
+      uint32_t
+      PrivateKey::length() const
+      {
+        return (static_cast<uint32_t>(
+                  ::EVP_PKEY_bits(this->_key.get())));
+      }
+
+      /*----------.
+      | Operators |
+      `----------*/
+
+      bool
+      PrivateKey::operator ==(PrivateKey const& other) const
+      {
+        if (this == &other)
+          return (true);
+
+        ELLE_ASSERT(this->_key);
+        ELLE_ASSERT(other._key);
+
+        // Compare the public components because it is sufficient to
+        // uniquely distinguish keys.
+        return (::EVP_PKEY_cmp(this->_key.get(), other._key.get()) == 1);
+      }
+
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      PrivateKey::print(std::ostream& stream) const
+      {
+        ELLE_ASSERT(this->_key);
+        ELLE_ASSERT(this->_key->pkey.dh);
+        ELLE_ASSERT(this->_key->pkey.dh->pub_key);
+        ELLE_ASSERT(this->_key->pkey.dh->priv_key);
+
+        stream << "("
+               << *this->_key->pkey.dh->pub_key
+               << ", "
+               << *this->_key->pkey.dh->priv_key
+               << ")";
+      }
+    }
+  }
+}
+
+namespace std
+{
+  size_t
+  hash<elle::cryptography::dh::PrivateKey>::operator()(
+    elle::cryptography::dh::PrivateKey const& value) const
+  {
+    std::stringstream stream;
+    {
+      elle::serialization::binary::SerializerOut output(stream);
+
+      // Note that this is not a great way to represent a key but OpenSSL
+      // does not provide DH-specific DER functions while Diffie Hellman keys
+      // are not exactly supposed to be serialized since used for one-time
+      // key exchanges.
+      ELLE_ASSERT(value.key()->pkey.dh->priv_key != nullptr);
+      output.serialize("value", value.key()->pkey.dh->priv_key);
+    }
+
+    return std::hash<std::string>()(stream.str());
+  }
+}

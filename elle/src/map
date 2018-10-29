@@ -1,0 +1,56 @@
+#pragma once
+
+// Keep those dependencies to the strict minimum, this header is often injected
+// very high.
+
+#include <ostream>
+#include_next <map>
+#include <vector>
+
+#include <elle/printf-fwd.hh>
+
+namespace std
+{
+  template <typename... Args>
+  std::ostream&
+  operator <<(ostream& out,
+              map<Args...> const& s)
+  {
+    auto const format = is_fixed(out) ? "%s%f: %f" : "%s%s: %s";
+    out << '{';
+      auto* sep = "";
+    for (auto const& e: s)
+    {
+      elle::fprintf(out, format, sep, e.first, e.second);
+      sep = ", ";
+    }
+    out << '}';
+    return out;
+  }
+
+  template <typename... Args, typename E>
+  bool
+  contains(map<Args...> const& map, E const& e)
+  {
+    return map.find(e) != map.end();
+  }
+}
+
+namespace elle
+{
+  template <typename K, typename... Args>
+  auto
+  keys(std::map<K, Args...> const& m)
+    -> std::vector<K>
+  {
+    auto res = std::vector<K>();
+    res.reserve(m.size());
+    for (auto const& e: m)
+      res.emplace_back(e.first);
+    return res;
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

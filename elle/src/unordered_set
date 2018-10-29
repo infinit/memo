@@ -1,0 +1,35 @@
+#pragma once
+
+#include <ostream>
+#include_next <unordered_set>
+#include <elle/printf-fwd.hh>
+
+namespace std
+{
+  template <typename... Args>
+  ostream&
+  operator <<(ostream& out, unordered_set<Args...> const& s)
+  {
+    auto const format = is_fixed(out) ? "%s%f" : "%s%s";
+    out << '{';
+    auto* sep = "";
+    for (auto const& e: s)
+    {
+      elle::fprintf(out, format, sep, e);
+      sep = ", ";
+    }
+    out << '}';
+    return out;
+  }
+
+  template <typename T, typename... Args>
+  bool
+  contains(std::unordered_set<Args...> const& set, T const& e)
+  {
+    return set.find(e) != set.end();
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

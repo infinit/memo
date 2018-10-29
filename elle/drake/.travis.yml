@@ -1,0 +1,9 @@
+language: python
+python:
+  - "3.4"
+install:
+  - "pip install -r requirements.txt"
+  - "git config --global user.email mefyl@gruntech.org"
+  - "git config --global user.name mefyl"
+script:
+  - cd _build && ./drake //check

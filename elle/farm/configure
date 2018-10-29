@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+
+import os
+import os.path
+import shutil
+import subprocess
+import stat
+import sys
+import platform
+
+def find_python3():
+  for minor in range(19, 0, -1):
+    for dir in ['/usr/local',
+                # From MacPorts.
+                '/opt/local/Library',
+                # From Brew.
+                '/usr/local/Cellar/python3/3.5.1',
+                '/usr/local/Cellar/python3/3.6.0']:
+      p = '{}/Frameworks/Python.framework/Versions/3.{}'.format(dir, minor)
+      if os.path.isdir(p):
+        return p
+
+def parse_options():
+  import argparse
+  parser = argparse.ArgumentParser(description = 'Create drake configuration file')
+  opt = parser.add_argument
+  opt('--arch', metavar = 'ARCHITECTURE', type = str, required = True,
+      help = 'CPU architecture (x86_64, i386)')
+  opt('--os', metavar = 'OPERATING_SYSTEM', type = str, required = True,
+      help = 'Target operating system')
+  opt('--compiler', metavar = 'COMPILER', help = 'Host compiler',
+      type = str, required = True)
+  opt('--project', metavar = 'PROJECT', help = 'Project name (case insensitive)',
+      type = str, required = True)
+  opt('--public-beyond', metavar = 'PUBLIC_BEYOND',
+      help = 'Strip all credentials from beyond',
+      type = bool, default = False)
+  for d in ['build', 'install', 'source']:
+    opt('--%s-dir' % d,
+        metavar = '%s_DIR' % d.upper(),
+        help = '%s directory' % d.capitalize(),
+        type = str, required = True)
+  return parser.parse_args()
+
+options = parse_options()
+
+template = '''\
+#!/usr/bin/env python3
+
+import os
+import os.path
+import sys
+
+project = %(project)r
+os_ = %(os)r
+source_dir = %(source_dir)r
+install_dir = %(install_dir)r
+go_path = %(go_path)r
+
+# Add drake in the Python path.
+sys.path.insert(0, source_dir + '/drake/src')
+
+import drake
+import drake.cxx
+import drake.cxx.boost
+import drake.go
+
+os.environ.update(%(environ)r)
+
+cxx_toolkit = drake.cxx.GccToolkit(
+  compiler = %(compiler)r, compiler_wrappers = %(compiler_wrappers)r)
+cxx_config = drake.cxx.Config()
+cxx_config.enable_debug_symbols()
+cxx_config.enable_optimization(True)
+# Needed on macOS?
+# cxx_config.warnings.overloaded_virtual = False
+if cxx_toolkit.os == drake.os.macos:
+  cxx_config.use_local_libcxx = True
+
+for f in %(flags)r:
+  cxx_config.flag(f)
+
+extra_args = {}
+
+if os_ == 'alpine':
+  # inhibit major and minor macros
+  cxx_config.define('_SYS_SYSMACROS_H')
+
+if os_ == 'alpine' and project in ['filesystem', 'memo']:
+  extra_args['enable_crash_report'] = False
+
+if %(arch)r == 'arm':
+  cxx_toolkit_host =  drake.cxx.GccToolkit()
+  extra_args['cxx_toolkit_host'] = cxx_toolkit_host
+
+if %(beyond_public)r and project in ['filesystem', 'memo']:
+  extra_args['beyond_public'] = True
+
+if project == 'elle':
+  extra_args['enable_cryptographic_rotation'] = False
+
+if os_ == 'windows':
+  cxx_config.define('ELLE_TEST_NO_MEMFRY=1')
+
+if project in ['filesystem', 'memo']:
+  if os_ == 'windows':
+    go_toolkit = drake.go.Toolkit(os = 'windows',
+                                  arch = 'amd64',
+                                  path = go_path,
+                                  cxx_toolkit = cxx_toolkit)
+  else:
+    go_toolkit = drake.go.Toolkit(path = go_path,
+                                  cxx_toolkit = cxx_toolkit)
+  go_config = drake.go.Config()
+  extra_args['go_toolkit'] = go_toolkit
+  extra_args['go_config'] = go_config
+
+with drake.Drake(source_dir) as d:
+  python = %(python)r
+  import drake.valgrind
+  valgrind = %(valgrind)r
+  valgrind_tests = %(valgrind)r
+
+  def drake_run(codesign = False):
+    d.run(cxx_toolkit,
+          cxx_config = cxx_config,
+          python3 = python,
+          valgrind = valgrind,
+          valgrind_tests = valgrind_tests,
+          production_build = %(production_build)r,
+          prefix = install_dir,
+          codesign = codesign,
+          **extra_args)
+
+  if cxx_toolkit.os == drake.os.macos and os.environ.get('MACMINI_KEYCHAIN_PASSWORD', None):
+    with open(%(drake_utils)r, 'r') as f:
+      exec(f.read(), globals(), globals())
+    keychain_path = os.path.expanduser('~/AppSign.keychain')
+    with Keychain(keychain_path, os.environ['MACMINI_KEYCHAIN_PASSWORD']):
+      drake_run(codesign = True)
+  else:
+    drake_run()
+'''
+
+if options.os in ['macosx', 'macosx64', 'osx']:
+  options.os = 'macos'
+
+parameters = {
+  'compiler': None,
+  'compiler_wrappers': [],
+  'environ': {},
+  'flags': (),
+  'boost': None,
+  'boost_shared': True,
+  'python': None,
+  'valgrind': False,
+  'production_build': True,
+  'arch': options.arch,
+  'os': options.os,
+  'drake_utils': '%s/../drake-utils.py' % os.path.dirname(__file__),
+  'project': options.project.lower(),
+  'go_path': '%s/go-dependencies' % options.build_dir,
+  'source_dir': options.source_dir,
+  'install_dir': options.install_dir,
+}
+
+parameters['beyond_public'] = options.public_beyond
+if options.os == 'alpine':
+  parameters['environ'] = {'LC_ALL': 'C'}
+elif options.os == 'android':
+  parameters['compiler'] = '/root/arm-linux-androideabi-4.8/bin/arm-linux-androideabi-g++'
+  parameters['python'] = False
+  parameters['valgrind'] = False
+elif options.os == 'centos6':
+  pass
+elif options.os == 'jessie':
+  pass
+elif options.os in ['trusty', 'xenial']:
+  parameters['compiler_wrappers'] = ['ccache']
+  parameters['valgrind'] = True
+elif options.os == 'macos':
+  parameters['compiler'] = 'clang++'
+  parameters['environ'] = {'MACOSX_DEPLOYMENT_TARGET': '10.7'}
+  parameters['flags'] = ('-ftemplate-depth=512', '-stdlib=libc++')
+  parameters['python'] = find_python3()
+elif options.os == 'windows':
+  parameters['compiler'] = '%s-w64-mingw32-g++' % options.arch
+  parameters['flags'] = ('-gstabs',)
+  parameters['boost_shared'] = False
+  if options.arch == 'x86_64': # Use native python3 in order to run tests
+    parameters['python'] = None # '/home/buildslave/local/python-mingw-64'
+  else:
+    parameters['python'] = None # '/home/buildslave/local/python-mingw-32'
+else:
+  raise Exception('invalid OS: %s' % options.os)
+
+os.makedirs(options.build_dir, exist_ok = True)
+os.makedirs(options.install_dir, exist_ok = True)
+
+tmp = '%s/.drake.tmp' % options.build_dir
+with open(tmp, 'w') as drake:
+  content = template % parameters
+  print(content, file = drake)
+drake = '%s/drake' % options.build_dir
+subprocess.call(['diff', '-u', drake if os.path.isfile(drake) else '/dev/null', tmp])
+shutil.move(tmp, drake)
+# chmod +x
+os.chmod(drake, os.stat(drake).st_mode | stat.S_IEXEC)

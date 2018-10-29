@@ -1,0 +1,14 @@
+#pragma once
+
+#include_next <iosfwd>
+
+namespace std
+{
+  template <typename charT, typename traits>
+  bool
+  is_fixed(basic_ostream<charT, traits> const& o);
+}
+
+// Local Variables:
+// mode: c++
+// End:

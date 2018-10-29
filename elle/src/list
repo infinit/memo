@@ -1,0 +1,32 @@
+#pragma once
+
+#include <ostream>
+#include_next <list>
+#include <elle/printf-fwd.hh>
+
+namespace std
+{
+  template <class V, class ... Args>
+  ostream&
+  operator <<(ostream& out, list<V, Args...> const& v)
+  {
+    elle::fprintf(out, "[");
+    bool first = true;
+    for (V const& elt: v)
+    {
+      if (first)
+      {
+        first = false;
+        elle::fprintf(out, "%s", elt);
+      }
+      else
+        elle::fprintf(out, ", %s", elt);
+    }
+    elle::fprintf(out, "]");
+    return out;
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

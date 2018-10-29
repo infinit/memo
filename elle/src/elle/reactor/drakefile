@@ -1,0 +1,999 @@
+import drake
+import drake.cxx
+import drake.cxx.boost
+import drake.templating
+import sys
+import os
+from itertools import chain
+
+config = None
+lib_static = None
+lib_dynamic = None
+library = None
+headers = None
+examples = None
+python_lib = None
+dokan_lib = None
+cxx_lib = None
+connectivity = None
+fnetusermount_binaries = None
+library_coroutine = None
+
+rule_build = None
+rule_check = None
+rule_install = None
+rule_tests = None
+rule_examples = None
+
+with open(str(drake.path_source('../../../drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
+def configure(curl_config,
+              curl_lib,
+              zlib_config,
+              zlib_lib,
+              cxx_toolkit,
+              cxx_config,
+              boost,
+              openssl_config,
+              openssl_lib_crypto,
+              openssl_lib_ssl,
+              python3 = None,
+              elle = None,
+              das = None,
+              prefix = '/usr',
+              valgrind = None,
+              valgrind_tests = False,
+              archs = [],
+              fuse = None,
+              codesign = False,
+):
+
+  global config, lib_static, lib_dynamic, library, cxx_lib
+  global rule_build, rule_install, rule_examples
+  global python_lib, dokan_lib
+  global connectivity, fnetusermount_binaries
+  global examples
+
+  if cxx_toolkit.os is drake.os.macos:
+    global osxfuse_package
+
+  # Public C++ configuration
+  config = drake.cxx.Config()
+  config.standard = drake.cxx.Config.cxx_14
+  lib_path = '../../../lib'
+  config.lib_path(lib_path)
+
+  # Das
+  das = das or drake.include('../das')
+  config += das.config
+
+  # Local C++ configuration
+  cxx_toolkit = cxx_toolkit or drake.cxx.Toolkit()
+  local_cxx_config = drake.cxx.Config(cxx_config)
+
+  local_cxx_config += config
+  local_cxx_config.lib_path_runtime('.')
+  local_cxx_config.enable_debug_symbols()
+
+  class Backends(drake.enumeration.Enumerated,
+                 values = ['boost', 'io', 'threads']):
+    pass
+
+  if cxx_toolkit.os in [drake.os.windows]:
+    backend = Backends.io
+  else:
+    backend = Backends.boost
+
+  # Libcxabi through llvm
+  if cxx_toolkit.os in [drake.os.macos, drake.os.ios] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+    build_libcxxabi = drake.Rule("libcxxabi")
+    llvm_url = 'http://llvm.org/releases/3.5.1/llvm-3.5.1.src.tar.xz'
+    libcxx_url = 'http://llvm.org/releases/3.5.1/libcxx-3.5.1.src.tar.xz'
+    libcxxabi_url = 'http://llvm.org/releases/3.5.1/libcxxabi-3.5.1.src.tar.xz'
+    llvm_tarball = drake.node('llvm/llvm-3.5.1.src.tar.xz')
+    libcxx_tarball = drake.node('llvm/libcxx-3.5.1.src.tar.xz')
+    libcxxabi_tarball = drake.node('llvm/libcxxabi-3.5.1.src.tar.xz')
+    drake.HTTPDownload(llvm_url , llvm_tarball,
+                       fingerprint='2d3d8004f38852aa679e5945b8ce0b14')
+    drake.HTTPDownload(libcxx_url , libcxx_tarball,
+                       fingerprint='406f09b1dab529f3f7879f4d548329d2')
+    drake.HTTPDownload(libcxxabi_url , libcxxabi_tarball,
+                       fingerprint='b22c707e8d474a99865ad3c521c3d464')
+    drake.TarballExtractor(
+      llvm_tarball,
+      targets = ['llvm-3.5.1.src/configure'],
+    )
+    drake.TarballExtractor(
+      libcxx_tarball,
+      targets = ['libcxx-3.5.1.src/CMakeLists.txt'],
+    )
+    # Patch CMakeLists.txt to more recent version for llvm detection
+    libcxxabi_patches = [(drake.node('patches/libcxxabi2.patch'),0)]
+    if cxx_toolkit.os in [drake.os.macos, drake.os.ios]: # pass --unused dyn_lookup to linker
+      libcxxabi_patches.append((drake.node('patches/libcxxabi.patch'),0))
+    drake.TarballExtractor(
+      libcxxabi_tarball,
+      targets = ['libcxxabi-3.5.1.src/CMakeLists.txt'],
+      patches = libcxxabi_patches,
+      patch_dir = 'libcxxabi-3.5.1.src'
+    )
+    #invoke cmake
+    if cxx_toolkit.os is drake.os.ios and archs:
+      libcxxabi_libs = []
+      libcxx_libs = []
+      for arch in archs:
+        build = 'build_%s' % arch
+        drake.ShellCommand(
+          drake.nodes('llvm/libcxxabi-3.5.1.src/CMakeLists.txt',
+            'llvm/llvm-3.5.1.src/configure',
+            'llvm/libcxx-3.5.1.src/CMakeLists.txt'
+            ),
+          drake.nodes('llvm/libcxxabi-3.5.1.src/'+build+'/CMakeCache.txt'),
+            [
+             'cmake', '..',
+             '-DCMAKE_CXX_COMPILER=clang++',
+             '-DCMAKE_C_COMPILER=clang',
+             '-DCMAKE_CXX_FLAGS=-arch %s -mios-version-min=7.1' % arch,
+             '-DCMAKE_C_FLAGS=-arch %s -mios-version-min=7.1' % arch,
+             '-DLLVM_PATH=%s' % (drake.path_build('llvm/llvm-3.5.1.src', True)),
+             '-DLLVM_ENABLE_LIBCXX=ON',
+             '-DLIBCXXABI_ENABLE_SHARED=OFF',
+             '-DLIBCXXABI_LIBCXX_PATH=%s' % (drake.path_build('llvm/libcxx-3.5.1.src', True))
+            ],
+            True,
+            drake.path_build('llvm/libcxxabi-3.5.1.src/' + build),
+        )
+        libcxxabi_lib = cxx_toolkit.libname_static(None,'llvm/libcxxabi-3.5.1.src/'+build+'/lib/c++abi')
+        libcxxabi_lib = drake.path_build(libcxxabi_lib, True)
+        libcxxabi_libs.append(drake.node(libcxxabi_lib))
+        #invoke make
+        drake.ShellCommand(
+          drake.nodes('llvm/libcxxabi-3.5.1.src/'+build+'/CMakeCache.txt'),
+          drake.nodes(libcxxabi_lib),
+          ['make'],
+          True,
+          drake.path_build('llvm/libcxxabi-3.5.1.src/' + build),
+          )
+        # Under ios we cannot link with our own dylib,
+        # So we can't override libc++.dylib as we do on macos.
+        # So build our own static libc++ so we can stop linking to the system
+        # one altogether
+        drake.ShellCommand(
+          drake.nodes('llvm/libcxx-3.5.1.src/CMakeLists.txt',
+            'llvm/llvm-3.5.1.src/configure',
+            'llvm/libcxx-3.5.1.src/CMakeLists.txt'
+            ),
+          drake.nodes('llvm/libcxx-3.5.1.src/'+build+'/CMakeCache.txt'),
+            [
+             'cmake', '..',
+             '-DCMAKE_CXX_COMPILER=clang++',
+             '-DCMAKE_C_COMPILER=clang',
+             '-DCMAKE_CXX_FLAGS=-arch %s -mios-version-min=7.1' % arch,
+             '-DCMAKE_C_FLAGS=-arch %s -mios-version-min=7.1' % arch,
+             '-DLLVM_PATH=%s' % (drake.path_build('llvm/llvm-3.5.1.src', True)),
+             '-DLLVM_ENABLE_LIBCXX=ON',
+             '-DLIBCXX_ENABLE_SHARED=OFF',
+             ],
+            True,
+            drake.path_build('llvm/libcxx-3.5.1.src/' + build),
+        )
+        libcxx_lib = cxx_toolkit.libname_static(None,'llvm/libcxx-3.5.1.src/'+build+'/lib/c++')
+        libcxx_lib = drake.path_build(libcxx_lib, True)
+        libcxx_libs.append(drake.node(libcxx_lib))
+        #make
+        drake.ShellCommand(
+          drake.nodes('llvm/libcxx-3.5.1.src/'+build+'/CMakeCache.txt'),
+          drake.nodes(libcxx_lib),
+          ['make'],
+          True,
+          drake.path_build('llvm/libcxx-3.5.1.src/' + build),
+          )
+      libcxxabi_lib = cxx_toolkit.libname_static(None, 'lib/c++abi')
+      libcxxabi_lib = drake.path_build(libcxxabi_lib, True)
+      FatLibraryGenerator(libcxxabi_libs, drake.node(libcxxabi_lib))
+      libcxx_lib = drake.path_build('lib/libc++.a', True)
+      FatLibraryGenerator(libcxx_libs, drake.node(libcxx_lib))
+      build_libcxxabi << drake.node(libcxxabi_lib)
+      build_libcxxabi << drake.node(libcxx_lib)
+    else:
+      drake.ShellCommand(
+        drake.nodes('llvm/libcxxabi-3.5.1.src/CMakeLists.txt',
+          'llvm/llvm-3.5.1.src/configure',
+          'llvm/libcxx-3.5.1.src/CMakeLists.txt'
+          ),
+        drake.nodes('llvm/libcxxabi-3.5.1.src/build/CMakeCache.txt'),
+        [
+         'cmake', '..',
+         '-DCMAKE_CXX_COMPILER=clang++',
+         '-DLLVM_PATH=%s' % (drake.path_build('llvm/llvm-3.5.1.src', True)),
+         '-DLLVM_ENABLE_LIBCXX=ON',
+         '-DLIBCXXABI_LIBCXX_PATH=%s' % (drake.path_build('llvm/libcxx-3.5.1.src', True))
+        ],
+        True,
+        drake.path_build('llvm/libcxxabi-3.5.1.src/build/'),
+        )
+      libcxxabi_lib = cxx_toolkit.libname_dyn('llvm/libcxxabi-3.5.1.src/build/lib/c++abi')
+      libcxxabi_lib = drake.path_build(libcxxabi_lib, True)
+      #invoke make
+      drake.ShellCommand(
+        drake.nodes('llvm/libcxxabi-3.5.1.src/build/CMakeCache.txt'),
+        drake.nodes(libcxxabi_lib),
+        ['make'],
+        True,
+        drake.path_build('llvm/libcxxabi-3.5.1.src/build/'),
+        )
+      build_libcxxabi << drake.nodes(libcxxabi_lib)
+
+
+  if cxx_toolkit.os in [drake.os.macos, drake.os.ios] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
+    # Every lib/bin links to /usr/lib/libc++.dylib, which itself refers /usr/lib/libc++abi.dylib.
+    # So we need to copy and patch libc++.dylib
+    def rpath_libcxx(tgt):
+      with drake.WritePermissions(drake.node(tgt)):
+        return drake.command([
+          'install_name_tool',
+          '-change', '/usr/lib/libc++abi.dylib', '@rpath/libc++abi.dylib',
+          '-id', '@rpath/libc++.1.dylib',
+          str(drake.path_build(tgt, True))
+        ])
+    def rpath_libcxxabi(tgt):
+      with drake.WritePermissions(drake.node(tgt)):
+        return drake.command(
+          ['install_name_tool',
+           '-id', '@rpath/libc++abi.dylib',
+           str(drake.path_build(tgt, True))
+          ])
+    lib_cxx = drake.copy(drake.node('/usr/lib/libc++.1.dylib'), lib_path,
+                         strip_prefix = True,
+                         post_process = rpath_libcxx)
+    lib_cxx_abi = drake.copy(drake.node(libcxxabi_lib), lib_path,
+                             strip_prefix = True,
+                             post_process = rpath_libcxxabi)
+    cxx_libs = [lib_cxx, lib_cxx_abi]
+    cxx_lib = lib_cxx
+  else:
+    cxx_libs = []
+    cxx_lib = None
+
+  # Boost
+  boost = boost or drake.cxx.boost.Boost()
+  local_cxx_config += boost.config()
+  def import_lib(l, cfg):
+    if boost.prefer_shared:
+      cfg += getattr(boost, 'config_%s' % l)(link = False, static = False)
+      cfg.library_add(
+        drake.copy(getattr(boost, '%s_dynamic' % l), lib_path,
+                   strip_prefix = True,
+                   post_process = set_local_libcxx(cxx_toolkit)))
+      return cfg
+    else:
+      cfg += getattr(boost, 'config_%s' % l)(link = True, static = True)
+      # cfg.library_add(getattr(boost, '%s_static' % l))
+      return cfg
+  if backend == Backends.boost:
+    local_cxx_config = import_lib('context', local_cxx_config)
+  local_cxx_config = import_lib('signals', local_cxx_config)
+  local_cxx_config = import_lib('system', local_cxx_config)
+  local_cxx_config = import_lib('thread', local_cxx_config)
+  if backend == Backends.io:
+    local_cxx_config.define('REACTOR_CORO_BACKEND_IO')
+  else:
+    local_cxx_config.define('REACTOR_CORO_BACKEND_BOOST_CONTEXT')
+
+  # FUSE
+  fuse_lib = None
+  dokan_lib = None
+  if fuse is None:
+    enable_fuse = True
+    fuse_includes = drake.nodes(
+      'fuse/include/fuse/cuse_lowlevel.h',
+      'fuse/include/fuse/fuse_common_compat.h',
+      'fuse/include/fuse/fuse_common.h',
+      'fuse/include/fuse/fuse_compat.h',
+      'fuse/include/fuse/fuse.h',
+      'fuse/include/fuse/fuse_lowlevel_compat.h',
+      'fuse/include/fuse/fuse_lowlevel.h',
+      'fuse/include/fuse/fuse_opt.h'
+    )
+    if cxx_toolkit.os is drake.os.linux:
+      fuse_version = '2.9.4'
+      fuse_version_us = fuse_version.replace(".", "_")
+      fuse_basename = 'fuse-%s' % fuse_version
+      fuse_url = \
+        'https://github.com/libfuse/libfuse/releases/download/' \
+        'fuse_%s/%s.tar.gz' % (fuse_version_us, fuse_basename)
+      fuse_tarball = \
+        drake.node('fuse/%s.tar.gz' % fuse_basename)
+      fuse_configure = \
+        drake.node('fuse/%s/configure' % fuse_basename)
+      fuse_prefix = drake.path_build('fuse')
+      fuse_prefix_absolute = drake.path_root() / fuse_prefix
+      fuse_lib =  drake.cxx.DynLib('fuse/lib/libfuse.so.2')
+      drake.HTTPDownload(fuse_url, fuse_tarball,
+                         fingerprint='ecb712b5ffc6dffd54f4a405c9b372d8')
+      drake.TarballExtractor(
+        fuse_tarball,
+        targets = ['%s/configure' % fuse_basename],
+        patches = [(drake.node('patches/fuse.patch'), 1),
+                   (drake.node('patches/fuse-fusermount-fallback.patch'), 1),
+        ],
+        patch_dir = fuse_basename
+      )
+      extra_args = []
+      if cxx_toolkit.architecture is drake.architecture.arm:
+        extra_args += ['--host', cxx_toolkit.cxx[:-4]]
+      GNUBuilder(
+        cxx_toolkit,
+        configure = fuse_configure,
+        configure_args = [
+        '--prefix=%s' % fuse_prefix_absolute,
+        'CXX=%s' % ' '.join(cxx_toolkit.command_cxx),
+        'CC=%s' % ' '.join(cxx_toolkit.command_c),
+        '--disable-util',
+        '--disable-example',
+        '--disable-static',
+        '--enable-shared'
+        ] + extra_args,
+        targets = [fuse_lib] + fuse_includes,
+      )
+      fuse_config = drake.cxx.Config()
+      fuse_config.add_local_include_path('fuse/include')
+      local_cxx_config += fuse_config
+      fuse_lib = drake.copy(fuse_lib, lib_path, strip_prefix = True)
+    elif cxx_toolkit.os is drake.os.macos:
+      osxfuse_version = drake.Version(3, 5, 4)
+      osxfuse_base_name = 'osxfuse-%s' % osxfuse_version
+      osxfuse_url = 'https://github.com/osxfuse/osxfuse/releases/download'\
+        '/%(name)s/%(name)s.dmg' % {'name': osxfuse_base_name}
+      osxfuse_dmg = drake.node('modules/osxfuse/%s.dmg' % osxfuse_base_name)
+      drake.HTTPDownload(
+        osxfuse_url,
+        osxfuse_dmg,
+        fingerprint = '084949b3d6256be32b6a6e83f78aa35a',
+      )
+      osxfuse_package = drake.node('modules/osxfuse/%s.pkg' % osxfuse_base_name)
+      fuse_includes = drake.copy(
+        fuse_includes, 'osxfuse/include/fuse', strip_prefix = True)
+      fuse_config = drake.cxx.Config()
+      fuse_config.add_local_include_path('modules/osxfuse/include')
+      local_cxx_config += fuse_config
+
+      class OSXFUSEExtractor(drake.Builder):
+        def __init__(self, version, dmg, target):
+          self.__version = version
+          self.__dmg = dmg
+          self.__destination = target
+          import tempfile
+          self.__mountpoint = tempfile.mkdtemp()
+          drake.Builder.__init__(self, [self.__dmg], [target])
+
+        def execute(self):
+          self.cmd('Mount DMG: %s' % self.__dmg,
+          [
+            'hdiutil', 'attach', '-noautoopen', '-nobrowse',
+            '-mountpoint', self.__mountpoint,
+            self.__dmg,
+          ])
+          self.cmd('Copy .pkg',
+          [
+            'cp',
+            '%s/Extras/FUSE for macOS %s.pkg' % \
+              (self.__mountpoint, self.__version),
+            self.__destination,
+          ])
+          self.cmd('Unmount DMG: %s' % self.__dmg,
+          [
+            'hdiutil', 'detach', self.__mountpoint,
+          ])
+          import shutil
+          shutil.rmtree(self.__mountpoint)
+          return True
+
+      OSXFUSEExtractor(osxfuse_version, osxfuse_dmg, osxfuse_package)
+      fuse_lib = drake.cxx.DynLib('/usr/local/lib/libosxfuse.2.dylib')
+
+  elif fuse:
+    enable_fuse = True
+    fuse_config = drake.cxx.Config()
+    fuse_config.add_local_include_path('%s/include/osxfuse' % fuse)
+    local_cxx_config += fuse_config
+    fuse_lib = drake.cxx.DynLib('%s/lib/libosxfuse.2.dylib' % fuse)
+  else:
+    enable_fuse = False
+
+
+  # Curl
+  local_cxx_config += curl_config
+  curl_lib = drake.copy(curl_lib, lib_path, strip_prefix = True)
+
+  # OpenSSL (for SSL sockets)
+  local_cxx_config += openssl_config
+  openssl_libs = drake.copy([openssl_lib_ssl, openssl_lib_crypto],
+                            lib_path, strip_prefix = True)
+
+
+  # Zlib
+  local_cxx_config += zlib_config
+  zlib_lib = drake.copy(zlib_lib, lib_path, strip_prefix = True)
+
+  # Elle
+  elle = elle or drake.include('../../../elle')
+  local_cxx_config += elle.config
+
+  # Beast
+  local_cxx_config.add_local_include_path('modules/Beast/include')
+
+  # cpp-netlib
+  local_cxx_config.add_local_include_path(
+    'modules/cpp-netlib/uri/include')
+
+  # elle_lib = drake.copy(elle.library, lib_path, strip_prefix = True, post_process = set_local_libcxx(cxx_toolkit))
+
+  # miniupnpc
+  miniupnp = drake.include('modules/miniupnp', cxx_toolkit, archs = archs)
+  miniupnpc = miniupnp.miniupnpc
+  local_cxx_config += miniupnpc.config
+  miniupnpc_lib = miniupnpc.library
+
+  # UTP
+  utp = drake.include('modules/libutp', cxx_toolkit, archs = archs)
+  utp_lib = utp.library
+
+  # Build
+  rule_build = drake.Rule('build')
+
+  sources = drake.nodes(
+    'BackgroundFuture.hh',
+    'BackgroundFuture.hxx',
+    'BackgroundOperation.hh',
+    'BackgroundOperation.hxx',
+    'Backoff.cc',
+    'Backoff.hh',
+    'Barrier.cc',
+    'Barrier.hh',
+    'Barrier.hxx',
+    'Channel.hh',
+    'Channel.hxx',
+    'FDStream.cc',
+    'FDStream.hh',
+    'Generator.cc',
+    'Generator.hh',
+    'Generator.hxx',
+    'MultiLockBarrier.cc',
+    'MultiLockBarrier.hh',
+    'Operation.cc',
+    'Operation.hh',
+    'OrWaitable.cc',
+    'OrWaitable.hh',
+    'Scope.cc',
+    'Scope.hh',
+    'Thread.cc',
+    'Thread.hh',
+    'Thread.hxx',
+    'TimeoutGuard.cc',
+    'TimeoutGuard.hh',
+    'Waitable.cc',
+    'Waitable.hh',
+    'Waitable.hxx',
+    'asio.hh',
+    'duration.hh',
+    'exception.cc',
+    'exception.hh',
+    'for-each.hh',
+    'for-each.hxx',
+    'fsm.hh',
+    'fsm/CatchTransition.cc',
+    'fsm/CatchTransition.hh',
+    'fsm/EndTransition.cc',
+    'fsm/EndTransition.hh',
+    'fsm/Machine.cc',
+    'fsm/Machine.hh',
+    'fsm/Machine.hxx',
+    'fsm/State.cc',
+    'fsm/State.hh',
+    'fsm/Transition.cc',
+    'fsm/Transition.hh',
+    'fsm/WaitableTransition.cc',
+    'fsm/WaitableTransition.hh',
+    'fsm/fwd.hh',
+    'fwd.hh',
+    'lockable.cc',
+    'lockable.hh',
+    'logger.cc',
+    'logger.hh',
+    'mutex.cc',
+    'mutex.hh',
+    'network/Error.cc',
+    'network/Error.hh',
+    'network/Protocol.cc',
+    'network/Protocol.hh',
+    'network/SSLHandshake.hh',
+    'network/SSLHandshake.hxx',
+    'network/SocketOperation.cc',
+    'network/SocketOperation.hh',
+    'network/SocketOperation.hxx',
+    'network/TCPServer.cc',
+    'network/TCPServer.hh',
+    'network/TCPSocket.cc',
+    'network/TCPSocket.hh',
+    'network/buffer.hh',
+    'network/exception.hh',
+    'network/fingerprinted-socket.cc',
+    'network/fingerprinted-socket.hh',
+    'network/fwd.hh',
+    'network/http-server.cc',
+    'network/http-server.hh',
+    'network/proxy.cc',
+    'network/proxy.hh',
+    'network/rdv-socket.cc',
+    'network/rdv-socket.hh',
+    'network/rdv.hh',
+    'network/resolve.cc',
+    'network/resolve.hh',
+    'network/server.cc',
+    'network/server.hh',
+    'network/socket.cc',
+    'network/socket.hh',
+    'network/socket.hxx',
+    'network/ssl-server.cc',
+    'network/ssl-server.hh',
+    'network/ssl-socket.cc',
+    'network/ssl-socket.hh',
+    'network/ssl-socket.hh',
+    'network/udp-socket.cc',
+    'network/udp-socket.hh',
+    'network/upnp.cc',
+    'network/upnp.hh',
+    'network/utp-server-impl.hh',
+    'network/utp-server.cc',
+    'network/utp-server.hh',
+    'network/utp-socket-impl.hh',
+    'network/utp-socket-impl.hh',
+    'network/utp-socket.cc',
+    'network/utp-socket.hh',
+    'rw-mutex.cc',
+    'rw-mutex.hh',
+    'scheduler.cc',
+    'scheduler.hh',
+    'scheduler.hxx',
+    'semaphore.cc',
+    'semaphore.hh',
+    'signal.cc',
+    'signal.hh',
+    'signal.hxx',
+    'signals.hh',
+    'sleep.cc',
+    'sleep.hh',
+    'storage.cc',
+    'storage.hh',
+    'storage.hxx',
+    'timer.cc',
+    'timer.hh',
+  )
+
+  if cxx_toolkit.os in [drake.os.linux, drake.os.macos]:
+    sources += drake.nodes(
+      'network/unix-domain-server.cc',
+      'network/unix-domain-server.hh',
+      'network/unix-domain-socket.cc',
+      'network/unix-domain-socket.hh',
+      'pthread.cc',
+      'pthread.hh',
+      )
+
+  sources += drake.nodes(
+    'filesystem.cc',
+    'filesystem.hh',
+    'filesystem_journal.cc',
+  )
+  if enable_fuse:
+    if cxx_toolkit.os in [drake.os.linux, drake.os.macos]:
+      sources += drake.nodes(
+        'filesystem_fuse.cc',
+        'fuse.cc',
+        'fuse.hh',
+      )
+    if cxx_toolkit.os is drake.os.macos:
+      local_cxx_config.add_system_include_path('/usr/local/include/osxfuse')
+    elif cxx_toolkit.os is drake.os.windows:
+      dokan = drake.include('modules/dokany', cxx_toolkit, cxx_config)
+      sources += drake.nodes(
+        'filesystem_dokanx.cc',
+        'fuse.hh',
+        )
+      local_cxx_config += dokan.config
+      dokan_lib = dokan.lib_dynamic
+  else:
+      sources += drake.nodes(
+        'filesystem_dummy.cc',
+      )
+
+  sources += drake.nodes(
+    'http/Client.cc',
+    'http/Client.hh',
+    'http/Client.hxx',
+    'http/EscapedString.cc',
+    'http/EscapedString.hh',
+    'http/Method.cc',
+    'http/Method.hh',
+    'http/Request.cc',
+    'http/Request.hh',
+    'http/Service.cc',
+    'http/Service.hh',
+    'http/StatusCode.cc',
+    'http/StatusCode.hh',
+    'http/Version.cc',
+    'http/Version.hh',
+    'http/WebSocket.cc',
+    'http/WebSocket.hh',
+    'http/exceptions.cc',
+    'http/exceptions.hh',
+    'http/fwd.hh',
+    'http/url.cc',
+    'http/url.hh',
+  )
+
+  # cpp-netlib
+  netlib_sources = drake.nodes(
+    'modules/cpp-netlib/uri/src/detail/uri_advance_parts.cpp',
+    'modules/cpp-netlib/uri/src/detail/uri_normalize.cpp',
+    'modules/cpp-netlib/uri/src/detail/uri_parse.cpp',
+    'modules/cpp-netlib/uri/src/detail/uri_parse_authority.cpp',
+    'modules/cpp-netlib/uri/src/detail/uri_resolve.cpp',
+    'modules/cpp-netlib/uri/src/uri.cpp',
+    'modules/cpp-netlib/uri/src/uri_builder.cpp',
+    'modules/cpp-netlib/uri/src/uri_errors.cpp',
+  )
+
+  connectivity_sources = drake.nodes(
+    'connectivity/connectivity.cc',
+    'connectivity/connectivity.hh',
+  )
+  sources += connectivity_sources
+
+  if cxx_toolkit.os in [drake.os.ios, drake.os.macos]:
+    sources += drake.nodes(
+      'network/reachability.cc',
+      'network/reachability.hh',
+    )
+
+  lib_cxx_config = drake.cxx.Config(local_cxx_config)
+
+  backend_sources = drake.nodes(
+    'backend/backend.cc',
+    'backend/backend.hh',
+    'backend/fwd.hh',
+  )
+  backend_lib = drake.cxx.StaticLib(
+    lib_path + '/elle_reactor_backend',
+    backend_sources,
+    cxx_toolkit,
+    lib_cxx_config,
+  )
+
+  if backend == Backends.io:
+    libcoroutine_sources = drake.nodes(
+      'backend/coro_io/libcoroutine/asm.S',
+      'backend/coro_io/libcoroutine/context.cc',
+      'backend/coro_io/libcoroutine/coroutine.cc',
+      'backend/coro_io/libcoroutine/coroutine.hh',
+    )
+    libcoroutine_cxx_config = drake.cxx.Config(local_cxx_config)
+    libcoroutine_cxx_config.warnings.missing_declarations = None
+    if valgrind is not None:
+      libcoroutine_cxx_config.define('USE_VALGRIND')
+    libcoroutine = drake.cxx.StaticLib(lib_path + '/elle_reactor_coroutine',
+                                       libcoroutine_sources,
+                                       cxx_toolkit,
+                                       libcoroutine_cxx_config)
+    backend_coro_io = drake.cxx.StaticLib(
+      lib_path + '/elle_reactor_backend_coro_io',
+      drake.nodes(
+        'backend/coro_io/backend.cc',
+        'backend/coro_io/backend.hh',
+      ) + [backend_lib, libcoroutine],
+      cxx_toolkit,
+      lib_cxx_config,
+    )
+    library_coroutine = libcoroutine
+  else:
+    libcoroutine = None
+    backend_coro_io = None
+
+  lib_cxx_config.add_local_include_path('modules/libutp')
+  backend_boost_cxx_config = drake.cxx.Config(lib_cxx_config)
+  backend_boost = drake.cxx.StaticLib(
+    lib_path + '/elle_reactor_backend_boost',
+    drake.nodes(
+      'backend/boost/backend.cc',
+      'backend/boost/backend.hh',
+    ),
+    cxx_toolkit,
+    backend_boost_cxx_config,
+  )
+  lib_dynamic_link_libs = [
+    curl_lib,
+    elle.library,
+    miniupnpc_lib,
+    utp_lib,
+  ]
+  lib_static_link_libs = [
+    curl_lib,
+    elle.library,
+    miniupnpc_lib,
+    utp_lib,
+  ]
+  if boost.prefer_shared:
+    lib_cxx_config += boost.config_filesystem(link = False)
+    lib_cxx_config.library_add(
+        drake.copy(boost.filesystem_dynamic, lib_path, strip_prefix = True))
+  if backend == Backends.io:
+    lib_dynamic_link_libs.append(libcoroutine)
+    lib_dynamic_link_libs.append(backend_coro_io)
+    lib_static_link_libs.append(libcoroutine)
+    lib_static_link_libs.append(backend_coro_io)
+  elif backend == Backends.boost:
+    lib_dynamic_link_libs.append(backend_boost)
+    lib_dynamic_link_libs.append(backend_lib)
+    lib_static_link_libs.append(backend_boost)
+    lib_static_link_libs.append(backend_lib)
+  if fuse_lib:
+    lib_dynamic_link_libs.append(fuse_lib)
+  if dokan_lib:
+    lib_static_link_libs.append(dokan_lib)
+    lib_cxx_config.library_add(
+      drake.copy(dokan_lib, lib_path, strip_prefix = True))
+  if cxx_toolkit.os in [drake.os.macos]:
+    lib_cxx_config.framework_add('DiskArbitration')
+    pass #lib_cxx_config.use_local_libcxx = True
+  netlib_cxx_config = drake.cxx.Config(lib_cxx_config)
+  netlib_cxx_config.define('network_boost', 'boost')
+  netlib_cxx_config.warnings.missing_declarations = False
+  sources += [
+    drake.cxx.Object(s, cxx_toolkit, netlib_cxx_config)
+    for s in netlib_sources
+  ]
+  lib_dynamic = drake.cxx.DynLib(
+    lib_path + '/elle_reactor',
+    sources + lib_dynamic_link_libs + openssl_libs + cxx_libs,
+    cxx_toolkit, lib_cxx_config)
+  lib_static = drake.cxx.StaticLib(
+    lib_path + '/elle_reactor',
+    sources + lib_static_link_libs + openssl_libs,
+    cxx_toolkit, lib_cxx_config)
+  rule_build << lib_static
+  if cxx_toolkit.os in [drake.os.ios, drake.os.android]:
+    library = lib_static
+  else:
+    rule_build << lib_dynamic
+    library = lib_dynamic
+
+  if python3 is not None and cxx_toolkit.os != drake.os.windows:
+    python_cxx_config = drake.cxx.Config(local_cxx_config)
+    python_cxx_config.lib_path_runtime('..')
+    python_cxx_config += python3
+    if cxx_toolkit.os is drake.os.windows:
+      python_cxx_config += boost.config_python(static = True)
+    else:
+      python_cxx_config += boost.config_python(link = False)
+      python_cxx_config.library_add(
+        drake.copy(boost.python_dynamic, lib_path, strip_prefix = True))
+    python_sources = drake.nodes('python.cc', 'python.hh')
+    sources += python_sources
+    python_lib = drake.cxx.Module(
+      lib_path + '/python/reactor',
+      python_sources + [library, elle.python_plugin_datetime],
+      cxx_toolkit, python_cxx_config)
+    drake.Rule('python') << python_lib
+    rule_build << python_lib
+
+  ## ----- ##
+  ## Bins  ##
+  ## ----- ##
+
+  binaries_config = [
+    'connectivity-server',
+    'connectivity',
+    'rdv-server',
+  ]
+  cxx_config_bin = drake.cxx.Config(local_cxx_config)
+  cxx_config_bin.lib_path_runtime('../lib')
+  cxx_config_bin = import_lib('filesystem', cxx_config_bin)
+  for name in binaries_config:
+    bin = drake.cxx.Executable(
+      'bin/%s' % name,
+        drake.nodes('bin/%s.cc' % name) + [
+        library,
+        elle.library,
+      ],
+      cxx_toolkit,
+      cxx_config_bin)
+    rule_build << bin
+    if name == 'connectivity':
+      connectivity = bin
+
+  if cxx_toolkit.os is drake.os.linux:
+    fnetusermount_binaries = []
+    for name in ['fnetusermount-client', 'fnetusermount-server']:
+      bin = drake.cxx.Executable(
+        'bin/%s' % name,
+        drake.nodes('bin/%s.cc' % name),
+        cxx_toolkit,
+        cxx_config_bin)
+      rule_build << bin
+      fnetusermount_binaries.append(bin)
+
+  ## ----- ##
+  ## Tests ##
+  ## ----- ##
+  global rule_check, rule_tests
+  rule_tests = drake.Rule('tests')
+  rule_check = drake.TestSuite('check')
+  elle_tests_path = drake.Path('../../../tests')
+  tests_path = elle_tests_path / 'elle/reactor'
+
+  # (bin, libs, stdin)
+  tests = [
+    ('backend', [], None),
+    ('for-each', [], None),
+    ('fsm', [], None),
+    ('generator', [], None),
+    ('http', [curl_lib], None),
+    ('logger', [], None),
+    ('network', [], None),
+    ('reactor', [], None),
+    ('upnp', [], None), # Not an auto test, just a utility.
+    ('ssl', openssl_libs, None),
+    ('utp', [utp_lib], None),
+    ('rdv-cat', [], None),
+    ('rdv-utp-cat', [], None),
+    ('utp-chat', [], None),
+    ('websocket', [], None),
+  ]
+  if cxx_toolkit.os in [drake.os.linux, drake.os.macos]:
+    tests.append(('fdstream', [], None))
+    tests.append(('filesystem_bind', [], None))
+    tests.append(('filesystem_git', [], None))
+    if enable_fuse:
+      tests.append(('filesystem', [], None))
+
+  cxx_config_tests = drake.cxx.Config(local_cxx_config)
+  cxx_config_tests.add_local_include_path(elle_tests_path)
+  test_libs = [elle.library, library]
+  cxx_config_tests += boost.config_test(
+    static = not boost.prefer_shared or None,
+    link = not boost.prefer_shared)
+  cxx_config_tests += boost.config_timer(
+    static = not boost.prefer_shared or None,
+    link = not boost.prefer_shared)
+  use_boost_filesystem_static_library = not boost.prefer_shared or \
+                                        cxx_toolkit.os is drake.os.macos
+  cxx_config_tests += boost.config_filesystem(
+    static = use_boost_filesystem_static_library or None,
+    link = use_boost_filesystem_static_library)
+  if boost.prefer_shared:
+    test_libs += drake.copy([boost.timer_dynamic, boost.test_dynamic],
+                            lib_path, strip_prefix = True)
+  else:
+    test_libs += [boost.timer_static, boost.test_static]
+  if not use_boost_filesystem_static_library:
+    test_libs += drake.copy([boost.filesystem_dynamic],
+                            lib_path, strip_prefix = True)
+  else:
+    test_libs += [boost.filesystem_static]
+  if cxx_toolkit.os == drake.os.android:
+    cxx_config_tests.lib('stdc++')
+    cxx_config_tests.lib('atomic')
+  for test_name, libraries, stdin in tests:
+    local_test_libs = test_libs + libraries
+    local_cxx_config_tests = drake.cxx.Config(cxx_config_tests)
+    if cxx_toolkit.os == drake.os.macos:
+      local_test_libs += cxx_libs
+    test_sources = drake.nodes('%s/%s.cc' % (tests_path, test_name))
+    test = drake.cxx.Executable('%s/%s' % (tests_path, test_name),
+                                test_sources + local_test_libs,
+                                cxx_toolkit, cxx_config_tests)
+    # These are not real tests, just binaries.
+    if test_name in ['filesystem_git', 'filesystem_bind', 'rdv-cat', 'rdv-utp-cat', 'utp-chat']:
+      continue
+    rule_tests << test
+    env = {
+      'BUILD_DIR': drake.path_build(),
+      'BOOST_TEST_COLOR_OUTPUT': '1',
+      'BOOST_TEST_LOG_LEVEL': 'all',
+      'BOOST_TEST_LOG_SINK': 'stderr',  # Keep our logs, and Boost's, together.
+      'SOURCE_DIR': drake.path_source(),
+    }
+    if cxx_toolkit.os is drake.os.windows:
+      env.update({'Path': drake.path_build(lib_path)})
+    if cxx_toolkit.os is drake.os.windows and sys.platform is 'linux':
+      env['RUNNING_ON_WINE'] = '1'
+    # Disable valgrind for tests using fuse.
+    # Valgrind has deadlock issues when hosting a program that both implements
+    # and use a FUSE fs from different threads.
+    # The option --sim-hints=fuse-compatible is supposed to fix that, but
+    # it crashes valgrind with an assert.
+    if valgrind_tests and test_name is not 'filesystem':
+      runner = drake.valgrind.ValgrindRunner(
+        exe = test,
+        valgrind = valgrind,
+        env = env,
+        stdin = stdin,
+        valgrind_args = ['--suppressions=%s' % (drake.path_source('../../../valgrind.suppr'))
+        ])
+    else:
+      runner = drake.Runner(exe = test, env = env,stdin = stdin)
+    runner.reporting = drake.Runner.Reporting.on_failure
+    rule_check << runner.status
+
+  if python3 is not None and cxx_toolkit.os is not drake.os.windows:
+    python_tests = (
+      'python',
+      )
+    with drake.templating.Context(content = {
+        'python_interpreter': str(python3.python_interpreter),
+    }):
+      for test in python_tests:
+        drake.node('%s/%s.tmpl' % (tests_path, test))
+    for test in python_tests:
+      test = drake.node('%s/%s' % (tests_path, test))
+      test.dependency_add(python_lib)
+      python_runner = drake.Runner(
+        exe = test,
+        env = {
+          'PYTHONPATH': str(drake.path_build(lib_path + '/python')),
+        },
+      )
+      python_runner.reporting = drake.Runner.Reporting.on_failure
+      rule_check << python_runner.status
+
+  ## -------- ##
+  ## Examples ##
+  ## -------- ##
+
+  cxx_config_examples = drake.cxx.Config(local_cxx_config)
+  cxx_config_examples = import_lib('filesystem', cxx_config_examples)
+  rule_examples = drake.Rule('examples')
+  examples_path = drake.Path('../../../examples')
+  examples = [
+    drake.cxx.Executable(
+      examples_path / example,
+      [drake.node('%s/%s.cc' % (examples_path, example)), library, elle.library],
+      cxx_toolkit, cxx_config_examples)
+    for example in [
+        'demo/elle/reactor/echo_server',
+    ]]
+  rule_examples << examples
+  echo_server = examples[0]
+  env = dict()
+  if cxx_toolkit.os is drake.os.windows:
+    env.update({'Path': drake.path_build(lib_path)})
+  runner = drake.Runner(
+    exe = drake.node(examples_path / 'demo/elle/reactor/test_echo_server'),
+    env = env,
+    args = [echo_server.path()],
+    sources = [echo_server])
+  runner.reporting = drake.Runner.Reporting.on_failure
+  rule_examples << runner.status
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  global headers
+  headers = (node for node in chain(sources, backend_sources)
+             if isinstance(node, drake.cxx.Header))
+
+  if prefix is not False:
+    rule_install = drake.Rule('install')
+    if cxx_toolkit.os not in [drake.os.windows, drake.os.ios]:
+      rule_install << drake.install(lib_dynamic, prefix / 'lib', strip_prefix = True)
+    rule_install << drake.install(lib_static, prefix / 'lib', strip_prefix = True)
+    rule_install << drake.install(
+      headers,
+      prefix / 'include' / 'elle' / 'reactor')
+
+# Local Variables:
+# mode: python
+# End:

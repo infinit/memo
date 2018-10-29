@@ -1,0 +1,35 @@
+#pragma once
+
+#include <ostream>
+#include_next <set>
+#include <elle/printf-fwd.hh>
+
+namespace std
+{
+  template <typename T, typename H, typename E>
+  bool
+  contains(std::set<T, H> const& set, E const& e)
+  {
+    return set.find(e) != set.end();
+  }
+
+  template <typename... Args>
+  ostream&
+  operator <<(ostream& out, set<Args...> const& s)
+  {
+    auto const format = is_fixed(out) ? "%s%f" : "%s%s";
+    out << '{';
+    auto* sep = "";
+    for (auto const& e: s)
+    {
+      elle::fprintf(out, format, sep, e);
+      sep = ", ";
+    }
+    out << '}';
+    return out;
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

@@ -1,0 +1,25 @@
+#pragma once
+
+#include_next <iostream>
+
+namespace std
+{
+  template <typename charT, typename traits>
+  bool
+  is_fixed(std::basic_ostream<charT, traits> const& o)
+  {
+    return o.flags() & std::ios::fixed;
+  }
+
+  /// Useful with BOOST_TEST(str == nullptr) for instance.
+  inline
+  std::ostream&
+  operator <<(std::ostream& os, std::nullptr_t)
+  {
+    return os << "nullptr";
+  }
+}
+
+// Local Variables:
+// mode: c++
+// End:

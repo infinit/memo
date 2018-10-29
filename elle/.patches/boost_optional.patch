@@ -1,0 +1,14 @@
+diff --git a/boost/optional/optional_io.hpp b/boost/optional/optional_io.hpp
+index e75a9c9..bacd1fb 100644
+--- a/boost/optional/optional_io.hpp
++++ b/boost/optional/optional_io.hpp
+@@ -44,7 +44,7 @@ operator<<(std::basic_ostream<CharType, CharTrait>& out, optional<T> const& v)
+   {
+     if (!v)
+-         out << "--" ;
+-    else out << ' ' << *v ;
++         out << "null" ;
++    else out << *v ;
+   }
+
+   return out;
