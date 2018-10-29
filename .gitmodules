@@ -1,6 +1,3 @@
-[submodule "elle"]
-	path = elle
-	url = ../elle
 [submodule "couchdb-python"]
 	path = beyond/couchdb-python
 	url = https://github.com/infinitdotio/couchdb-python.git
