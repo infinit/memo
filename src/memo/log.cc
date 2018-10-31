@@ -31,7 +31,8 @@ namespace memo
 
   std::string log_base(std::string const& family)
   {
-    auto const now = elle::to_iso8601_local(std::chrono::system_clock::now());
+    auto const now = elle::to_iso8601(
+      boost::posix_time::second_clock::local_time());
     auto const base
       = elle::print("{family}/{now}-{pid}",
                     {
@@ -41,7 +42,7 @@ namespace memo
                     });
     auto const path = log_dir() / base;
     // log_dir is created, but base may also contain `/`.
-    elle::create_parent_directories(path);
+    elle::fs::create_parent_directories(path);
     return path.string();
   }
 
@@ -184,7 +185,7 @@ namespace memo
     // to change the timestamp for instance.
     auto const fname = main_log()->fstream().path().stem();
     auto const new_base = log_dir() / family / fname;
-    elle::create_parent_directories(new_base);
+    elle::fs::create_parent_directories(new_base);
     main_log()->base(new_base);
   }
 
@@ -266,7 +267,7 @@ namespace memo
     auto const size = int(logs.size());
     if (n < size)
       for (auto const& p: logs | sliced(0, size - n))
-        elle::try_remove(p);
+        elle::fs::try_remove(p);
   }
 
   int

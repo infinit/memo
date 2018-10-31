@@ -180,7 +180,7 @@ namespace crash_report
         {
           ELLE_DUMP("%s: removing uploaded file: %s: %s", this,
                     f.first, f.second);
-          elle::try_remove(f.second);
+          elle::fs::try_remove(f.second);
         }
       else
         ELLE_ERR("%s: unable to upload crash report (%s)", this, path);

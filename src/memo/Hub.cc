@@ -137,7 +137,8 @@ namespace memo
   _log_get_url(std::string const& user)
   {
     ELLE_DEBUG("get upload url for {}", user);
-    auto const timestamp = elle::to_iso8601(std::chrono::system_clock::now());
+    auto const timestamp = elle::to_iso8601(
+      boost::posix_time::second_clock::local_time());
     auto const url = report_url("log/{}/{}.tgz/get_url",
                                 user, timestamp);
     auto r = http::Request(url, http::Method::GET, "application/json",

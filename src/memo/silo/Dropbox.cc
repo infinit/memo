@@ -1,6 +1,7 @@
 #include <memo/silo/Dropbox.hh>
 
 #include <elle/log.hh>
+#include <elle/make-vector.hh>
 
 #include <memo/silo/Collision.hh>
 #include <memo/silo/MissingKey.hh>
