@@ -7,12 +7,12 @@
 #include <elle/With.hh>
 #include <elle/das/Symbol.hh>
 #include <elle/das/named.hh>
+#include <elle/reactor/Waitable.hh>
 #include <elle/reactor/asio.hh>
 #include <elle/reactor/backend/fwd.hh>
 #include <elle/reactor/duration.hh>
 #include <elle/reactor/fwd.hh>
 #include <elle/reactor/signals.hh>
-#include <elle/reactor/Waitable.hh>
 
 namespace elle
 {
@@ -329,11 +329,12 @@ namespace elle
       class Context
       {
       protected:
-        Context();
+        Context(bool raise);
         ~Context() noexcept(false);
         friend class elle::With<Context>;
         ELLE_ATTRIBUTE(Thread&, current);
         ELLE_ATTRIBUTE(bool, interruptible);
+        ELLE_ATTRIBUTE(bool, raise);
 
       public:
         bool
@@ -344,8 +345,10 @@ namespace elle
       class NonInterruptible
         : public Context
       {
+      public:
+        using Super = Context;
       protected:
-        NonInterruptible();
+        NonInterruptible(bool raise = true);
         friend class elle::With<NonInterruptible>;
       };
 
@@ -353,6 +356,8 @@ namespace elle
       class Interruptible
         : public Context
       {
+      public:
+        using Super = Context;
       protected:
         Interruptible();
         friend class elle::With<Interruptible>;
@@ -363,13 +368,15 @@ namespace elle
     `--------*/
     public:
       Scheduler& scheduler();
+      void
+      interruptible(bool interruptible, bool raise = true);
     private:
       friend class Scheduler;
       ELLE_ATTRIBUTE(std::unique_ptr<backend::Thread>, thread);
       ELLE_ATTRIBUTE(Scheduler&, scheduler);
       ELLE_ATTRIBUTE_R(bool, terminating);
       /// If set to false, do not rethrow Terminate exception.
-      ELLE_ATTRIBUTE_Rw(bool, interruptible);
+      ELLE_ATTRIBUTE_R(bool, interruptible);
     };
 
     template <typename R>

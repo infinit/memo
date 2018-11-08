@@ -303,36 +303,6 @@ namespace elle
         }
       }
 
-      template <typename T, typename ... Types>
-      struct
-      any_casts
-      {
-        static
-        T&
-        cast(std::string const& name, boost::any& value)
-        {
-          throw TypeError(name, typeid(T), value.type());
-        }
-      };
-
-      template <typename T, typename First, typename ... Tail>
-      struct
-      any_casts<T, First, Tail ...>
-      {
-        static
-        T&
-        cast(std::string const& name, boost::any& value)
-        {
-          if (value.type() == typeid(First))
-          {
-            value = T(boost::any_cast<First&>(value));
-            return boost::any_cast<T&>(value);
-          }
-          else
-            return any_casts<T, Tail ...>::cast(name, value);
-        }
-      };
-
       elle::json::Json&
       SerializerIn::_check_type(elle::json::Type t)
       {
