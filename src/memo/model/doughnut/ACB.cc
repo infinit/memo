@@ -835,7 +835,7 @@ namespace memo
           if (!key)
           {
             secret = elle::cryptography::secretkey::generate(256);
-            key = secret;
+            key.emplace(secret.get());
           }
           ELLE_DUMP("new block secret: %s", key.get());
           auto seal_version = this->doughnut()->version();
@@ -974,8 +974,9 @@ namespace memo
             this->_data_signature = std::make_shared<typename Super::SignFuture>(
                 sign_key->sign_async(
                   *this->_data_sign(), this->doughnut()->version()));
-            ELLE_DUMP("signature: %s",
-                      elle::lazy([&] { return this->_data_signature->value(); }));
+            ELLE_DUMP(
+              "signature: {}",
+              elle::lazy([&] { return this->_data_signature->value(); }));
           }
           this->_sign_key = sign_key;
 

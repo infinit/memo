@@ -112,10 +112,10 @@ namespace memo
         `-----------*/
         public:
           virtual
-          elle::json::Object
+          elle::json::Json
           redundancy();
           virtual
-          elle::json::Object
+          elle::json::Json
           stats();
 
         /*----------.

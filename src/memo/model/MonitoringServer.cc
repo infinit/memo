@@ -81,36 +81,33 @@ namespace memo
     MonitoringServer::MonitorResponse::MonitorResponse(
       bool success,
       boost::optional<std::string> error,
-      boost::optional<elle::json::Object> result)
+      boost::optional<elle::json::Json> result)
       : success(success)
       , error(std::move(error))
       , result(std::move(result))
     {}
 
     MonitoringServer::MonitorResponse::MonitorResponse(
-      elle::json::Object response)
-      : success(boost::any_cast<bool>(response["success"]))
+      elle::json::Json response)
+      : success(response["success"])
     {
       if (response.count("error"))
-        this->error = boost::any_cast<std::string>(response["error"]);
+        this->error = response["error"];
       response.erase("success");
       response.erase("error");
       if (!response.empty())
         this->result = std::move(response);
     }
 
-    elle::json::Object
+    elle::json::Json
     MonitoringServer::MonitorResponse::as_object() const
     {
-      auto res = elle::json::Object
-        {
-          {"success", this->success},
-        };
+      auto res = elle::json::Json();
+      if (this->result)
+        res = this->result.get();
+      res["success"] = this->success;
       if (this->error)
         res["error"] = this->error.get();
-      if (this->result)
-        for (auto const& pair: this->result.get())
-          res[pair.first] = pair.second;
       return res;
     }
 
@@ -163,8 +160,8 @@ namespace memo
           auto socket =
             std::shared_ptr<elle::reactor::network::Socket>{
               this->_server->accept().release()};
-          ELLE_DEBUG("accept connection from %s", *socket);
-          scope.run_background(elle::sprintf("request %s", *socket),
+          ELLE_DEBUG("accept connection from {}", *socket);
+          scope.run_background(elle::print("request {}", *socket),
             [this, socket]
             {
               try
@@ -199,9 +196,8 @@ namespace memo
         {
           try
           {
-            auto command =
-              elle::serialization::json::deserialize<
-                MonitorQuery>(*socket, false);
+            auto command = elle::serialization::json::deserialize<MonitorQuery>(
+              *socket, false);
             ELLE_TRACE("%s: got command: %s", this, query_str(command.query));
             using Query = MonitorQuery::Query;
             auto const response = [&]
@@ -210,7 +206,7 @@ namespace memo
               {
               case Query::Stats:
               {
-                auto res = elle::json::Object{
+                auto res = elle::json::Json{
                   {"consensus", this->_owner.consensus()->stats()},
                   {"overlay", this->_owner.overlay()->stats()},
                   {"peers", this->_owner.overlay()->peer_list()},

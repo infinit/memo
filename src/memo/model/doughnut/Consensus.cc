@@ -347,7 +347,7 @@ namespace memo
         | Monitoring |
         `-----------*/
 
-        elle::json::Object
+        elle::json::Json
         Consensus::redundancy()
         {
           return {
@@ -356,7 +356,7 @@ namespace memo
           };
         }
 
-        elle::json::Object
+        elle::json::Json
         Consensus::stats()
         {
           return {

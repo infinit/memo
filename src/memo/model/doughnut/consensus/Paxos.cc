@@ -2215,7 +2215,7 @@ namespace memo
         | Monitoring |
         `-----------*/
 
-        elle::json::Object
+        elle::json::Json
         Paxos::redundancy()
         {
           return {
@@ -2224,7 +2224,7 @@ namespace memo
           };
         }
 
-        elle::json::Object
+        elle::json::Json
         Paxos::stats()
         {
           return {

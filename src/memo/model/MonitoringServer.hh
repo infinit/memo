@@ -43,14 +43,14 @@ namespace memo
       {
         MonitorResponse(bool success,
                         boost::optional<std::string> error = {},
-                        boost::optional<elle::json::Object> result = {});
-        MonitorResponse(elle::json::Object response);
+                        boost::optional<elle::json::Json> result = {});
+        MonitorResponse(elle::json::Json response);
 
         bool success;
         boost::optional<std::string> error;
-        boost::optional<elle::json::Object> result;
+        boost::optional<elle::json::Json> result;
 
-        elle::json::Object
+        elle::json::Json
         as_object() const;
         void
         print(std::ostream& stream) const;

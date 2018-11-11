@@ -62,9 +62,9 @@ namespace memo
         | Monitoring |
         `-----------*/
         public:
-          elle::json::Object
+          elle::json::Json
           redundancy() override;
-          elle::json::Object
+          elle::json::Json
           stats() override;
 
         public:

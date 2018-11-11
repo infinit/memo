@@ -660,13 +660,13 @@ namespace memo
         | Monitoring |
         `-----------*/
 
-        elle::json::Object
+        elle::json::Json
         Async::redundancy()
         {
           return this->_backend->redundancy();
         }
 
-        elle::json::Object
+        elle::json::Json
         Async::stats()
         {
           return this->_backend->stats();

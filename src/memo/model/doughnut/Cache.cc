@@ -560,13 +560,13 @@ namespace memo
         | Monitoring |
         `-----------*/
 
-        elle::json::Object
+        elle::json::Json
         Cache::redundancy()
         {
           return this->_backend->redundancy();
         }
 
-        elle::json::Object
+        elle::json::Json
         Cache::stats()
         {
           return this->_backend->stats();
