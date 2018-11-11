@@ -107,8 +107,7 @@ namespace memo
       if (id == "")
       {
         auto r = this->_mkdir(this->_root.string());
-        auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-        id = boost::any_cast<std::string>(json["id"]);
+        id = elle::json::read(r)["id"];
       }
 
       this->_dir_id = id;
@@ -373,13 +372,11 @@ namespace memo
 
         if (r.status() == StatusCode::OK)
         {
-          auto json = boost::any_cast<elle::json::Object>(
-              elle::json::read(r));
-          auto items = boost::any_cast<elle::json::Array>(json["items"]);
+          auto json = elle::json::read(r);
+          auto items = json["items"];
           for (auto const& item: items)
           {
-            auto f = boost::any_cast<elle::json::Object>(item);
-            std::string id = boost::any_cast<std::string>(f["id"]);
+            std::string id = item["id"];
             ELLE_DEBUG("Resolved %s to %s", file_name, id);
             return id;
           }
