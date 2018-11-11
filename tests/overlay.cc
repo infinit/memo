@@ -201,11 +201,11 @@ private:
 
 namespace
 {
-  elle::json::Object
+  elle::json::Json
   get_ostats(DHT& client)
   {
     auto stats = client.dht->overlay()->query("stats", {});
-    return boost::any_cast<elle::json::Object>(stats);
+    return stats;
   }
 
   /// @param ostats  A JSON stat object.
@@ -213,15 +213,14 @@ namespace
   ///
   /// @throw std::out_of_range when the type is not in ostats.
   std::vector<memo::model::Address>
-  get_addresses(elle::json::Object const& ostats,
+  get_addresses(elle::json::Json const& ostats,
                 std::string const& type)
   {
     ELLE_DUMP("%s", elle::json::pretty_print(ostats.at(type)));
-    auto cts = boost::any_cast<elle::json::Array>(ostats.at(type));
+    auto cts = ostats.at(type);
     return elle::make_vector(cts, [](auto& c) {
-      auto const& o = boost::any_cast<elle::json::Object>(c);
-      return memo::model::Address::from_string(
-        boost::any_cast<std::string>(o.at("id")));
+      auto const& o = c;
+      return memo::model::Address::from_string(o.at("id"));
       });
   }
 
@@ -243,19 +242,18 @@ namespace
     auto const ostats = get_ostats(client);
     if (get_kelips(client))
     {
-      auto cts = boost::any_cast<elle::json::Array>(ostats.at("contacts"));
+      auto cts = ostats.at("contacts");
       ELLE_DEBUG("%s", elle::json::pretty_print(cts));
       ELLE_TRACE("checking %s candidates", cts.size());
       res = boost::count_if(cts, [&](auto& c) {
-          auto const& o = boost::any_cast<elle::json::Object>(c);
-          return (!discovered
-                  || boost::any_cast<bool>(o.at("discovered")));
+          auto const& o = c;
+          return (!discovered || o.at("discovered"));
         });
     }
     else
     {
       assert(get_kouncil(client));
-      res = boost::any_cast<elle::json::Array>(ostats.at("peers")).size();
+      res = ostats.at("peers").size();
     }
     ELLE_TRACE("counted %s peers for %s", res, client.dht);
     return res;
@@ -280,15 +278,15 @@ namespace
   kouncil_wait_pasv(DHT& s, int n_servers)
   {
     // Get the addresses of the *connected* peers.
-    auto get_addresses = [](elle::json::Array const& cts)
+    auto get_addresses = [](elle::json::Json const& cts)
       {
         auto res = std::vector<memo::model::Address>{};
         for (auto const& c: cts)
         {
-          auto const& o = boost::any_cast<elle::json::Object>(c);
-          if (boost::any_cast<bool> (o.at("connected")))
-            res.emplace_back(memo::model::Address::from_string
-                             (boost::any_cast<std::string>(o.at("id"))));
+          auto const& o = c;
+          if (o.at("connected"))
+            res.emplace_back(
+              memo::model::Address::from_string(o.at("id")));
         }
         return res;
       };
@@ -297,7 +295,7 @@ namespace
     {
       auto const ostats = get_ostats(s);
       ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("peers")));
-      auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
+      auto cts = ostats.at("peers");
       auto servers = get_addresses(cts);
       if (n_servers <= int(servers.size()))
         return;

@@ -998,11 +998,11 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
   elle::reactor::network::UnixDomainSocket socket(monitoring_path);
   using Monitoring = memo::model::MonitoringServer;
   using Query = memo::model::MonitoringServer::MonitorQuery::Query;
-  auto do_query = [&] (Query query_val) -> elle::json::Object
+  auto do_query = [&] (Query query_val)
     {
       auto query = Monitoring::MonitorQuery(query_val);
       elle::serialization::json::serialize(query, socket, false, false);
-      return boost::any_cast<elle::json::Object>(elle::json::read(socket));
+      return elle::json::read(socket);
     };
   {
     Monitoring::MonitorResponse res(do_query(Query::Status));
@@ -1014,24 +1014,19 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
     BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
     // UTP was temporarily deprecated.
-    // BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
-    BOOST_TEST(boost::any_cast<std::string>(obj["protocol"]) == "tcp");
-    BOOST_CHECK_EQUAL(
-      boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
-    auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
+    // BOOST_TEST(obj["protocol"] == "all");
+    BOOST_TEST(obj["protocol"] == "tcp");
+    BOOST_TEST(obj["peers"].size() == 3);
+    auto redundancy = obj["redundancy"];
     if (paxos)
     {
-      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
-                        3);
-      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
-                        "replication");
+      BOOST_TEST(redundancy["desired_factor"] == 3);
+      BOOST_TEST(redundancy["type"] == "replication");
     }
     else
     {
-      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
-                        1);
-      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
-                        "none");
+      BOOST_TEST(redundancy["desired_factor"] == 1);
+      BOOST_TEST(redundancy["type"] == "none");
     }
   }
 }
@@ -2409,12 +2404,12 @@ ELLE_TEST_SUITE()
   {                                             \
     auto _Name = boost::bind(Name, true);       \
     auto Name = _Name;                          \
-    paxos->add(BOOST_TEST_CASE(Name));          \
+    paxos->add(BOOST_TEST_CASE(Name), 0, 30);   \
   }                                             \
   {                                             \
     auto _Name = boost::bind(Name, false);      \
     auto Name = _Name;                          \
-    plain->add(BOOST_TEST_CASE(Name));          \
+    plain->add(BOOST_TEST_CASE(Name), 0, 30);   \
   }
   TEST(CHB);
   TEST(OKB);

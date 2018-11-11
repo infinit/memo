@@ -140,13 +140,13 @@ public:
     return "test";
   }
 
-  elle::json::Array
+  elle::json::Json
   peer_list() const override
   {
     return {};
   }
 
-  elle::json::Object
+  elle::json::Json
   stats() const override
   {
     return {{"type", this->type_name()}};
