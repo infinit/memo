@@ -61,7 +61,7 @@ namespace memo
   Hub::upload_crash(Files const& fs)
   {
     ELLE_DEBUG("uploading %s", fs);
-    auto content = elle::json::Object
+    auto content = elle::json::Json
       {
         {"platform", elle::system::platform::os_description()},
         // There is no reason for the version of memo sending the
@@ -195,7 +195,7 @@ namespace memo
   _log_uploaded(std::string const& user, UrlPath const& url_path)
   {
     ELLE_DEBUG("notify that {} sent logs to {}", user, url_path);
-    auto content = elle::json::Object
+    auto content = elle::json::Json
       {
         {"path", url_path.path},
         {"url",  url_path.url},

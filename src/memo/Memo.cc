@@ -1,14 +1,14 @@
 #include <memo/Memo.hh>
 
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/cryptography/hash.hh>
-#include <elle/format/hexadecimal.hh>
-
 
 #include <elle/bytes.hh>
 #include <elle/find.hh>
+#include <elle/make-vector.hh>
 #include <elle/log.hh>
 
 #include <memo/environ.hh>
@@ -17,6 +17,8 @@
 #include <memo/silo/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("memo");
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -968,11 +970,9 @@ namespace memo
   std::vector<std::string>
   Memo::user_passports_for_network(std::string const& network_name)
   {
-    return elle::make_vector(this->passports_get(network_name),
-                             [](auto const& p)
-                             {
-                               return p.second;
-                             });
+    return elle::make_vector(
+      this->passports_get(network_name) |
+      transformed([] (auto const& n) { return n.second; }));
   }
 
   std::vector<KeyValueStore>

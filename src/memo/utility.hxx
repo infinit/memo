@@ -10,24 +10,21 @@ namespace memo
     template <typename Exception>
     ELLE_COMPILER_ATTRIBUTE_NORETURN
     void
-    _read_error(elle::json::Object& request)
+    _read_error(elle::json::Json const& request)
     {
-      auto error = boost::any_cast<std::string>(request["error"]);
-      throw Exception(error);
+      throw Exception(request["error"]);
     }
 
     template <>
     ELLE_COMPILER_ATTRIBUTE_NORETURN
     inline
     void
-    _read_error<BeyondError>(elle::json::Object& request)
+    _read_error<BeyondError>(elle::json::Json const& request)
     {
-      auto error = boost::any_cast<std::string>(request["error"]);
-      auto reason = boost::any_cast<std::string>(request["reason"]);
       boost::optional<std::string> name = boost::none;
       if (request.find("name") != request.end())
-        name = boost::any_cast<std::string>(request["name"]);
-      throw BeyondError(error, reason, name);
+        name.emplace(request["name"]);
+      throw BeyondError(request["error"], request["reason"], name);
     }
   }
 
@@ -38,16 +35,10 @@ namespace memo
              std::string const& name)
   {
     ELLE_LOG_COMPONENT("memo");
-    ELLE_DEBUG("read_error");
-    elle::json::Object json;
+    ELLE_DEBUG_SCOPE("read_error");
     try
     {
-      json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-    }
-    catch (boost::bad_any_cast const& e)
-    {
-      ELLE_DEBUG("Not json. html ?");
-      throw elle::Error(e.what());
+      _details::_read_error<Exception>(elle::json::read(r));
     }
     catch (elle::json::ParseError const& e)
     {
@@ -56,6 +47,5 @@ namespace memo
         elle::sprintf("unexpected HTTP error %s while performing %s for %s %s",
                       r.status(), r.method(), type, name));
     }
-    _details::_read_error<Exception>(json);
   }
 }

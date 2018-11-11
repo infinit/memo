@@ -327,15 +327,15 @@ namespace memo
     if (r.status() != elle::reactor::http::StatusCode::OK)
       elle::err("unexpected HTTP error %s fetching endpoints for \"%s\"",
                 r.status(), this->name);
-    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    auto json = elle::json::read(r);
     for (auto const& user: json)
     {
       try
       {
-        for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+        for (auto node: user.items())
         {
-          auto uuid = memo::model::Address::from_string(node.first);
-          elle::serialization::json::SerializerIn s(node.second, false);
+          auto uuid = memo::model::Address::from_string(node.key());
+          elle::serialization::json::SerializerIn s(node.value(), false);
           auto endpoints = s.deserialize<Endpoints>();
           auto eps = memo::model::Endpoints{};
           for (auto const& addr: endpoints.addresses)
