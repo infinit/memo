@@ -3,6 +3,7 @@
 #include <memo/cli/Network.hh>
 
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
@@ -38,6 +39,8 @@
 #endif
 
 ELLE_LOG_COMPONENT("cli.network");
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -617,7 +620,7 @@ namespace memo
         {
           auto query = Monitoring::MonitorQuery(query_val);
           elle::serialization::json::serialize(query, socket, false, false);
-          auto json = boost::any_cast<elle::json::Object>(elle::json::read(socket));
+          auto json = elle::json::read(socket);
           return Monitoring::MonitorResponse(std::move(json));
         };
       auto print_response = [&] (Monitoring::MonitorResponse const& response)
@@ -645,8 +648,7 @@ namespace memo
         auto res = do_query(Query::Stats);
         if (res.result)
         {
-          auto redundancy =
-            boost::any_cast<elle::json::Object>(res.result.get()["redundancy"]);
+          auto redundancy = res.result.get()["redundancy"];
           if (cli.script())
             elle::json::write(*cli.get_output(output_name), redundancy);
           else
@@ -658,8 +660,7 @@ namespace memo
         auto res = do_query(Query::Stats);
         if (res.result)
         {
-          auto peer_list =
-            boost::any_cast<elle::json::Array>(res.result.get()["peers"]);
+          auto peer_list = res.result.get()["peers"];
           if (cli.script())
             elle::json::write(*cli.get_output(output_name), peer_list);
           else
@@ -667,13 +668,12 @@ namespace memo
             if (peer_list.empty())
               std::cout << "No peers" << std::endl;
             else
-              for (auto obj: peer_list)
+              for (auto json: peer_list)
               {
-                auto json = boost::any_cast<elle::json::Object>(obj);
-                std::cout << boost::any_cast<std::string>(json["id"]);
+                elle::print(std::cout, "{}", std::string(json["id"]));
                 json.erase("id");
                 if (json.size())
-                  std::cout << ": " << elle::json::pretty_print(json) << std::endl;
+                  elle::print(std::cout, ": {}\n", json);
               }
           }
         }
@@ -792,17 +792,19 @@ namespace memo
       auto owner = cli.as_user();
       if (cli.script())
       {
-        auto const l = elle::json::make_array(memo.networks_get(owner),
-                                              [&] (auto const& network) {
-          auto res = elle::json::Object
-            {
-              {"name", static_cast<std::string>(network.name)},
-              {"linked", bool(network.model) && network.user_linked(owner)},
-            };
-          if (network.description)
-            res["description"] = network.description.get();
-          return res;
-        });
+        auto const l = elle::json::Json(
+          memo.networks_get(owner) |
+          transformed(
+            [&] (auto const& network) {
+              auto res = elle::json::Json
+                {
+                  {"name", static_cast<std::string>(network.name)},
+                  {"linked", bool(network.model) && network.user_linked(owner)},
+                };
+              if (network.description)
+                res["description"] = network.description.get();
+              return res;
+            }));
         elle::json::write(std::cout, l);
       }
       else
@@ -1254,8 +1256,7 @@ namespace memo
              {
                try
                {
-                 auto const json = boost::any_cast<elle::json::Object>(
-                   elle::json::read(*input));
+                 auto const json = elle::json::read(*input);
                  auto command
                    = elle::serialization::json::SerializerIn(json, false);
                  command.set_context<dnut::Doughnut*>(&dht);

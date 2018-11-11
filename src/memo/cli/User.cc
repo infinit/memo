@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <boost/range/adaptor/transformed.hpp>
+
 #include <elle/algorithm.hh>
 
 #include <elle/cryptography/rsa/pem.hh>
@@ -14,6 +16,8 @@
 ELLE_LOG_COMPONENT("cli.user");
 
 namespace bfs = boost::filesystem;
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -396,10 +400,9 @@ namespace memo
       auto key_hash = memo::model::doughnut::short_key_hash(user.public_key);
       if (this->cli().script())
       {
-        auto res = elle::json::Object
-          {
-            {name, key_hash},
-          };
+        auto res = elle::json::Json {
+          {name, key_hash},
+        };
         elle::json::write(std::cout, res);
       }
       else
@@ -434,16 +437,18 @@ namespace memo
                 { return lhs.name < rhs.name; });
       if (this->cli().script())
       {
-        auto l = elle::json::make_array(users, [](auto const& user) {
-          auto res = elle::json::Object
-            {
-              {"name", static_cast<std::string>(user.name)},
-              {"has_private_key",  bool(user.private_key)},
-            };
-          if (user.description)
-            res["description"] = *user.description;
-          return res;
-          });
+        auto l = elle::json::Json(
+          users | transformed(
+            [](auto const& user) {
+              auto res = elle::json::Json
+                {
+                  {"name", static_cast<std::string>(user.name)},
+                  {"has_private_key",  bool(user.private_key)},
+                };
+              if (user.description)
+                res["description"] = *user.description;
+              return res;
+            }));
         elle::json::write(std::cout, l);
       }
       else

@@ -6,10 +6,7 @@
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/range/algorithm/equal.hpp>
-#include <boost/range/algorithm/find_if.hpp>
-#include <boost/range/algorithm/sort.hpp>
-#include <boost/range/algorithm_ext/iota.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include <elle/algorithm.hh>
 #include <elle/bytes.hh>
@@ -46,6 +43,8 @@
 ELLE_LOG_COMPONENT("cli.doctor");
 
 #include <memo/cli/doctor-networking.hh>
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -241,10 +240,10 @@ namespace memo
       auto const families = log_families(*match);
       if (cli.script())
       {
-        auto const l = elle::json::make_array(families,
-                                              [&] (auto const& f) {
-            return elle::json::Object{{"name", f}};
-          });
+        auto const l = elle::json::Json(
+          families | transformed([&] (auto const& f) {
+                                   return elle::json::Json{{"name", f}};
+                                 }));
         elle::json::write(std::cout, l);
       }
       else

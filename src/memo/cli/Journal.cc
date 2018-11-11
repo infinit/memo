@@ -131,7 +131,7 @@ namespace memo
         networks.emplace_back(memo.network_get(*network_name, owner));
       else
         networks = memo.networks_get(owner);
-      auto res = elle::json::Object{};
+      auto res = elle::json::Json{};
       for (auto const& network: networks)
       {
         auto const async_path = memo._network_cache_dir(network.name, owner) / "async";
@@ -145,7 +145,7 @@ namespace memo
               data_size += bfs::file_size(p);
             }
         if (cli.script())
-          res[network.name] = elle::json::Object
+          res[network.name] = elle::json::Json
             {
               {"operations", operation_count},
               {"size", data_size},

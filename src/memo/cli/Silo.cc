@@ -313,10 +313,10 @@ namespace memo
       auto silos = this->cli().backend().silos_get();
       if (this->cli().script())
       {
-        auto l = elle::json::Array{};
+        auto l = elle::json::Json::array();
         for (auto const& silo: silos)
         {
-          auto o = elle::json::Object{
+          auto o = elle::json::Json{
             {"name", static_cast<std::string>(silo->name)},
             {"capacity", capacity(silo)},
           };

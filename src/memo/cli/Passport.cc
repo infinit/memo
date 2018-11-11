@@ -208,15 +208,15 @@ namespace memo
         auto owner_name = memo.owner_name(*network_name);
         if (owner_name == owner.name)
         {
-          auto res = memo.hub_fetch_json(
+          auto json = memo.hub_fetch_json(
             elle::sprintf("networks/%s/passports", network_name.get()),
             "passports for",
             network_name.get(),
             owner);
-          auto json = boost::any_cast<elle::json::Object>(res);
           for (auto const& user_passport: json)
           {
-            auto s = elle::serialization::json::SerializerIn(user_passport.second, false);
+            auto s =
+              elle::serialization::json::SerializerIn(user_passport, false);
             auto passport = s.deserialize<memo::Memo::Passport>();
             memo.passport_save(passport, true);
           }
@@ -287,9 +287,9 @@ namespace memo
       auto passports = memo.passports_get(network_name);
       if (cli.script())
       {
-        auto l = elle::json::Array{};
+        auto l = elle::json::Json::array();
         for (auto const& pair: passports)
-          l.emplace_back(elle::json::Object
+          l.emplace_back(elle::json::Json
                          {
                            {"network", pair.first.network()},
                            {"user", pair.second},

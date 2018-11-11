@@ -1,5 +1,7 @@
 #include <memo/cli/KeyValueStore.hh>
 
+#include <boost/range/adaptor/transformed.hpp>
+
 #include <elle/reactor/network/resolve.hh>
 
 #include <memo/cli/Memo.hh>
@@ -12,6 +14,8 @@
 #include <memo/silo/Silo.hh>
 
 ELLE_LOG_COMPONENT("cli.key-value-store");
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -233,17 +237,19 @@ namespace memo
 
       if (cli.script())
       {
-        auto const l = elle::json::make_array(memo.key_value_stores_get(),
-                                              [&](auto const& kvs) {
-          auto res = elle::json::Object
+        auto const l = elle::json::Json(
+          memo.key_value_stores_get() | transformed(
+            [&](auto const& kvs)
             {
-              {"name", static_cast<std::string>(kvs.name)},
-              {"network", kvs.network},
-            };
-          if (kvs.description)
-            res["description"] = *kvs.description;
-          return res;
-          });
+              auto res = elle::json::Json
+                {
+                  {"name", static_cast<std::string>(kvs.name)},
+                  {"network", kvs.network},
+                };
+              if (kvs.description)
+                res["description"] = *kvs.description;
+              return res;
+            }));
         elle::json::write(std::cout, l);
       }
       else

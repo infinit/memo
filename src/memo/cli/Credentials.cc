@@ -270,14 +270,12 @@ namespace memo
           where += elle::sprintf("/%s", *account);
         // FIXME: Workaround for using std::unique_ptr.
         // Remove when serialization does not require copy.
-        auto res =
+        auto root =
           memo.hub_fetch_json
           (where,
            elle::sprintf("\"%s\" credentials", ServicePrint<Service>::pretty),
            user.name, user);
-        auto root = boost::any_cast<elle::json::Object>(res);
-        auto credentials_vec =
-          boost::any_cast<std::vector<elle::json::Json>>(root["credentials"]);
+        auto credentials_vec = root["credentials"];
         for (auto const& a_json: credentials_vec)
         {
           auto input = elle::serialization::json::SerializerIn(a_json, false);

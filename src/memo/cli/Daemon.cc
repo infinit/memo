@@ -137,7 +137,7 @@ namespace memo
         if (it == options.end())
           return {};
         else
-          return boost::any_cast<std::string>(it->second);
+          return it->second;
       }
 
       elle::serialization::json::SerializerIn
@@ -276,7 +276,7 @@ namespace memo
             ELLE_TRACE("reading result");
             auto buffer = sock->read_until("\n");
             auto stream = elle::IOStream(buffer.istreambuf());
-            res = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            res = elle::json::read(stream);
             if (hold)
               elle::reactor::sleep();
           });
@@ -616,8 +616,7 @@ namespace memo
 //                 {
 //                   while (true)
 //                   {
-//                     auto json =
-//                       boost::any_cast<elle::json::Object>(elle::json::read(**socket));
+//                     auto json = elle::json::read(**socket);
 //                     auto reply = [&] {
 //                       SystemUser::Lock lock(system_user.enter(mutex));
 //                       return process_command(json, *user_manager, on_end);
