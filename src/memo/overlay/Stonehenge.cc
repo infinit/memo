@@ -125,20 +125,20 @@ namespace memo
       return "stonehenge";
     }
 
-    elle::json::Array
+    elle::json::Json
     Stonehenge::peer_list() const
     {
-      auto res = elle::json::Array{};
+      auto res = elle::json::Json();
       for (auto const& peer: this->_peers)
         res.push_back
-          (elle::json::Object{
+          (elle::json::Json{
             { "id", elle::sprintf("%x", peer.id()) },
             { "endpoints", elle::sprintf("%s", peer.endpoints()) }
           });
       return res;
     }
 
-    elle::json::Object
+    elle::json::Json
     Stonehenge::stats() const
     {
       return {{"type", this->type_name()}};

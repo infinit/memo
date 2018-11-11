@@ -1,5 +1,6 @@
 #include <chrono>
 
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/algorithm_ext/iota.hpp>
 
@@ -21,6 +22,8 @@
 #include <memo/overlay/kouncil/Kouncil.hh>
 
 ELLE_LOG_COMPONENT("memo.overlay.kouncil.Kouncil")
+
+using boost::adaptors::transformed;
 
 namespace memo
 {
@@ -317,35 +320,30 @@ namespace memo
         if (k == "stats")
         {
           auto rb = reachable_blocks();
-          return elle::json::Object
+          return elle::json::Json
             {
               {"type", this->type_name()},
               {"peers", this->peer_list()},
               {"id", elle::sprintf("%s", this->doughnut()->id())},
-              {"infos", elle::json::make_array(_infos,
-                       [](auto& pi) -> elle::json::Object
+              {"infos", _infos | transformed(
+                       [](auto& pi)
                        {
-                         return
-                           {
-                             {"id", elle::sprintf("%s", pi.id())},
-                             {"endpoints", elle::sprintf("%s", pi.endpoints())},
-                             {"stamp", elle::sprintf("%s", pi.stamp())},
-                             {"disappearance", elle::sprintf("%s", pi.disappearance())},
-                           };
-                       })
-                },
+                         return elle::json::Json {
+                           {"id", elle::sprintf("%s", pi.id())},
+                           {"endpoints", elle::sprintf("%s", pi.endpoints())},
+                           {"stamp", elle::sprintf("%s", pi.stamp())},
+                           {"disappearance", elle::sprintf("%s", pi.disappearance())},
+                         };
+                       })},
               {"mutable_blocks", rb.mutable_blocks},
               {"immutable_blocks", rb.immutable_blocks},
               {"underreplicated_immutable_blocks", rb.underreplicated_immutable_blocks},
               {"underreplicated_mutable_blocks", rb.underreplicated_mutable_blocks},
               {"overreplicated_immutable_blocks", rb.overreplicated_immutable_blocks},
               {"under_quorum_mutable_blocks", rb.under_quorum_mutable_blocks},
-              {"sample_underreplicated", elle::json::make_array(
-                  rb.sample_underreplicated,
-                  [](auto& addr) -> std::string
-                  {
-                    return elle::sprintf("%s", addr);
-                  })
+              {"sample_underreplicated",
+                  rb.sample_underreplicated |
+                  transformed([](auto const& a) { return elle::to_string(a);}),
               },
             };
         }
@@ -697,17 +695,17 @@ namespace memo
         return "kouncil";
       }
 
-      elle::json::Array
+      elle::json::Json
       Kouncil::peer_list() const
       {
-        auto res = elle::json::Array{};
+        auto res = elle::json::Json();
         for (auto const& p: this->peers())
           if (auto r = dynamic_cast<Remote const*>(p.get()))
           {
-            auto endpoints = elle::json::Array{};
+            auto endpoints = elle::json::Json();
             for (auto const& e: r->endpoints())
               endpoints.push_back(elle::sprintf("%s", e));
-            res.push_back(elle::json::Object{
+            res.push_back(elle::json::Json{
               { "id", elle::sprintf("%x", r->id()) },
               { "endpoints",  endpoints },
               { "connected",  true},
@@ -716,11 +714,10 @@ namespace memo
         return res;
       }
 
-      elle::json::Object
+      elle::json::Json
       Kouncil::stats() const
       {
-        return boost::any_cast<elle::json::Object>(
-          elle::unconst(this)->query("stats", boost::none));
+        return elle::unconst(this)->query("stats", boost::none);
       }
 
       void

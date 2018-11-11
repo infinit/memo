@@ -204,10 +204,10 @@ namespace memo
       std::string
       type_name() const = 0;
       virtual
-      elle::json::Array
+      elle::json::Json
       peer_list() const = 0;
       virtual
-      elle::json::Object
+      elle::json::Json
       stats() const = 0;
 
 #if MEMO_ENABLE_PROMETHEUS

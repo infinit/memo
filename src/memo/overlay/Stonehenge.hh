@@ -50,9 +50,9 @@ namespace memo
     public:
       std::string
       type_name() const override;
-      elle::json::Array
+      elle::json::Json
       peer_list() const override;
-      elle::json::Object
+      elle::json::Json
       stats() const override;
     };
 

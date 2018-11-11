@@ -9,6 +9,7 @@
 #include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/count.hpp>
 #include <boost/range/algorithm/count_if.hpp>
 #include <boost/range/algorithm/equal_range.hpp>
@@ -64,6 +65,7 @@ using boost::algorithm::any_of_equal;
 using boost::algorithm::none_of;
 using boost::algorithm::none_of_equal;
 using boost::algorithm::starts_with;
+using boost::adaptors::transformed;
 
 using namespace std::literals;
 
@@ -3528,7 +3530,7 @@ namespace memo
       Node::query(std::string const& k,
                   boost::optional<std::string> const& v)
       {
-        elle::json::Object res;
+        elle::json::Json res;
         if (k == "protocol")
         {
           if (v)
@@ -3544,20 +3546,20 @@ namespace memo
           res["dropped_puts"] = this->_dropped_puts;
           res["dropped_gets"] = this->_dropped_gets;
           res["failed_puts"] = this->_failed_puts;
-          elle::json::Array rtts;
+          elle::json::Json rtts;
           for (auto const& c: _state.contacts[_group])
           rtts.push_back(
             std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
           res["ping_rtt"] = rtts;
-          elle::json::Array observers;
+          elle::json::Json observers;
           for (auto& contact: this->_state.observers)
           {
             auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
               (now() - endpoints_max(contact.second.endpoints));
-            elle::json::Array endpoints;
+            elle::json::Json endpoints;
             for (auto const pair: contact.second.endpoints)
               endpoints.push_back(PrettyEndpoint(pair.first).repr());
-            elle::json::Object obs {
+            elle::json::Json obs{
               { "id", elle::sprintf("%x", contact.second.address) },
               { "validated_endpoint",
                 elle::sprintf("%s", (contact.second.validated_endpoint
@@ -3584,7 +3586,7 @@ namespace memo
                 counts.resize(count + 1, 0);
               counts[count]++;
             }
-          res["counts"] = elle::json::make_array(counts);
+          res["counts"] = counts;
         }
         else if (auto const a = elle::tail(k, "cachecheck."))
         {
@@ -3659,7 +3661,7 @@ namespace memo
             while (!elle::reactor::wait(s, 10s))
               ELLE_TRACE("scanner: %s remaining", to_scan.size());
           };
-          res["counts"] = elle::json::make_array(counts);
+          res["counts"] = counts;
         }
         else if (k == "bootstrap")
         {
@@ -3710,10 +3712,10 @@ namespace memo
         return "kelips";
       }
 
-      elle::json::Array
+      elle::json::Json
       Node::peer_list() const
       {
-        auto res = elle::json::Array{};
+        auto res = elle::json::Json();
         for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
         {
           auto const& group = this->_state.contacts[i];
@@ -3726,7 +3728,7 @@ namespace memo
                                   {
                                     return PrettyEndpoint(pair.first).repr();
                                   });
-            res.emplace_back(elle::json::Object{
+            res.emplace_back(elle::json::Json{
               { "id", elle::sprintf("%x", contact.second.address) },
               { "validated_endpoint",
                 elle::sprintf("%s", (contact.second.validated_endpoint
@@ -3743,7 +3745,7 @@ namespace memo
         return res;
       }
 
-      elle::json::Object
+      elle::json::Json
       Node::stats() const
       {
         auto rb = reachable_blocks();
@@ -3752,7 +3754,7 @@ namespace memo
             {"type", this->type_name()},
             {"protocol", elle::sprintf("%s", this->_config.rpc_protocol)},
             {"group", this->_group},
-            {"statistics", elle::json::Object{
+            {"statistics", elle::json::Json{
                 { "files", this->_state.files.size() },
                 { "dropped_puts", this->_dropped_puts },
                 { "dropped_gets", this->_dropped_gets },
@@ -3760,19 +3762,16 @@ namespace memo
               }
             },
             {"mutable_blocks", rb.mutable_blocks},
-              {"immutable_blocks", rb.immutable_blocks},
-              {"underreplicated_immutable_blocks", rb.underreplicated_immutable_blocks},
-              {"underreplicated_mutable_blocks", rb.underreplicated_mutable_blocks},
-              {"overreplicated_immutable_blocks", rb.overreplicated_immutable_blocks},
-              {"under_quorum_mutable_blocks", rb.under_quorum_mutable_blocks},
-              {"sample_underreplicated", elle::json::make_array(
-                  rb.sample_underreplicated,
-                  [](auto& addr) -> std::string
-                  {
-                    return elle::sprintf("%s", addr);
-                  })
-              },
-        };
+            {"immutable_blocks", rb.immutable_blocks},
+            {"underreplicated_immutable_blocks", rb.underreplicated_immutable_blocks},
+            {"underreplicated_mutable_blocks", rb.underreplicated_mutable_blocks},
+            {"overreplicated_immutable_blocks", rb.overreplicated_immutable_blocks},
+            {"under_quorum_mutable_blocks", rb.under_quorum_mutable_blocks},
+            {"sample_underreplicated",
+             rb.sample_underreplicated |
+             transformed(elle::to_string<model::Address const&>),
+            },
+          };
       }
 
       Overlay::ReachableBlocks

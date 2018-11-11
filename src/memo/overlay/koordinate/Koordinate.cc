@@ -109,10 +109,10 @@ namespace memo
         return "koordinate";
       }
 
-      elle::json::Array
+      elle::json::Json
       Koordinate::peer_list() const
       {
-        elle::json::Array res;
+        elle::json::Json res;
         for (auto const& backend: this->_backends)
         {
           auto const& peer_list = backend->peer_list();
@@ -121,7 +121,7 @@ namespace memo
         return res;
       }
 
-      elle::json::Object
+      elle::json::Json
       Koordinate::stats() const
       {
         return

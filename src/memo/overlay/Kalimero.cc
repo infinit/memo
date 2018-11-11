@@ -76,13 +76,13 @@ namespace memo
       return "kalimero";
     }
 
-    elle::json::Array
+    elle::json::Json
     Kalimero::peer_list() const
     {
       return {};
     }
 
-    elle::json::Object
+    elle::json::Json
     Kalimero::stats() const
     {
       return {{"type", this->type_name()}};
