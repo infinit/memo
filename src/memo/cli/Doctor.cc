@@ -215,13 +215,13 @@ namespace memo
                              int number)
     {
       ELLE_TRACE_SCOPE("log.delete");
-      if (all && match)
+      if (all && match.set())
         elle::err<CLIError>("cannot use --all and --match simultaneously");
       try
       {
         if (all)
           log_remove(std::regex{""}, number);
-        else if (match)
+        else if (match.set())
           log_remove(*match, number);
         else
           elle::err<CLIError>("specify --all or --match");
@@ -256,7 +256,7 @@ namespace memo
                            int number)
     {
       ELLE_TRACE_SCOPE("log.push");
-      if (network && match)
+      if (network && match.set())
         elle::err<CLIError>("cannot use --network and --match simultaneously");
       auto& cli = this->cli();
       auto owner = cli.as_user();

@@ -111,7 +111,7 @@ namespace
   _connect_timeout_val(elle::Defaulted<elle::Duration> arg)
   {
     static auto const env = memo::getenv("CONNECT_TIMEOUT", ""s);
-    if (arg || env.empty())
+    if (arg.set() || env.empty())
       return arg.get();
     else
       return elle::chrono::duration_parse<std::milli>(env);
@@ -121,7 +121,7 @@ namespace
   _soft_fail_timeout_val(elle::Defaulted<elle::Duration> arg)
   {
     static auto const env = memo::getenv("SOFTFAIL_TIMEOUT", ""s);
-    if (arg || env.empty())
+    if (arg.set() || env.empty())
       return arg.get();
     else
       return elle::chrono::duration_parse<std::milli>(env);
@@ -134,7 +134,7 @@ namespace
     if (inenv)
     {
       static auto const env = memo::getenv("SOFTFAIL_RUNNING", ""s);
-      if (arg || env.empty())
+      if (arg.set() || env.empty())
         return arg.get();
       else
         return true; // FIXME: parse that value
