@@ -551,6 +551,16 @@ namespace memo
                           {
                             conn->ready().disconnect_all_slots();
                             this->_peers.erase(it);
+                            // FIXME: Store sockets. Those are always sockets.
+                            if (auto s = dynamic_cast<
+                                elle::reactor::network::Socket*>(conn->stream().get()))
+                            {
+                              // Close sockets upon cleanup, so we are not stuck
+                              // indefinitely in case the network is blocked,
+                              // because protocol serialization in
+                              // non-interruptible mid-packet.
+                              s->close();
+                            }
                           });
                       });
                   conn->_run();
