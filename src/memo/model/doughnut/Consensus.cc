@@ -211,9 +211,9 @@ namespace memo
                                address, e.what());
                     cleanup();
                   }
-                  catch (elle::protocol::Serializer::EOF const&)
+                  catch (elle::protocol::Serializer::EOS const&)
                   {
-                    ELLE_TRACE("EOF while removing %f", address);
+                    ELLE_TRACE("end of stream while removing %f", address);
                     cleanup();
                   }
                   catch (...)

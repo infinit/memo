@@ -565,7 +565,7 @@ namespace memo
                       });
                   conn->_run();
                 }
-                catch (elle::protocol::Serializer::EOF const&)
+                catch (elle::protocol::Serializer::EOS const&)
                 {}
                 catch (elle::reactor::network::ConnectionClosed const& e)
                 {}

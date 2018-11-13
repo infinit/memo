@@ -306,7 +306,7 @@ namespace memo
       {
         f(std::forward<Args>(args)...);
       }
-      catch (elle::protocol::Serializer::EOF const&)
+      catch (elle::protocol::Serializer::EOS const&)
       {}
       catch (elle::reactor::network::ConnectionClosed const& e)
       {}

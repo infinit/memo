@@ -113,9 +113,9 @@ namespace memo
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);
           }
-          catch (elle::protocol::Serializer::EOF const& e)
+          catch (elle::protocol::Serializer::EOS const& e)
           {
-            ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
+            ELLE_TRACE("%s: end of stream when invoking %s: %s", this, name, e);
           }
           catch (elle::Error const& e)
           {
