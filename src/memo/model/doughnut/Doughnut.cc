@@ -354,38 +354,49 @@ namespace memo
       }
 
       Doughnut::~Doughnut()
+      try
       {
-        ELLE_TRACE_SCOPE("%s: destruct", this);
-        this->_terminating.open();
-        if (this->_resign_on_shutdown)
-        {
-          ELLE_TRACE_SCOPE("resign");
-          this->overlay()->storing(false);
-          this->consensus()->resign();
-        }
-        if (this->_user_init)
-        {
-          if (!elle::reactor::wait(*this->_user_init, 5s))
-            this->_user_init->terminate_now();
-          this->_user_init.reset();
-        }
-        if (this->_local)
-          this->_local->cleanup();
-        if (this->_overlay)
-          this->_overlay->cleanup();
-        this->_consensus.reset();
-        this->_dock.disconnect();
-        this->_overlay.reset();
-        this->_dock.cleanup();
-        if (this->_local)
-        {
-          if (!this->_local.unique())
+        elle::With<elle::reactor::Thread::NonInterruptible>(false) <<
+          [this]
           {
-            ELLE_ABORT("Doughnut destroyed with %s extra references to Local",
-                       this->_local.use_count() - 1);
-          }
-          this->_local.reset();
-        }
+            ELLE_TRACE_SCOPE("{}: destruct", this);
+            this->_terminating.open();
+            if (this->_resign_on_shutdown)
+              ELLE_TRACE("resign")
+              {
+                this->overlay()->storing(false);
+                this->consensus()->resign();
+              }
+            if (this->_user_init)
+            {
+              if (!elle::reactor::wait(*this->_user_init, 5s))
+                this->_user_init->terminate_now();
+              this->_user_init.reset();
+            }
+            if (this->_local)
+              this->_local->cleanup();
+            if (this->_overlay)
+              this->_overlay->cleanup();
+            this->_consensus.reset();
+            this->_dock.disconnect();
+            this->_overlay.reset();
+            this->_dock.cleanup();
+            if (this->_local)
+            {
+              if (!this->_local.unique())
+              {
+                ELLE_ABORT("Doughnut destroyed with %s extra references to Local",
+                           this->_local.use_count() - 1);
+              }
+              this->_local.reset();
+            }
+            this->_monitoring_server.reset();
+          };
+      }
+      catch (...)
+      {
+        ELLE_ABORT("{}: exception escaped destructor: {}",
+                   *this, elle::exception_string());
       }
 
       void
