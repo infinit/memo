@@ -3,6 +3,7 @@
 #include <regex>
 
 #include <elle/das/cli.hh>
+#include <elle/serialization/regex.hh>
 
 #include <memo/cli/Object.hh>
 #include <memo/cli/Mode.hh>
